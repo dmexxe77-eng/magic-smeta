@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { aiReadNumbers } from "../canvas/TracingCanvas.jsx";
 import { T } from "../../theme.js";
 import { fmt, uid, L, COLORS, deep } from "../../utils/helpers.js";
 import { calcPoly, getAngles, countAngles, snapOrthogonal } from "../../utils/geometry.js";

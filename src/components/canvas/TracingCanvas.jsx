@@ -590,7 +590,7 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
 /* ═══════════════════════════════════════════════════════
    NEW: AI Number Reader for sketch photos
    ═══════════════════════════════════════════════════════ */
-async function aiReadNumbers(imgB64){
+export async function aiReadNumbers(imgB64){
   const b64=imgB64.indexOf(",")>=0?imgB64.slice(imgB64.indexOf(",")+1):imgB64;
   const resp=await fetch("https://api.anthropic.com/v1/messages",{
     method:"POST",headers:{"Content-Type":"application/json"},
