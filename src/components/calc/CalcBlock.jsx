@@ -106,7 +106,7 @@ function PresetEditor({preset,onSave,onClose}){
   </div>);
 }
 
-function FavEditor2({allPresets,favIds,setFavIds,maxFav,onEditPreset,onAddPreset,onClose}){
+function FavEditor2({allPresets,favIds,setFavIds,maxFav,onEditPreset,onAddPreset,onDeletePreset,onClose}){
   const favList=favIds.map(id=>allPresets.find(p=>p.id===id)).filter(Boolean);
   const notFav=allPresets.filter(p=>!favIds.includes(p.id));
   const move=(idx,dir)=>{
@@ -154,9 +154,9 @@ function FavEditor2({allPresets,favIds,setFavIds,maxFav,onEditPreset,onAddPreset
             <div style={{fontSize:8,color:T.dim}}>{p.items?.map(id=>NB(id)?.name).filter(Boolean).slice(0,2).join(" + ")||"—"}</div>
           </div>
           {btnSm(()=>onEditPreset(p),"Ред.",T.accent)}
-          <button onClick={()=>remove(p.id)} style={{background:"rgba(255,69,58,0.1)",
+          <button onClick={()=>{if(window.confirm("Удалить кнопку «"+p.name+"»?"))onDeletePreset?.(p.id);}} style={{background:"rgba(255,69,58,0.1)",
             border:"1px solid rgba(255,69,58,0.3)",borderRadius:6,padding:"3px 7px",
-            color:T.red,fontSize:12,cursor:"pointer",lineHeight:1}}>{"×"}</button>
+            color:T.red,fontSize:12,cursor:"pointer",lineHeight:1}}>{"🗑"}</button>
         </div>
       ))}
 
@@ -229,7 +229,7 @@ function CalcBlock({config,instance,onChange,presets,onPresets,autoAngles,onAppl
     {config.cat==="canvas"&&<div style={{display:"flex",alignItems:"center",gap:4,marginBottom:6}}><label style={{display:"flex",alignItems:"center",gap:4,fontSize:10,color:instance.overcut?T.orange:T.dim,cursor:"pointer"}}><input type="checkbox" checked={!!instance.overcut} onChange={e=>upd({overcut:e.target.checked})} style={{accentColor:T.orange,width:12,height:12}}/>{"Перерасход материала"}</label>{instance.overcut&&<span style={{fontSize:9,color:T.orange,marginLeft:"auto"}}>{"▸ "+fmt(instance.overcutArea||0)+" м²"}</span>}<span style={{fontSize:9,color:T.dim,cursor:"pointer",padding:"2px 6px",background:T.pillBg,borderRadius:6,border:"1px solid "+T.border,marginLeft:instance.overcut?"4px":"auto"}}>{"⚙"}</span></div>}
     {pr&&<div style={{display:"flex",gap:6}}><div style={{flex:1,minWidth:0}}><div style={{fontSize:9,fontWeight:600,color:T.dim,marginBottom:3}}>{"Позиции"}</div>{items.map(n=>{const on=instance.off?.[n.id]!==true;const baseQ=(ocArea&&n.type==="canvas")?ocArea:effectiveQ;const iq=instance.iq?.[n.id];const qUse=(config.cat==="canvas"?baseQ:(iq!=null?iq:baseQ));return(<div key={n.id} style={{display:"flex",alignItems:"center",gap:4,padding:"3px 0",borderBottom:"0.5px solid "+T.border}}><input type="checkbox" checked={on} onChange={e=>upd({off:{...instance.off,[n.id]:!e.target.checked}})} style={{accentColor:T.green,width:12,height:12,flexShrink:0}}/><div style={{flex:1,minWidth:0}}><div style={{fontSize:10,color:on?T.text:T.muted,textDecoration:on?"none":"line-through",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{n.name}</div><div style={{fontSize:9,color:T.dim}}>{fmt(n.price)}×{on?(config.cat==="canvas"?<span>{fmt(qUse)}</span>:<NI value={qUse} onChange={v=>upd({iq:{...(instance.iq||{}),[n.id]:v}})} w={44}/>):<span>{fmt(qUse)}</span>}</div></div><span style={{fontSize:10,fontWeight:500,color:on?T.accent:T.muted}}>{fmt(on?qUse*n.price:0)}</span><span onClick={()=>onEditNom?.(n.id)} style={{color:T.accent,fontSize:11,cursor:"pointer",padding:"0 6px"}}>✎</span></div>);})}</div>
     {opts.length>0&&<div style={{flex:1,minWidth:0}}><div style={{fontSize:9,fontWeight:600,color:T.dim,marginBottom:3}}>{"Опции"}</div>{opts.map(n=>{const on=instance.off?.[n.id]!==true;const oq=instance.oq?.[n.id]||0;return(<div key={n.id} style={{display:"flex",alignItems:"center",gap:4,padding:"3px 0",borderBottom:"0.5px solid "+T.border}}><input type="checkbox" checked={on} onChange={e=>upd({off:{...instance.off,[n.id]:!e.target.checked}})} style={{accentColor:T.green,width:12,height:12,flexShrink:0}}/><div style={{flex:1,minWidth:0}}><div style={{fontSize:10,color:on?T.text:T.muted}}>{n.name}</div><div style={{fontSize:9,color:T.dim}}>{fmt(n.price)+"/"+n.unit}</div></div>{on&&<NI value={oq} onChange={v=>upd({oq:{...instance.oq,[n.id]:v}})} w={28}/>}<span style={{fontSize:10,fontWeight:500,color:on?T.accent:T.muted,minWidth:30,textAlign:"right"}}>{fmt(on?oq*n.price:0)}</span><span onClick={()=>onEditNom?.(n.id)} style={{color:T.accent,fontSize:11,cursor:"pointer",padding:"0 6px"}}>✎</span></div>);})}</div>}</div>}
-    {showFav&&<FavEditor2 allPresets={presets.filter(p=>p.cat===config.cat)} favIds={favIds} setFavIds={setFavIds} maxFav={config.maxFav} onEditPreset={p=>setEditPr(p)} onAddPreset={()=>setEditPr({id:null,name:"",cat:config.cat,items:[],options:[]})} onClose={()=>setShowFav(false)}/>}
+    {showFav&&<FavEditor2 allPresets={presets.filter(p=>p.cat===config.cat)} favIds={favIds} setFavIds={setFavIds} maxFav={config.maxFav} onEditPreset={p=>setEditPr(p)} onAddPreset={()=>setEditPr({id:null,name:"",cat:config.cat,items:[],options:[]})} onDeletePreset={id=>{onPresets(presets.filter(p=>p.id!==id));setFavIds(prev=>prev.filter(x=>x!==id));}} onClose={()=>setShowFav(false)}/>}
     {editPr&&<PresetEditor preset={editPr} onSave={savePr} onClose={()=>setEditPr(null)}/>}
   </div>);}
 
