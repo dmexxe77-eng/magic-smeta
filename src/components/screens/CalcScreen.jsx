@@ -64,7 +64,7 @@ function BuilderSelect({ onSelect, onBack, rooms }) {
   );
 }
 
-function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,initMode}){
+function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,initMode,onPlanImageChange}){
   const[mode,setMode]=useState(initMode||"main");
   const[planImage,setPlanImage]=useState(initPlanImage||null);
   const[rooms,setRooms]=useState(initRooms||[]);
@@ -199,7 +199,7 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
   const u=useCallback((id,fn)=>{setRooms(prev=>prev.map(r=>r.id===id?fn(deep(r)):r));},[]);
   useEffect(()=>{if(onRoomsChange)onRoomsChange(rooms);},[rooms]);
 
-  const handleFile=e=>{const f=e.target.files?.[0];if(!f)return;e.target.value="";if(f.size>80*1024*1024){alert("Файл слишком большой (макс. 80 МБ)");return;}if(f.type==="application/pdf"||f.name.endsWith(".pdf")){const r=new FileReader();r.onload=()=>setPdfData(new Uint8Array(r.result));r.readAsArrayBuffer(f);}else{const r=new FileReader();r.onload=()=>{setPlanImage(r.result);setMode("trace");};r.readAsDataURL(f);}};
+  const handleFile=e=>{const f=e.target.files?.[0];if(!f)return;e.target.value="";if(f.size>80*1024*1024){alert("Файл слишком большой (макс. 80 МБ)");return;}if(f.type==="application/pdf"||f.name.endsWith(".pdf")){const r=new FileReader();r.onload=()=>setPdfData(new Uint8Array(r.result));r.readAsArrayBuffer(f);}else{const r=new FileReader();r.onload=()=>{setPlanImage(r.result);setMode("trace");if(onPlanImageChange)onPlanImageChange(r.result);};r.readAsDataURL(f);}};
   const totA=rooms.filter(r=>r.on).reduce((s,r)=>s+gA(r),0);
   /* File input always rendered */
   const fileInput=(<input ref={fRef} type="file" accept="image/*,.pdf" onChange={handleFile} style={{display:"none"}}/>);
@@ -209,7 +209,7 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
   if(mode==="recognize")return(<SketchRecognition onFinish={rm=>{setRooms(p=>[...p,rm]);setTab(rm.id);setMode("main");}} onBack={()=>setMode("main")} existingCount={rooms.length}/>);
   if(mode==="manual")return(<ManualBuilder onFinish={rm=>{setRooms(p=>[...p,rm]);setTab(rm.id);setMode("main");}} onBack={()=>setMode("select")} existingCount={rooms.length}/>);
   if(mode==="compass")return(<CompassBuilder onFinish={rm=>{setRooms(p=>[...p,rm]);setTab(rm.id);setMode("main");}} onBack={()=>setMode("main")} existingCount={rooms.length}/>);
-  if(pdfData)return(<PdfPagePicker pdfData={pdfData} onSelect={img=>{setPdfData(null);setPlanImage(img);setMode("trace");}} onBack={()=>setPdfData(null)}/>);
+  if(pdfData)return(<PdfPagePicker pdfData={pdfData} onSelect={img=>{setPdfData(null);setPlanImage(img);setMode("trace");if(onPlanImageChange)onPlanImageChange(img);}} onBack={()=>setPdfData(null)}/>);
   if(mode==="trace")return(<div style={{height:"100vh",display:"flex",flexDirection:"column"}}><TracingCanvas image={planImage} onFinish={rm=>{setRooms(p=>[...p,rm]);setTab(rm.id);}} completedRooms={rooms} initScale={traceScale} onScaleChange={s=>setTraceScale(s)}/><div style={{padding:"5px 10px",background:T.bg,display:"flex",justifyContent:"space-between",alignItems:"center",borderTop:"1px solid "+T.border,flexShrink:0}}><span style={{fontSize:10,color:T.sub}}>{"Обведено: "}<b style={{color:T.text}}>{rooms.length}</b></span><button onClick={()=>setMode("main")} style={{background:T.actBg,border:"1px solid "+T.actBd,borderRadius:10,padding:"5px 14px",color:T.accent,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{"Готово ("+rooms.length+")"}</button></div></div>);
 
   const r=rooms.find(x=>x.id===tab)||rooms[0];

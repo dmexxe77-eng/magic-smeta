@@ -263,33 +263,33 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
 
             <div style={{background:T.card,borderRadius:15,padding:12,marginBottom:12}}>
               <div style={{fontSize:11,fontWeight:700,color:T.sub,marginBottom:10,letterSpacing:"0.5px",textTransform:"uppercase"}}>Действия</div>
-              <button onClick={()=>onOpen(ord.id)}
-                style={{width:"100%",display:"flex",alignItems:"center",gap:12,background:ACC,border:"none",borderRadius:12,padding:"13px 16px",cursor:"pointer",fontFamily:"inherit",marginBottom:8,textAlign:"left"}}>
-                <span style={{fontSize:20}}>📐</span>
-                <div style={{flex:1}}>
-                  <div style={{fontSize:14,fontWeight:700,color:"#fff"}}>Открыть калькулятор смет</div>
-                  <div style={{fontSize:11,color:"rgba(255,255,255,0.7)",marginTop:1}}>Помещения, материалы, расчёт</div>
-                </div>
-                <span style={{color:"rgba(255,255,255,0.6)",fontSize:16}}>›</span>
-              </button>
-              <button disabled
-                style={{width:"100%",display:"flex",alignItems:"center",gap:12,background:T.faint,border:"1px dashed "+T.border,borderRadius:12,padding:"13px 16px",cursor:"default",fontFamily:"inherit",marginBottom:8,textAlign:"left",opacity:0.6}}>
-                <span style={{fontSize:20}}>💡</span>
-                <div style={{flex:1}}>
-                  <div style={{fontSize:14,fontWeight:600,color:T.sub}}>Создать КП на освещение</div>
-                  <div style={{fontSize:11,color:T.dim,marginTop:1}}>Скоро</div>
-                </div>
-                <span style={{fontSize:10,color:T.dim,background:T.border,borderRadius:6,padding:"2px 6px"}}>Soon</span>
-              </button>
-              <button disabled
-                style={{width:"100%",display:"flex",alignItems:"center",gap:12,background:T.faint,border:"1px dashed "+T.border,borderRadius:12,padding:"13px 16px",cursor:"default",fontFamily:"inherit",textAlign:"left",opacity:0.6}}>
-                <span style={{fontSize:20}}>💬</span>
-                <div style={{flex:1}}>
-                  <div style={{fontSize:14,fontWeight:600,color:T.sub}}>Чат с участниками проекта</div>
-                  <div style={{fontSize:11,color:T.dim,marginTop:1}}>Скоро</div>
-                </div>
-                <span style={{fontSize:10,color:T.dim,background:T.border,borderRadius:6,padding:"2px 6px"}}>Soon</span>
-              </button>
+              <div style={{display:"flex",gap:8}}>
+                {/* Главная кнопка — Калькулятор */}
+                <button onClick={()=>onOpen(ord.id)}
+                  style={{flex:2,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,
+                    background:ACC,border:"none",borderRadius:14,padding:"14px 10px",cursor:"pointer",fontFamily:"inherit",minWidth:0}}>
+                  <span style={{fontSize:24}}>📐</span>
+                  <div style={{fontSize:12,fontWeight:700,color:"#fff",textAlign:"center",lineHeight:1.2}}>Калькулятор смет</div>
+                </button>
+                {/* КП на освещение */}
+                <button disabled
+                  style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,
+                    background:T.faint,border:"1px dashed "+T.border,borderRadius:14,padding:"14px 8px",
+                    cursor:"default",fontFamily:"inherit",minWidth:0,opacity:0.55}}>
+                  <span style={{fontSize:24}}>💡</span>
+                  <div style={{fontSize:11,fontWeight:600,color:T.sub,textAlign:"center",lineHeight:1.2}}>КП освещение</div>
+                  <span style={{fontSize:9,color:T.dim,background:T.border,borderRadius:4,padding:"1px 5px"}}>Soon</span>
+                </button>
+                {/* Чат */}
+                <button disabled
+                  style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,
+                    background:T.faint,border:"1px dashed "+T.border,borderRadius:14,padding:"14px 8px",
+                    cursor:"default",fontFamily:"inherit",minWidth:0,opacity:0.55}}>
+                  <span style={{fontSize:24}}>💬</span>
+                  <div style={{fontSize:11,fontWeight:600,color:T.sub,textAlign:"center",lineHeight:1.2}}>Чат</div>
+                  <span style={{fontSize:9,color:T.dim,background:T.border,borderRadius:4,padding:"1px 5px"}}>Soon</span>
+                </button>
+              </div>
             </div>
 
             <div style={{background:T.card,borderRadius:15,padding:14,marginBottom:10}}>
