@@ -2,6 +2,8 @@ import { uid, safeJsonParse } from "../utils/helpers.js";
 import { loadNomPhotoFromIdb, revokeObjectUrl, idbGet, idbPut } from '../utils/storage.js';
 import { ALL_NOM, NB, USER_NOMS_CUSTOM, USER_NOMS_EDITED, USER_NOMS_DELETED, addNewNom, deleteNom, DELETED_NOM_IDS, RUNTIME_EDITED_NOMS } from "./nomenclature.jsx";
 import { P, PF, LIGHT, OPT, DEFAULT_MAT, KK, PIMG } from "./profiles.js";
+import { newRoom, newR, gA, gP } from '../utils/roomUtils.js';
+export { newRoom, newR, gA, gP };
 
 export function normalizeNomName(s){
   return safeStr(s)
@@ -154,9 +156,6 @@ export const BLOCK_CFG=[
 ];
 
 /* ═══ Новая структура комнаты ═══ */
-
-import { newRoom, newR, gA, gP } from '../utils/roomUtils.js';
-export { newRoom, newR, gA, gP };
 
 export function buildEst(rooms,allPresets,gOpts){
   const _pr=allPresets||PRESETS_GEN;
