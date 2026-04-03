@@ -82,7 +82,12 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
   const[editRoomName,setEditRoomName]=useState(null); /* id помещения в режиме редактирования названия */
   /* Если уже были в калькуляторе — берём из CALC_STATE_REF, иначе из базы */
   const[presets,setPresets]=useState(()=>CALC_STATE_REF.presets?.length?deep(CALC_STATE_REF.presets):deep(USER_PRESETS_OVERRIDE));
-  const[sharedFavs,setSharedFavs]=useState(()=>Object.keys(CALC_STATE_REF.sharedFavs||{}).length?{...CALC_STATE_REF.sharedFavs}:{...USER_FAVS_OVERRIDE});
+  const[sharedFavs,setSharedFavs]=useState(()=>{
+    const base=Object.keys(CALC_STATE_REF.sharedFavs||{}).length?{...CALC_STATE_REF.sharedFavs}:{...USER_FAVS_OVERRIDE};
+    // Ensure every category is an array
+    Object.keys(base).forEach(k=>{if(!Array.isArray(base[k]))base[k]=Array.isArray(USER_FAVS_OVERRIDE[k])?[...USER_FAVS_OVERRIDE[k]]:[];});
+    return base;
+  });
   /* globalOpts должен быть объявлен ДО useEffect который его использует */
   const[globalOpts,setGlobalOpts]=useState([{id:uid(),name:"Укрытие стен защитной плёнкой",nomId:"w_prot",param:"perim",on:true}]);
   /* Пишем текущее состояние в глобальный ref для экспорта */
