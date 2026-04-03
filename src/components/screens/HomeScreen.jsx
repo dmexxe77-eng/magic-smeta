@@ -210,8 +210,7 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
             <div style={{fontWeight:700,fontSize:16,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{ord.name}</div>
             <div style={{fontSize:11,color:T.sub,marginTop:1}}>{ord.client||"Клиент не указан"}{des.name?" · ✦ "+des.name:""}</div>
           </div>
-          <button onClick={()=>onOpen(ord.id)}
-            style={{background:ACC,border:"none",borderRadius:10,padding:"8px 16px",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
+          <button onClick={()=>onOpen(ord.id)} style={{display:"none"}}>
             {"Открыть"}
           </button>
         </div>
@@ -261,6 +260,37 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
                 </div>
               </div>
             )}
+
+            <div style={{background:T.card,borderRadius:15,padding:12,marginBottom:12}}>
+              <div style={{fontSize:11,fontWeight:700,color:T.sub,marginBottom:10,letterSpacing:"0.5px",textTransform:"uppercase"}}>Действия</div>
+              <button onClick={()=>onOpen(ord.id)}
+                style={{width:"100%",display:"flex",alignItems:"center",gap:12,background:ACC,border:"none",borderRadius:12,padding:"13px 16px",cursor:"pointer",fontFamily:"inherit",marginBottom:8,textAlign:"left"}}>
+                <span style={{fontSize:20}}>📐</span>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:14,fontWeight:700,color:"#fff"}}>Открыть калькулятор смет</div>
+                  <div style={{fontSize:11,color:"rgba(255,255,255,0.7)",marginTop:1}}>Помещения, материалы, расчёт</div>
+                </div>
+                <span style={{color:"rgba(255,255,255,0.6)",fontSize:16}}>›</span>
+              </button>
+              <button disabled
+                style={{width:"100%",display:"flex",alignItems:"center",gap:12,background:T.faint,border:"1px dashed "+T.border,borderRadius:12,padding:"13px 16px",cursor:"default",fontFamily:"inherit",marginBottom:8,textAlign:"left",opacity:0.6}}>
+                <span style={{fontSize:20}}>💡</span>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:14,fontWeight:600,color:T.sub}}>Создать КП на освещение</div>
+                  <div style={{fontSize:11,color:T.dim,marginTop:1}}>Скоро</div>
+                </div>
+                <span style={{fontSize:10,color:T.dim,background:T.border,borderRadius:6,padding:"2px 6px"}}>Soon</span>
+              </button>
+              <button disabled
+                style={{width:"100%",display:"flex",alignItems:"center",gap:12,background:T.faint,border:"1px dashed "+T.border,borderRadius:12,padding:"13px 16px",cursor:"default",fontFamily:"inherit",textAlign:"left",opacity:0.6}}>
+                <span style={{fontSize:20}}>💬</span>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:14,fontWeight:600,color:T.sub}}>Чат с участниками проекта</div>
+                  <div style={{fontSize:11,color:T.dim,marginTop:1}}>Скоро</div>
+                </div>
+                <span style={{fontSize:10,color:T.dim,background:T.border,borderRadius:6,padding:"2px 6px"}}>Soon</span>
+              </button>
+            </div>
 
             <div style={{background:T.card,borderRadius:15,padding:14,marginBottom:10}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:13}}>

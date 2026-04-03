@@ -386,7 +386,7 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
       </div>
       {/* Канвас */}
       <div ref={containerRef}
-        style={{ flex: 1, overflow: "hidden", position: "relative", cursor: closed ? "default" : "crosshair", touchAction: "none" }}
+        style={{ flex: 1, overflow: "hidden", position: "relative", cursor: closed ? "default" : "crosshair", touchAction: "none", WebkitUserSelect: "none", userSelect: "none", WebkitTouchCallout: "none" }}
         onClick={onClick} onWheel={handleWheel}
         onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
         onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp}
@@ -521,7 +521,7 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
             {namePrompt && <div style={{ display: "flex", gap: 4, alignItems: "center", marginBottom: 6 }}>
               <span style={{ color: T.accent, fontSize: 11, fontWeight: 600 }}>{"Название:"}</span>
               <input value={roomName} onChange={e => setRoomName(e.target.value)} autoFocus
-                style={{ flex: 1, background: T.pillBd, border: "1px solid "+T.actBd, borderRadius: 4, padding: "4px 8px", color: T.text, fontSize: 12, fontFamily: "inherit" }} />
+                style={{ flex: 1, background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 6, padding: "6px 10px", color: "#fff", fontSize: 13, fontFamily: "inherit", outline: "none" }} />
             </div>}
             <div style={{ fontSize: 10, color: T.accent, fontWeight: 600, marginBottom: 4 }}>{"Выберите сторону и введите длину (см):"}</div>
             <div style={{ display: "flex", gap: 3, flexWrap: "wrap", marginBottom: 5 }}>
@@ -542,7 +542,7 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
                 onChange={e => { setScaleCm(e.target.value); setScaleConfirmed(false); }}
                 onKeyDown={e => { if (e.key === "Enter" && scaleCm) setScaleConfirmed(true); }}
                 placeholder={"длина в см"} autoFocus
-                style={{ width: 100, background: T.pillBd, border: "1px solid "+T.actBd, borderRadius: 4, padding: "6px 10px", color: T.text, fontSize: 14, fontFamily: "inherit", textAlign: "center" }} />
+                style={{ width: 100, background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 6, padding: "6px 10px", color: "#fff", fontSize: 14, fontFamily: "inherit", textAlign: "center", outline: "none" }} />
               <span style={{ color: "#6a5c40", fontSize: 10 }}>{"см"}</span>
               <button onClick={() => { if (scaleCm) setScaleConfirmed(true); }}
                 style={{ background: scaleCm ? T.actBd : T.pillBg,
@@ -557,7 +557,7 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
             <div style={{ display: "flex", gap: 4, alignItems: "center", marginBottom: 6 }}>
               <span style={{ color: T.accent, fontSize: 11, fontWeight: 600 }}>{"Название:"}</span>
               <input value={roomName} onChange={e => setRoomName(e.target.value)} autoFocus
-                style={{ flex: 1, background: T.pillBd, border: "1px solid "+T.actBd, borderRadius: 4, padding: "4px 8px", color: T.text, fontSize: 12, fontFamily: "inherit" }} />
+                style={{ flex: 1, background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 6, padding: "6px 10px", color: "#fff", fontSize: 13, fontFamily: "inherit", outline: "none" }} />
             </div>
             <div style={{ fontSize: 12, fontWeight: 600, color: T.green, marginBottom: 4 }}>
               {"S=" + fmt(realArea) + " м" + String.fromCharCode(178) + " P=" + fmt(realPerim) + " м"}
