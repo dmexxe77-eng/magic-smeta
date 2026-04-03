@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { T, setT, THEMES } from "./theme.js";
 import { uid, safeJsonParse } from "./utils/helpers.js";
 import { AUTO_SAVE_KEY, AUTO_SAVE_META_KEY, idbPut, idbGet } from "./utils/storage.js";
-import { RUNTIME_EDITED_NOMS, DELETED_NOM_IDS, USER_NOMS_CUSTOM, USER_NOMS_EDITED } from "./data/nomenclature.jsx";
+import { RUNTIME_EDITED_NOMS, DELETED_NOM_IDS, USER_NOMS_CUSTOM, USER_NOMS_EDITED, ALL_NOM} from "./data/nomenclature.jsx";
 import { USER_PRESETS_OVERRIDE, USER_FAVS_OVERRIDE, CALC_STATE_REF, newRoom, newR } from "./data/presets.js";
 import HomeScreen from "./components/screens/HomeScreen.jsx";
 import CalcScreen from "./components/screens/CalcScreen.jsx";

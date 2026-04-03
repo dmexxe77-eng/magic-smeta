@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { T } from "../../theme.js";
+import { P } from "../../data/profiles.js";
 import { fmt, uid, L, COLORS, deep } from "../../utils/helpers.js";
 import { calcPoly, getAngles, countAngles, snapOrthogonal } from "../../utils/geometry.js";
 import { compressImg } from "../../utils/imageUtils.js";

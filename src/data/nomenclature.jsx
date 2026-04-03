@@ -1,5 +1,6 @@
 import { uid } from "../utils/helpers.js";
 import EXCEL_OTHER_NOMS from "../../excel_other_noms_data.js";
+import { DEFAULT_MAT, KK, LIGHT, OPT, P } from "./profiles.js";
 
 export const NOM_GEN=(()=>{
   const noms=[];
