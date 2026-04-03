@@ -372,7 +372,7 @@ function NomEditor({onClose, initialEditId}){
     </div>);
   };
 
-  /* Папка бренда */
+  /* ── Мобильный аккордеон-бренд ── */
   const BrandFolder=({g})=>{
     const isOpen=openBrand===g.id;
     const profItems=ALL_NOM.filter(n=>n.brand===g.id&&n.type!=="work");
@@ -409,242 +409,241 @@ function NomEditor({onClose, initialEditId}){
     </div>);
   };
 
-  return(<div style={{position:"fixed",inset:0,zIndex:50,background:T.overlay,display:"flex",padding:16,justifyContent:"center",alignItems:"stretch"}}>
-    <div style={{background:T.card,width:"100%",maxWidth:1200,borderRadius:20,overflow:"hidden",display:"flex",flexDirection:"column"}}>
-      <input
-        ref={photoInputRef}
-        type="file"
-        accept="image/*"
-        style={{position:"absolute",left:-99999,top:0,width:1,height:1,opacity:0}}
-        onChange={e=>{
-          const f=e.target.files?.[0]||null;
-          const targetId=photoTargetRef.current;
-          if(!f){
-            setEditPhotoFileName("не удалось прочитать файл");
-            return;
-          }
-          onPhotoChosenForEdit(f, targetId);
-          try{e.target.value="";}catch(err){}
-        }}
-      />
-      {/* Шапка */}
-      <div style={{padding:"14px 16px 10px",borderBottom:"0.5px solid "+T.border,flexShrink:0}}>
-        <div style={{width:36,height:4,background:T.border,borderRadius:2,margin:"0 auto 12px"}}/>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-          <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <div style={{fontSize:16,fontWeight:700,color:T.text}}>База номенклатур</div>
-            <span style={{fontSize:10,color:"#16a34a",fontWeight:700,background:"rgba(22,163,74,0.1)",border:"1px solid rgba(22,163,74,0.3)",padding:"2px 6px",borderRadius:10}}>SMART 5177</span>
-          </div>
-          <div style={{display:"flex",gap:6}}>
-            <button onClick={()=>setShowAdd(!showAdd)} style={{background:T.actBg,border:"none",borderRadius:8,padding:"6px 12px",color:T.accent,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>+ Добавить</button>
-            <button
-              onClick={()=>importXlsxRef.current?.click()}
-              disabled={nomImportBusy}
-              style={{background:nomImportBusy?"rgba(0,0,0,0.05)":T.card2,border:"none",borderRadius:8,padding:"6px 12px",color:T.sub,fontSize:12,cursor:nomImportBusy?"default":"pointer",fontFamily:"inherit",fontWeight:700}}
-            >{nomImportBusy?"Импорт...":"Импорт Excel"}</button>
-            <input
-              ref={importXlsxRef}
-              type="file"
-              accept=".xlsx,.xls"
-              style={{display:"none"}}
-              onChange={e=>{
-                const f=e.target.files?.[0]||null;
-                try{e.target.value="";}catch(err){}
-                if(f)importFromXlsx(f);
-              }}
-            />
-            <button onClick={onClose} style={{background:T.card2,border:"none",borderRadius:8,padding:"6px 12px",color:T.sub,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>Закрыть</button>
-          </div>
-        </div>
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Поиск по всей базе..."
-          style={{...IS,width:"100%"}}/>
-        {nomImportInfo&&<div style={{marginTop:8,background:T.faint,border:"0.5px solid "+T.border,borderRadius:10,padding:"8px 10px",fontSize:12,color:T.dim}}>{nomImportInfo}</div>}
-      </div>
+  const typeColor = t => t==='work'?T.green:t==='option'?T.orange:t==='canvas'?'#0ea5e9':T.accent;
+  const typeLabel = t => ({profile:'Материал',work:'Работа',option:'Опция',canvas:'Полотно'}[t]||t);
 
-      <div style={{flex:1,display:"flex",minHeight:0}}>
-        {/* Левая панель (папки) */}
-        <div style={{width:280,borderRight:"0.5px solid "+T.border,background:T.faint,display:"flex",flexDirection:"column"}}>
-          <div style={{padding:"10px 12px",borderBottom:"0.5px solid "+T.border,fontSize:12,fontWeight:700,color:T.sub}}>
-            Профили
-          </div>
-          <div style={{flex:1,overflowY:"auto",padding:6}}>
-            <div
-              onClick={()=>{setOpenBrand(MINE_ID);setOpenSub(null);}}
-              style={{cursor:"pointer",padding:"9px 10px",borderRadius:10,margin:"4px 0",
-                background:openBrand===MINE_ID?T.card2:"transparent",
-                border:openBrand===MINE_ID?"1px solid "+T.border:"1px solid transparent"}}>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
-                <span style={{fontSize:12,fontWeight:700,color:T.text}}>Другое</span>
-                <span style={{fontSize:10,color:T.dim}}>{myNomsNoBrand.length}</span>
-              </div>
+  /* ── Строка номенклатуры ── */
+  const NomRowMobile=({n,indent=0})=>{
+    const isEditing=editId===n.id;
+    const isUser=n.id.startsWith('u');
+    const tc=typeColor(n.type);
+    return(
+      <div style={{marginBottom:1}}>
+        <div onClick={()=>isEditing?setEditId(null):startEdit(n)}
+          style={{display:'flex',alignItems:'center',gap:10,padding:'11px 14px',
+            paddingLeft:14+indent*10,background:isEditing?T.actBg:T.card,
+            borderBottom:'0.5px solid '+T.border,cursor:'pointer'}}>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:13,fontWeight:isEditing?700:400,color:T.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{n.name}</div>
+            <div style={{display:'flex',gap:6,marginTop:2,alignItems:'center'}}>
+              <span style={{fontSize:10,color:'#fff',background:tc,borderRadius:4,padding:'1px 5px'}}>{typeLabel(n.type)}</span>
+              <span style={{fontSize:11,fontWeight:600,color:T.accent}}>{fmt(n.price||0)} ₽ / {n.unit}</span>
             </div>
-
-            {brandList.map(b=>{
-              const isOpen=openBrand===b.id;
-              const matCount=brandStats[b.id]?.mats||0;
-              const workCount=brandStats[b.id]?.works||0;
-              const tc=b.base?T.text:T.accent;
-              const renameBrand=()=>{
-                const nn=window.prompt("Новое название профиля",b.name);
-                if(!nn)return;
-                ALL_NOM.forEach(n=>{if(n.id&&n.id.startsWith("u")&&n.brand===b.id){n.brandName=nn;}});
-                forceRender(x=>x+1);
-              };
-              const deleteBrand=()=>{
-                const ok=window.confirm("Удалить профиль и все ваши позиции в нём?");
-                if(!ok)return;
-                const ids=ALL_NOM.filter(n=>n.id&&n.id.startsWith("u")&&n.brand===b.id).map(n=>n.id);
-                ids.forEach(id=>deleteNom(id));
-                if(openBrand===b.id){setOpenBrand(null);setOpenSub(null);}
-                forceRender(x=>x+1);
-              };
-              return(
-                <div key={b.id}>
-                  <div
-                    onClick={()=>{setOpenBrand(b.id);setOpenSub(b.id+"_mat");}}
-                    style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",padding:"9px 10px",borderRadius:10,margin:"4px 0",
-                      background:isOpen?T.card2:"transparent",border:isOpen?"1px solid "+T.border:"1px solid transparent"}}>
-                    <div style={{width:10,height:10,borderRadius:2,background:b.color||T.accent,flexShrink:0}}/>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:12,fontWeight:700,color:tc,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{b.name}</div>
-                      <div style={{fontSize:10,color:T.dim,marginTop:1}}>{matCount+workCount} поз.</div>
-                    </div>
-                    {!b.base&&(
-                      <div style={{display:"flex",gap:6}}>
-                        <span onClick={(e)=>{e.stopPropagation();renameBrand();}} style={{color:T.accent,fontSize:12,cursor:"pointer"}}>{"✎"}</span>
-                        <span onClick={(e)=>{e.stopPropagation();deleteBrand();}} style={{color:T.red,fontSize:12,cursor:"pointer"}}>{"×"}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {isOpen&&(
-                    <div style={{marginLeft:12}}>
-                      <div
-                        onClick={()=>setOpenSub(openSub===b.id+"_mat"?null:b.id+"_mat")}
-                        style={{cursor:"pointer",padding:"7px 10px",borderRadius:10,margin:"4px 0",
-                          background:openSub===b.id+"_mat"?T.card2:"transparent",border:openSub===b.id+"_mat"?"1px solid "+T.border:"1px solid transparent"}}>
-                        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
-                          <span style={{fontSize:11,color:T.accent,fontWeight:700}}>📦 Материалы</span>
-                          <span style={{fontSize:10,color:T.dim}}>{matCount}</span>
-                        </div>
-                      </div>
-                      <div
-                        onClick={()=>setOpenSub(openSub===b.id+"_work"?null:b.id+"_work")}
-                        style={{cursor:"pointer",padding:"7px 10px",borderRadius:10,margin:"4px 0",
-                          background:openSub===b.id+"_work"?T.card2:"transparent",border:openSub===b.id+"_work"?"1px solid "+T.border:"1px solid transparent"}}>
-                        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
-                          <span style={{fontSize:11,color:T.green,fontWeight:700}}>🔧 Работы</span>
-                          <span style={{fontSize:10,color:T.dim}}>{workCount}</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
           </div>
-
-          <div style={{padding:"8px 12px",borderTop:"0.5px solid "+T.border,flexShrink:0,fontSize:10,color:T.dim,textAlign:"center"}}>
-            {ALL_NOM.length} в базе
-          </div>
-        </div>
-
-        {/* Правая панель (контент) */}
-        <div style={{flex:1,overflowY:"auto",padding:12}}>
-          {/* Добавить новую позицию */}
-          {showAdd&&(()=>{
-            const fixedType=openBrand&&openBrand!==MINE_ID&&openSub===openBrand+"_work"?"work":
-              openBrand&&openBrand!==MINE_ID&&openSub===openBrand+"_mat"?"profile":null;
-            return(
-              <div style={{background:T.faint,border:"0.5px solid "+T.border,borderRadius:12,padding:12,marginBottom:12}}>
-                <div style={{fontSize:12,fontWeight:700,color:T.text,marginBottom:8}}>Новая позиция</div>
-                <input style={{...IS,marginBottom:6}} value={newName} onChange={e=>setNewName(e.target.value)} placeholder="Название"/>
-                <div style={{display:"flex",gap:6,marginBottom:8}}>
-                  <input style={{...IS,width:90}} type="number" value={newPrice} onChange={e=>setNewPrice(e.target.value)} placeholder="Цена"/>
-                  <input style={{...IS,width:60}} value={newUnit} onChange={e=>setNewUnit(e.target.value)} placeholder="ед."/>
-                  <select style={{...IS,flex:1}} disabled={!!fixedType} value={fixedType||newType} onChange={e=>setNewType(e.target.value)}>
-                    <option value="profile">Материал</option>
-                    <option value="work">Работа</option>
-                  </select>
-                </div>
-                {!fixedType&&(
-                  <>
-                    <div style={{display:"flex",gap:6,marginBottom:8}}>
-                      <select style={{...IS,flex:1}} value={addBrandChoice} onChange={e=>setAddBrandChoice(e.target.value)}>
-                        <option value="__none__">Без бренда</option>
-                        {brandList.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}
-                        <option value="__new__">+ Новый профиль</option>
-                      </select>
-                    </div>
-                    {addBrandChoice==="__new__"&&(
-                      <div style={{display:"flex",gap:6,marginBottom:8,alignItems:"center"}}>
-                        <input style={{...IS,flex:1}} value={addBrandNewName} onChange={e=>setAddBrandNewName(e.target.value)} placeholder="Название профиля"/>
-                        <input type="color" value={addBrandNewColor||T.accent} onChange={e=>setAddBrandNewColor(e.target.value)} style={{width:46,height:34,border:"none",background:"transparent",cursor:"pointer"}}/>
-                      </div>
-                    )}
-                  </>
-                )}
-                <div style={{display:"flex",gap:6}}>
-                  <button onClick={doAdd} style={{flex:1,background:T.accent,border:"none",borderRadius:8,padding:"8px",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Добавить</button>
-                  <button onClick={()=>setShowAdd(false)} style={{flex:1,background:T.card2,border:"none",borderRadius:8,padding:"8px",color:T.sub,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>Отмена</button>
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* Результаты поиска */}
-          {search.length>1?(
-            <div>
-              <div style={{padding:"6px 2px",fontSize:10,color:T.sub,fontWeight:700,letterSpacing:"0.5px"}}>{searchResults.length} РЕЗУЛЬТАТОВ</div>
-              {searchResults.map(n=><NomRow key={n.id} n={n}/>)}
-              {searchResults.length===0&&<div style={{padding:20,textAlign:"center",color:T.dim,fontSize:12}}>Ничего не найдено</div>}
-            </div>
-          ):(
-            <div>
-              {/* Мои позиции без бренда */}
-              {openBrand===MINE_ID&&(
-                <div>
-                  <div style={{padding:"6px 2px",fontSize:12,fontWeight:800,color:T.sub,marginBottom:6}}>{"Другое"}</div>
-                  {myNomsNoBrand.length?myNomsNoBrand.map(n=><NomRow key={n.id} n={n}/>):<div style={{padding:20,textAlign:"center",color:T.dim,fontSize:12}}>Пока пусто</div>}
-                </div>
-              )}
-
-              {/* Папки бренда */}
-              {openBrand&&openBrand!==MINE_ID&&(
-                <div>
-                  {!openSub?(
-                    <div style={{padding:20,textAlign:"center",color:T.dim,fontSize:12}}>
-                      Выберите подпапку слева: <b>Материалы</b> или <b>Работы</b>
-                    </div>
-                  ):(
-                    <>
-                      <div style={{display:"flex",alignItems:"baseline",justifyContent:"space-between",gap:10,marginBottom:8}}>
-                        <div style={{fontSize:14,fontWeight:800,color:T.text}}>
-                          {openSub===openBrand+"_mat"?"Материалы":"Работы"} · {brandById(openBrand)?.name||""}
-                        </div>
-                        <div style={{fontSize:10,color:T.dim}}>
-                          {openSub===openBrand+"_mat"?(brandStats[openBrand]?.mats||0):(brandStats[openBrand]?.works||0)} поз.
-                        </div>
-                      </div>
-                      {openSub===openBrand+"_mat" ? (
-                        <div>{ALL_NOM.filter(n=>n.brand===openBrand && n.type==="profile").map(n=><NomRow key={n.id} n={n}/>)}</div>
-                      ) : (
-                        <div>{ALL_NOM.filter(n=>n.brand===openBrand && n.type==="work").map(n=><NomRow key={n.id} n={n}/>)}</div>
-                      )}
-                    </>
-                  )}
-                </div>
-              )}
-
-              {/* Ничего не выбрано */}
-              {openBrand==null&&openBrand!==MINE_ID&&(
-                <div style={{padding:20,textAlign:"center",color:T.dim,fontSize:12}}>
-                  Выберите профиль слева, чтобы увидеть материалы и работы.
-                </div>
+          {isUser&&!isEditing&&(
+            <div style={{display:'flex',gap:2}}>
+              <button onClick={e=>{e.stopPropagation();startEdit(n);}} style={{background:T.actBg,border:'none',borderRadius:6,padding:'6px 8px',color:T.accent,fontSize:12,cursor:'pointer',fontFamily:'inherit'}}>✎</button>
+              {delConfirmId===n.id?(
+                <button onClick={e=>{e.stopPropagation();deleteNom(n.id);setDelConfirmId(null);forceRender(x=>x+1);}}
+                  style={{background:'rgba(255,59,48,0.15)',border:'none',borderRadius:6,padding:'6px 8px',color:T.red,fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>Да</button>
+              ):(
+                <button onClick={e=>{e.stopPropagation();setDelConfirmId(n.id);setTimeout(()=>setDelConfirmId(null),3000);}}
+                  style={{background:'transparent',border:'none',borderRadius:6,padding:'6px 8px',color:T.red,fontSize:14,cursor:'pointer',fontFamily:'inherit'}}>×</button>
               )}
             </div>
           )}
+          {!isUser&&<span style={{color:T.dim,fontSize:11}}>›</span>}
         </div>
+
+        {/* Инлайн-редактор */}
+        {isEditing&&(
+          <div style={{background:T.faint,padding:14,borderBottom:'1px solid '+T.border}}>
+            <div style={{fontSize:11,fontWeight:700,color:T.sub,marginBottom:8,textTransform:'uppercase',letterSpacing:'0.5px'}}>Редактирование</div>
+            <input style={{...IS,marginBottom:8}} value={editName} onChange={e=>setEditName(e.target.value)} placeholder="Название"/>
+            <div style={{display:'flex',gap:8,marginBottom:8}}>
+              <input style={{...IS,flex:1}} type="number" value={editPrice} onChange={e=>setEditPrice(e.target.value)} placeholder="Цена"/>
+              <input style={{...IS,width:70}} value={editUnit} onChange={e=>setEditUnit(e.target.value)} placeholder="ед."/>
+            </div>
+            <select style={{...IS,marginBottom:12}} value={editType} onChange={e=>setEditType(e.target.value)}>
+              <option value="profile">Материал</option>
+              <option value="work">Работа</option>
+              <option value="option">Опция</option>
+              <option value="canvas">Полотно</option>
+            </select>
+            {/* Фото */}
+            {n.id.startsWith('u')&&(
+              <div style={{marginBottom:12}}>
+                {editPhotoPreview?(
+                  <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
+                    <img src={editPhotoPreview} style={{width:48,height:48,objectFit:'cover',borderRadius:8,border:'1px solid '+T.border}} alt=""/>
+                    <div style={{flex:1,fontSize:10,color:T.dim,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{editPhotoFileName||'фото'}</div>
+                    <button onClick={()=>{const targetId=n.id;const nom=ALL_NOM.find(x=>x.id===targetId);if(nom){revokeObjectUrl(nom.photo);nom.photo=null;setEditPhotoPreview(null);setEditPhotoFileName('');deleteNomPhotoFromIdb(targetId);const ex=RUNTIME_EDITED_NOMS.findIndex(x=>x.id===targetId);const patch={id:targetId,name:nom.name,price:nom.price,type:nom.type,unit:nom.unit,photo:null};if(ex>=0)RUNTIME_EDITED_NOMS[ex]=patch;else RUNTIME_EDITED_NOMS.push(patch);}forceRender(x=>x+1);}}
+                      style={{background:'rgba(255,59,48,0.1)',border:'none',borderRadius:6,padding:'4px 8px',color:T.red,fontSize:11,cursor:'pointer',fontFamily:'inherit'}}>Удалить фото</button>
+                  </div>
+                ):(
+                  <button onClick={()=>{photoTargetRef.current=n.id;photoInputRef.current?.click();}}
+                    style={{background:T.card2,border:'0.5px dashed '+T.border,borderRadius:8,padding:'8px 14px',color:T.sub,fontSize:11,cursor:'pointer',fontFamily:'inherit',width:'100%'}}>📷 Добавить фото</button>
+                )}
+              </div>
+            )}
+            <div style={{display:'flex',gap:8}}>
+              <button onClick={saveEdit} style={{flex:1,background:T.accent,border:'none',borderRadius:10,padding:'10px',color:'#fff',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>Сохранить</button>
+              <button onClick={()=>setEditId(null)} style={{background:T.card2,border:'none',borderRadius:10,padding:'10px 14px',color:T.sub,fontSize:13,cursor:'pointer',fontFamily:'inherit'}}>Отмена</button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  /* ── Секция бренда (аккордеон) ── */
+  const BrandSection=({b})=>{
+    const isOpen=openBrand===b.id;
+    const matItems=ALL_NOM.filter(n=>n.brand===b.id&&n.type!=='work');
+    const workItems=ALL_NOM.filter(n=>n.brand===b.id&&n.type==='work');
+    const total=matItems.length+workItems.length;
+    return(
+      <div style={{borderBottom:'0.5px solid '+T.border}}>
+        <div onClick={()=>setOpenBrand(isOpen?null:b.id)}
+          style={{display:'flex',alignItems:'center',gap:10,padding:'13px 16px',cursor:'pointer',background:isOpen?T.faint:T.card}}>
+          <div style={{width:12,height:12,borderRadius:3,background:b.color||T.accent,flexShrink:0}}/>
+          <div style={{flex:1,fontSize:14,fontWeight:700,color:T.text}}>{b.name}</div>
+          <span style={{fontSize:11,color:T.dim}}>{total} поз.</span>
+          <span style={{fontSize:12,color:T.dim,marginLeft:4}}>{isOpen?'▲':'▼'}</span>
+        </div>
+        {isOpen&&(
+          <div>
+            {/* Материалы */}
+            {matItems.length>0&&(
+              <div>
+                <div onClick={()=>setOpenSub(openSub===b.id+'_mat'?null:b.id+'_mat')}
+                  style={{display:'flex',alignItems:'center',gap:8,padding:'9px 16px 9px 32px',background:T.faint,borderTop:'0.5px solid '+T.border,cursor:'pointer'}}>
+                  <span style={{fontSize:12,fontWeight:700,color:T.accent}}>📦 Материалы</span>
+                  <span style={{fontSize:11,color:T.dim,marginLeft:'auto'}}>{matItems.length}</span>
+                  <span style={{fontSize:10,color:T.dim,marginLeft:6}}>{openSub===b.id+'_mat'?'▲':'▼'}</span>
+                </div>
+                {openSub===b.id+'_mat'&&matItems.map(n=><NomRowMobile key={n.id} n={n}/>)}
+              </div>
+            )}
+            {/* Работы */}
+            {workItems.length>0&&(
+              <div>
+                <div onClick={()=>setOpenSub(openSub===b.id+'_work'?null:b.id+'_work')}
+                  style={{display:'flex',alignItems:'center',gap:8,padding:'9px 16px 9px 32px',background:T.faint,borderTop:'0.5px solid '+T.border,cursor:'pointer'}}>
+                  <span style={{fontSize:12,fontWeight:700,color:T.green}}>🔧 Работы</span>
+                  <span style={{fontSize:11,color:T.dim,marginLeft:'auto'}}>{workItems.length}</span>
+                  <span style={{fontSize:10,color:T.dim,marginLeft:6}}>{openSub===b.id+'_work'?'▲':'▼'}</span>
+                </div>
+                {openSub===b.id+'_work'&&workItems.map(n=><NomRowMobile key={n.id} n={n}/>)}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return(<div style={{position:'fixed',inset:0,zIndex:50,background:T.overlay,display:'flex',flexDirection:'column',justifyContent:'flex-end'}}>
+    <div style={{background:T.card,borderRadius:'20px 20px 0 0',maxHeight:'94vh',display:'flex',flexDirection:'column',overflow:'hidden'}}>
+      <input ref={photoInputRef} type="file" accept="image/*" style={{position:'absolute',left:-99999,top:0,width:1,height:1,opacity:0}}
+        onChange={e=>{const f=e.target.files?.[0]||null;const targetId=photoTargetRef.current;if(!f){setEditPhotoFileName('не удалось');return;}onPhotoChosenForEdit(f,targetId);try{e.target.value='';}catch(err){}}}/>
+
+      {/* ── Шапка ── */}
+      <div style={{padding:'12px 16px 10px',flexShrink:0}}>
+        <div style={{width:36,height:4,background:T.border,borderRadius:2,margin:'0 auto 12px'}}/>
+        {/* Строка 1: заголовок + закрыть */}
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+          <div style={{display:'flex',alignItems:'center',gap:8}}>
+            <span style={{fontSize:17,fontWeight:700,color:T.text}}>Номенклатуры</span>
+            <span style={{fontSize:10,color:'#16a34a',fontWeight:700,background:'rgba(22,163,74,0.1)',border:'1px solid rgba(22,163,74,0.3)',padding:'2px 6px',borderRadius:10}}>SMART</span>
+          </div>
+          <button onClick={onClose} style={{background:T.card2,border:'none',borderRadius:10,padding:'7px 14px',color:T.sub,fontSize:13,cursor:'pointer',fontFamily:'inherit',fontWeight:600}}>Закрыть</button>
+        </div>
+        {/* Строка 2: поиск */}
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Поиск по всей базе..."
+          style={{...IS,width:'100%',marginBottom:8,fontSize:14,padding:'10px 12px'}}/>
+        {/* Строка 3: кнопки действий */}
+        <div style={{display:'flex',gap:8}}>
+          <button onClick={()=>setShowAdd(!showAdd)}
+            style={{flex:1,background:showAdd?T.actBg:T.faint,border:'0.5px solid '+T.border,borderRadius:10,padding:'9px',color:showAdd?T.accent:T.text,fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
+            {showAdd?'✕ Отмена':'+ Добавить'}
+          </button>
+          <button onClick={()=>importXlsxRef.current?.click()} disabled={nomImportBusy}
+            style={{flex:1,background:T.faint,border:'0.5px solid '+T.border,borderRadius:10,padding:'9px',color:T.sub,fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>
+            {nomImportBusy?'Импорт...':'↑ Excel'}
+          </button>
+        </div>
+        <input ref={importXlsxRef} type="file" accept=".xlsx,.xls" style={{display:'none'}}
+          onChange={e=>{const f=e.target.files?.[0]||null;try{e.target.value='';}catch(err){}if(f)importFromXlsx(f);}}/>
+        {nomImportInfo&&<div style={{marginTop:8,background:T.faint,border:'0.5px solid '+T.border,borderRadius:10,padding:'8px 12px',fontSize:11,color:T.dim}}>{nomImportInfo}</div>}
+      </div>
+
+      {/* ── Добавить форма ── */}
+      {showAdd&&(()=>{
+        const fixedType=openBrand&&openBrand!==MINE_ID&&openSub===openBrand+'_work'?'work':
+          openBrand&&openBrand!==MINE_ID&&openSub===openBrand+'_mat'?'profile':null;
+        return(
+          <div style={{padding:'0 16px 12px',flexShrink:0,borderBottom:'0.5px solid '+T.border}}>
+            <input style={{...IS,marginBottom:8}} value={newName} onChange={e=>setNewName(e.target.value)} placeholder="Название позиции"/>
+            <div style={{display:'flex',gap:8,marginBottom:8}}>
+              <input style={{...IS,flex:1}} type="number" value={newPrice} onChange={e=>setNewPrice(e.target.value)} placeholder="Цена"/>
+              <input style={{...IS,width:70}} value={newUnit} onChange={e=>setNewUnit(e.target.value)} placeholder="ед."/>
+            </div>
+            <select style={{...IS,marginBottom:8}} disabled={!!fixedType} value={fixedType||newType} onChange={e=>setNewType(e.target.value)}>
+              <option value="profile">Материал</option>
+              <option value="work">Работа</option>
+            </select>
+            {!fixedType&&(
+              <>
+                <select style={{...IS,marginBottom:8}} value={addBrandChoice} onChange={e=>setAddBrandChoice(e.target.value)}>
+                  <option value="__none__">Без профиля</option>
+                  {brandList.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}
+                  <option value="__new__">+ Новый профиль</option>
+                </select>
+                {addBrandChoice==='__new__'&&(
+                  <div style={{display:'flex',gap:8,marginBottom:8}}>
+                    <input style={{...IS,flex:1}} value={addBrandNewName} onChange={e=>setAddBrandNewName(e.target.value)} placeholder="Название профиля"/>
+                    <input type="color" value={addBrandNewColor||T.accent} onChange={e=>setAddBrandNewColor(e.target.value)} style={{width:44,height:40,border:'none',background:'transparent',cursor:'pointer'}}/>
+                  </div>
+                )}
+              </>
+            )}
+            <button onClick={doAdd} style={{width:'100%',background:T.accent,border:'none',borderRadius:10,padding:'11px',color:'#fff',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>Добавить</button>
+          </div>
+        );
+      })()}
+
+      {/* ── Основной контент ── */}
+      <div style={{flex:1,overflowY:'auto'}}>
+        {/* Поиск */}
+        {search.length>1?(
+          <div>
+            <div style={{padding:'8px 16px',fontSize:11,fontWeight:700,color:T.sub,background:T.faint,borderBottom:'0.5px solid '+T.border}}>
+              {searchResults.length} результатов
+            </div>
+            {searchResults.length?searchResults.map(n=><NomRowMobile key={n.id} n={n}/>):(
+              <div style={{padding:32,textAlign:'center',color:T.dim,fontSize:13}}>Ничего не найдено</div>
+            )}
+          </div>
+        ):(
+          <div>
+            {/* Другое (без бренда) */}
+            <div style={{borderBottom:'0.5px solid '+T.border}}>
+              <div onClick={()=>setOpenBrand(openBrand===MINE_ID?null:MINE_ID)}
+                style={{display:'flex',alignItems:'center',gap:10,padding:'13px 16px',cursor:'pointer',background:openBrand===MINE_ID?T.faint:T.card}}>
+                <div style={{width:12,height:12,borderRadius:3,background:T.dim,flexShrink:0}}/>
+                <span style={{flex:1,fontSize:14,fontWeight:700,color:T.text}}>Другое</span>
+                <span style={{fontSize:11,color:T.dim}}>{myNomsNoBrand.length} поз.</span>
+                <span style={{fontSize:12,color:T.dim,marginLeft:4}}>{openBrand===MINE_ID?'▲':'▼'}</span>
+              </div>
+              {openBrand===MINE_ID&&(
+                <div>
+                  {myNomsNoBrand.length?myNomsNoBrand.map(n=><NomRowMobile key={n.id} n={n}/>):(
+                    <div style={{padding:20,textAlign:'center',color:T.dim,fontSize:12}}>Пока пусто</div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Бренды */}
+            {brandList.map(b=><BrandSection key={b.id} b={b}/>)}
+
+            {/* Итого */}
+            <div style={{padding:'12px 16px',textAlign:'center',color:T.dim,fontSize:12,borderTop:'0.5px solid '+T.border}}>
+              {ALL_NOM.length} позиций в базе
+            </div>
+          </div>
+        )}
       </div>
     </div>
   </div>);
