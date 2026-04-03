@@ -280,3 +280,11 @@ export function buildEst(rooms,allPresets,gOpts){
 
 /* ═══ UI COMPONENTS ═══ */
 
+
+export const STATUSES=[
+  {id:"order",    label:"Заявка",           color:"#8e8e93"},
+  {id:"estimate", label:"Расчёт готов",     color:"#4F46E5"},
+  {id:"discuss",  label:"На согласовании",  color:"#ff9f0a"},
+  {id:"contract", label:"Договор подписан", color:"#0a84ff"},
+  {id:"done",     label:"Выполнен",         color:"#16a34a"},
+];

@@ -6,7 +6,7 @@ import { compressImg, profSvgHtml } from "../../utils/imageUtils.js";
 import { AUTO_SAVE_KEY, AUTO_SAVE_META_KEY, idbPut, idbGet, idbDel, blobToObjectUrl, blobToDataUrl, revokeObjectUrl, persistNomPhotoToIdb, loadNomPhotoFromIdb } from "../../utils/storage.js";
 import { P, PF, Pmp, Pap, Pcu, Ptr, DEFAULT_MAT, KK, LIGHT, OPT, PIMG, DEFAULT_FAV } from "../../data/profiles.js";
 import { ALL_NOM, NB, addNewNom, deleteNom, DELETED_NOM_IDS, RUNTIME_EDITED_NOMS, NOM_BRAND_GROUPS } from "../../data/nomenclature.jsx";
-import { PRESETS_GEN, PRbyId, USER_PRESETS_OVERRIDE, USER_FAVS_OVERRIDE, BLOCK_CFG, CALC_STATE_REF, newRoom, newR, gA, gP, buildEst, sanitizeOrdersForStorage, applyNomsSnapshot, resolveNomByEstimateLine} from "../../data/presets.js";
+import { PRESETS_GEN, PRbyId, USER_PRESETS_OVERRIDE, USER_FAVS_OVERRIDE, BLOCK_CFG, CALC_STATE_REF, newRoom, newR, gA, gP, buildEst, sanitizeOrdersForStorage, applyNomsSnapshot, resolveNomByEstimateLine, STATUSES} from "../../data/presets.js";
 import { btnS, N, SecH, Sel, ProfSel, ProfDD, OptsInline, ProfLine, NI, ProGate } from "../ui.jsx";
 import PolyMini from "../canvas/PolyMini.jsx";
 import PolyEditorFull from "../canvas/PolyEditorFull.jsx";
@@ -638,13 +638,6 @@ td.total-val{font-weight:700;color:#1e2530}
 }
 
 
-const STATUSES=[
-  {id:"order",    label:"Заявка",           color:"#8e8e93"},
-  {id:"estimate", label:"Расчёт готов",     color:"#4F46E5"},
-  {id:"discuss",  label:"На согласовании",  color:"#ff9f0a"},
-  {id:"contract", label:"Договор подписан", color:"#0a84ff"},
-  {id:"done",     label:"Выполнен",         color:"#16a34a"},
-];
 
 
 /* ═══ Nomenclature Editor ═══ */
