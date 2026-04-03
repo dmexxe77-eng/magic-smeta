@@ -89,11 +89,11 @@ export async function loadNomPhotoDataUrlFromIdb(nomId){
     return await blobToDataUrl(blob);
   }catch(e){return null;}
 }
-async function deleteNomPhotoFromIdb(nomId){
+export async function deleteNomPhotoFromIdb(nomId){
   try{await idbDel(IDB_STORE_NOM_PHOTOS, nomId);}catch{}
 }
 
-async function getNomPhotoDataUrl(nomId){
+export async function getNomPhotoDataUrl(nomId){
   const nom=ALL_NOM.find(n=>n.id===nomId);
   const p=nom?.photo;
   if(typeof p==="string"&&p.startsWith("data:"))return p;

@@ -64,7 +64,7 @@ export const ALL_NOM=(()=>{
   return filtered;
 })();
 
-function ensureOptionPairsForNom(opt){
+export function ensureOptionPairsForNom(opt){
   // Ensure every `option` nomenclature also has two counterparts:
   // - `profile` for "Материал"
   // - `work` for "Работа"

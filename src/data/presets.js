@@ -36,13 +36,13 @@ export function resolveNomByEstimateLine(line){
   return null;
 }
 
-async function saveAppStateToIdb(state){
+export async function saveAppStateToIdb(state){
   try{
     await idbPut(IDB_STORE_APP_STATE,"state",state);
     return true;
   }catch(e){return false;}
 }
-async function loadAppStateFromIdb(){
+export async function loadAppStateFromIdb(){
   try{
     return await idbGet(IDB_STORE_APP_STATE,"state");
   }catch(e){return null;}
@@ -97,7 +97,7 @@ export function applyNomsSnapshot(snap){
   RUNTIME_EDITED_NOMS.push(...editedNoms);
 }
 
-async function hydrateNomsPhotosFromIdb(){
+export async function hydrateNomsPhotosFromIdb(){
   // Attach blob URLs for any nom that has a photo stored in IndexedDB
   const ids=(ALL_NOM||[]).map(n=>n?.id).filter(Boolean);
   for(const id of ids){

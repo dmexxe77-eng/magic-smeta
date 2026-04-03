@@ -3,7 +3,7 @@ import { T, setT, THEMES, IS_PRO_OVERRIDE, setIsProOverride} from "./theme.js";
 import { uid, safeJsonParse } from "./utils/helpers.js";
 import { AUTO_SAVE_KEY, AUTO_SAVE_META_KEY, idbPut, idbGet } from "./utils/storage.js";
 import { RUNTIME_EDITED_NOMS, DELETED_NOM_IDS, USER_NOMS_CUSTOM, USER_NOMS_EDITED, ALL_NOM} from "./data/nomenclature.jsx";
-import { USER_PRESETS_OVERRIDE, USER_FAVS_OVERRIDE, CALC_STATE_REF, newRoom, newR, applyNomsSnapshot, sanitizeCustomNoms, sanitizeEditedNoms, sanitizeOrdersForStorage} from "./data/presets.js";
+import { USER_PRESETS_OVERRIDE, USER_FAVS_OVERRIDE, CALC_STATE_REF, newRoom, newR, applyNomsSnapshot, sanitizeCustomNoms, sanitizeEditedNoms, sanitizeOrdersForStorage, hydrateNomsPhotosFromIdb, loadAppStateFromIdb, saveAppStateToIdb} from "./data/presets.js";
 import HomeScreen from "./components/screens/HomeScreen.jsx";
 import CalcScreen from "./components/screens/CalcScreen.jsx";
 import NewOrderFlow from "./components/screens/NewOrderFlow.jsx";
