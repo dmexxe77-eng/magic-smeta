@@ -597,10 +597,16 @@ function NomEditor({onClose, initialEditId}){
                       <span style={{fontSize:12,color:T.text}}>{n.unit}</span>
                     </div>
                   </div>
+                  <div style={{display:"flex",gap:8}}>
+                  <button onClick={()=>startEdit(n)}
+                    style={{flex:1,background:T.accent,border:"none",borderRadius:12,padding:"12px",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                    ✎ Редактировать
+                  </button>
                   <button onClick={closeEdit}
-                    style={{width:"100%",background:T.faint,border:"none",borderRadius:12,padding:"12px",color:T.sub,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
+                    style={{flex:1,background:T.faint,border:"none",borderRadius:12,padding:"12px",color:T.sub,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
                     Закрыть
                   </button>
+                  </div>
                 </>
               )}
             </div>
