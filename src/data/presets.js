@@ -154,7 +154,8 @@ export const BLOCK_CFG=[
 
 /* ═══ Новая структура комнаты ═══ */
 
-export { newRoom, newR, gA, gP } from '../utils/roomUtils.js';
+import { newRoom, newR, gA, gP } from '../utils/roomUtils.js';
+export { newRoom, newR, gA, gP };
 
 export function buildEst(rooms,allPresets,gOpts){
   const _pr=allPresets||PRESETS_GEN;
