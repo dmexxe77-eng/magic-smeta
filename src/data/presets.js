@@ -156,10 +156,12 @@ export const BLOCK_CFG=[
 
 /* ═══ Новая структура комнаты ═══ */
 
-export function buildEst(rooms,allPresets,gOpts){
+export function buildEst(rooms,allPresets,gOpts,priceSnap){
   const _pr=allPresets||PRESETS_GEN;
   const _find=id=>_pr.find(x=>x.id===id);
   const mm={},ww={};
+  /* priceSnap: {nomId: frozenPrice} — если передан, цены из него, иначе живые */
+  const gPrice=(nomId,livePrice)=>priceSnap?.[nomId]??livePrice;
   const addM=(k,n,q,u,p)=>{if(q<=0)return;if(!mm[k])mm[k]={n,q:0,u,p};mm[k].q=Math.round((mm[k].q+q)*100)/100;};
   const addW=(k,n,q,u,p)=>{if(q<=0)return;if(!ww[k])ww[k]={n,q:0,u,p};ww[k].q=Math.round((ww[k].q+q)*100)/100;};
 
@@ -181,8 +183,8 @@ export function buildEst(rooms,allPresets,gOpts){
         const iq=inst.iq?.[nomId];
         const qUse=(iq!=null?iq:qBase);
         if(qUse<=0)return;
-        if(nom.type==="profile"||nom.type==="canvas"||nom.type==="option")addM(nomId,nom.name+(nom.type==="canvas"?" ("+r.name+")":""),qUse,nom.unit,nom.price);
-        else addW(nomId,nom.name,qUse,nom.unit,nom.price);
+        if(nom.type==="profile"||nom.type==="canvas"||nom.type==="option")addM(nomId,nom.name+(nom.type==="canvas"?" ("+r.name+")":""),qUse,nom.unit,gPrice(nomId,nom.price));
+        else addW(nomId,nom.name,qUse,nom.unit,gPrice(nomId,nom.price));
       });
       (preset.options||[]).forEach(nomId=>{
         const nom=NB(nomId);if(!nom)return;
@@ -191,8 +193,8 @@ export function buildEst(rooms,allPresets,gOpts){
         if(oq>0){
           // Options теперь тоже учитывают тип позиции:
           // `profile/canvas` -> Материалы, иначе -> Работы.
-          if(nom.type==="profile"||nom.type==="canvas"||nom.type==="option")addM(nomId,nom.name,oq,nom.unit,nom.price);
-          else addW(nomId,nom.name,oq,nom.unit,nom.price);
+          if(nom.type==="profile"||nom.type==="canvas"||nom.type==="option")addM(nomId,nom.name,oq,nom.unit,gPrice(nomId,nom.price));
+          else addW(nomId,nom.name,oq,nom.unit,gPrice(nomId,nom.price));
         }
       });
     };
@@ -217,16 +219,16 @@ export function buildEst(rooms,allPresets,gOpts){
         if(nom.type==="profile"||nom.type==="canvas"||nom.type==="option"){
           const key=useCanvasArea?nomId+"_"+r.id:nomId;
           const nm=nom.name+(useCanvasArea?" ("+r.name+")":"");
-          addM(key,nm,qUse,nom.unit,nom.price);
-        }else addW(nomId,nom.name,qUse,nom.unit,nom.price);
+          addM(key,nm,qUse,nom.unit,gPrice(nomId,nom.price));
+        }else addW(nomId,nom.name,qUse,nom.unit,gPrice(nomId,nom.price));
       });
       /* Опции полотна */
       (cPreset?.options||[]).forEach(nomId=>{
         const nom=NB(nomId);if(!nom||r.canvas.off?.[nomId]===true)return;
         const oq=r.canvas.oq?.[nomId]||0;
         if(oq>0){
-          if(nom.type==="profile"||nom.type==="canvas"||nom.type==="option")addM(nomId,nom.name,oq,nom.unit,nom.price);
-          else addW(nomId,nom.name,oq,nom.unit,nom.price);
+          if(nom.type==="profile"||nom.type==="canvas"||nom.type==="option")addM(nomId,nom.name,oq,nom.unit,gPrice(nomId,nom.price));
+          else addW(nomId,nom.name,oq,nom.unit,gPrice(nomId,nom.price));
         }
       });
     }
@@ -239,8 +241,8 @@ export function buildEst(rooms,allPresets,gOpts){
         const q2=ec.qty||0;if(q2<=0)return;
         const iq=ec.iq?.[nomId];
         const qUse=(iq!=null?iq:q2);
-        if(nom.type==="profile"||nom.type==="canvas"||nom.type==="option")addM(nom.type==="canvas"?nomId+"_"+r.id:nomId,nom.name+(nom.type==="canvas"?" ("+r.name+")":""),qUse,nom.unit,nom.price);
-        else addW(nomId,nom.name,qUse,nom.unit,nom.price);
+        if(nom.type==="profile"||nom.type==="canvas"||nom.type==="option")addM(nom.type==="canvas"?nomId+"_"+r.id:nomId,nom.name+(nom.type==="canvas"?" ("+r.name+")":""),qUse,nom.unit,gPrice(nomId,nom.price));
+        else addW(nomId,nom.name,qUse,nom.unit,gPrice(nomId,nom.price));
       });
     });
     /* Основной профиль (с peEff) */
@@ -250,8 +252,8 @@ export function buildEst(rooms,allPresets,gOpts){
       if(!go.on||!go.nomId)return;
       const nom=NB(go.nomId);if(!nom)return;
       const qty=go.param==="area"?a:pe;
-      if(nom.type==="profile"||nom.type==="canvas"||nom.type==="option")addM(go.nomId,nom.name,qty,nom.unit,nom.price);
-      else addW(go.nomId,nom.name,qty,nom.unit,nom.price);
+      if(nom.type==="profile"||nom.type==="canvas"||nom.type==="option")addM(go.nomId,nom.name,qty,nom.unit,gPrice(nomId,nom.price));
+      else addW(go.nomId,nom.name,qty,nom.unit,gPrice(nomId,nom.price));
     });
     /* Доп. профили */
     (r.extras||[]).forEach(inst=>processBlock(inst));
@@ -264,8 +266,8 @@ export function buildEst(rooms,allPresets,gOpts){
     /* Доп. работы/материалы */
     (r.extraItems||[]).forEach(item=>{
       const nom=NB(item.nomId);if(!nom||!(item.qty>0))return;
-      if(nom.type==="profile"||nom.type==="canvas"||nom.type==="option")addM(nom.type==="canvas"?item.nomId+"_"+r.id:item.nomId,nom.name+(nom.type==="canvas"?" ("+r.name+")":""),item.qty,nom.unit,nom.price);
-      else addW(item.nomId,nom.name,item.qty,nom.unit,nom.price);
+      if(nom.type==="profile"||nom.type==="canvas"||nom.type==="option")addM(nom.type==="canvas"?item.nomId+"_"+r.id:item.nomId,nom.name+(nom.type==="canvas"?" ("+r.name+")":""),item.qty,nom.unit,gPrice(nomId,nom.price));
+      else addW(item.nomId,nom.name,item.qty,nom.unit,gPrice(nomId,nom.price));
     });
     /* Обрезь убрана */
   });
@@ -287,3 +289,35 @@ export const STATUSES=[
   {id:"contract", label:"Договор подписан", color:"#0a84ff"},
   {id:"done",     label:"Выполнен",         color:"#16a34a"},
 ];
+
+/* ─────────────────────────────────────────────
+   snapNomPrices — снапшот цен используемых в смете номенклатур
+   Вызывается при выходе из калькулятора
+───────────────────────────────────────────── */
+export function snapNomPrices(rooms, allPresets, gOpts) {
+  const usedIds = new Set();
+  const _pr = allPresets || PRESETS_GEN;
+
+  (rooms || []).filter(r => r?.on).forEach(r => {
+    const fromInst = inst => {
+      if (!inst?.btnId) return;
+      const pr = _pr.find(p => p.id === inst.btnId);
+      if (!pr) return;
+      (pr.items  || []).forEach(id => usedIds.add(id));
+      (pr.options|| []).forEach(id => usedIds.add(id));
+    };
+    fromInst(r.canvas);
+    fromInst(r.mainProf);
+    (r.extras       || []).forEach(fromInst);
+    (r.lights       || []).forEach(fromInst);
+    (r.tracks       || []).forEach(fromInst);
+    (r.curtains     || []).forEach(fromInst);
+    (r.extraCanvas  || []).forEach(fromInst);
+    (r.extraItems   || []).forEach(item => { if (item?.nomId) usedIds.add(item.nomId); });
+  });
+  (gOpts || []).forEach(go => { if (go?.nomId) usedIds.add(go.nomId); });
+
+  const snap = {};
+  usedIds.forEach(id => { const n = NB(id); if (n) snap[id] = n.price; });
+  return snap;
+}

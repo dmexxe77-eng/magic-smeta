@@ -88,7 +88,7 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
     salary:"ЗП",tools:"Инструменты",designer_bonus:"Бонус дизайнеру"};
   const EXP_CATS=["materials","transport","consumable","tools","salary","designer_bonus","other"];
   const calcFin=ord=>{
-    const est=(ord.rooms||[]).length>0?buildEst(ord.rooms,CALC_STATE_REF.presets,CALC_STATE_REF.globalOpts||[]):{mats:[],works:[]};
+    const est=(ord.rooms||[]).length>0?buildEst(ord.rooms,CALC_STATE_REF.presets,CALC_STATE_REF.globalOpts||[],ord.nomSnapshot||null):{mats:[],works:[]};
     const total=est.mats.reduce((s,l)=>s+l.q*l.p,0)+est.works.reduce((s,l)=>s+l.q*l.p,0);
     const inc=(ord.payments||[]).filter(x=>x.type==="income").reduce((s,x)=>s+x.amount,0);
     const exp=(ord.expenses||[]).reduce((s,x)=>s+x.amount,0);

@@ -182,10 +182,19 @@ export default function App(){
   else if(screen==="calc"&&curOrder)content=(<CalcScreen
     initRooms={curOrder.rooms}
     orderName={curOrder.name}
-    onBack={()=>{setScreen("home");setPlanImg(null);}}
+    onBack={()=>{
+      // Freeze nom prices into order before leaving calculator
+      try{
+        const snap=snapNomPrices(curOrder.rooms||[],CALC_STATE_REF.presets,CALC_STATE_REF.globalOpts||[]);
+        if(Object.keys(snap).length>0)
+          setOrders(prev=>prev.map(o=>o.id===curId?{...o,nomSnapshot:snap}:o));
+      }catch(e){}
+      setScreen("home");setPlanImg(null);
+    }}
     onRoomsChange={updateOrderRooms}
     initPlanImage={planImg||curOrder.planImage}
     initMode={["recognize","compass","manual"].includes(curOrder.method)&&curOrder.rooms.length===0?curOrder.method:"main"}
+    onSnapshotUpdate={snap=>{if(curId)setOrders(prev=>prev.map(o=>o.id===curId?{...o,nomSnapshot:snap}:o));}}
     onPlanImageChange={img=>{setPlanImg(img);if(curId)setOrders(prev=>prev.map(o=>o.id===curId?{...o,planImage:img}:o));}}
   />);
   else content=(<HomeScreen orders={orders} setOrders={setOrders} onOpen={openOrder} onNew={()=>setScreen("new")} onStatusChange={changeStatus} theme={theme} setTheme={setTheme} onFullExport={buildFullExport} onSaveNow={manualSave} saveStatus={saveStatus}/>);
