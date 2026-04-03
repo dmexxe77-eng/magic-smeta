@@ -10,6 +10,7 @@ import { calcPoly } from "../../utils/geometry.js";
 ───────────────────────────────────────────── */
 export default function RoomDrawer({ onDone, onCancel, initialVerts }) {
   const [step, setStep]       = useState("draw");
+  const [roomName, setRoomName] = useState("");
   const [rawPts, setRawPts]   = useState(() => {
     // Если есть initialVerts — переводим в canvas-нормализованные (0..1)
     if (initialVerts && initialVerts.length >= 3) {
@@ -482,9 +483,15 @@ export default function RoomDrawer({ onDone, onCancel, initialVerts }) {
         {/* ── Шаг 3: превью ── */}
         {step === "preview" && built && (
           <div style={{ padding: "8px 16px 24px", flexShrink: 0 }}>
+            {/* Имя помещения */}
+            <input value={roomName} onChange={e=>setRoomName(e.target.value)}
+              placeholder={"Помещение " + (rooms ? rooms.length + 1 : 1)}
+              style={{width:"100%",background:T.inputBg,border:"1px solid "+T.border,color:T.text,
+                borderRadius:10,padding:"10px 12px",fontSize:14,fontFamily:"inherit",
+                boxSizing:"border-box",outline:"none",marginBottom:10}}/>
             <div style={{ display: "flex", gap: 10 }}>
               {BTN(T.faint, T.sub, () => setStep("measure"), "← Изменить")}
-              {BTN(T.green, "#fff", () => onDone(built), "✓ Принять")}
+              {BTN(T.green, "#fff", () => onDone(built, roomName||("Помещение "+(Math.random()*99|0+1))), "✓ Принять")}
             </div>
           </div>
         )}

@@ -19,11 +19,56 @@ import ManualBuilder from "../builders/ManualBuilder.jsx";
 import PdfPagePicker from "../builders/PdfPagePicker.jsx";
 
 import { PresetEditor, FavEditor2, CalcBlock, MultiBlock, ExtraBlock } from "../calc/CalcBlock.jsx";
+/* ── Выбор способа построения ── */
+function BuilderSelect({ onSelect, onBack, rooms }) {
+  const options = [
+    { id:"trace",   icon:"🗺️", label:"Обводка чертежа",     sub:"Обведите PDF/фото планировки",    color:"#4F46E5" },
+    { id:"recognize",icon:"🤖",label:"АИ распознавание",     sub:"Сфотографируйте эскиз комнаты",   color:"#0ea5e9" },
+    { id:"compass", icon:"🧭", label:"Компас",               sub:"Постройте по направлениям",       color:"#10b981" },
+    { id:"draw",    icon:"✏️", label:"Ручное построение",    sub:"Нарисуйте форму по точкам",       color:"#f59e0b" },
+  ];
+  return (
+    <div style={{minHeight:"100vh",background:T.bg,display:"flex",flexDirection:"column"}}>
+      {/* Header */}
+      <div style={{background:T.card,padding:"14px 16px",display:"flex",alignItems:"center",gap:12,borderBottom:"0.5px solid "+T.border,flexShrink:0}}>
+        {onBack&&<button onClick={onBack} style={{background:T.faint,border:"none",borderRadius:10,width:36,height:36,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0}}>
+          <svg width="16" height="16" fill="none" stroke={T.text} strokeWidth="2" strokeLinecap="round"><path d="M10 4L6 8l4 4"/></svg>
+        </button>}
+        <div>
+          <div style={{fontSize:17,fontWeight:700,color:T.text}}>Добавить помещение</div>
+          <div style={{fontSize:12,color:T.sub,marginTop:1}}>
+            {rooms&&rooms.length>0?`Уже добавлено: ${rooms.length}`:"Выберите способ построения потолка"}
+          </div>
+        </div>
+      </div>
+      {/* Options */}
+      <div style={{flex:1,padding:"20px 16px",display:"flex",flexDirection:"column",gap:12}}>
+        {options.map(o=>(
+          <button key={o.id} onClick={()=>onSelect(o.id)}
+            style={{background:T.card,border:"1px solid "+T.border,borderRadius:16,padding:"18px 16px",
+              display:"flex",alignItems:"center",gap:16,cursor:"pointer",fontFamily:"inherit",
+              textAlign:"left",transition:"transform 0.1s"}}>
+            <div style={{width:52,height:52,borderRadius:14,background:o.color+"18",
+              display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,flexShrink:0}}>
+              {o.icon}
+            </div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:16,fontWeight:700,color:T.text,marginBottom:2}}>{o.label}</div>
+              <div style={{fontSize:12,color:T.sub}}>{o.sub}</div>
+            </div>
+            <span style={{color:T.dim,fontSize:18,flexShrink:0}}>›</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,initMode}){
   const[mode,setMode]=useState(initMode||"main");
   const[planImage,setPlanImage]=useState(initPlanImage||null);
-  const[rooms,setRooms]=useState(initRooms||[newR("Помещение 1")]);
-  const[tab,setTab]=useState(initRooms?.[0]?.id||rooms[0]?.id);
+  const[rooms,setRooms]=useState(initRooms||[]);
+  const[tab,setTab]=useState(initRooms?.[0]?.id||null);
   const[showEst,setShowEst]=useState(false);
   const[showExport,setShowExport]=useState(false);
   const[showConfigExport,setShowConfigExport]=useState(false);
@@ -159,14 +204,16 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
   /* File input always rendered */
   const fileInput=(<input ref={fRef} type="file" accept="image/*,.pdf" onChange={handleFile} style={{display:"none"}}/>);
   /* Mode checks FIRST — before room access */
+  if(mode==="draw")return(<RoomDrawer onDone={(poly,name)=>{const nm=name||("Помещение "+(rooms.length+1));const rm=newR(nm);rm.v=poly;rm.aO=null;rm.pO=null;const p2=calcPoly(poly);rm.canvas.qty=Math.round(p2.a*100)/100;rm.mainProf.qty=Math.round(p2.p*100)/100;setRooms(p=>[...p,rm]);setTab(rm.id);setMode("main");}} onCancel={()=>setMode(rooms.length?"main":"select")}/>);
+  if(mode==="select")return(<BuilderSelect rooms={rooms} onSelect={m=>{if(m==="trace"){fRef.current?.click();}else setMode(m);}} onBack={rooms.length>0?()=>setMode("main"):null}/>);
   if(mode==="recognize")return(<SketchRecognition onFinish={rm=>{setRooms(p=>[...p,rm]);setTab(rm.id);setMode("main");}} onBack={()=>setMode("main")} existingCount={rooms.length}/>);
-  if(mode==="manual")return(<ManualBuilder onFinish={rm=>{setRooms(p=>[...p,rm]);setTab(rm.id);setMode("main");}} onBack={()=>setMode("main")} existingCount={rooms.length}/>);
+  if(mode==="manual")return(<ManualBuilder onFinish={rm=>{setRooms(p=>[...p,rm]);setTab(rm.id);setMode("main");}} onBack={()=>setMode("select")} existingCount={rooms.length}/>);
   if(mode==="compass")return(<CompassBuilder onFinish={rm=>{setRooms(p=>[...p,rm]);setTab(rm.id);setMode("main");}} onBack={()=>setMode("main")} existingCount={rooms.length}/>);
   if(pdfData)return(<PdfPagePicker pdfData={pdfData} onSelect={img=>{setPdfData(null);setPlanImage(img);setMode("trace");}} onBack={()=>setPdfData(null)}/>);
   if(mode==="trace")return(<div style={{height:"100vh",display:"flex",flexDirection:"column"}}><TracingCanvas image={planImage} onFinish={rm=>{setRooms(p=>[...p,rm]);setTab(rm.id);}} completedRooms={rooms} initScale={traceScale} onScaleChange={s=>setTraceScale(s)}/><div style={{padding:"5px 10px",background:T.bg,display:"flex",justifyContent:"space-between",alignItems:"center",borderTop:"1px solid "+T.border,flexShrink:0}}><span style={{fontSize:10,color:T.sub}}>{"Обведено: "}<b style={{color:T.text}}>{rooms.length}</b></span><button onClick={()=>setMode("main")} style={{background:T.actBg,border:"1px solid "+T.actBd,borderRadius:10,padding:"5px 14px",color:T.accent,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{"Готово ("+rooms.length+")"}</button></div></div>);
 
   const r=rooms.find(x=>x.id===tab)||rooms[0];
-  if(!r){/* Пустой — создаём первую комнату */const nr=newR("Помещение 1");setRooms([nr]);setTab(nr.id);return null;}
+  if(!r){if(mode==="main"&&rooms.length===0){setTimeout(()=>setMode("select"),0);}return null;}
   const poly=calcPoly(r.v||[]);
   const angs=getAngles((r.v||[]).map(p=>[p[0]*1000,p[1]*1000]));
   const inn=angs.filter(d=>d===90).length,out=angs.filter(d=>d===270).length;
@@ -246,7 +293,7 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
             </div>}
           </div>
         </div>);})}
-        <div onClick={()=>{const curR=rooms.find(x=>x.id===tab);const tplC=curR?.canvas?.applyAll?curR.canvas:null;const tplM=curR?.mainProf?.applyAll?curR.mainProf:null;const nr=newR("Помещение "+(rooms.length+1),tplC,tplM);setRooms(p=>[...p,nr]);setTab(nr.id);}} style={{flex:"1 1 calc("+(100/perRow)+"% - 4px)",minWidth:0,border:"1px dashed "+T.border,borderRadius:10,padding:"5px 8px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:T.dim,fontSize:10}}>{"+"}</span></div>
+        <div onClick={()=>{const curR=rooms.find(x=>x.id===tab);const tplC=curR?.canvas?.applyAll?curR.canvas:null;const tplM=curR?.mainProf?.applyAll?curR.mainProf:null;setMode("select");}} style={{flex:"1 1 calc("+(100/perRow)+"% - 4px)",minWidth:0,border:"1px dashed "+T.border,borderRadius:10,padding:"5px 8px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:T.dim,fontSize:10}}>{"+"}</span></div>
       </div>);})()}
 
       {/* Totals */}
