@@ -1,3 +1,4 @@
+import { ALL_NOM } from "../data/nomenclature.jsx";
 export const AUTO_SAVE_KEY = "magicapp_v2_4_autosave_v1";
 export const AUTO_SAVE_META_KEY = "magicapp_v2_4_autosave_meta_v1";
 
