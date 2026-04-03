@@ -42,6 +42,9 @@ function NomEditor({onClose, initialEditId}){
   const[addBrandChoice,setAddBrandChoice]=useState("__none__"); // __none__ | __new__ | brandId
   const[addBrandNewName,setAddBrandNewName]=useState("");
   const[addBrandNewColor,setAddBrandNewColor]=useState(T.accent);
+  const[tab,setTab]=useState("all");
+  const[editOpen,setEditOpen]=useState(false);
+  const[addOpen,setAddOpen]=useState(false);
 
   const IS={width:"100%",background:T.inputBg,border:"0.5px solid "+T.border,color:T.text,borderRadius:8,padding:"8px 10px",fontSize:12,fontFamily:"inherit",boxSizing:"border-box",outline:"none"};
   const TYPE_LABELS={profile:"Материал",work:"Работа",option:"Опция",canvas:"Полотно"};
