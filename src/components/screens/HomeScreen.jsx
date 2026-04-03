@@ -263,31 +263,40 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
 
             <div style={{background:T.card,borderRadius:15,padding:"10px 12px",marginBottom:12}}>
               <div style={{fontSize:10,fontWeight:700,color:T.sub,marginBottom:8,letterSpacing:"0.5px",textTransform:"uppercase"}}>Действия</div>
-              <div style={{display:"flex",gap:8}}>
+              <div style={{display:"flex",gap:6}}>
+                {/* Калькулятор — основная, горизонтальная */}
                 <button onClick={()=>onOpen(ord.id)}
-                  style={{flex:2,display:"flex",alignItems:"center",gap:10,background:ACC,border:"none",
-                    borderRadius:12,padding:"10px 12px",cursor:"pointer",fontFamily:"inherit",minWidth:0}}>
-                  <span style={{fontSize:18,flexShrink:0}}>📐</span>
-                  <div style={{minWidth:0}}>
-                    <div style={{fontSize:12,fontWeight:700,color:"#fff",lineHeight:1.2}}>Калькулятор смет</div>
-                    <div style={{fontSize:10,color:"rgba(255,255,255,0.65)",marginTop:1}}>Помещения и расчёт</div>
+                  style={{flex:"0 0 auto",display:"flex",alignItems:"center",gap:7,background:ACC,border:"none",
+                    borderRadius:10,padding:"8px 10px",cursor:"pointer",fontFamily:"inherit"}}>
+                  <span style={{fontSize:16}}>📐</span>
+                  <div>
+                    <div style={{fontSize:11,fontWeight:700,color:"#fff",whiteSpace:"nowrap"}}>Калькулятор</div>
+                    <div style={{fontSize:9,color:"rgba(255,255,255,0.65)"}}>смет</div>
                   </div>
                 </button>
-                <button disabled
-                  style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:3,
-                    background:T.faint,border:"1px dashed "+T.border,borderRadius:12,padding:"10px 6px",
-                    cursor:"default",fontFamily:"inherit",minWidth:0,opacity:0.5}}>
-                  <span style={{fontSize:18}}>💡</span>
-                  <div style={{fontSize:10,color:T.sub,textAlign:"center",lineHeight:1.2}}>КП свет</div>
-                  <span style={{fontSize:8,color:T.dim,background:T.border,borderRadius:4,padding:"1px 4px"}}>Soon</span>
+                {/* КП Освещение */}
+                <button disabled style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",
+                  justifyContent:"center",gap:2,background:T.faint,border:"1px dashed "+T.border,
+                  borderRadius:10,padding:"7px 4px",cursor:"default",fontFamily:"inherit",opacity:0.5}}>
+                  <span style={{fontSize:15}}>💡</span>
+                  <div style={{fontSize:9,color:T.sub,textAlign:"center"}}>КП свет</div>
+                  <span style={{fontSize:7,color:T.dim,background:T.border,borderRadius:3,padding:"1px 3px"}}>Soon</span>
                 </button>
-                <button disabled
-                  style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:3,
-                    background:T.faint,border:"1px dashed "+T.border,borderRadius:12,padding:"10px 6px",
-                    cursor:"default",fontFamily:"inherit",minWidth:0,opacity:0.5}}>
-                  <span style={{fontSize:18}}>💬</span>
-                  <div style={{fontSize:10,color:T.sub,textAlign:"center",lineHeight:1.2}}>Чат</div>
-                  <span style={{fontSize:8,color:T.dim,background:T.border,borderRadius:4,padding:"1px 4px"}}>Soon</span>
+                {/* Договор */}
+                <button disabled style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",
+                  justifyContent:"center",gap:2,background:T.faint,border:"1px dashed "+T.border,
+                  borderRadius:10,padding:"7px 4px",cursor:"default",fontFamily:"inherit",opacity:0.5}}>
+                  <span style={{fontSize:15}}>📄</span>
+                  <div style={{fontSize:9,color:T.sub,textAlign:"center"}}>Договор</div>
+                  <span style={{fontSize:7,color:T.dim,background:T.border,borderRadius:3,padding:"1px 3px"}}>Soon</span>
+                </button>
+                {/* Чат */}
+                <button disabled style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",
+                  justifyContent:"center",gap:2,background:T.faint,border:"1px dashed "+T.border,
+                  borderRadius:10,padding:"7px 4px",cursor:"default",fontFamily:"inherit",opacity:0.5}}>
+                  <span style={{fontSize:15}}>💬</span>
+                  <div style={{fontSize:9,color:T.sub,textAlign:"center"}}>Чат</div>
+                  <span style={{fontSize:7,color:T.dim,background:T.border,borderRadius:3,padding:"1px 3px"}}>Soon</span>
                 </button>
               </div>
             </div>

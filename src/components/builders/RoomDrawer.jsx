@@ -428,7 +428,7 @@ export default function RoomDrawer({ onDone, onCancel, initialVerts, roomCount=0
                 fontSize: 12, color: T.sub }}>
                 Сторона {selSide + 1}
               </div>
-              <input ref={inputRef} type="number" inputMode="decimal" enterKeyHint="next"
+              <input ref={inputRef} type="text" inputMode="numeric" enterKeyHint="next" pattern="[0-9]*"
                 value={inputVal}
                 onChange={e => setInputVal(e.target.value)}
                 onBlur={() => {
