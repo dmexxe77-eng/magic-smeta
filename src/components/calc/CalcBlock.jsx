@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import NomEditor from "../screens/NomEditor.jsx";
 import { T, setT, THEMES } from "../../theme.js";
 import { fmt, uid, deep, safeStr } from "../../utils/helpers.js";
 import { calcPoly, getAngles, countAngles, effectiveOq, getAutoOq } from "../../utils/geometry.js";
