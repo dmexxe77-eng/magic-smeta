@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { T, setT, THEMES } from "../../theme.js";
+import { T, setT, THEMES, IS_PRO_OVERRIDE, setIsProOverride} from "../../theme.js";
 import { fmt, uid, deep, safeStr } from "../../utils/helpers.js";
 import { calcPoly, getAngles, countAngles, effectiveOq, getAutoOq } from "../../utils/geometry.js";
 import { compressImg, profSvgHtml } from "../../utils/imageUtils.js";
@@ -650,7 +650,6 @@ function NomEditor({onClose, initialEditId}){
   </div>);
 }
 
-let IS_PRO_OVERRIDE = false;
 
 
 export default NomEditor;

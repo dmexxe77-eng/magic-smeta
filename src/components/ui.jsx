@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { T } from "../theme.js";
+import { T, IS_PRO_OVERRIDE} from "../theme.js";
 import { fmt } from "../utils/helpers.js";
 import { OPT, PF } from "../data/profiles.js";
 import { effectiveOq } from "../utils/geometry.js";

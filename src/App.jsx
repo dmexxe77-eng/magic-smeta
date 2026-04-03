@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { T, setT, THEMES } from "./theme.js";
+import { T, setT, THEMES, IS_PRO_OVERRIDE, setIsProOverride} from "./theme.js";
 import { uid, safeJsonParse } from "./utils/helpers.js";
 import { AUTO_SAVE_KEY, AUTO_SAVE_META_KEY, idbPut, idbGet } from "./utils/storage.js";
 import { RUNTIME_EDITED_NOMS, DELETED_NOM_IDS, USER_NOMS_CUSTOM, USER_NOMS_EDITED, ALL_NOM} from "./data/nomenclature.jsx";
@@ -45,7 +45,7 @@ export default function App(){
         if(cancelled||!snap)return;
 
         if(typeof snap.isProOverride==="boolean"){
-          IS_PRO_OVERRIDE=snap.isProOverride;
+          setIsProOverride(snap.isProOverride);
           try{window.dispatchEvent(new CustomEvent("magicapp:proOverride",{detail:{value:IS_PRO_OVERRIDE}}));}catch(e){}
         }
         if(snap.theme)setTheme(snap.theme);

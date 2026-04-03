@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { T, setT, THEMES } from "../../theme.js";
+import { T, setT, THEMES, IS_PRO_OVERRIDE, setIsProOverride} from "../../theme.js";
 import { fmt, uid, deep, safeStr } from "../../utils/helpers.js";
 import { calcPoly, getAngles, countAngles, effectiveOq, getAutoOq } from "../../utils/geometry.js";
 import { compressImg, profSvgHtml } from "../../utils/imageUtils.js";
@@ -26,7 +26,7 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
   const[devUnlock,setDevUnlock] = useState(IS_PRO_OVERRIDE);
   const isPro = devUnlock;
   const toggleDev=()=>{
-    IS_PRO_OVERRIDE=!IS_PRO_OVERRIDE;
+    setIsProOverride(!IS_PRO_OVERRIDE);
     setDevUnlock(IS_PRO_OVERRIDE);
     try{window.dispatchEvent(new CustomEvent("magicapp:proOverride",{detail:{value:IS_PRO_OVERRIDE}}));}catch(e){}
   };
@@ -34,7 +34,7 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
   useEffect(()=>{
     const onPro=(e)=>{
       const v=!!(e?.detail?.value);
-      IS_PRO_OVERRIDE=v;
+      setIsProOverride(v);
       setDevUnlock(v);
     };
     try{window.addEventListener("magicapp:proOverride", onPro);}catch(e){}
