@@ -107,7 +107,7 @@ export default function RoomDrawer({ onDone, onCancel, initialVerts }) {
         return;
       }
       const pts = rawPts.map(([x, y]) => [x * cw, y * ch]);
-      drawPolygon(ctx, pts, rawPts.length >= 3);
+      drawPolygon(ctx, pts, false); // open while drawing
       return;
     }
 
@@ -215,15 +215,20 @@ export default function RoomDrawer({ onDone, onCancel, initialVerts }) {
       ctx.arc(x, y, r, 0, Math.PI * 2);
       ctx.fillStyle = i === 0 ? T.green : (opts.dimAll ? T.dim : T.accent);
       ctx.fill();
-      // Letter label
+      // Letter label with white halo for visibility
       const letter = LETTERS[i % 26];
       ctx.save();
-      ctx.fillStyle = i === 0 ? T.green : T.accent;
-      ctx.font = "bold 13px sans-serif";
+      ctx.font = "bold 14px sans-serif";
       ctx.textAlign = "center";
-      ctx.textBaseline = "bottom";
-      // Offset label away from polygon center (simple: nudge up-left)
-      ctx.fillText(letter, x, y - r - 3);
+      ctx.textBaseline = "middle";
+      const lx2 = x, ly2 = y - r - 10;
+      // White halo
+      ctx.strokeStyle = "rgba(255,255,255,0.95)";
+      ctx.lineWidth = 4;
+      ctx.strokeText(letter, lx2, ly2);
+      // Colored text
+      ctx.fillStyle = i === 0 ? "#16a34a" : T.accent;
+      ctx.fillText(letter, lx2, ly2);
       ctx.restore();
     });
   }
@@ -244,12 +249,13 @@ export default function RoomDrawer({ onDone, onCancel, initialVerts }) {
 
   /* ── Обработка тапа на canvas (шаг draw) ── */
   const handleCanvasTap = (e) => {
+    e.preventDefault(); // prevent synthetic click / scroll
     if (step !== "draw") {
       // На шаге measure — выбор стороны
       if (step === "measure") {
         const canvas = canvasRef.current;
         const rect = canvas.getBoundingClientRect();
-        const touch = e.touches ? e.touches[0] : e;
+        const touch = e.touches?.[0] || e;
         const cx = (touch.clientX - rect.left) * (canvas.width / rect.width);
         const cy = (touch.clientY - rect.top) * (canvas.height / rect.height);
         // Найти ближайшую сторону
@@ -269,7 +275,7 @@ export default function RoomDrawer({ onDone, onCancel, initialVerts }) {
 
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
-    const touch = e.touches ? e.touches[0] : e;
+    const touch = e.touches?.[0] || e;
     const x = (touch.clientX - rect.left) / rect.width;
     const y = (touch.clientY - rect.top) / rect.height;
 
@@ -384,9 +390,8 @@ export default function RoomDrawer({ onDone, onCancel, initialVerts }) {
             height={canvasH}
             style={{ width: "100%", height: canvasH, borderRadius: 12,
               background: T.faint, border: "1px solid " + T.border, display: "block",
-              touchAction: "none" }}
-            onClick={handleCanvasTap}
-            onTouchStart={handleCanvasTap}
+              touchAction: "none", WebkitUserSelect: "none", userSelect: "none" }}
+            onPointerDown={handleCanvasTap}
           />
           {/* Счётчик угловых точек */}
           {step === "draw" && rawPts.length > 0 && (
