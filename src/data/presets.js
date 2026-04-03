@@ -252,8 +252,8 @@ export function buildEst(rooms,allPresets,gOpts,priceSnap){
       if(!go.on||!go.nomId)return;
       const nom=NB(go.nomId);if(!nom)return;
       const qty=go.param==="area"?a:pe;
-      if(nom.type==="profile"||nom.type==="canvas"||nom.type==="option")addM(go.nomId,nom.name,qty,nom.unit,gPrice(nomId,nom.price));
-      else addW(go.nomId,nom.name,qty,nom.unit,gPrice(nomId,nom.price));
+      if(nom.type==="profile"||nom.type==="canvas"||nom.type==="option")addM(go.nomId,nom.name,qty,nom.unit,gPrice(go.nomId,nom.price));
+      else addW(go.nomId,nom.name,qty,nom.unit,gPrice(go.nomId,nom.price));
     });
     /* Доп. профили */
     (r.extras||[]).forEach(inst=>processBlock(inst));
@@ -266,8 +266,8 @@ export function buildEst(rooms,allPresets,gOpts,priceSnap){
     /* Доп. работы/материалы */
     (r.extraItems||[]).forEach(item=>{
       const nom=NB(item.nomId);if(!nom||!(item.qty>0))return;
-      if(nom.type==="profile"||nom.type==="canvas"||nom.type==="option")addM(nom.type==="canvas"?item.nomId+"_"+r.id:item.nomId,nom.name+(nom.type==="canvas"?" ("+r.name+")":""),item.qty,nom.unit,gPrice(nomId,nom.price));
-      else addW(item.nomId,nom.name,item.qty,nom.unit,gPrice(nomId,nom.price));
+      if(nom.type==="profile"||nom.type==="canvas"||nom.type==="option")addM(nom.type==="canvas"?item.nomId+"_"+r.id:item.nomId,nom.name+(nom.type==="canvas"?" ("+r.name+")":""),item.qty,nom.unit,gPrice(item.nomId,nom.price));
+      else addW(item.nomId,nom.name,item.qty,nom.unit,gPrice(item.nomId,nom.price));
     });
     /* Обрезь убрана */
   });
