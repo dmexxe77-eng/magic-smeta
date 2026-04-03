@@ -44,6 +44,7 @@ function NomEditor({onClose, initialEditId}){
   const[addBrandNewColor,setAddBrandNewColor]=useState(T.accent);
   const[tab,setTab]=useState("all");
   const[editOpen,setEditOpen]=useState(false);
+  const[forceEditMode,setForceEditMode]=useState(false);
   const[addOpen,setAddOpen]=useState(false);
 
   const IS={width:"100%",background:T.inputBg,border:"0.5px solid "+T.border,color:T.text,borderRadius:8,padding:"8px 10px",fontSize:12,fontFamily:"inherit",boxSizing:"border-box",outline:"none"};
@@ -167,7 +168,7 @@ function NomEditor({onClose, initialEditId}){
       const patch={id:editId,name:editName,price:n.price,type:editType,unit:editUnit};
       if(ex>=0)RUNTIME_EDITED_NOMS[ex]=patch;else RUNTIME_EDITED_NOMS.push(patch);
     }
-    setEditId(null);setEditPhotoPreview(null);setEditPhotoFileName("");forceRender(x=>x+1);
+    setEditId(null);setEditPhotoPreview(null);setEditPhotoFileName("");setForceEditMode(false);forceRender(x=>x+1);
   };
 
   const loadXlsxFromCdn=async()=>{
@@ -496,7 +497,7 @@ function NomEditor({onClose, initialEditId}){
             <div style={{padding:40,textAlign:"center",color:T.dim,fontSize:13}}>Ничего не найдено</div>
           )}
           {displayList.map(n=>{
-            const isUser=n.id.startsWith("u");
+            const isUser=n.id.startsWith("u")||forceEditMode;
             const tc=typeColor(n.type);
             return(
               <div key={n.id} onClick={()=>openEdit(n)}
@@ -533,7 +534,7 @@ function NomEditor({onClose, initialEditId}){
       {editOpen&&editId&&(()=>{
         const n=ALL_NOM.find(x=>x.id===editId);
         if(!n)return null;
-        const isUser=n.id.startsWith("u");
+        const isUser=n.id.startsWith("u")||forceEditMode;
         return(
           <div style={{position:"fixed",inset:0,zIndex:60,background:T.overlay,display:"flex",flexDirection:"column",justifyContent:"flex-end"}}
             onClick={e=>{if(e.target===e.currentTarget)closeEdit();}}>
@@ -541,7 +542,7 @@ function NomEditor({onClose, initialEditId}){
               <div style={{width:36,height:4,background:T.border,borderRadius:2,margin:"0 auto 14px"}}/>
               <div style={{fontSize:15,fontWeight:700,color:T.text,marginBottom:14,
                 overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                {isUser?"✎ Редактирование":n.name}
+                {isUser?"✎ "+n.name:n.name}
               </div>
               {isUser?(
                 <>
@@ -598,7 +599,7 @@ function NomEditor({onClose, initialEditId}){
                     </div>
                   </div>
                   <div style={{display:"flex",gap:8}}>
-                  <button onClick={()=>startEdit(n)}
+                  <button onClick={()=>{startEdit(n);setForceEditMode(true);}}
                     style={{flex:1,background:T.accent,border:"none",borderRadius:12,padding:"12px",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                     ✎ Редактировать
                   </button>
