@@ -205,7 +205,7 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
   const fileInput=(<input ref={fRef} type="file" accept="image/*,.pdf" onChange={handleFile} style={{display:"none"}}/>);
   /* Mode checks FIRST — before room access */
   if(mode==="draw")return(<RoomDrawer onDone={(poly,name)=>{const nm=name||("Помещение "+(rooms.length+1));const rm=newR(nm);rm.v=poly;rm.aO=null;rm.pO=null;const p2=calcPoly(poly);rm.canvas.qty=Math.round(p2.a*100)/100;rm.mainProf.qty=Math.round(p2.p*100)/100;setRooms(p=>[...p,rm]);setTab(rm.id);setMode("main");}} onCancel={()=>setMode(rooms.length?"main":"select")}/>);
-  if(mode==="select")return(<BuilderSelect rooms={rooms} onSelect={m=>{if(m==="trace"){fRef.current?.click();}else setMode(m);}} onBack={rooms.length>0?()=>setMode("main"):null}/>);
+  if(mode==="select")return(<BuilderSelect rooms={rooms} onSelect={m=>{if(m==="trace"){fRef.current?.click();}else setMode(m);}} onBack={rooms.length>0?()=>setMode("main"):onBack}/>);
   if(mode==="recognize")return(<SketchRecognition onFinish={rm=>{setRooms(p=>[...p,rm]);setTab(rm.id);setMode("main");}} onBack={()=>setMode("main")} existingCount={rooms.length}/>);
   if(mode==="manual")return(<ManualBuilder onFinish={rm=>{setRooms(p=>[...p,rm]);setTab(rm.id);setMode("main");}} onBack={()=>setMode("select")} existingCount={rooms.length}/>);
   if(mode==="compass")return(<CompassBuilder onFinish={rm=>{setRooms(p=>[...p,rm]);setTab(rm.id);setMode("main");}} onBack={()=>setMode("main")} existingCount={rooms.length}/>);
@@ -272,7 +272,7 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
         <span style={{fontSize:11,color:"#888",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{orderName||"Заказ"}</span>
         <div style={{display:"flex",gap:4}}>
           <button onClick={()=>fRef.current?.click()} style={{background:"rgba(79,70,229,0.08)",border:"0.5px solid rgba(79,70,229,0.2)",borderRadius:7,padding:"4px 9px",color:"#4F46E5",fontSize:9,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{"Обводка"}</button>
-          {planImage&&<button onClick={()=>setMode("trace")} style={{background:"rgba(79,70,229,0.08)",border:"0.5px solid rgba(79,70,229,0.2)",borderRadius:7,padding:"4px 9px",color:"#4F46E5",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>{"Ред."}</button>}
+          {planImage&&<button onClick={()=>setMode("trace")} style={{background:"rgba(79,70,229,0.12)",border:"1px solid rgba(79,70,229,0.3)",borderRadius:8,padding:"5px 11px",color:"#4F46E5",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>{"🗺️ Чертёж"}</button>}
           <button onClick={()=>setMode("recognize")} style={{background:"rgba(124,92,191,0.08)",border:"0.5px solid rgba(124,92,191,0.2)",borderRadius:7,padding:"4px 9px",color:"#7c5cbf",fontSize:9,fontWeight:500,cursor:"pointer",fontFamily:"inherit"}}>{"AI"}</button>
           <button onClick={()=>setMode("compass")} style={{background:"rgba(255,149,0,0.08)",border:"0.5px solid rgba(255,149,0,0.2)",borderRadius:7,padding:"4px 9px",color:"#ff9500",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>{"Замер"}</button>
           <button onClick={()=>setMode("manual")} style={{background:"#f2f3fa",border:"0.5px solid #eeeef8",borderRadius:7,padding:"4px 9px",color:"#888",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>{"Ручн."}</button>

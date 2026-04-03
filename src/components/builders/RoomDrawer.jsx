@@ -115,10 +115,20 @@ export default function RoomDrawer({ onDone, onCancel, initialVerts }) {
       const pts = rawPts.map(([x, y]) => [x * cw, y * ch]);
       drawPolygon(ctx, pts, true, { dimAll: true });
       const n = pts.length;
+      canvas._sides = [];
       pts.forEach(([x1, y1], i) => {
         const [x2, y2] = pts[(i + 1) % n];
         const active = selSide === i;
-        // Подсветить активную сторону
+        const midX = (x1 + x2) / 2, midY = (y1 + y2) / 2;
+        const edgeLen = Math.hypot(x2 - x1, y2 - y1);
+        const nx = -(y2 - y1) / (edgeLen || 1) * 20;
+        const ny =  (x2 - x1) / (edgeLen || 1) * 20;
+        const lx = midX + nx, ly = midY + ny;
+
+        // Tap area (invisible)
+        canvas._sides[i] = { mx: lx, my: ly };
+
+        // Active side: highlight + show measurement
         if (active) {
           ctx.beginPath();
           ctx.moveTo(x1, y1);
@@ -126,33 +136,34 @@ export default function RoomDrawer({ onDone, onCancel, initialVerts }) {
           ctx.strokeStyle = T.accent;
           ctx.lineWidth = 3;
           ctx.stroke();
+          // Show entered value (or side letter range)
+          const val = lengths[i] ? lengths[i] + " см" : "";
+          if (val) {
+            ctx.save();
+            ctx.fillStyle = T.accent;
+            ctx.strokeStyle = "rgba(255,255,255,0.9)";
+            ctx.lineWidth = 4;
+            ctx.font = "bold 13px sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.strokeText(val, lx, ly);
+            ctx.fillText(val, lx, ly);
+            ctx.restore();
+          }
+        } else if (lengths[i]) {
+          // Non-active side with value: show small label
+          const val = lengths[i] + " см";
+          ctx.save();
+          ctx.fillStyle = T.sub;
+          ctx.strokeStyle = "rgba(255,255,255,0.8)";
+          ctx.lineWidth = 3;
+          ctx.font = "11px sans-serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.strokeText(val, lx, ly);
+          ctx.fillText(val, lx, ly);
+          ctx.restore();
         }
-        // Метка длины
-        const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
-        const edgeLen = Math.hypot(x2 - x1, y2 - y1);
-        const nx = -(y2 - y1) / edgeLen * 18, ny = (x2 - x1) / edgeLen * 18;
-        const lx = mx + nx, ly = my + ny;
-
-        const label = lengths[i] ? lengths[i] + " см" : `S${i + 1}`;
-        ctx.save();
-        ctx.fillStyle = active ? T.accent : "#fff";
-        ctx.strokeStyle = active ? T.accent : T.border;
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        const tw = ctx.measureText(label).width + 12;
-        roundRect(ctx, lx - tw / 2, ly - 10, tw, 20, 6);
-        ctx.fill();
-        ctx.stroke();
-        ctx.fillStyle = active ? "#fff" : T.text;
-        ctx.font = `${active ? 700 : 400} 11px sans-serif`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(label, lx, ly);
-        ctx.restore();
-
-        // Tap area для выбора стороны
-        canvas._sides = canvas._sides || [];
-        canvas._sides[i] = { mx: lx, my: ly };
       });
       return;
     }
@@ -185,6 +196,8 @@ export default function RoomDrawer({ onDone, onCancel, initialVerts }) {
   }, [rawPts, step, lengths, selSide, built, toCanvas]);
 
   /* ── helpers ── */
+  const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
   function drawPolygon(ctx, pts, closed, opts = {}) {
     if (!pts.length) return;
     ctx.beginPath();
@@ -195,11 +208,23 @@ export default function RoomDrawer({ onDone, onCancel, initialVerts }) {
     ctx.strokeStyle = opts.dimAll ? T.border : T.accent;
     ctx.lineWidth = 2;
     ctx.stroke();
+    // Draw vertices with letter labels
     pts.forEach(([x, y], i) => {
+      const r = i === 0 ? 8 : 6;
       ctx.beginPath();
-      ctx.arc(x, y, i === 0 ? 7 : 5, 0, Math.PI * 2);
+      ctx.arc(x, y, r, 0, Math.PI * 2);
       ctx.fillStyle = i === 0 ? T.green : (opts.dimAll ? T.dim : T.accent);
       ctx.fill();
+      // Letter label
+      const letter = LETTERS[i % 26];
+      ctx.save();
+      ctx.fillStyle = i === 0 ? T.green : T.accent;
+      ctx.font = "bold 13px sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "bottom";
+      // Offset label away from polygon center (simple: nudge up-left)
+      ctx.fillText(letter, x, y - r - 3);
+      ctx.restore();
     });
   }
 
@@ -248,12 +273,6 @@ export default function RoomDrawer({ onDone, onCancel, initialVerts }) {
     const x = (touch.clientX - rect.left) / rect.width;
     const y = (touch.clientY - rect.top) / rect.height;
 
-    // Если тапаем близко к первой точке и уже ≥3 точек — закрываем
-    if (rawPts.length >= 3) {
-      const [fx, fy] = rawPts[0];
-      const distToFirst = Math.hypot((x - fx) * rect.width, (y - fy) * rect.height);
-      if (distToFirst < 24) { goToMeasure(); return; }
-    }
     setRawPts(prev => [...prev, [x, y]]);
   };
 
@@ -352,7 +371,7 @@ export default function RoomDrawer({ onDone, onCancel, initialVerts }) {
           <div style={{ fontSize: 12, color: T.sub, marginBottom: 4 }}>
             {step === "draw" && (rawPts.length < 3
               ? "Нажимайте по углам потолка. Минимум 3 угла."
-              : `${rawPts.length} углов. Нажмите на первую точку (зелёную) чтобы закрыть.`)}
+              : `${rawPts.length} углов — нажмите «Далее» когда отметите все углы.`)}
             {step === "measure" && `Сторона ${selSide + 1} из ${rawPts.length} — введите длину в см`}
             {step === "preview" && "Проверьте форму и нажмите «Принять»"}
           </div>
@@ -423,9 +442,11 @@ export default function RoomDrawer({ onDone, onCancel, initialVerts }) {
 
             {/* Миниатюры сторон */}
             <div style={{ display: "flex", gap: 6, overflowX: "auto", marginBottom: 10, paddingBottom: 4 }}>
-              {lengths.map((l, i) => (
+              {lengths.map((l, i) => {
+                const L = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+                const sideLabel = L[i % 26] + L[(i+1) % 26];
+                return(
                 <button key={i} onClick={() => {
-                  // сохраняем текущий ввод
                   setLengths(prev => { const n = [...prev]; n[selSide] = inputVal; return n; });
                   setSelSide(i);
                   setInputVal(l || "");
@@ -435,13 +456,13 @@ export default function RoomDrawer({ onDone, onCancel, initialVerts }) {
                     border: "1px solid " + (i === selSide ? T.accent : l ? T.green : T.border),
                     borderRadius: 8, padding: "5px 8px", cursor: "pointer",
                     fontFamily: "inherit", textAlign: "center" }}>
-                  <div style={{ fontSize: 9, color: i === selSide ? "#fff" : T.dim }}>S{i + 1}</div>
+                  <div style={{ fontSize: 9, color: i === selSide ? "#fff" : T.dim }}>{sideLabel}</div>
                   <div style={{ fontSize: 11, fontWeight: 600,
                     color: i === selSide ? "#fff" : l ? T.green : T.sub }}>
                     {l || "—"}
                   </div>
                 </button>
-              ))}
+              );})}
             </div>
 
             {/* Переключатель 90° */}

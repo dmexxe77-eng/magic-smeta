@@ -185,7 +185,7 @@ export default function App(){
     onBack={()=>{setScreen("home");setPlanImg(null);}}
     onRoomsChange={updateOrderRooms}
     initPlanImage={planImg||curOrder.planImage}
-    initMode={["recognize","compass","manual"].includes(curOrder.method)&&curOrder.rooms.length===0?curOrder.method:planImg?"trace":"main"}
+    initMode={["recognize","compass","manual"].includes(curOrder.method)&&curOrder.rooms.length===0?curOrder.method:"main"}
     onPlanImageChange={img=>{setPlanImg(img);if(curId)setOrders(prev=>prev.map(o=>o.id===curId?{...o,planImage:img}:o));}}
   />);
   else content=(<HomeScreen orders={orders} setOrders={setOrders} onOpen={openOrder} onNew={()=>setScreen("new")} onStatusChange={changeStatus} theme={theme} setTheme={setTheme} onFullExport={buildFullExport} onSaveNow={manualSave} saveStatus={saveStatus}/>);

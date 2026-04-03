@@ -71,8 +71,7 @@ export function sanitizeOrdersForStorage(orders){
     ...o,
     rooms:(o.rooms||[]).map(r=>({
       ...r,
-      imgPts:undefined,
-      aImg:undefined
+      aImg:undefined   // только большие бинарные данные убираем
     }))
   }));
 }
