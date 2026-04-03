@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { N, btnS } from "../ui.jsx";
 import { T } from "../../theme.js";
 import { P } from "../../data/profiles.js";
 import { fmt, uid, L, COLORS, deep } from "../../utils/helpers.js";
