@@ -1,0 +1,157 @@
+import { uid, safeJsonParse } from "../utils/helpers.js";
+import { ALL_NOM, USER_NOMS_CUSTOM, USER_NOMS_EDITED, USER_NOMS_DELETED, addNewNom, deleteNom, DELETED_NOM_IDS, RUNTIME_EDITED_NOMS } from "./nomenclature.jsx";
+import { P, LIGHT } from "./profiles.js";
+
+export function normalizeNomName(s){
+  return safeStr(s)
+    .replace(/\s*\(.*?\)\s*/g," ")
+    .replace(/\s+профиль\b/gi," ")
+    .replace(/\s+проф\.\b/gi," ")
+    .replace(/\s+/g," ")
+    .trim()
+    .toLowerCase();
+}
+
+export function resolveNomByEstimateLine(line){
+  const ids=[line?._k,line?.k,line?.nomId].map(safeStr).filter(Boolean);
+  for(const id of ids){
+    let n=ALL_NOM.find(x=>x.id===id);
+    if(n)return n;
+    if(id.includes("_")){
+      const parts=id.split("_");
+      const shortId=parts.length>1?parts.slice(0,-1).join("_"):"";
+      if(shortId){
+        n=ALL_NOM.find(x=>x.id===shortId);
+        if(n)return n;
+      }
+    }
+  }
+  const nm=normalizeNomName(line?.n);
+  if(nm){
+    let n=ALL_NOM.find(x=>normalizeNomName(x.name)===nm);
+    if(n)return n;
+    n=ALL_NOM.find(x=>normalizeNomName(x.name).startsWith(nm)||nm.startsWith(normalizeNomName(x.name)));
+    if(n)return n;
+  }
+  return null;
+}
+
+async function saveAppStateToIdb(state){
+  try{
+    await idbPut(IDB_STORE_APP_STATE,"state",state);
+    return true;
+  }catch(e){return false;}
+}
+async function loadAppStateFromIdb(){
+  try{
+    return await idbGet(IDB_STORE_APP_STATE,"state");
+  }catch(e){return null;}
+}
+
+export function sanitizeCustomNoms(list){
+  // photos are stored in IndexedDB; keep localStorage light
+  return (list||[]).map(n=>{
+    const m={...n};
+    m.photo=null;
+    return m;
+  });
+}
+export function sanitizeEditedNoms(list){
+  return (list||[]).map(n=>{
+    const m={...n};
+    m.photo=null;
+    return m;
+  });
+}
+export function sanitizeOrdersForStorage(orders){
+  return (orders||[]).map(o=>({
+    ...o,
+    rooms:(o.rooms||[]).map(r=>({
+      ...r,
+      imgPts:undefined,
+      aImg:undefined
+    }))
+  }));
+}
+export function applyNomsSnapshot(snap){
+  if(!snap||typeof snap!=="object")return;
+  const customNoms=snap.customNoms||[];
+  const editedNoms=snap.editedNoms||[];
+  const deletedNomIds=snap.deletedNomIds||[];
+  const deletedSet=new Set(deletedNomIds);
+
+  const base=[...NOM_GEN,...NOM_EXT,...customNoms];
+  editedNoms.forEach(e=>{
+    const n=base.find(x=>x.id===e.id);
+    if(n)Object.assign(n,e);
+  });
+
+  const filtered=base.filter(n=>!deletedSet.has(n.id));
+
+  ALL_NOM.length=0;
+  ALL_NOM.push(...filtered);
+
+  DELETED_NOM_IDS.length=0;
+  DELETED_NOM_IDS.push(...deletedNomIds);
+  RUNTIME_EDITED_NOMS.length=0;
+  RUNTIME_EDITED_NOMS.push(...editedNoms);
+}
+
+async function hydrateNomsPhotosFromIdb(){
+  // Attach blob URLs for any nom that has a photo stored in IndexedDB
+  const ids=(ALL_NOM||[]).map(n=>n?.id).filter(Boolean);
+  for(const id of ids){
+    const n=ALL_NOM.find(x=>x.id===id);
+    if(!n)continue;
+    // If it's already a blob URL, keep it; if it's a data URL, keep it too.
+    // Otherwise try to load from IndexedDB.
+    if(n.photo && (typeof n.photo==="string") && (n.photo.startsWith("blob:")||n.photo.startsWith("data:")))continue;
+    const url=await loadNomPhotoFromIdb(id);
+    if(url){
+      // revoke previous blob url if any
+      revokeObjectUrl(n.photo);
+      n.photo=url;
+    }
+  }
+}
+
+/* Пресеты: автоматически из P[] */
+export const PRESETS_GEN=(()=>{
+  const pr=[];
+  /* Полотна */
+  DEFAULT_MAT.forEach(m=>{
+    pr.push({id:"btn_c_"+m.id,name:m.label.split(" ")[0],cat:"canvas",items:["c_"+m.id,m.id==="tkan"?"w_mont_tk":"w_mont"],options:["o_inner_angle","o_outer_angle"]});
+  });
+  /* Профили по категориям */
+  P.forEach(p=>{
+    const cat=p.cat==="mp"?"main":p.cat==="ap"?"extra":p.cat==="ll"?"track":p.cat==="tr"?"track":p.cat==="cu"?"curtain":"other";
+    const opts=p.o.map(ok=>"o_"+ok);
+    pr.push({id:"btn_p_"+p.id,name:p.n,cat,items:["p_"+p.id,"w_"+p.id],options:opts,pid:p.id,sec:p.sec});
+  });
+  /* Светильники */
+  LIGHT.forEach(l=>{
+    pr.push({id:"btn_li_"+l.id,name:l.label,cat:"light",items:["li_"+l.id],options:["o_provod","o_zakl"]});
+  });
+  return pr;
+})();
+export const PRbyId=id=>PRESETS_GEN.find(x=>x.id===id);
+/* ── Пользовательские пресеты (экспортированы из приложения) ── */
+export const USER_PRESETS_OVERRIDE=[{"id":"btn_c_msd","name":"MSD EVO","cat":"canvas","items":["c_msd","w_mont"],"options":["urzstie","urm94mg"]},{"id":"btn_c_tkan","name":"Тканевое JM","cat":"canvas","items":["c_tkan","w_mont_tk"],"options":[]},{"id":"btn_c_trans","name":"Транслюцидное","cat":"canvas","items":["c_trans","w_mont"],"options":["urzstie"]},{"id":"btn_c_clear","name":"Прозрачное","cat":"canvas","items":["c_clear","w_mont"],"options":["urzstie"]},{"id":"btn_p_1","name":"EUROKRAAB","cat":"main","items":["p_1","w_1"],"options":["o_inner_angle","o_outer_angle"],"pid":1,"sec":"KRAAB"},{"id":"btn_p_2","name":"EUROKRAAB STRONG","cat":"main","items":["p_2","w_2"],"options":["o_inner_angle","o_outer_angle"],"pid":2,"sec":"KRAAB"},{"id":"btn_p_3","name":"EUROKRAAB 2.0","cat":"main","items":["p_3","w_3"],"options":["o_inner_angle","o_outer_angle"],"pid":3,"sec":"KRAAB"},{"id":"btn_p_4","name":"EUROKRAAB потолочн.","cat":"main","items":["p_4","w_4"],"options":["o_inner_angle","o_outer_angle"],"pid":4,"sec":"KRAAB"},{"id":"btn_p_5","name":"EUROKRAAB BOX","cat":"main","items":["p_5","w_5"],"options":["o_inner_angle","o_outer_angle"],"pid":5,"sec":"KRAAB"},{"id":"btn_p_6","name":"AIRKRAAB 2.0","cat":"main","items":["p_6","w_6"],"options":["o_inner_angle","o_outer_angle"],"pid":6,"sec":"KRAAB"},{"id":"btn_p_7","name":"EUROSLOTT","cat":"main","items":["p_7","w_7"],"options":["o_inner_angle","o_outer_angle"],"pid":7,"sec":"KRAAB"},{"id":"btn_p_8","name":"KRAAB 4.0","cat":"main","items":["p_8","w_8"],"options":["o_angle"],"pid":8,"sec":"KRAAB"},{"id":"btn_p_27","name":"Clamp Umbra перф.","cat":"main","items":["p_27","w_27"],"options":["o_inner_angle","o_outer_angle"],"pid":27,"sec":"Clamp"},{"id":"btn_p_28","name":"Clamp Umbra Top","cat":"main","items":["p_28","w_28"],"options":["o_inner_angle","o_outer_angle"],"pid":28,"sec":"Clamp"},{"id":"btn_p_29","name":"Clamp Umbra Box","cat":"main","items":["p_29","w_29"],"options":["o_inner_angle","o_outer_angle"],"pid":29,"sec":"Clamp"},{"id":"btn_p_45","name":"EuroLumFer 02","cat":"main","items":["p_45","w_45"],"options":["o_inner_angle","o_outer_angle"],"pid":45,"sec":"LumFer"},{"id":"btn_p_46","name":"Double LumFer","cat":"main","items":["p_46","w_46"],"options":["o_angle"],"pid":46,"sec":"LumFer"},{"id":"btn_p_9","name":"SLOTT R","cat":"extra","items":["p_9","w_9"],"options":["o_angle","o_wall_junction"],"pid":9,"sec":"Разделитель"},{"id":"btn_p_10","name":"SLOTT VILLAR MINI","cat":"extra","items":["p_10","w_10"],"options":["o_angle"],"pid":10,"sec":"Парящий"},{"id":"btn_p_11","name":"SLOTT VILLAR KIT","cat":"extra","items":["p_11","w_11"],"options":["o_angle"],"pid":11,"sec":"Парящий"},{"id":"btn_p_12","name":"SLOTT VILLAR BASE","cat":"extra","items":["p_12","w_12"],"options":["o_angle"],"pid":12,"sec":"Парящий"},{"id":"btn_p_30","name":"Clamp Supra","cat":"extra","items":["p_30","w_30"],"options":["o_angle"],"pid":30,"sec":"Парящий"},{"id":"btn_p_31","name":"Clamp Radium mini","cat":"extra","items":["p_31","w_31"],"options":["o_angle"],"pid":31,"sec":"Парящий"},{"id":"btn_p_32","name":"Clamp Radium","cat":"extra","items":["p_32","w_32"],"options":["o_angle"],"pid":32,"sec":"Парящий"},{"id":"btn_p_47","name":"Volat mini","cat":"extra","items":["p_47","w_47"],"options":["o_angle"],"pid":47,"sec":"Парящий"},{"id":"btn_p_48","name":"Volat","cat":"extra","items":["p_48","w_48"],"options":["o_angle"],"pid":48,"sec":"Парящий"},{"id":"btn_p_49","name":"BP03","cat":"extra","items":["p_49","w_49"],"options":["o_angle"],"pid":49,"sec":"Парящий"},{"id":"btn_p_13","name":"MADERNO 80","cat":"extra","items":["p_13","w_13"],"options":["o_turn","o_wall_junction"],"pid":13,"sec":"Уровневый"},{"id":"btn_p_14","name":"MADERNO 60","cat":"extra","items":["p_14","w_14"],"options":["o_turn","o_wall_junction"],"pid":14,"sec":"Уровневый"},{"id":"btn_p_15","name":"MADERNO 40","cat":"extra","items":["p_15","w_15"],"options":["o_turn","o_wall_junction"],"pid":15,"sec":"Уровневый"},{"id":"btn_p_16","name":"ARTISS","cat":"extra","items":["p_16","w_16"],"options":["o_turn","o_wall_junction"],"pid":16,"sec":"Уровневый"},{"id":"btn_p_17","name":"TRAYLIN","cat":"extra","items":["p_17","w_17"],"options":["o_angle"],"pid":17,"sec":"Уровневый"},{"id":"btn_p_18","name":"TRAYLIN с рассеив.","cat":"extra","items":["p_18","w_18"],"options":["o_angle"],"pid":18,"sec":"Уровневый"},{"id":"btn_p_37","name":"Clamp Top","cat":"extra","items":["p_37","w_37"],"options":["o_turn","o_wall_junction"],"pid":37,"sec":"Двухуровн."},{"id":"btn_p_38","name":"Clamp Level 50","cat":"extra","items":["p_38","w_38"],"options":["o_turn","o_wall_junction"],"pid":38,"sec":"Двухуровн."},{"id":"btn_p_39","name":"Clamp Level 70","cat":"extra","items":["p_39","w_39"],"options":["o_turn","o_wall_junction"],"pid":39,"sec":"Двухуровн."},{"id":"btn_p_40","name":"Clamp Level LUX 70","cat":"extra","items":["p_40","w_40"],"options":["o_turn","o_wall_junction"],"pid":40,"sec":"Двухуровн."},{"id":"btn_p_41","name":"Clamp Level 90","cat":"extra","items":["p_41","w_41"],"options":["o_turn","o_wall_junction"],"pid":41,"sec":"Двухуровн."},{"id":"btn_p_19","name":"SLOTT 50","cat":"track","items":["p_19","w_19"],"options":["o_end_cap","o_turn","o_wall_junction"],"pid":19,"sec":"Свет. линии"},{"id":"btn_p_20","name":"SLOTT 35","cat":"track","items":["p_20","w_20"],"options":["o_end_cap","o_turn","o_wall_junction"],"pid":20,"sec":"Свет. линии"},{"id":"btn_p_21","name":"SLOTT CANYON 3.0","cat":"track","items":["p_21","w_21"],"options":["o_end_cap","o_turn","o_wall_junction"],"pid":21,"sec":"Свет. линии"},{"id":"btn_p_22","name":"SLOTT LINE","cat":"track","items":["p_22","w_22"],"options":["o_end_cap","o_turn","o_wall_junction"],"pid":22,"sec":"Свет. линии"},{"id":"btn_p_33","name":"Clamp Meduza 14 (разд.)","cat":"track","items":["p_33","w_33"],"options":["o_end_cap","o_turn"],"pid":33,"sec":"Свет. линии"},{"id":"btn_p_34","name":"Clamp Meduza 14 (свет.)","cat":"track","items":["p_34","w_34"],"options":["o_end_cap","o_turn"],"pid":34,"sec":"Свет. линии"},{"id":"btn_p_35","name":"Clamp Meduza 35","cat":"track","items":["p_35","w_35"],"options":["o_end_cap","o_turn"],"pid":35,"sec":"Свет. линии"},{"id":"btn_p_50","name":"B01 (ниша)","cat":"track","items":["p_50","w_50"],"options":["o_end_cap","o_turn"],"pid":50,"sec":"Ниши"},{"id":"btn_p_51","name":"SV (свет. линия)","cat":"track","items":["p_51","w_51"],"options":["o_end_cap","o_turn"],"pid":51,"sec":"Ниши"},{"id":"btn_p_52","name":"UN (универс. ниша)","cat":"track","items":["p_52","w_52"],"options":["o_end_cap","o_turn"],"pid":52,"sec":"Ниши"},{"id":"btn_p_53","name":"N02 (ниша)","cat":"track","items":["p_53","w_53"],"options":["o_end_cap","o_turn"],"pid":53,"sec":"Ниши"},{"id":"btn_p_23","name":"SLOTT PARSEK 2.0","cat":"curtain","items":["p_23","w_23"],"options":["o_end_cap","o_turn","o_wall_junction"],"pid":23,"sec":"KRAAB"},{"id":"btn_p_24","name":"SLOTT MOTION","cat":"curtain","items":["p_24","w_24"],"options":["o_end_cap","o_turn","o_wall_junction","o_motor_setup"],"pid":24,"sec":"KRAAB"},{"id":"btn_p_25","name":"SLIM ROAD 01","cat":"curtain","items":["p_25","w_25"],"options":["o_end_cap","o_turn","o_wall_junction"],"pid":25,"sec":"KRAAB"},{"id":"btn_p_36","name":"Clamp Cornice Uno","cat":"curtain","items":["p_36","w_36"],"options":["o_end_cap","o_turn","o_wall_junction"],"pid":36,"sec":"Clamp"},{"id":"btn_p_54","name":"SK Novus","cat":"curtain","items":["p_54","w_54"],"options":["o_end_cap","o_turn","o_wall_junction"],"pid":54,"sec":"LumFer"},{"id":"btn_p_55","name":"SK Magnum","cat":"curtain","items":["p_55","w_55"],"options":["o_end_cap","o_turn","o_wall_junction"],"pid":55,"sec":"LumFer"},{"id":"btn_p_56","name":"Sputnik","cat":"curtain","items":["p_56","w_56"],"options":["o_end_cap","o_turn","o_wall_junction"],"pid":56,"sec":"LumFer"},{"id":"btn_p_57","name":"UK (универс.)","cat":"curtain","items":["p_57","w_57"],"options":["o_end_cap","o_turn","o_wall_junction"],"pid":57,"sec":"LumFer"},{"id":"btn_p_58","name":"SK03 (теневой)","cat":"curtain","items":["p_58","w_58"],"options":["o_end_cap","o_turn","o_wall_junction"],"pid":58,"sec":"LumFer"},{"id":"btn_p_59","name":"VMK01","cat":"curtain","items":["p_59","w_59"],"options":["o_end_cap","o_turn","o_wall_junction"],"pid":59,"sec":"LumFer"},{"id":"btn_p_60","name":"VMK02","cat":"curtain","items":["p_60","w_60"],"options":["o_end_cap","o_turn","o_wall_junction"],"pid":60,"sec":"LumFer"},{"id":"btn_p_61","name":"EuroTop","cat":"curtain","items":["p_61","w_61"],"options":["o_turn","o_wall_junction"],"pid":61,"sec":"LumFer"},{"id":"btn_p_62","name":"PDK60 NEW","cat":"curtain","items":["p_62","w_62"],"options":["o_turn","o_wall_junction"],"pid":62,"sec":"LumFer"},{"id":"btn_p_63","name":"PDK80","cat":"curtain","items":["p_63","w_63"],"options":["o_turn","o_wall_junction"],"pid":63,"sec":"LumFer"},{"id":"btn_p_64","name":"PDK100","cat":"curtain","items":["p_64","w_64"],"options":["o_turn","o_wall_junction"],"pid":64,"sec":"LumFer"},{"id":"btn_p_42","name":"Clamp Track 23 (48V)","cat":"track","items":["p_42","w_42"],"options":["o_end_cap","o_turn","o_wall_junction"],"pid":42,"sec":"Clamp"},{"id":"btn_p_43","name":"Clamp Track 25 (220V)","cat":"track","items":["p_43","w_43"],"options":["o_end_cap","o_turn","o_wall_junction"],"pid":43,"sec":"Clamp"},{"id":"btn_p_65","name":"Track 23 Light 48V","cat":"track","items":["p_65","w_65"],"options":["o_end_cap","o_turn","o_wall_junction"],"pid":65,"sec":"LumFer"},{"id":"btn_p_66","name":"Track 23 48V","cat":"track","items":["p_66","w_66"],"options":["o_end_cap","o_turn","o_wall_junction"],"pid":66,"sec":"LumFer"},{"id":"btn_p_67","name":"Track 25 Light 220V","cat":"track","items":["p_67","w_67"],"options":["o_end_cap","o_turn","o_wall_junction"],"pid":67,"sec":"LumFer"},{"id":"btn_p_68","name":"Track 25 220V","cat":"track","items":["p_68","w_68"],"options":["o_end_cap","o_turn","o_wall_junction"],"pid":68,"sec":"LumFer"},{"id":"btn_p_69","name":"Standart 48","cat":"track","items":["p_69","w_69"],"options":[],"pid":69,"sec":"LumFer"},{"id":"btn_p_70","name":"Standart 220","cat":"track","items":["p_70","w_70"],"options":[],"pid":70,"sec":"LumFer"},{"id":"btn_p_26","name":"Диффузор SLOTT 5+","cat":"other","items":["p_26","w_26"],"options":[],"pid":26,"sec":"KRAAB"},{"id":"btn_p_44","name":"Clamp Diffuser","cat":"other","items":["p_44","w_44"],"options":[],"pid":44,"sec":"Clamp"},{"id":"btn_p_71","name":"LumFer Diffuser гот.","cat":"other","items":["p_71","w_71"],"options":[],"pid":71,"sec":"Тех."},{"id":"btn_p_72","name":"LumFer Diffuser проф.","cat":"other","items":["p_72","w_72"],"options":[],"pid":72,"sec":"Тех."},{"id":"btn_p_73","name":"BU (брус 2×3)","cat":"other","items":["p_73","w_73"],"options":[],"pid":73,"sec":"Тех."},{"id":"btn_p_74","name":"BS (контур. подсв.)","cat":"other","items":["p_74","w_74"],"options":[],"pid":74,"sec":"Тех."},{"id":"btn_p_75","name":"BT (теневой брус)","cat":"other","items":["p_75","w_75"],"options":[],"pid":75,"sec":"Тех."},{"id":"btn_p_76","name":"BT-U (теневой ун.)","cat":"other","items":["p_76","w_76"],"options":[],"pid":76,"sec":"Тех."},{"id":"btn_p_77","name":"TR (отбойник)","cat":"other","items":["p_77","w_77"],"options":[],"pid":77,"sec":"Тех."},{"id":"btn_p_78","name":"TD (держатель)","cat":"other","items":["p_78","w_78"],"options":[],"pid":78,"sec":"Тех."},{"id":"btn_p_79","name":"Люк 40×40","cat":"other","items":["p_79","w_79"],"options":[],"pid":79,"sec":"Тех."},{"id":"btn_p_80","name":"Люк 80×40","cat":"other","items":["p_80","w_80"],"options":[],"pid":80,"sec":"Тех."},{"id":"btn_li_bez","name":"Безрамный Arte Lamp+монтаж","cat":"light","items":["li_bez","x229"],"options":[]},{"id":"btn_li_nakl","name":"ЧПУ","cat":"light","items":["x434"],"options":[]},{"id":"btn_li_pot","name":"Потолочный","cat":"light","items":["li_pot"],"options":["o_provod","o_zakl"]},{"id":"btn_li_lust","name":"Люстра стандарт","cat":"light","items":["li_lust"],"options":["urxh4ka"]},{"id":"btn_li_vip","name":"VIP подвесной","cat":"light","items":["li_vip"],"options":["o_provod","o_zakl"]},{"id":"btn_rnrf67","name":"Euroslott теневой ткань","cat":"main","items":["p_7","w_7"],"options":["x38"]},{"id":"btn_r7hg65","name":"Алюминий под вставку","cat":"main","items":["x218","uruqufy"],"options":["x219"]},{"id":"btn_r4vru3","name":"Парящий Fenix","cat":"extra","items":["x464","ur5jp8m","x355"],"options":["o_power","ur3c35c","x465"]},{"id":"btn_rdf7mk","name":"Парящий Volat","cat":"extra","items":["p_48","x355","ur5jp8m"],"options":["ur3c35c","o_power"]},{"id":"btn_rtpbyl","name":"Разделитель ПВХ Slim R","cat":"extra","items":["x138"],"options":["x137","x139"]},{"id":"btn_r07416","name":"Гарпунная СвЛиния","cat":"track","items":["x435","x593"],"options":["o_turn","o_wall_junction","o_end_cap"]},{"id":"btn_rlmjae","name":"Ниша Фанера","cat":"curtain","items":["x651"],"options":["o_angle","o_turn","o_wall_junction"]},{"id":"btn_rhnrvi","name":"Карниз Novus","cat":"curtain","items":["p_54","w_54","x257"],"options":["x92","x93","x94"]},{"id":"btn_rj3bim","name":"Road 01","cat":"curtain","items":["p_25","x179"],"options":["x140","x141","x142"]},{"id":"btn_rbhn7d","name":"Светильник стандарт","cat":"light","items":["x579"],"options":[]}];
+export const USER_FAVS_OVERRIDE={"canvas":["btn_c_msd","btn_c_tkan","btn_c_trans","btn_c_clear"],"main":["btn_p_2","btn_p_3","btn_rnrf67","btn_r7hg65"],"extra":["btn_r4vru3","btn_rtpbyl","btn_rdf7mk"],"light":["btn_li_lust","btn_li_bez","btn_li_nakl","btn_rbhn7d"],"track":["btn_p_21","btn_p_22","btn_r07416"],"curtain":["btn_rlmjae","btn_rhnrvi","btn_rj3bim"]};
+
+
+/* Глобальный ref — CalcScreen пишет сюда актуальное состояние для экспорта */
+export const CALC_STATE_REF={presets:USER_PRESETS_OVERRIDE,sharedFavs:USER_FAVS_OVERRIDE,globalOpts:[]};
+
+export const BLOCK_CFG=[
+  {id:"canvas",title:"Полотно",cat:"canvas",qtyLabel:"S",qtyUnit:"м²",maxFav:99,defFav:["btn_c_msd","btn_c_tkan","btn_c_trans","btn_c_clear"]},
+  {id:"main",title:"Основной профиль",cat:"main",qtyLabel:"P",qtyUnit:"м.п.",maxFav:99,defFav:(()=>{const mp=P.filter(x=>x.cat==="mp");return[mp[1],mp[2],mp[7],mp[11]].filter(Boolean).map(x=>"btn_p_"+x.id).slice(0,4);})()},
+  {id:"extra",title:"Доп. профиль",cat:"extra",qtyLabel:"Дл",qtyUnit:"м.п.",maxFav:99,defFav:(()=>{const ap=P.filter(x=>x.cat==="ap");return ap.slice(0,4).map(x=>"btn_p_"+x.id);})(),multi:true,subP:true},
+  {id:"light",title:"Светильники / люстры",cat:"light",qtyLabel:"Кол",qtyUnit:"шт",maxFav:99,defFav:LIGHT.slice(0,4).map(l=>"btn_li_"+l.id),multi:true},
+  {id:"track",title:"Линейное освещение",cat:"track",qtyLabel:"Дл",qtyUnit:"м.п.",maxFav:99,defFav:(()=>{const ll=P.filter(x=>x.cat==="ll"||x.cat==="tr");return ll.slice(0,4).map(x=>"btn_p_"+x.id);})(),multi:true},
+  {id:"curtain",title:"Шторы",cat:"curtain",qtyLabel:"Дл",qtyUnit:"м.п.",maxFav:99,defFav:(()=>{const cu=P.filter(x=>x.cat==="cu");return cu.slice(0,4).map(x=>"btn_p_"+x.id);})(),multi:true,subP:true},
+];
+
+/* ═══ Новая структура комнаты ═══ */
+
+export { newRoom, newR, gA, gP, buildEst } from '../utils/roomUtils.js';
