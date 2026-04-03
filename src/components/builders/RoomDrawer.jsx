@@ -8,7 +8,7 @@ import { calcPoly } from "../../utils/geometry.js";
    Шаг 2: вводим длины сторон (см)
    Шаг 3: превью + подтверждение
 ───────────────────────────────────────────── */
-export default function RoomDrawer({ onDone, onCancel, initialVerts }) {
+export default function RoomDrawer({ onDone, onCancel, initialVerts, roomCount=0 }) {
   const [step, setStep]       = useState("draw");
   const [roomName, setRoomName] = useState("");
   const [rawPts, setRawPts]   = useState(() => {
@@ -279,6 +279,12 @@ export default function RoomDrawer({ onDone, onCancel, initialVerts }) {
     const x = (touch.clientX - rect.left) / rect.width;
     const y = (touch.clientY - rect.top) / rect.height;
 
+    // Snap to first point if close enough → close polygon and proceed
+    if (rawPts.length >= 3) {
+      const [fx, fy] = rawPts[0];
+      const distToFirst = Math.hypot((x - fx) * rect.width, (y - fy) * rect.height);
+      if (distToFirst < 28) { goToMeasure(); return; }
+    }
     setRawPts(prev => [...prev, [x, y]]);
   };
 
@@ -376,8 +382,8 @@ export default function RoomDrawer({ onDone, onCancel, initialVerts }) {
           {/* Инструкция */}
           <div style={{ fontSize: 12, color: T.sub, marginBottom: 4 }}>
             {step === "draw" && (rawPts.length < 3
-              ? "Нажимайте по углам потолка. Минимум 3 угла."
-              : `${rawPts.length} углов — нажмите «Далее» когда отметите все углы.`)}
+              ? "Нажимайте по углам потолка. Минимум 3 точки."
+              : `${rawPts.length} точек — нажмите «A» (зелёная) чтобы замкнуть, или «Далее».`)}
             {step === "measure" && `Сторона ${selSide + 1} из ${rawPts.length} — введите длину в см`}
             {step === "preview" && "Проверьте форму и нажмите «Принять»"}
           </div>
@@ -422,7 +428,7 @@ export default function RoomDrawer({ onDone, onCancel, initialVerts }) {
                 fontSize: 12, color: T.sub }}>
                 Сторона {selSide + 1}
               </div>
-              <input ref={inputRef} type="number" inputMode="decimal"
+              <input ref={inputRef} type="number" inputMode="decimal" enterKeyHint="next"
                 value={inputVal}
                 onChange={e => setInputVal(e.target.value)}
                 onBlur={() => {
@@ -430,7 +436,8 @@ export default function RoomDrawer({ onDone, onCancel, initialVerts }) {
                   setLengths(prev => { const n = [...prev]; n[selSide] = v; return n; });
                 }}
                 onKeyDown={e => {
-                  if (e.key === "Enter" || e.key === "Next") {
+                  if (e.key === "Enter" || e.key === "Go" || e.key === "Next" || e.key === "Done") {
+                    e.preventDefault();
                     const v = inputVal.trim();
                     const next = (selSide + 1) % rawPts.length;
                     setLengths(prev => { const n = [...prev]; n[selSide] = v; return n; });
@@ -511,7 +518,7 @@ export default function RoomDrawer({ onDone, onCancel, initialVerts }) {
           <div style={{ padding: "8px 16px 24px", flexShrink: 0 }}>
             {/* Имя помещения */}
             <input value={roomName} onChange={e=>setRoomName(e.target.value)}
-              placeholder={"Помещение " + (rooms ? rooms.length + 1 : 1)}
+              placeholder={"Помещение " + (roomCount + 1)}
               style={{width:"100%",background:T.inputBg,border:"1px solid "+T.border,color:T.text,
                 borderRadius:10,padding:"10px 12px",fontSize:14,fontFamily:"inherit",
                 boxSizing:"border-box",outline:"none",marginBottom:10}}/>

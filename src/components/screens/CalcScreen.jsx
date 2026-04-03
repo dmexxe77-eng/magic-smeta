@@ -204,7 +204,7 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
   /* File input always rendered */
   const fileInput=(<input ref={fRef} type="file" accept="image/*,.pdf" onChange={handleFile} style={{display:"none"}}/>);
   /* Mode checks FIRST — before room access */
-  if(mode==="draw")return(<RoomDrawer onDone={(poly,name)=>{const nm=name||("Помещение "+(rooms.length+1));const rm=newR(nm);rm.v=poly;rm.aO=null;rm.pO=null;const p2=calcPoly(poly);rm.canvas.qty=Math.round(p2.a*100)/100;rm.mainProf.qty=Math.round(p2.p*100)/100;setRooms(p=>[...p,rm]);setTab(rm.id);setMode("main");}} onCancel={()=>setMode(rooms.length?"main":"select")}/>);
+  if(mode==="draw")return(<RoomDrawer roomCount={rooms.length} onDone={(poly,name)=>{const nm=name||("Помещение "+(rooms.length+1));const rm=newR(nm);rm.v=poly;rm.aO=null;rm.pO=null;const p2=calcPoly(poly);rm.canvas.qty=Math.round(p2.a*100)/100;rm.mainProf.qty=Math.round(p2.p*100)/100;setRooms(p=>[...p,rm]);setTab(rm.id);setMode("main");}} onCancel={()=>setMode(rooms.length?"main":"select")}/>);
   if(mode==="select")return(<BuilderSelect rooms={rooms} onSelect={m=>{if(m==="trace"){fRef.current?.click();}else setMode(m);}} onBack={rooms.length>0?()=>setMode("main"):onBack}/>);
   if(mode==="recognize")return(<SketchRecognition onFinish={rm=>{setRooms(p=>[...p,rm]);setTab(rm.id);setMode("main");}} onBack={()=>setMode("main")} existingCount={rooms.length}/>);
   if(mode==="manual")return(<ManualBuilder onFinish={rm=>{setRooms(p=>[...p,rm]);setTab(rm.id);setMode("main");}} onBack={()=>setMode("select")} existingCount={rooms.length}/>);
