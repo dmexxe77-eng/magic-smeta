@@ -592,14 +592,6 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
             <div style={{fontSize:18,fontWeight:700,color:totRev>0?"#4ade80":"rgba(255,255,255,0.3)"}}>{totRev>0?ff(totRev)+" ₽":"—"}</div>
           </div>
         </div>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:10}}>
-          <button
-            onClick={()=>{try{onSaveNow&&onSaveNow();}catch(e){}}}
-            style={{background:"#16a34a",border:"none",borderRadius:12,padding:"9px 12px",color:"#fff",fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>
-            {"💾 Сохранить"}
-          </button>
-          <div style={{fontSize:10,color:savedCol,opacity:0.9,textAlign:"right"}}>{savedTxt}</div>
-        </div>
         <div style={{display:"flex",gap:18}}>
           <div><div style={{fontSize:10,color:"rgba(255,255,255,0.3)",marginBottom:3}}>{"В работе"}</div><div style={{fontSize:20,fontWeight:700,color:ACC}}>{inWork}</div></div>
           <div><div style={{fontSize:10,color:"rgba(255,255,255,0.3)",marginBottom:3}}>{"Сдано"}</div><div style={{fontSize:20,fontWeight:700,color:"#4ade80"}}>{done}</div></div>
