@@ -254,18 +254,19 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
     /* при изменении цены — сохраняем в ALL_NOM + RUNTIME_EDITED_NOMS + nomSnapshot */
     if(f==="p"){
       const line=[...matsE,...worksE].find(l=>l.k===k);
-      const nomId=line?._k; /* buildEst кладёт _k = исходный ключ номенклатуры */
-      if(nomId){
-        const nom=ALL_NOM.find(n=>n.id===nomId);
-        if(nom){
-          nom.price=v;
-          const ex=RUNTIME_EDITED_NOMS.findIndex(x=>x.id===nomId);
-          const patch={id:nomId,name:nom.name,price:v,type:nom.type};
-          if(ex>=0)RUNTIME_EDITED_NOMS[ex]=patch;else RUNTIME_EDITED_NOMS.push(patch);
-        }
-        /* Обновляем nomSnapshot сразу — чтобы итог пересчитался и сохранился */
-        nomSnapshotRef.current={...(nomSnapshotRef.current||{}),[nomId]:v};
-        if(onSnapshotUpdate)onSnapshotUpdate({...(nomSnapshotRef.current)});
+      const nom=resolveNomByEstimateLine(line); /* правильно находит nomId даже для canvas */
+      if(nom){
+        const nomId=nom.id;
+        nom.price=v;
+        const ex=RUNTIME_EDITED_NOMS.findIndex(x=>x.id===nomId);
+        const patch={id:nomId,name:nom.name,price:v,type:nom.type};
+        if(ex>=0)RUNTIME_EDITED_NOMS[ex]=patch;else RUNTIME_EDITED_NOMS.push(patch);
+        /* Обновляем nomSnapshot — чтобы итог пересчитался и сохранился в проект */
+        const newSnap={...(nomSnapshotRef.current||{}),[nomId]:v};
+        nomSnapshotRef.current=newSnap;
+        if(onSnapshotUpdate)onSnapshotUpdate(newSnap);
+        /* Форсируем сохранение */
+        setTimeout(()=>{try{window.dispatchEvent(new Event("magicapp:saveNow"));}catch(e){}},150);
       }
     }
   };
