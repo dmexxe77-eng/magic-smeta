@@ -103,8 +103,9 @@ export default function App(){
 
   const ordersRef=useRef(orders);
   const themeRef=useRef(theme);
-  useEffect(()=>{ordersRef.current=orders;},[orders]);
-  useEffect(()=>{themeRef.current=theme;},[theme]);
+  // Обновляем ref синхронно во время рендера — не через useEffect чтобы избежать race condition с auto-save
+  ordersRef.current=orders;
+  themeRef.current=theme;
 
   useEffect(()=>{
     if(typeof window==="undefined")return;
@@ -187,7 +188,12 @@ export default function App(){
     else if(method==="recognize"||method==="compass"||method==="manual"){setScreen("calc");}
     else{ord.rooms=[newR("Помещение 1")];setOrders(prev=>prev.map(o=>o.id===ord.id?ord:o));setScreen("calc");}
   };
-  const updateOrderRooms=rooms=>{if(!curId)return;setOrders(prev=>prev.map(o=>o.id===curId?{...o,rooms}:o));};
+  const updateOrderRooms=rooms=>{
+    if(!curId)return;
+    setOrders(prev=>prev.map(o=>o.id===curId?{...o,rooms}:o));
+    // Форсируем сохранение через 100мс чтобы ordersRef успел обновиться
+    setTimeout(()=>{try{window.dispatchEvent(new Event("magicapp:saveNow"));}catch(e){}},100);
+  };
   const handleTraceFile=e=>{const f=e.target.files?.[0];if(!f)return;if(f.size>80*1024*1024){alert("Файл слишком большой (макс. 80 МБ)");return;}if(f.type==="application/pdf"||f.name.endsWith(".pdf")){const r=new FileReader();r.onload=()=>{setPdfData2(new Uint8Array(r.result));setScreen("pdfPick");};r.readAsArrayBuffer(f);}else{const r=new FileReader();r.onload=()=>{setPlanImg(r.result);if(curId)setOrders(prev=>prev.map(o=>o.id===curId?{...o,planImage:r.result}:o));setScreen("calc");};r.readAsDataURL(f);}};
 
   let content;
@@ -302,6 +308,8 @@ export default function App(){
         }
       }catch(e){}
       setScreen("home");setPlanImg(null);
+      // Форсируем финальное сохранение после выхода из калькулятора
+      setTimeout(()=>{try{window.dispatchEvent(new Event("magicapp:saveNow"));}catch(e){}},200);
     }}
     onRoomsChange={updateOrderRooms}
     initPlanImage={planImg||curOrder.planImage}
