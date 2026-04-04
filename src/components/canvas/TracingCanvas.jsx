@@ -26,6 +26,8 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
   const gestureRef = useRef({ isPan: false, startDist: 0, startZoom: 1, startPan: { x: 0, y: 0 }, lastTouch: null, moved: false });
   const imgDataRef = useRef(null);
   const imgElRef = useRef(null); /* загруженный Image объект для лупы */
+  const dragStartRef = useRef(null); /* для определения drag vs click на ЛКМ */
+  const isDragPanRef = useRef(false); /* флаг: ЛКМ-drag перешёл в pan */
   /* ЛУПА — state и refs */
   const [loupe, setLoupe] = useState(null);
   const loupeRef = useRef(null); /* всегда актуальное значение для touch-обработчиков */
@@ -278,12 +280,15 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
       setMPan({ sx: e.clientX - pan.x, sy: e.clientY - pan.y });
       return;
     }
-    /* ЛКМ без shift — запуск таймера лупы */
+    /* ЛКМ без shift — запуск таймера лупы + запоминаем стартовую позицию */
     if (!closed && e.button === 0) {
+      dragStartRef.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
+      isDragPanRef.current = false;
       mouseLoupeRef.current = false;
       const tx = e.clientX, ty = e.clientY;
       holdTimerRef.current = setTimeout(() => {
         if (closedRef.current) return;
+        if (isDragPanRef.current) return; // не активировать лупу если уже панируем
         mouseLoupeRef.current = true;
         loupeActiveRef.current = true;
         const [rawIx, rawIy] = s2iDOM(tx, ty);
@@ -295,14 +300,29 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
   const onMouseMove = useCallback(e => {
     if (mPan) {
       setPan({ x: e.clientX - mPan.sx, y: e.clientY - mPan.sy });
-    } else if (mouseLoupeRef.current && loupeActiveRef.current) {
+      return;
+    }
+    /* ЛКМ drag → pan: если двинули > 5px с зажатой ЛКМ и нет активной лупы */
+    if (e.buttons === 1 && dragStartRef.current && !mouseLoupeRef.current) {
+      const dx = e.clientX - dragStartRef.current.x;
+      const dy = e.clientY - dragStartRef.current.y;
+      if (Math.sqrt(dx * dx + dy * dy) > 5) {
+        if (holdTimerRef.current) { clearTimeout(holdTimerRef.current); holdTimerRef.current = null; }
+        isDragPanRef.current = true;
+        dragStartRef.current = null;
+        setMPan({ sx: e.clientX - pan.x, sy: e.clientY - pan.y });
+        return;
+      }
+    }
+    if (mouseLoupeRef.current && loupeActiveRef.current) {
       const [rawIx, rawIy] = s2iDOM(e.clientX, e.clientY);
       const [ix, iy] = snapToCorner(rawIx, rawIy, "loupe");
       setLoupeSync({ imgX: ix, imgY: iy, fingerX: e.clientX, fingerY: e.clientY });
     }
-  }, [mPan, snapToCorner, setLoupeSync]);
+  }, [mPan, pan, snapToCorner, setLoupeSync]);
   const onMouseUp = useCallback(e => {
     if (holdTimerRef.current) { clearTimeout(holdTimerRef.current); holdTimerRef.current = null; }
+    dragStartRef.current = null;
     if (mPan) { setMPan(null); return; }
     if (mouseLoupeRef.current && loupeActiveRef.current) {
       const lp = loupeRef.current;
@@ -316,6 +336,7 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
   const onClick = useCallback(e => {
     if (Date.now() - lastTouchTimeRef.current < 400) return;
     if (mouseLoupeRef.current) return;
+    if (isDragPanRef.current) { isDragPanRef.current = false; return; } // был drag-pan — не ставим точку
     if (holdTimerRef.current) { clearTimeout(holdTimerRef.current); holdTimerRef.current = null; }
     if (!mPan && !e.shiftKey) {
       const [ix, iy] = s2iDOM(e.clientX, e.clientY);
@@ -386,7 +407,7 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
       </div>
       {/* Канвас */}
       <div ref={containerRef}
-        style={{ flex: 1, overflow: "hidden", position: "relative", cursor: closed ? "default" : "crosshair", touchAction: "none", WebkitUserSelect: "none", userSelect: "none", WebkitTouchCallout: "none" }}
+        style={{ flex: 1, overflow: "hidden", position: "relative", cursor: mPan ? "grabbing" : (closed ? "default" : "crosshair"), touchAction: "none", WebkitUserSelect: "none", userSelect: "none", WebkitTouchCallout: "none" }}
         onClick={onClick} onWheel={handleWheel}
         onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
         onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp}
