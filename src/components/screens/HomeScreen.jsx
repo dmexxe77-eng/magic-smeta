@@ -564,7 +564,17 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
           }}/>
           <button onClick={()=>{document.getElementById("import-file-input")?.click();}} style={{width:"100%",background:"rgba(99,102,241,0.08)",border:"none",borderRadius:11,padding:12,color:ACC,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",textAlign:"left",marginBottom:6}}>{"⬆ Загрузить данные"}</button>
         </>)}
-        <div style={{fontSize:10,color:T.dim,marginTop:8,lineHeight:1.6}}>{"Версия 2.1 · "+ALL_NOM.length+" номенклатур"}</div>
+        <button onClick={()=>{
+          if(window.confirm("Сбросить локальные данные?\nПриложение откроется с актуальными данными из кода (проекты, кнопки, номенклатура).")){
+            try{
+              Object.keys(localStorage).filter(k=>k.startsWith("magicapp")).forEach(k=>localStorage.removeItem(k));
+              const dbs=["magicapp_idb_v1","magicapp-idb"];
+              dbs.forEach(db=>{try{indexedDB.deleteDatabase(db);}catch(e){}});
+            }catch(e){}
+            window.location.reload();
+          }
+        }} style={{width:"100%",background:"rgba(220,38,38,0.07)",border:"none",borderRadius:11,padding:10,color:"#dc2626",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit",textAlign:"left",marginTop:6}}>{"🔄 Сбросить локальные данные"}</button>
+        <div style={{fontSize:10,color:T.dim,marginTop:6,lineHeight:1.6}}>{"Версия 2.1 · "+ALL_NOM.length+" номенклатур"}</div>
       </div>
     </div>)}
 
