@@ -20,7 +20,7 @@ import PdfPagePicker from "../builders/PdfPagePicker.jsx";
 
 import { PresetEditor, FavEditor2, CalcBlock, MultiBlock, ExtraBlock } from "../calc/CalcBlock.jsx";
 /* ── Выбор способа построения ── */
-function BuilderSelect({ onSelect, onBack, rooms }) {
+function BuilderSelect({ onSelect, onBack, rooms, onFileChosen }) {
   const options = [
     { id:"trace",   icon:"🗺️", label:"Обводка чертежа",     sub:"Обведите PDF/фото планировки",    color:"#4F46E5" },
     { id:"recognize",icon:"🤖",label:"АИ распознавание",     sub:"Сфотографируйте эскиз комнаты",   color:"#0ea5e9" },
@@ -43,22 +43,41 @@ function BuilderSelect({ onSelect, onBack, rooms }) {
       </div>
       {/* Options */}
       <div style={{flex:1,padding:"20px 16px",display:"flex",flexDirection:"column",gap:12}}>
-        {options.map(o=>(
-          <button key={o.id} onClick={()=>onSelect(o.id)}
-            style={{background:T.card,border:"1px solid "+T.border,borderRadius:16,padding:"18px 16px",
-              display:"flex",alignItems:"center",gap:16,cursor:"pointer",fontFamily:"inherit",
-              textAlign:"left",transition:"transform 0.1s"}}>
-            <div style={{width:52,height:52,borderRadius:14,background:o.color+"18",
-              display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,flexShrink:0}}>
-              {o.icon}
-            </div>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:16,fontWeight:700,color:T.text,marginBottom:2}}>{o.label}</div>
-              <div style={{fontSize:12,color:T.sub}}>{o.sub}</div>
-            </div>
-            <span style={{color:T.dim,fontSize:18,flexShrink:0}}>›</span>
-          </button>
-        ))}
+        {options.map(o=>{
+          const inner = (
+            <>
+              <div style={{width:52,height:52,borderRadius:14,background:o.color+"18",
+                display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,flexShrink:0}}>
+                {o.icon}
+              </div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:16,fontWeight:700,color:T.text,marginBottom:2}}>{o.label}</div>
+                <div style={{fontSize:12,color:T.sub}}>{o.sub}</div>
+              </div>
+              <span style={{color:T.dim,fontSize:18,flexShrink:0}}>›</span>
+            </>
+          );
+          const cardStyle = {background:T.card,border:"1px solid "+T.border,borderRadius:16,padding:"18px 16px",
+            display:"flex",alignItems:"center",gap:16,cursor:"pointer",fontFamily:"inherit",
+            textAlign:"left",width:"100%",boxSizing:"border-box"};
+          if(o.id==="trace"){
+            return (
+              <label key={o.id} style={{...cardStyle,display:"flex"}}>
+                <input type="file" accept="image/*,.pdf" style={{display:"none"}} onChange={e=>{
+                  const f=e.target.files?.[0];
+                  if(f&&onFileChosen)onFileChosen(f);
+                  e.target.value="";
+                }}/>
+                {inner}
+              </label>
+            );
+          }
+          return (
+            <button key={o.id} onClick={()=>onSelect(o.id)} style={cardStyle}>
+              {inner}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -210,7 +229,7 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
   const fileInput=(<input ref={fRef} type="file" accept="image/*,.pdf" onChange={handleFile} style={{display:"none"}}/>);
   /* Mode checks FIRST — before room access */
   if(mode==="draw")return(<RoomDrawer roomCount={rooms.length} onDone={(poly,name)=>{const nm=name||("Помещение "+(rooms.length+1));const rm=newR(nm);rm.v=poly;rm.aO=null;rm.pO=null;const p2=calcPoly(poly);rm.canvas.qty=Math.round(p2.a*100)/100;rm.mainProf.qty=Math.round(p2.p*100)/100;setRooms(p=>[...p,rm]);setTab(rm.id);setMode("main");}} onCancel={()=>setMode(rooms.length?"main":"select")}/>);
-  if(mode==="select")return(<BuilderSelect rooms={rooms} onSelect={m=>{if(m==="trace"){fRef.current?.click();}else setMode(m);}} onBack={rooms.length>0?()=>setMode("main"):onBack}/>);
+  if(mode==="select")return(<BuilderSelect rooms={rooms} onSelect={m=>{setMode(m);}} onBack={rooms.length>0?()=>setMode("main"):onBack} onFileChosen={f=>{handleFile({target:{files:[f],value:""}});}}/>);
   if(mode==="recognize")return(<SketchRecognition onFinish={rm=>{setRooms(p=>[...p,rm]);setTab(rm.id);setMode("main");}} onBack={()=>setMode("main")} existingCount={rooms.length}/>);
   if(mode==="manual")return(<ManualBuilder onFinish={rm=>{setRooms(p=>[...p,rm]);setTab(rm.id);setMode("main");}} onBack={()=>setMode("select")} existingCount={rooms.length}/>);
   if(mode==="compass")return(<CompassBuilder onFinish={rm=>{setRooms(p=>[...p,rm]);setTab(rm.id);setMode("main");}} onBack={()=>setMode("main")} existingCount={rooms.length}/>);
