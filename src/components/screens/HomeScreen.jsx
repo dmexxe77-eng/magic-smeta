@@ -244,7 +244,7 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
             {fin.total>0&&(
               <div style={{background:DARK,borderRadius:16,padding:"16px 18px",marginBottom:12,display:"flex",justifyContent:"space-between",alignItems:"flex-end"}}>
                 <div>
-                  <div style={{fontSize:10,color:"rgba(79,70,229,0.7)",letterSpacing:"0.5px",marginBottom:6}}>{"СУММА ПО СМЕТЕ"}</div>
+                  <div style={{fontSize:10,color:"rgba(255,255,255,0.5)",letterSpacing:"1px",marginBottom:6,fontWeight:600}}>{"СУММА ПО СМЕТЕ"}</div>
                   <div style={{fontSize:30,fontWeight:700,color:"#fff",letterSpacing:-1,lineHeight:1}}>{ff(fin.total)+" ₽"}</div>
                   <div style={{height:3,background:"rgba(255,255,255,0.1)",borderRadius:3,marginTop:10,width:160,overflow:"hidden"}}>
                     <div style={{height:"100%",width:`${Math.min(pct,100)}%`,background:ACC,borderRadius:3}}/>
@@ -584,7 +584,7 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
       <div style={{background:DARK,borderRadius:16,padding:"16px 18px",marginBottom:12}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
           <div>
-            <div style={{fontSize:10,color:`rgba(79,70,229,0.7)`,letterSpacing:"0.8px",marginBottom:6}}>{"АКТИВНЫЕ ОБЪЕКТЫ"}</div>
+            <div style={{fontSize:10,color:"rgba(255,255,255,0.5)",letterSpacing:"1px",marginBottom:6,fontWeight:600}}>{"АКТИВНЫЕ ОБЪЕКТЫ"}</div>
             <div style={{fontSize:34,fontWeight:700,color:"#fff",letterSpacing:-1,lineHeight:1}}>{totalOrders}</div>
           </div>
           <div style={{textAlign:"right",marginTop:4}}>
