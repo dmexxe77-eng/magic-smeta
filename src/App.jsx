@@ -203,11 +203,15 @@ export default function App(){
   };
   const updateOrderRooms=rooms=>{
     if(!curId)return;
-    setOrders(prev=>prev.map(o=>o.id===curId?{...o,rooms}:o));
-    // Форсируем сохранение через 100мс чтобы ordersRef успел обновиться
+    // Обновляем ordersRef НЕМЕДЛЕННО — до следующего рендера App.jsx
+    // Это критично для beforeunload: пользователь может обновить страницу
+    // до того как React обработает setOrders и обновит ordersRef во время рендера
+    ordersRef.current=ordersRef.current.map(o=>o.id===curId?{...o,rooms}:o);
+    setOrders(ordersRef.current);
+    // Форсируем сохранение через 100мс
     setTimeout(()=>{try{window.dispatchEvent(new Event("magicapp:saveNow"));}catch(e){}},100);
   };
-  const handleTraceFile=e=>{const f=e.target.files?.[0];if(!f)return;if(f.size>80*1024*1024){alert("Файл слишком большой (макс. 80 МБ)");return;}if(f.type==="application/pdf"||f.name.endsWith(".pdf")){const r=new FileReader();r.onload=()=>{setPdfData2(new Uint8Array(r.result));setScreen("pdfPick");};r.readAsArrayBuffer(f);}else{const r=new FileReader();r.onload=()=>{setPlanImg(r.result);if(curId)setOrders(prev=>prev.map(o=>o.id===curId?{...o,planImage:r.result}:o));setScreen("calc");};r.readAsDataURL(f);}};
+  const handleTraceFile=e=>{const f=e.target.files?.[0];if(!f)return;if(f.size>80*1024*1024){alert("Файл слишком большой (макс. 80 МБ)");return;}if(f.type==="application/pdf"||f.name.endsWith(".pdf")){const r=new FileReader();r.onload=()=>{setPdfData2(new Uint8Array(r.result));setScreen("pdfPick");};r.readAsArrayBuffer(f);}else{const r=new FileReader();r.onload=()=>{setPlanImg(r.result);if(curId){ordersRef.current=ordersRef.current.map(o=>o.id===curId?{...o,planImage:r.result}:o);setOrders(ordersRef.current);}setScreen("calc");};r.readAsDataURL(f);}};
 
   let content;
   const buildFullExport=()=>({
@@ -326,7 +330,7 @@ export default function App(){
     }}
     onRoomsChange={updateOrderRooms}
     initPlanImage={planImg||curOrder.planImage}
-    initMode={["recognize","compass","manual"].includes(curOrder.method)&&curOrder.rooms.length===0?curOrder.method:"main"}
+    initMode={["recognize","compass","manual","trace"].includes(curOrder.method)&&curOrder.rooms.length===0?curOrder.method:"main"}
     initNomSnapshot={curOrder.nomSnapshot||null}
     onSnapshotUpdate={snap=>{if(curId)setOrders(prev=>prev.map(o=>o.id===curId?{...o,nomSnapshot:snap}:o));}}
     onPlanImageChange={img=>{setPlanImg(img);if(curId)setOrders(prev=>prev.map(o=>o.id===curId?{...o,planImage:img}:o));}}
