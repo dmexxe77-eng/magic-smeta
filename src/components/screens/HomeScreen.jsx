@@ -17,7 +17,7 @@ import ManualBuilder from "../builders/ManualBuilder.jsx";
 import PdfPagePicker from "../builders/PdfPagePicker.jsx";
 
 import NomEditor from "./NomEditor.jsx";
-function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme,onFullExport,onSaveNow,saveStatus}){
+function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme,onFullExport,onSaveNow,onImport,saveStatus}){
   const[tab,setTab]       = useState("home");
   const[showMenu,setShowMenu] = useState(false);
   const[showNomEd,setShowNomEd] = useState(false);
@@ -550,7 +550,20 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
           </div>
         </div>
         <button onClick={()=>{setShowMenu(false);setShowNomEd(true);}} style={{width:"100%",background:ABGC,border:"none",borderRadius:11,padding:12,color:ACC,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginBottom:6,textAlign:"left"}}>{"📋 Редактор номенклатур"}</button>
-        {onFullExport&&<button onClick={()=>{const d=onFullExport();setShowFullExp(d);setShowMenu(false);}} style={{width:"100%",background:"rgba(22,163,74,0.08)",border:"none",borderRadius:11,padding:12,color:T.green,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",textAlign:"left"}}>{"💾 Сохранить настройки"}</button>}
+        {onFullExport&&<button onClick={()=>{const d=onFullExport();setShowFullExp(d);setShowMenu(false);}} style={{width:"100%",background:"rgba(22,163,74,0.08)",border:"none",borderRadius:11,padding:12,color:T.green,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",textAlign:"left",marginBottom:6}}>{"💾 Сохранить настройки"}</button>}
+        {onImport&&(<>
+          <input id="import-file-input" type="file" accept=".json" style={{display:"none"}} onChange={e=>{
+            const f=e.target.files?.[0];if(!f)return;
+            const r=new FileReader();
+            r.onload=ev=>{
+              onImport(ev.target.result);
+              setShowMenu(false);
+            };
+            r.readAsText(f);
+            e.target.value="";
+          }}/>
+          <button onClick={()=>{document.getElementById("import-file-input")?.click();}} style={{width:"100%",background:"rgba(99,102,241,0.08)",border:"none",borderRadius:11,padding:12,color:ACC,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",textAlign:"left",marginBottom:6}}>{"⬆ Загрузить данные"}</button>
+        </>)}
         <div style={{fontSize:10,color:T.dim,marginTop:8,lineHeight:1.6}}>{"Версия 2.1 · "+ALL_NOM.length+" номенклатур"}</div>
       </div>
     </div>)}

@@ -172,7 +172,58 @@ export default function App(){
     orders:orders.map(o=>({...o,planImage:undefined,rooms:(o.rooms||[]).map(r=>({...r,imgPts:undefined,aImg:undefined}))}))
   });
   const manualSave=()=>{try{window.dispatchEvent(new Event("magicapp:saveNow"));}catch(e){}};
-  if(screen==="home")content=(<HomeScreen orders={orders} setOrders={setOrders} onOpen={openOrder} onNew={()=>setScreen("new")} onStatusChange={changeStatus} theme={theme} setTheme={setTheme} onFullExport={buildFullExport} onSaveNow={manualSave} saveStatus={saveStatus}/>);
+
+  const handleImport=(jsonText)=>{
+    try{
+      const d=JSON.parse(jsonText);
+      if(!d||typeof d!=="object")throw new Error("Неверный формат файла");
+      let applied=[];
+      // 1. Apply presets
+      if(Array.isArray(d.presets)&&d.presets.length>0){
+        CALC_STATE_REF.presets=d.presets;
+        applied.push(`кнопок: ${d.presets.length}`);
+      }
+      // 2. Apply sharedFavs
+      if(d.sharedFavs&&typeof d.sharedFavs==="object"){
+        CALC_STATE_REF.sharedFavs=d.sharedFavs;
+      }
+      // 3. Apply globalOpts
+      if(Array.isArray(d.globalOpts)){
+        CALC_STATE_REF.globalOpts=d.globalOpts;
+      }
+      // 4. Apply nomenclature
+      if(d.customNoms||d.editedNoms||d.deletedNomIds){
+        applyNomsSnapshot({
+          customNoms:d.customNoms||[],
+          editedNoms:d.editedNoms||[],
+          deletedNomIds:d.deletedNomIds||[]
+        });
+        const cn=(d.customNoms||[]).length;
+        const en=(d.editedNoms||[]).length;
+        if(cn>0)applied.push(`доп. номенклатур: ${cn}`);
+        if(en>0)applied.push(`изменённых цен: ${en}`);
+      }
+      // 5. Apply orders — MERGE: keep existing, add/overwrite by id
+      if(Array.isArray(d.orders)&&d.orders.length>0){
+        setOrders(prev=>{
+          const map=new Map(prev.map(o=>[o.id,o]));
+          d.orders.forEach(o=>{ if(o&&o.id)map.set(o.id,o); });
+          return Array.from(map.values());
+        });
+        applied.push(`проектов: ${d.orders.length}`);
+      }
+      // 6. Save to localStorage immediately
+      setTimeout(()=>{try{window.dispatchEvent(new Event("magicapp:saveNow"));}catch(e){}},300);
+      const msg=applied.length>0
+        ?`✅ Данные загружены!\n${applied.join(" · ")}`
+        :"⚠️ Файл пустой или неизвестный формат";
+      alert(msg);
+    }catch(e){
+      alert("❌ Ошибка загрузки: "+e.message);
+    }
+  };
+
+  if(screen==="home")content=(<HomeScreen orders={orders} setOrders={setOrders} onOpen={openOrder} onNew={()=>setScreen("new")} onStatusChange={changeStatus} theme={theme} setTheme={setTheme} onFullExport={buildFullExport} onSaveNow={manualSave} onImport={handleImport} saveStatus={saveStatus}/>);
   else if(screen==="new")content=(<NewOrderFlow onBack={()=>setScreen("home")} onCreate={createOrder} clients={appClients} designers={appDesigners} onAddClient={addClient} onAddDesigner={addDesigner}/>);
   else if(screen==="pickImage")content=(<div style={{minHeight:"100vh",background:T.bg,color:T.text,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16,padding:20}}>
     <div style={{fontSize:14,fontWeight:600}}>{"Загрузите план потолков"}</div>
@@ -200,7 +251,7 @@ export default function App(){
     onSnapshotUpdate={snap=>{if(curId)setOrders(prev=>prev.map(o=>o.id===curId?{...o,nomSnapshot:snap}:o));}}
     onPlanImageChange={img=>{setPlanImg(img);if(curId)setOrders(prev=>prev.map(o=>o.id===curId?{...o,planImage:img}:o));}}
   />);
-  else content=(<HomeScreen orders={orders} setOrders={setOrders} onOpen={openOrder} onNew={()=>setScreen("new")} onStatusChange={changeStatus} theme={theme} setTheme={setTheme} onFullExport={buildFullExport} onSaveNow={manualSave} saveStatus={saveStatus}/>);
+  else content=(<HomeScreen orders={orders} setOrders={setOrders} onOpen={openOrder} onNew={()=>setScreen("new")} onStatusChange={changeStatus} theme={theme} setTheme={setTheme} onFullExport={buildFullExport} onSaveNow={manualSave} onImport={handleImport} saveStatus={saveStatus}/>);
 
   return(<div style={{fontFamily:"'Inter',-apple-system,BlinkMacSystemFont,'SF Pro Display',system-ui,sans-serif",background:T.bg,color:T.text,minHeight:"100vh"}}>
     <style>{"@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');*{box-sizing:border-box;margin:0;padding:0;font-family:inherit}::-webkit-scrollbar{width:3px}select{outline:none;font-family:inherit}input[type=number]::-webkit-inner-spin-button{opacity:.3}"}</style>
