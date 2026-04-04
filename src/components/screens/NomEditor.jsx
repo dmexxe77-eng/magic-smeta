@@ -53,8 +53,8 @@ function NomEditor({onClose, initialEditId}){
   const[addOpen,setAddOpen]=useState(false);
 
   const IS={width:"100%",background:T.inputBg,border:"0.5px solid "+T.border,color:T.text,borderRadius:8,padding:"8px 10px",fontSize:12,fontFamily:"inherit",boxSizing:"border-box",outline:"none"};
-  const TYPE_LABELS={profile:"Материал",work:"Работа",option:"Опция",canvas:"Полотно"};
-  const TYPE_COLORS={profile:T.accent,work:T.green,option:T.orange,canvas:"#0ea5e9"};
+  const TYPE_LABELS={profile:"Материал",work:"Работа",option:"Материал",canvas:"Полотно"};
+  const TYPE_COLORS={profile:T.accent,work:T.green,option:T.accent,canvas:"#0ea5e9"};
 
   /* Пользовательские номенклатуры (id начинается с "u") */
   const userNoms=ALL_NOM.filter(n=>n.id.startsWith("u"));
@@ -419,14 +419,20 @@ function NomEditor({onClose, initialEditId}){
   /* ── Лаконичный мобильный UI ── */
   // Активная вкладка: "all" | "mine" | brandId
 
-  const typeColor = t => t==="work"?T.green:t==="option"?T.orange:t==="canvas"?"#0ea5e9":T.accent;
-  const typeChar  = t => t==="work"?"⚒":t==="option"?"◎":t==="canvas"?"◻":"■";
+  const typeColor = t => t==="work"?T.green:t==="canvas"?"#0ea5e9":T.accent;
+  const typeChar  = t => t==="work"?"⚒":t==="canvas"?"◻":"■";
 
   // Список для отображения
   const displayList = (() => {
     let list = ALL_NOM;
     if (search.length > 1) {
       list = list.filter(n => n.name.toLowerCase().includes(search.toLowerCase()));
+    } else if (tab === "canvas") {
+      list = list.filter(n => n.type === "canvas");
+    } else if (tab === "profile") {
+      list = list.filter(n => n.type === "profile" || n.type === "option");
+    } else if (tab === "work") {
+      list = list.filter(n => n.type === "work");
     } else if (tab === "mine") {
       list = list.filter(n => n.id.startsWith("u"));
     } else if (tab !== "all") {
@@ -437,8 +443,11 @@ function NomEditor({onClose, initialEditId}){
 
   // Вкладки: Все + Мои + бренды с пользовательским контентом
   const tabs = [
-    { id:"all",  label:"Все" },
-    { id:"mine", label:"Мои" },
+    { id:"all",     label:"Все" },
+    { id:"canvas",  label:"Полотна" },
+    { id:"profile", label:"Материалы" },
+    { id:"work",    label:"Работы" },
+    { id:"mine",    label:"Мои" },
     ...NOM_BRAND_GROUPS.map(g => ({ id:g.id, label:g.name.split(" ")[0] })),
   ];
 
@@ -500,7 +509,7 @@ function NomEditor({onClose, initialEditId}){
           {displayList.map(n=>{
             const isUser=n.id.startsWith("u")||forceEditMode;
             const tc=typeColor(n.type);
-            const typeLabel={profile:"Материал",work:"Работа",option:"Опция",canvas:"Полотно"}[n.type]||n.type;
+            const typeLabel={profile:"Материал",work:"Работа",option:"Материал",canvas:"Полотно"}[n.type]||n.type;
             return(
               <div key={n.id} onClick={()=>openEdit(n)}
                 style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",
@@ -566,7 +575,6 @@ function NomEditor({onClose, initialEditId}){
                   <select style={{...IS,marginBottom:12}} value={editType} onChange={e=>setEditType(e.target.value)}>
                     <option value="profile">Материал</option>
                     <option value="work">Работа</option>
-                    <option value="option">Опция</option>
                     <option value="canvas">Полотно</option>
                   </select>
                   {/* Фото */}
@@ -607,7 +615,7 @@ function NomEditor({onClose, initialEditId}){
                     <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
                       <span style={{fontSize:12,color:T.sub}}>Тип</span>
                       <span style={{fontSize:12,color:typeColor(n.type),fontWeight:600}}>
-                        {{profile:"Материал",work:"Работа",option:"Опция",canvas:"Полотно"}[n.type]||n.type}
+                        {{profile:"Материал",work:"Работа",option:"Материал",canvas:"Полотно"}[n.type]||n.type}
                       </span>
                     </div>
                     <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
@@ -651,7 +659,7 @@ function NomEditor({onClose, initialEditId}){
             <select style={{...IS,marginBottom:8}} value={newType} onChange={e=>setNewType(e.target.value)}>
               <option value="profile">Материал</option>
               <option value="work">Работа</option>
-              <option value="option">Опция</option>
+              <option value="canvas">Полотно</option>
             </select>
             <select style={{...IS,marginBottom:16}} value={addBrandChoice} onChange={e=>setAddBrandChoice(e.target.value)}>
               <option value="__none__">Без профиля</option>
