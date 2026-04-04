@@ -251,7 +251,7 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
     .sort((a,b)=>(b.q||0)-(a.q||0));
   const eE=(k,f,v)=>{
     setEstEd(prev=>({...prev,[k]:{...prev[k],[f]:v}}));
-    /* при изменении цены — сохраняем в ALL_NOM + RUNTIME_EDITED_NOMS */
+    /* при изменении цены — сохраняем в ALL_NOM + RUNTIME_EDITED_NOMS + nomSnapshot */
     if(f==="p"){
       const line=[...matsE,...worksE].find(l=>l.k===k);
       const nomId=line?._k; /* buildEst кладёт _k = исходный ключ номенклатуры */
@@ -263,6 +263,9 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
           const patch={id:nomId,name:nom.name,price:v,type:nom.type};
           if(ex>=0)RUNTIME_EDITED_NOMS[ex]=patch;else RUNTIME_EDITED_NOMS.push(patch);
         }
+        /* Обновляем nomSnapshot сразу — чтобы итог пересчитался и сохранился */
+        nomSnapshotRef.current={...(nomSnapshotRef.current||{}),[nomId]:v};
+        if(onSnapshotUpdate)onSnapshotUpdate({...(nomSnapshotRef.current)});
       }
     }
   };
@@ -289,7 +292,10 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
           <div style={{textAlign:"right"}}>
             <div style={{fontSize:16,fontWeight:700,color:"#1e2530"}}>{fmt(grand)+" ₽"}</div>
             {onSnapshotUpdate&&<button onClick={()=>{
-              try{const snap=snapNomPrices(rooms,CALC_STATE_REF.presets,CALC_STATE_REF.globalOpts||[]);if(Object.keys(snap).length>0)handleSnapshotUpdate(snap);}catch(e){}
+              try{
+                const snap=snapNomPrices(rooms,CALC_STATE_REF.presets,CALC_STATE_REF.globalOpts||[]);
+                if(Object.keys(snap).length>0){handleSnapshotUpdate(snap);setEstEd({});}
+              }catch(e){}
             }} style={{background:"none",border:"none",padding:0,color:"#4F46E5",fontSize:9,cursor:"pointer",fontFamily:"inherit",lineHeight:1.2}}>{"🔄 обновить цены"}</button>}
           </div>
           <button onClick={onBack} style={{background:"#f2f3fa",border:"none",borderRadius:8,width:32,height:32,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0}}>
