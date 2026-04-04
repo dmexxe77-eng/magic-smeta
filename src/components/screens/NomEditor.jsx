@@ -500,19 +500,30 @@ function NomEditor({onClose, initialEditId}){
           {displayList.map(n=>{
             const isUser=n.id.startsWith("u")||forceEditMode;
             const tc=typeColor(n.type);
+            const typeLabel={profile:"Материал",work:"Работа",option:"Опция",canvas:"Полотно"}[n.type]||n.type;
             return(
               <div key={n.id} onClick={()=>openEdit(n)}
-                style={{display:"flex",alignItems:"center",gap:10,padding:"11px 16px",
+                style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",
                   borderBottom:"0.5px solid "+T.border,cursor:"pointer",
-                  background:editId===n.id?T.actBg:T.card}}>
-                <span style={{color:tc,fontSize:13,flexShrink:0}}>{typeChar(n.type)}</span>
+                  background:editId===n.id?T.actBg:"transparent"}}>
+                {/* Фото или цветная иконка */}
+                {n.photo
+                  ? <img src={n.photo} style={{width:44,height:44,objectFit:"cover",borderRadius:8,flexShrink:0,border:"1px solid "+T.border}}/>
+                  : <div style={{width:44,height:44,borderRadius:8,background:tc+"18",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:18}}>
+                      {typeChar(n.type)}
+                    </div>
+                }
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:13,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                  <div style={{fontSize:13,fontWeight:500,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                     {n.name}
                   </div>
-                  <div style={{fontSize:11,color:T.dim,marginTop:1}}>{fmt(n.price||0)} ₽ · {n.unit}</div>
+                  <div style={{display:"flex",alignItems:"center",gap:6,marginTop:2}}>
+                    <span style={{fontSize:12,fontWeight:600,color:tc}}>{fmt(n.price||0)} ₽</span>
+                    <span style={{fontSize:11,color:T.dim}}>· {n.unit}</span>
+                    <span style={{fontSize:10,color:tc,background:tc+"15",borderRadius:4,padding:"1px 5px"}}>{typeLabel}</span>
+                  </div>
                 </div>
-                {isUser&&<span style={{color:T.accent,fontSize:12,flexShrink:0}}>›</span>}
+                <span style={{color:T.dim,fontSize:18,flexShrink:0}}>›</span>
               </div>
             );
           })}
