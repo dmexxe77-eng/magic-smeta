@@ -223,12 +223,12 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
   /* File input always rendered */
   const fileInput=(<input ref={fRef} type="file" accept="image/*,.pdf" onChange={handleFile} style={{display:"none"}}/>);
   /* Mode checks FIRST — before room access */
+  if(pdfData)return(<PdfPagePicker pdfData={pdfData} onSelect={img=>{setPdfData(null);setPlanImage(img);setMode("trace");if(onPlanImageChange)onPlanImageChange(img);}} onBack={()=>setPdfData(null)}/>);
   if(mode==="draw")return(<RoomDrawer roomCount={rooms.length} onDone={(poly,name)=>{const nm=name||("Помещение "+(rooms.length+1));const rm=newR(nm);rm.v=poly;rm.aO=null;rm.pO=null;const p2=calcPoly(poly);rm.canvas.qty=Math.round(p2.a*100)/100;rm.mainProf.qty=Math.round(p2.p*100)/100;setRooms(p=>[...p,rm]);setTab(rm.id);setMode("main");}} onCancel={()=>setMode(rooms.length?"main":"select")}/>);
   if(mode==="select")return(<BuilderSelect rooms={rooms} onSelect={m=>{setMode(m);}} onBack={rooms.length>0?()=>setMode("main"):onBack} onFileChosen={f=>{handleFile({target:{files:[f],value:""}});}}/>);
   if(mode==="recognize")return(<SketchRecognition onFinish={rm=>{setRooms(p=>[...p,rm]);setTab(rm.id);setMode("main");}} onBack={()=>setMode("main")} existingCount={rooms.length}/>);
   if(mode==="manual")return(<ManualBuilder onFinish={rm=>{setRooms(p=>[...p,rm]);setTab(rm.id);setMode("main");}} onBack={()=>setMode("select")} existingCount={rooms.length}/>);
   if(mode==="compass")return(<CompassBuilder onFinish={rm=>{setRooms(p=>[...p,rm]);setTab(rm.id);setMode("main");}} onBack={()=>setMode("main")} existingCount={rooms.length}/>);
-  if(pdfData)return(<PdfPagePicker pdfData={pdfData} onSelect={img=>{setPdfData(null);setPlanImage(img);setMode("trace");if(onPlanImageChange)onPlanImageChange(img);}} onBack={()=>setPdfData(null)}/>);
   if(mode==="trace")return(<div style={{height:"100vh",display:"flex",flexDirection:"column"}}><TracingCanvas image={planImage} onFinish={rm=>{setRooms(p=>[...p,rm]);setTab(rm.id);}} completedRooms={rooms} initScale={traceScale} onScaleChange={s=>setTraceScale(s)}/><div style={{padding:"5px 10px",background:T.bg,display:"flex",justifyContent:"space-between",alignItems:"center",borderTop:"1px solid "+T.border,flexShrink:0}}><span style={{fontSize:10,color:T.sub}}>{"Обведено: "}<b style={{color:T.text}}>{rooms.length}</b></span><button onClick={()=>setMode("main")} style={{background:T.actBg,border:"1px solid "+T.actBd,borderRadius:10,padding:"5px 14px",color:T.accent,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{"Готово ("+rooms.length+")"}</button></div></div>);
 
   const r=rooms.find(x=>x.id===tab)||rooms[0];
