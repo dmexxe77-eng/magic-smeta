@@ -333,7 +333,14 @@ export default function App(){
     initPlanImage={planImg||curOrder.planImage}
     initMode={["recognize","compass","manual","trace"].includes(curOrder.method)&&curOrder.rooms.length===0?curOrder.method:"main"}
     initNomSnapshot={curOrder.nomSnapshot||null}
-    onSnapshotUpdate={snap=>{if(curId)setOrders(prev=>prev.map(o=>o.id===curId?{...o,nomSnapshot:snap}:o));}}
+    onSnapshotUpdate={snap=>{
+      if(!curId)return;
+      // Обновляем ordersRef немедленно — до следующего рендера
+      ordersRef.current=ordersRef.current.map(o=>o.id===curId?{...o,nomSnapshot:snap}:o);
+      setOrders(ordersRef.current);
+      // Форсируем сохранение
+      setTimeout(()=>{try{window.dispatchEvent(new Event("magicapp:saveNow"));}catch(e){}},100);
+    }}
     onPlanImageChange={img=>{setPlanImg(img);if(curId)setOrders(prev=>prev.map(o=>o.id===curId?{...o,planImage:img}:o));}}
   />);
   else content=(<HomeScreen orders={orders} setOrders={setOrders} onOpen={openOrder} onNew={()=>setScreen("new")} onStatusChange={changeStatus} theme={theme} setTheme={setTheme} onFullExport={buildFullExport} onSaveNow={manualSave} onImport={handleImport} saveStatus={saveStatus}/>);
