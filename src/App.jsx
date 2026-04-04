@@ -134,7 +134,7 @@ export default function App(){
         orders:sanitizeOrdersForStorage(ordersRef.current)
       };
 
-      // Save to IndexedDB (primary)
+      // Save to IndexedDB (primary) — полные данные включая planImage
       let okIdb=false;
       let ordersInDb=null;
       try{
@@ -149,9 +149,10 @@ export default function App(){
       setSaveStatus({ts:Date.now(),ok:!!okIdb,ordersInDb});
       saving=false;
 
-      // Also try localStorage (secondary, for quick fallback)
+      // localStorage (вторичный fallback) — БЕЗ planImage (base64 может переполнить квоту ~5MB)
       try{
-        const raw=JSON.stringify(baseSnap);
+        const lsSnap={...baseSnap,orders:baseSnap.orders.map(o=>({...o,planImage:undefined}))};
+        const raw=JSON.stringify(lsSnap);
         window.localStorage.setItem(AUTO_SAVE_KEY, raw);
         window.localStorage.setItem(AUTO_SAVE_META_KEY, JSON.stringify({ok:true,ts:Date.now(),bytes:raw.length,okIdb}));
       }catch(e){
@@ -162,15 +163,15 @@ export default function App(){
     const onSaveNow=()=>{save();};
     try{window.addEventListener("magicapp:saveNow", onSaveNow);}catch(e){}
     const t=setInterval(()=>{save();}, 2500);
-    // СИНХРОННОЕ сохранение при обновлении/закрытии страницы
-    // async save() не успевает завершиться до unload — пишем localStorage синхронно
+    // СИНХРОННОЕ сохранение при обновлении/закрытии — тоже БЕЗ planImage
     const onUnload=()=>{
       try{
+        const orders=sanitizeOrdersForStorage(ordersRef.current).map(o=>({...o,planImage:undefined}));
         const snap={
           v:2,ts:Date.now(),theme:themeRef.current,isProOverride:!!IS_PRO_OVERRIDE,
           calc:{presets:CALC_STATE_REF.presets,sharedFavs:CALC_STATE_REF.sharedFavs,globalOpts:CALC_STATE_REF.globalOpts||[]},
           noms:{customNoms:sanitizeCustomNoms(ALL_NOM.filter(n=>n.id&&n.id.startsWith("u"))),editedNoms:sanitizeEditedNoms(RUNTIME_EDITED_NOMS),deletedNomIds:DELETED_NOM_IDS},
-          orders:sanitizeOrdersForStorage(ordersRef.current)
+          orders
         };
         window.localStorage.setItem(AUTO_SAVE_KEY,JSON.stringify(snap));
         window.localStorage.setItem(AUTO_SAVE_META_KEY,JSON.stringify({ok:true,ts:Date.now(),sync:true}));
