@@ -83,6 +83,24 @@ export default function App(){
     hydrateNomsPhotosFromIdb();
   },[]);
 
+  // Auto-generate nomSnapshot for orders that don't have one yet
+  useEffect(()=>{
+    if(!stateReady)return;
+    setOrders(prev=>{
+      let changed=false;
+      const updated=prev.map(o=>{
+        if(!o.nomSnapshot&&(o.rooms||[]).length>0){
+          try{
+            const snap=snapNomPrices(o.rooms,CALC_STATE_REF.presets,CALC_STATE_REF.globalOpts||[]);
+            if(Object.keys(snap).length>0){changed=true;return{...o,nomSnapshot:snap};}
+          }catch(e){}
+        }
+        return o;
+      });
+      return changed?updated:prev;
+    });
+  },[stateReady]);
+
   const ordersRef=useRef(orders);
   const themeRef=useRef(theme);
   useEffect(()=>{ordersRef.current=orders;},[orders]);
