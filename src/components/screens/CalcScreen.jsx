@@ -21,6 +21,7 @@ import PdfPagePicker from "../builders/PdfPagePicker.jsx";
 import { PresetEditor, FavEditor2, CalcBlock, MultiBlock, ExtraBlock } from "../calc/CalcBlock.jsx";
 /* ── Выбор способа построения ── */
 function BuilderSelect({ onSelect, onBack, rooms, onFileChosen }) {
+  const fileRef = useRef(null);
   const options = [
     { id:"trace",   icon:"🗺️", label:"Обводка чертежа",     sub:"Обведите PDF/фото планировки",    color:"#4F46E5" },
     { id:"recognize",icon:"🤖",label:"АИ распознавание",     sub:"Сфотографируйте эскиз комнаты",   color:"#0ea5e9" },
@@ -41,6 +42,12 @@ function BuilderSelect({ onSelect, onBack, rooms, onFileChosen }) {
           </div>
         </div>
       </div>
+      {/* Скрытый input для обводки — вне map(), управляется через ref */}
+      <input ref={fileRef} type="file" accept="image/*,.pdf" style={{display:"none",position:"absolute"}} onChange={e=>{
+        const f=e.target.files?.[0];
+        if(f&&onFileChosen)onFileChosen(f);
+        e.target.value="";
+      }}/>
       {/* Options */}
       <div style={{flex:1,padding:"20px 16px",display:"flex",flexDirection:"column",gap:12}}>
         {options.map(o=>{
@@ -60,20 +67,8 @@ function BuilderSelect({ onSelect, onBack, rooms, onFileChosen }) {
           const cardStyle = {background:T.card,border:"1px solid "+T.border,borderRadius:16,padding:"18px 16px",
             display:"flex",alignItems:"center",gap:16,cursor:"pointer",fontFamily:"inherit",
             textAlign:"left",width:"100%",boxSizing:"border-box"};
-          if(o.id==="trace"){
-            return (
-              <label key={o.id} style={{...cardStyle,display:"flex"}}>
-                <input type="file" accept="image/*,.pdf" style={{display:"none"}} onChange={e=>{
-                  const f=e.target.files?.[0];
-                  if(f&&onFileChosen)onFileChosen(f);
-                  e.target.value="";
-                }}/>
-                {inner}
-              </label>
-            );
-          }
           return (
-            <button key={o.id} onClick={()=>onSelect(o.id)} style={cardStyle}>
+            <button key={o.id} onClick={()=>{ if(o.id==="trace"){fileRef.current?.click();}else{onSelect(o.id);}}} style={cardStyle}>
               {inner}
             </button>
           );
