@@ -344,10 +344,10 @@ function NomEditor({onClose, initialEditId}){
           {/* Фото */}
           <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:6}}>
             {(editPhotoPreview||n.photo)&&<img src={editPhotoPreview||n.photo} style={{width:44,height:44,objectFit:"cover",borderRadius:6,flexShrink:0}}/>}
-            <label style={{flex:1,background:T.card2,border:"0.5px solid "+T.border,borderRadius:8,padding:"6px 10px",fontSize:11,color:T.sub,cursor:"pointer",textAlign:"center",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <label style={{flex:1,background:T.faint||T.pillBg,border:"0.5px solid "+T.border,borderRadius:8,padding:"6px 10px",fontSize:11,color:T.sub,cursor:"pointer",textAlign:"center",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center"}}>
               <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{const f=e.target.files?.[0]||null;if(f)onPhotoChosenForEdit(f,n.id);try{e.target.value="";}catch{}}}/>
               {editPhotoFileName
-                ? `Фото выбрано: 20{editPhotoFileName}`
+                ? ("Фото: "+editPhotoFileName)
                 : (editPhotoPreview||n.photo) ? "Сменить фото 📷" : "Добавить фото 📷"}
             </label>
             {(editPhotoPreview||n.photo)&&<button onClick={()=>{const targetId=n.id;const nom=ALL_NOM.find(x=>x.id===targetId);if(nom){revokeObjectUrl(nom.photo);nom.photo=null;setEditPhotoPreview(null);setEditPhotoFileName("");deleteNomPhotoFromIdb(targetId);const ex=RUNTIME_EDITED_NOMS.findIndex(x=>x.id===targetId);const patch={id:targetId,name:nom.name,price:nom.price,type:nom.type,unit:nom.unit,photo:null};if(ex>=0)RUNTIME_EDITED_NOMS[ex]=patch;else RUNTIME_EDITED_NOMS.push(patch);}forceRender(x=>x+1);}} style={{background:"rgba(255,59,48,0.1)",border:"none",borderRadius:6,padding:"6px 8px",color:T.red,fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>✕</button>}
