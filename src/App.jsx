@@ -225,6 +225,29 @@ export default function App(){
         });
         applied.push(`проектов: ${d.orders.length}`);
       }
+      // 6. Restore photos to IndexedDB
+      if(d.nomPhotos&&typeof d.nomPhotos==="object"){
+        const photoEntries=Object.entries(d.nomPhotos);
+        if(photoEntries.length>0){
+          (async()=>{
+            let restored=0;
+            for(const[nomId,dataUrl]of photoEntries){
+              try{
+                // Convert base64 dataUrl back to Blob
+                const res=await fetch(dataUrl);
+                const blob=await res.blob();
+                await idbPut("nomPhotos",nomId,blob);
+                // Update ALL_NOM photo
+                const nom=ALL_NOM.find(n=>n.id===nomId);
+                if(nom)nom.photo=dataUrl;
+                restored++;
+              }catch(e){}
+            }
+            console.log("✅ Фото восстановлено:",restored);
+          })();
+          applied.push(`фото: ${photoEntries.length}`);
+        }
+      }
       // 6. Save to localStorage immediately
       setTimeout(()=>{try{window.dispatchEvent(new Event("magicapp:saveNow"));}catch(e){}},300);
       const msg=applied.length>0
