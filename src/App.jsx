@@ -161,12 +161,15 @@ export default function App(){
 
   let content;
   const buildFullExport=()=>({
+    _version:"2.4",
+    _exportedAt:new Date().toISOString(),
     presets:CALC_STATE_REF.presets,
     sharedFavs:CALC_STATE_REF.sharedFavs,
+    globalOpts:CALC_STATE_REF.globalOpts||[],
     customNoms:ALL_NOM.filter(n=>n.id.startsWith("u")),
     editedNoms:RUNTIME_EDITED_NOMS,
     deletedNomIds:DELETED_NOM_IDS,
-    orders:orders.map(o=>({...o,rooms:(o.rooms||[]).map(r=>({...r,imgPts:undefined,aImg:undefined}))}))
+    orders:orders.map(o=>({...o,planImage:undefined,rooms:(o.rooms||[]).map(r=>({...r,imgPts:undefined,aImg:undefined}))}))
   });
   const manualSave=()=>{try{window.dispatchEvent(new Event("magicapp:saveNow"));}catch(e){}};
   if(screen==="home")content=(<HomeScreen orders={orders} setOrders={setOrders} onOpen={openOrder} onNew={()=>setScreen("new")} onStatusChange={changeStatus} theme={theme} setTheme={setTheme} onFullExport={buildFullExport} onSaveNow={manualSave} saveStatus={saveStatus}/>);

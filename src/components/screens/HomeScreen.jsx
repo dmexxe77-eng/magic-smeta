@@ -794,11 +794,23 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
           <div style={{display:"flex",gap:8,marginBottom:11,flexWrap:"wrap"}}>
             {[["Кнопок",(d.presets||[]).length,ACC],["Избр.",(Object.values(d.sharedFavs||{}).flat().length),ACC],["Ном.",(d.customNoms||[]).length,"#16a34a"],["Проектов",(d.orders||[]).length,"#7c5cbf"]].map(([l,n,c])=>(<div key={l} style={{background:T.faint,borderRadius:9,padding:"7px 11px",textAlign:"center"}}><div style={{color:c,fontSize:16,fontWeight:700}}>{n}</div><div style={{color:T.dim,fontSize:9}}>{l}</div></div>))}
           </div>
-          <div style={{background:T.faint,borderRadius:11,padding:10,fontSize:9,color:T.green,fontFamily:"monospace",maxHeight:160,overflowY:"auto",marginBottom:11,lineHeight:1.7,wordBreak:"break-all",userSelect:"all"}}>
-            {json.slice(0,2000)+(json.length>2000?"...":"")}
+          <div style={{background:T.faint,borderRadius:11,padding:10,fontSize:9,color:T.green,fontFamily:"monospace",maxHeight:120,overflowY:"auto",marginBottom:11,lineHeight:1.7,wordBreak:"break-all",userSelect:"all"}}>
+            {json.slice(0,1500)+(json.length>1500?"...":"")}
           </div>
+          <div style={{background:"rgba(99,102,241,0.07)",borderRadius:10,padding:"9px 12px",marginBottom:11,fontSize:11,color:T.sub,lineHeight:1.5}}>
+            {"📎 Скачайте файл → загрузите в чат разработчику → он обновит приложение с вашими данными"}
+          </div>
+          <button onClick={()=>{
+            const ts=new Date().toISOString().slice(0,10);
+            const fname=`magicapp_backup_${ts}.json`;
+            const blob=new Blob([json],{type:"application/json"});
+            const url=URL.createObjectURL(blob);
+            const a=document.createElement("a");a.href=url;a.download=fname;
+            document.body.appendChild(a);a.click();
+            document.body.removeChild(a);URL.revokeObjectURL(url);
+          }} style={{width:"100%",background:ACC,border:"none",borderRadius:12,padding:13,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginBottom:7}}>{"⬇ Скачать файл"}</button>
           <button onClick={()=>{try{navigator.clipboard.writeText(json);}catch(e){const ta=document.createElement("textarea");ta.value=json;document.body.appendChild(ta);ta.select();document.execCommand("copy");document.body.removeChild(ta);}}}
-            style={{width:"100%",background:"#16a34a",border:"none",borderRadius:12,padding:13,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginBottom:7}}>{"Копировать"}</button>
+            style={{width:"100%",background:T.faint,border:"none",borderRadius:12,padding:12,color:T.sub,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",marginBottom:7}}>{"Копировать текст"}</button>
           <button onClick={()=>setShowFullExp(null)} style={{width:"100%",background:T.bg,border:"none",borderRadius:12,padding:12,color:T.sub,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>{"Закрыть"}</button>
         </div>
       </div>);
