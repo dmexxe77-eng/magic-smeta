@@ -291,11 +291,15 @@ export default function App(){
     initRooms={curOrder.rooms}
     orderName={curOrder.name}
     onBack={()=>{
-      // Freeze nom prices into order before leaving calculator
+      // Only create snapshot if order doesn't have one yet
+      // (existing snapshots are preserved — use "Обновить цены" button to refresh)
       try{
-        const snap=snapNomPrices(curOrder.rooms||[],CALC_STATE_REF.presets,CALC_STATE_REF.globalOpts||[]);
-        if(Object.keys(snap).length>0)
-          setOrders(prev=>prev.map(o=>o.id===curId?{...o,nomSnapshot:snap}:o));
+        const alreadyHasSnap=curOrder.nomSnapshot&&Object.keys(curOrder.nomSnapshot).length>0;
+        if(!alreadyHasSnap){
+          const snap=snapNomPrices(curOrder.rooms||[],CALC_STATE_REF.presets,CALC_STATE_REF.globalOpts||[]);
+          if(Object.keys(snap).length>0)
+            setOrders(prev=>prev.map(o=>o.id===curId?{...o,nomSnapshot:snap}:o));
+        }
       }catch(e){}
       setScreen("home");setPlanImg(null);
     }}

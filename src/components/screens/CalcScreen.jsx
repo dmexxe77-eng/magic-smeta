@@ -280,7 +280,12 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
           </div>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <span style={{fontSize:16,fontWeight:700,color:"#1e2530"}}>{fmt(grand)+" ₽"}</span>
+          <div style={{textAlign:"right"}}>
+            <div style={{fontSize:16,fontWeight:700,color:"#1e2530"}}>{fmt(grand)+" ₽"}</div>
+            {onSnapshotUpdate&&<button onClick={()=>{
+              try{const snap=snapNomPrices(rooms,CALC_STATE_REF.presets,CALC_STATE_REF.globalOpts||[]);if(Object.keys(snap).length>0)onSnapshotUpdate(snap);}catch(e){}
+            }} style={{background:"none",border:"none",padding:0,color:"#4F46E5",fontSize:9,cursor:"pointer",fontFamily:"inherit",lineHeight:1.2}}>{"🔄 обновить цены"}</button>}
+          </div>
           <button onClick={onBack} style={{background:"#f2f3fa",border:"none",borderRadius:8,width:32,height:32,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0}}>
             <svg width="14" height="14" fill="none" stroke="#1e2530" strokeWidth="2" strokeLinecap="round"><path d="M9 3L5 7l4 4"/></svg>
           </button>
