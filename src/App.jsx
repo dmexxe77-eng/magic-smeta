@@ -306,6 +306,7 @@ export default function App(){
     onRoomsChange={updateOrderRooms}
     initPlanImage={planImg||curOrder.planImage}
     initMode={["recognize","compass","manual"].includes(curOrder.method)&&curOrder.rooms.length===0?curOrder.method:"main"}
+    initNomSnapshot={curOrder.nomSnapshot||null}
     onSnapshotUpdate={snap=>{if(curId)setOrders(prev=>prev.map(o=>o.id===curId?{...o,nomSnapshot:snap}:o));}}
     onPlanImageChange={img=>{setPlanImg(img);if(curId)setOrders(prev=>prev.map(o=>o.id===curId?{...o,planImage:img}:o));}}
   />);

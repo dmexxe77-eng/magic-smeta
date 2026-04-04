@@ -78,8 +78,14 @@ function BuilderSelect({ onSelect, onBack, rooms, onFileChosen }) {
   );
 }
 
-function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,initMode,onPlanImageChange,onSnapshotUpdate}){
+function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,initMode,onPlanImageChange,onSnapshotUpdate,initNomSnapshot}){
   const[mode,setMode]=useState(initMode||"main");
+  const nomSnapshotRef=useRef(initNomSnapshot||null); /* заморожен при входе, обновляется только через "обновить цены" */
+  /* При обновлении снапшота из кнопки — сохраняем локально */
+  const handleSnapshotUpdate=useCallback(snap=>{
+    nomSnapshotRef.current=snap;
+    if(onSnapshotUpdate)onSnapshotUpdate(snap);
+  },[onSnapshotUpdate]);
   const[planImage,setPlanImage]=useState(initPlanImage||null);
   const[rooms,setRooms]=useState(initRooms||[]);
   const[tab,setTab]=useState(initRooms?.[0]?.id||null);
@@ -238,7 +244,7 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
   const inn=angs.filter(d=>d===90).length,out=angs.filter(d=>d===270).length;
   const autoAngles={inner:inn,outer:out,total:inn+out};
 
-  const est=buildEst(rooms,presets,globalOpts);
+  const est=buildEst(rooms,presets,globalOpts,nomSnapshotRef.current);
   const matsE=est.mats.map((l,i)=>({...l,k:"m"+i}));
   const worksE=est.works
     .map((l,i)=>({...l,k:"w"+i}))
@@ -283,7 +289,7 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
           <div style={{textAlign:"right"}}>
             <div style={{fontSize:16,fontWeight:700,color:"#1e2530"}}>{fmt(grand)+" ₽"}</div>
             {onSnapshotUpdate&&<button onClick={()=>{
-              try{const snap=snapNomPrices(rooms,CALC_STATE_REF.presets,CALC_STATE_REF.globalOpts||[]);if(Object.keys(snap).length>0)onSnapshotUpdate(snap);}catch(e){}
+              try{const snap=snapNomPrices(rooms,CALC_STATE_REF.presets,CALC_STATE_REF.globalOpts||[]);if(Object.keys(snap).length>0)handleSnapshotUpdate(snap);}catch(e){}
             }} style={{background:"none",border:"none",padding:0,color:"#4F46E5",fontSize:9,cursor:"pointer",fontFamily:"inherit",lineHeight:1.2}}>{"🔄 обновить цены"}</button>}
           </div>
           <button onClick={onBack} style={{background:"#f2f3fa",border:"none",borderRadius:8,width:32,height:32,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0}}>
@@ -621,7 +627,7 @@ td.total-val{font-weight:700;color:#1e2530}
               /* ═══ ПО ПОМЕЩЕНИЯМ ═══ */
               let grandTotal=0;
               for(const rm2 of rooms.filter(x=>x.on!==false)){
-                const re=buildEst([rm2],presets,globalOpts);
+                const re=buildEst([rm2],presets,globalOpts,nomSnapshotRef.current);
                 const worksRm=(re.works||[]).slice().sort((a,b)=>(b.q||0)-(a.q||0));
                 const mt2=re.mats.reduce((s,l)=>s+l.q*l.p,0);
                 const wt2=worksRm.reduce((s,l)=>s+l.q*l.p,0);
