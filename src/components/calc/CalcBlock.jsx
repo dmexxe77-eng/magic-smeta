@@ -108,13 +108,13 @@ function PresetEditor({preset,onSave,onClose}){
 
 function FavEditor2({allPresets,favIds:_rawFavIds,setFavIds,maxFav,onEditPreset,onAddPreset,onDeletePreset,onClose}){
   const favIds=Array.isArray(_rawFavIds)?_rawFavIds:[];
+  const [confirmId,setConfirmId]=useState(null);
   const favList=favIds.map(id=>allPresets.find(p=>p.id===id)).filter(Boolean);
   const notFav=allPresets.filter(p=>!favIds.includes(p.id));
   const move=(idx,dir)=>{
     const next=idx+dir;
     if(next<0||next>=favList.length)return;
     const arr=[...favIds];
-    /* find actual positions in favIds array */
     const ai=arr.indexOf(favList[idx].id);
     const bi=arr.indexOf(favList[next].id);
     [arr[ai],arr[bi]]=[arr[bi],arr[ai]];
@@ -123,6 +123,15 @@ function FavEditor2({allPresets,favIds:_rawFavIds,setFavIds,maxFav,onEditPreset,
   const remove=id=>setFavIds(favIds.filter(x=>x!==id));
   const add=id=>setFavIds([...favIds,id]);
   const btnSm=(onClick,children,color)=>(<button onClick={onClick} style={{background:"transparent",border:"1px solid "+T.border,borderRadius:6,padding:"3px 7px",color:color||T.sub,fontSize:11,cursor:"pointer",fontFamily:"inherit",lineHeight:1}}>{children}</button>);
+  const ConfirmDelete=({id})=>confirmId===id?(
+    <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
+      <span style={{fontSize:10,color:T.red,whiteSpace:"nowrap"}}>{"Удалить?"}</span>
+      <button onClick={()=>{onDeletePreset?.(id);setConfirmId(null);}} style={{background:"rgba(255,69,58,0.15)",border:"1px solid rgba(255,69,58,0.5)",borderRadius:6,padding:"3px 9px",color:T.red,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",lineHeight:1}}>{"Да"}</button>
+      <button onClick={()=>setConfirmId(null)} style={{background:T.pillBg,border:"1px solid "+T.border,borderRadius:6,padding:"3px 9px",color:T.sub,fontSize:11,cursor:"pointer",fontFamily:"inherit",lineHeight:1}}>{"Нет"}</button>
+    </div>
+  ):(
+    <button onClick={()=>setConfirmId(id)} style={{background:"rgba(255,69,58,0.1)",border:"1px solid rgba(255,69,58,0.3)",borderRadius:6,padding:"3px 7px",color:T.red,fontSize:12,cursor:"pointer",lineHeight:1,flexShrink:0}}>{"🗑"}</button>
+  );
   return(<div style={{position:"fixed",top:0,left:0,right:0,bottom:0,zIndex:35,background:T.overlay,overflow:"auto",padding:"16px 10px"}}>
     <div style={{background:T.card,border:"1px solid "+T.border,borderRadius:16,padding:14,maxWidth:360,margin:"0 auto"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
@@ -132,65 +141,38 @@ function FavEditor2({allPresets,favIds:_rawFavIds,setFavIds,maxFav,onEditPreset,
         </div>
         <span onClick={onClose} style={{color:T.red,fontSize:18,cursor:"pointer",padding:"0 4px"}}>{"×"}</span>
       </div>
-
-      {/* ── Избранные (с удалением и сортировкой) ── */}
       {favList.length===0&&<div style={{color:T.dim,fontSize:12,textAlign:"center",padding:"12px 0",borderBottom:"0.5px solid "+T.border,marginBottom:10}}>{"Нет избранных — добавьте ниже"}</div>}
       {favList.map((p,i)=>(
-        <div key={p.id} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 8px",
-          background:T.actBg,border:"1px solid "+T.accent+"30",borderRadius:10,marginBottom:4}}>
-          {/* стрелки */}
-          <div style={{display:"flex",flexDirection:"column",gap:1}}>
-            <button onClick={()=>move(i,-1)} disabled={i===0}
-              style={{background:"transparent",border:"none",color:i===0?T.muted:T.accent,
-                fontSize:11,cursor:i===0?"default":"pointer",padding:"0 3px",lineHeight:1}}>{"▲"}</button>
-            <button onClick={()=>move(i,1)} disabled={i===favList.length-1}
-              style={{background:"transparent",border:"none",color:i===favList.length-1?T.muted:T.accent,
-                fontSize:11,cursor:i===favList.length-1?"default":"pointer",padding:"0 3px",lineHeight:1}}>{"▼"}</button>
+        <div key={p.id} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 8px",background:T.actBg,border:"1px solid "+T.accent+"30",borderRadius:10,marginBottom:4}}>
+          <div style={{display:"flex",flexDirection:"column",gap:1,flexShrink:0}}>
+            <button onClick={()=>move(i,-1)} disabled={i===0} style={{background:"transparent",border:"none",color:i===0?T.muted:T.accent,fontSize:11,cursor:i===0?"default":"pointer",padding:"0 3px",lineHeight:1}}>{"▲"}</button>
+            <button onClick={()=>move(i,1)} disabled={i===favList.length-1} style={{background:"transparent",border:"none",color:i===favList.length-1?T.muted:T.accent,fontSize:11,cursor:i===favList.length-1?"default":"pointer",padding:"0 3px",lineHeight:1}}>{"▼"}</button>
           </div>
-          <div style={{width:20,height:20,borderRadius:10,background:T.accent+"22",
-            display:"flex",alignItems:"center",justifyContent:"center",
-            color:T.accent,fontSize:9,fontWeight:700,flexShrink:0}}>{i+1}</div>
-          <div style={{flex:1,minWidth:0}}>
+          <div style={{width:20,height:20,borderRadius:10,background:T.accent+"22",display:"flex",alignItems:"center",justifyContent:"center",color:T.accent,fontSize:9,fontWeight:700,flexShrink:0}}>{i+1}</div>
+          {confirmId!==p.id&&<div style={{flex:1,minWidth:0}}>
             <div style={{fontSize:11,fontWeight:600,color:T.accent,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</div>
             <div style={{fontSize:8,color:T.dim}}>{p.items?.map(id=>NB(id)?.name).filter(Boolean).slice(0,2).join(" + ")||"—"}</div>
-          </div>
-          {btnSm(()=>onEditPreset(p),"Ред.",T.accent)}
-          <button onClick={()=>{if(window.confirm("Удалить кнопку «"+p.name+"»?"))onDeletePreset?.(p.id);}} style={{background:"rgba(255,69,58,0.1)",
-            border:"1px solid rgba(255,69,58,0.3)",borderRadius:6,padding:"3px 7px",
-            color:T.red,fontSize:12,cursor:"pointer",lineHeight:1}}>{"🗑"}</button>
+          </div>}
+          {confirmId!==p.id&&btnSm(()=>onEditPreset(p),"Ред.",T.accent)}
+          <ConfirmDelete id={p.id}/>
         </div>
       ))}
-
-      {/* ── Добавить новую ── */}
-      <button onClick={onAddPreset} style={{width:"100%",marginTop:4,marginBottom:10,
-        background:T.pillBg,border:"1px dashed "+T.accent,borderRadius:10,padding:8,
-        color:T.accent,fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>{"+ Создать новую кнопку"}</button>
-
-      {/* ── Не в избранных ── */}
+      <button onClick={onAddPreset} style={{width:"100%",marginTop:4,marginBottom:10,background:T.pillBg,border:"1px dashed "+T.accent,borderRadius:10,padding:8,color:T.accent,fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>{"+ Создать новую кнопку"}</button>
       {notFav.length>0&&(<>
-        <div style={{fontSize:9,fontWeight:600,color:T.dim,textTransform:"uppercase",
-          letterSpacing:0.6,marginBottom:6}}>{"Остальные кнопки"}</div>
+        <div style={{fontSize:9,fontWeight:600,color:T.dim,textTransform:"uppercase",letterSpacing:0.6,marginBottom:6}}>{"Остальные кнопки"}</div>
         {notFav.map(p=>(
-          <div key={p.id} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 8px",
-            background:T.pillBg,border:"1px solid "+T.border,borderRadius:10,marginBottom:3}}>
-            <div style={{flex:1,minWidth:0}}>
+          <div key={p.id} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 8px",background:T.pillBg,border:"1px solid "+T.border,borderRadius:10,marginBottom:3}}>
+            {confirmId!==p.id&&<div style={{flex:1,minWidth:0}}>
               <div style={{fontSize:11,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</div>
               <div style={{fontSize:8,color:T.dim}}>{p.items?.map(id=>NB(id)?.name).filter(Boolean).slice(0,2).join(" + ")||"—"}</div>
-            </div>
-            {btnSm(()=>onEditPreset(p),"Ред.")}
-            <button onClick={()=>add(p.id)} style={{background:"rgba(48,209,88,0.1)",
-              border:"1px solid rgba(48,209,88,0.3)",borderRadius:6,padding:"3px 8px",
-              color:T.green,fontSize:12,cursor:"pointer",lineHeight:1}}>{"+"}</button>
-            <button onClick={()=>{if(window.confirm("Удалить кнопку «"+p.name+"»?"))onDeletePreset?.(p.id);}} style={{background:"rgba(255,69,58,0.1)",
-              border:"1px solid rgba(255,69,58,0.3)",borderRadius:6,padding:"3px 7px",
-              color:T.red,fontSize:12,cursor:"pointer",lineHeight:1}}>{"🗑"}</button>
+            </div>}
+            {confirmId!==p.id&&btnSm(()=>onEditPreset(p),"Ред.")}
+            {confirmId!==p.id&&<button onClick={()=>add(p.id)} style={{background:"rgba(48,209,88,0.1)",border:"1px solid rgba(48,209,88,0.3)",borderRadius:6,padding:"3px 8px",color:T.green,fontSize:12,cursor:"pointer",lineHeight:1}}>{"+"}</button>}
+            <ConfirmDelete id={p.id}/>
           </div>
         ))}
       </>)}
-
-      <button onClick={onClose} style={{width:"100%",marginTop:10,background:T.accent,
-        border:"none",borderRadius:12,padding:11,color:"#fff",fontSize:13,fontWeight:600,
-        cursor:"pointer",fontFamily:"inherit"}}>{"Готово"}</button>
+      <button onClick={onClose} style={{width:"100%",marginTop:10,background:T.accent,border:"none",borderRadius:12,padding:11,color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{"Готово"}</button>
     </div>
   </div>);
 }
