@@ -552,12 +552,21 @@ function NomEditor({onClose, initialEditId}){
                     <input style={{...IS,flex:1}} type="number" value={editPrice} onChange={e=>setEditPrice(e.target.value)} placeholder="Цена"/>
                     <input style={{...IS,width:80}} value={editUnit} onChange={e=>setEditUnit(e.target.value)} placeholder="ед."/>
                   </div>
-                  <select style={{...IS,marginBottom:16}} value={editType} onChange={e=>setEditType(e.target.value)}>
+                  <select style={{...IS,marginBottom:12}} value={editType} onChange={e=>setEditType(e.target.value)}>
                     <option value="profile">Материал</option>
                     <option value="work">Работа</option>
                     <option value="option">Опция</option>
                     <option value="canvas">Полотно</option>
                   </select>
+                  {/* Фото */}
+                  <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:16}}>
+                    {(editPhotoPreview||n.photo)&&<img src={editPhotoPreview||n.photo} style={{width:48,height:48,objectFit:"cover",borderRadius:8,flexShrink:0,border:"1px solid "+T.border}}/>}
+                    <label style={{flex:1,background:T.faint,border:"1px solid "+T.border,borderRadius:10,padding:"10px",fontSize:12,color:T.sub,cursor:"pointer",textAlign:"center",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
+                      <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{const f=e.target.files?.[0]||null;if(f)onPhotoChosenForEdit(f,n.id);try{e.target.value="";}catch{}}}/>
+                      {editPhotoFileName?("✓ "+editPhotoFileName.slice(0,20)):(editPhotoPreview||n.photo)?"Сменить фото 📷":"Добавить фото 📷"}
+                    </label>
+                    {(editPhotoPreview||n.photo)&&<button onClick={()=>{const nom=ALL_NOM.find(x=>x.id===n.id);if(nom){revokeObjectUrl(nom.photo);nom.photo=null;setEditPhotoPreview(null);setEditPhotoFileName("");deleteNomPhotoFromIdb(n.id);const ex=RUNTIME_EDITED_NOMS.findIndex(x=>x.id===n.id);const patch={id:n.id,name:nom.name,price:nom.price,type:nom.type,unit:nom.unit,photo:null};if(ex>=0)RUNTIME_EDITED_NOMS[ex]=patch;else RUNTIME_EDITED_NOMS.push(patch);}forceRender(x=>x+1);}} style={{background:"rgba(255,59,48,0.1)",border:"none",borderRadius:8,padding:"10px 10px",color:T.red,fontSize:14,cursor:"pointer",flexShrink:0}}>✕</button>}
+                  </div>
                   <div style={{display:"flex",gap:8}}>
                     <button onClick={()=>{saveEdit();closeEdit();}}
                       style={{flex:1,background:T.accent,border:"none",borderRadius:12,padding:"12px",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
