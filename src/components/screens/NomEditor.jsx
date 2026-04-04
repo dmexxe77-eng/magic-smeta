@@ -6,7 +6,7 @@ import { compressImg, profSvgHtml } from "../../utils/imageUtils.js";
 import { AUTO_SAVE_KEY, AUTO_SAVE_META_KEY, idbPut, idbGet, idbDel, blobToObjectUrl, blobToDataUrl, revokeObjectUrl, persistNomPhotoToIdb, loadNomPhotoFromIdb, deleteNomPhotoFromIdb} from "../../utils/storage.js";
 import { P, PF, Pmp, Pap, Pcu, Ptr, DEFAULT_MAT, KK, LIGHT, OPT, PIMG, DEFAULT_FAV } from "../../data/profiles.js";
 import { ALL_NOM, NB, addNewNom, deleteNom, DELETED_NOM_IDS, RUNTIME_EDITED_NOMS, NOM_BRAND_GROUPS, ensureOptionPairsForNom} from "../../data/nomenclature.jsx";
-import { PRESETS_GEN, PRbyId, USER_PRESETS_OVERRIDE, USER_FAVS_OVERRIDE, BLOCK_CFG, CALC_STATE_REF, newRoom, newR, gA, gP, buildEst, sanitizeOrdersForStorage, applyNomsSnapshot, normalizeNomName} from "../../data/presets.js";
+import { PRESETS_GEN, PRbyId, USER_PRESETS_OVERRIDE, USER_FAVS_OVERRIDE, BLOCK_CFG, CALC_STATE_REF, newRoom, newR, gA, gP, buildEst, sanitizeOrdersForStorage, applyNomsSnapshot, normalizeNomName, hydrateNomsPhotosFromIdb} from "../../data/presets.js";
 import { btnS, N, SecH, Sel, ProfSel, ProfDD, OptsInline, ProfLine, NI, ProGate } from "../ui.jsx";
 import PolyMini from "../canvas/PolyMini.jsx";
 import PolyEditorFull from "../canvas/PolyEditorFull.jsx";
@@ -29,6 +29,11 @@ function NomEditor({onClose, initialEditId}){
   const[editPhotoFileName,setEditPhotoFileName]=useState("");
   const[delConfirmId,setDelConfirmId]=useState(null);
   const[,forceRender]=useState(0);
+
+  // Загружаем фото из IndexedDB при открытии редактора
+  useEffect(()=>{
+    hydrateNomsPhotosFromIdb().then(()=>forceRender(x=>x+1)).catch(()=>{});
+  },[]);
   const photoInputRef=useRef(null);
   const photoTargetRef=useRef(null);
   const[nomImportBusy,setNomImportBusy]=useState(false);
@@ -339,14 +344,12 @@ function NomEditor({onClose, initialEditId}){
           {/* Фото */}
           <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:6}}>
             {(editPhotoPreview||n.photo)&&<img src={editPhotoPreview||n.photo} style={{width:44,height:44,objectFit:"cover",borderRadius:6,flexShrink:0}}/>}
-            <button
-              onClick={()=>pickPhotoForEdit(n.id)}
-              style={{flex:1,background:T.card2,border:"0.5px solid "+T.border,borderRadius:8,padding:"6px 10px",fontSize:11,color:T.sub,cursor:"pointer",textAlign:"center",fontFamily:"inherit"}}
-            >
+            <label style={{flex:1,background:T.card2,border:"0.5px solid "+T.border,borderRadius:8,padding:"6px 10px",fontSize:11,color:T.sub,cursor:"pointer",textAlign:"center",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{const f=e.target.files?.[0]||null;if(f)onPhotoChosenForEdit(f,n.id);try{e.target.value="";}catch{}}}/>
               {editPhotoFileName
-                ? `Фото выбрано: ${editPhotoFileName}`
+                ? `Фото выбрано: 20{editPhotoFileName}`
                 : (editPhotoPreview||n.photo) ? "Сменить фото 📷" : "Добавить фото 📷"}
-            </button>
+            </label>
             {(editPhotoPreview||n.photo)&&<button onClick={()=>{const targetId=n.id;const nom=ALL_NOM.find(x=>x.id===targetId);if(nom){revokeObjectUrl(nom.photo);nom.photo=null;setEditPhotoPreview(null);setEditPhotoFileName("");deleteNomPhotoFromIdb(targetId);const ex=RUNTIME_EDITED_NOMS.findIndex(x=>x.id===targetId);const patch={id:targetId,name:nom.name,price:nom.price,type:nom.type,unit:nom.unit,photo:null};if(ex>=0)RUNTIME_EDITED_NOMS[ex]=patch;else RUNTIME_EDITED_NOMS.push(patch);}forceRender(x=>x+1);}} style={{background:"rgba(255,59,48,0.1)",border:"none",borderRadius:6,padding:"6px 8px",color:T.red,fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>✕</button>}
           </div>
           {editPhotoFileName&&<div style={{fontSize:10,color:T.dim,marginBottom:6}}>Фото выбрано: {editPhotoFileName} · id: {n.id}</div>}
@@ -448,9 +451,7 @@ function NomEditor({onClose, initialEditId}){
 
   return (
     <div style={{position:"fixed",inset:0,zIndex:50,background:T.overlay,display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
-      <input ref={photoInputRef} type="file" accept="image/*"
-        style={{position:"absolute",left:-99999,top:0,width:1,height:1,opacity:0}}
-        onChange={e=>{const f=e.target.files?.[0]||null;const tid=photoTargetRef.current;if(f)onPhotoChosenForEdit(f,tid);try{e.target.value="";}catch{}}}/>
+      
       <input ref={importXlsxRef} type="file" accept=".xlsx,.xls" style={{display:"none"}}
         onChange={e=>{const f=e.target.files?.[0]||null;try{e.target.value="";}catch{}if(f)importFromXlsx(f);}}/>
 
