@@ -251,21 +251,16 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
     .sort((a,b)=>(b.q||0)-(a.q||0));
   const eE=(k,f,v)=>{
     setEstEd(prev=>({...prev,[k]:{...prev[k],[f]:v}}));
-    /* при изменении цены — сохраняем в ALL_NOM + RUNTIME_EDITED_NOMS + nomSnapshot */
+    /* При изменении цены — обновляем ТОЛЬКО nomSnapshot проекта.
+       Глобальную номенклатуру (ALL_NOM, RUNTIME_EDITED_NOMS) НЕ трогаем —
+       изменения остаются только в этом проекте */
     if(f==="p"){
       const line=[...matsE,...worksE].find(l=>l.k===k);
-      const nom=resolveNomByEstimateLine(line); /* правильно находит nomId даже для canvas */
-      if(nom){
-        const nomId=nom.id;
-        nom.price=v;
-        const ex=RUNTIME_EDITED_NOMS.findIndex(x=>x.id===nomId);
-        const patch={id:nomId,name:nom.name,price:v,type:nom.type};
-        if(ex>=0)RUNTIME_EDITED_NOMS[ex]=patch;else RUNTIME_EDITED_NOMS.push(patch);
-        /* Обновляем nomSnapshot — чтобы итог пересчитался и сохранился в проект */
+      const nomId=line?._k;
+      if(nomId){
         const newSnap={...(nomSnapshotRef.current||{}),[nomId]:v};
         nomSnapshotRef.current=newSnap;
         if(onSnapshotUpdate)onSnapshotUpdate(newSnap);
-        /* Форсируем сохранение */
         setTimeout(()=>{try{window.dispatchEvent(new Event("magicapp:saveNow"));}catch(e){}},150);
       }
     }
@@ -442,50 +437,68 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
             <div style={{fontSize:10,color:"#aaa",marginTop:1}}>{fmt(matTot)+" мат · "+fmt(workTot)+" раб"}</div>
           </div>
         </div>
-        {showEst&&<div style={{padding:"0 14px 14px"}}>
-          <div style={{fontSize:9,fontWeight:700,color:"#4F46E5",marginBottom:4,letterSpacing:"0.8px"}}>{"МАТЕРИАЛЫ"}</div>
-          {matsE.map(l=>{const eq=estEd[l.k]?.q??l.q;const ep=estEd[l.k]?.p??l.p;const nom=resolveNomByEstimateLine(l);return(<div key={l.k} style={{padding:"4px 0",borderBottom:"0.5px solid "+T.border}}>
-            <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
-              {nom?.photo&&<img src={nom.photo} style={{width:30,height:30,objectFit:"cover",borderRadius:5,flexShrink:0}}/>}
-              <div style={{fontSize:10,color:T.sub,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>{l.n}</div>
+        {showEst&&(()=>{
+          const estTab=estEd.__tab||'room';
+          const setEstTab=t=>setEstEd(prev=>({...prev,__tab:t}));
+          const estRoom=r?buildEst([r],presets,globalOpts,nomSnapshotRef.current):{mats:[],works:[]};
+          const matsR=estRoom.mats.map((l,i)=>({...l,k:'rm'+i}));
+          const worksR=estRoom.works.map((l,i)=>({...l,k:'rw'+i})).sort((a,b)=>(b.q||0)-(a.q||0));
+          const matTotR=matsR.reduce((s,l)=>s+l.q*l.p,0);
+          const workTotR=worksR.reduce((s,l)=>s+l.q*l.p,0);
+          const grandR=matTotR+workTotR;
+          const activeMats=estTab==='room'?matsR:matsE;
+          const activeWorks=estTab==='room'?worksR:worksE;
+          const activeMatTot=estTab==='room'?matTotR:matTot;
+          const activeWorkTot=estTab==='room'?workTotR:workTot;
+          const activeGrand=estTab==='room'?grandR:grand;
+          return(<div style={{padding:'0 14px 14px'}}>
+            <div style={{display:'flex',gap:6,marginBottom:12}}>
+              <button onClick={()=>setEstTab('room')} style={{flex:1,background:estTab==='room'?'#1e2530':T.pillBg,border:'none',borderRadius:9,padding:'7px 0',fontSize:11,fontWeight:estTab==='room'?700:400,color:estTab==='room'?'#fff':T.sub,cursor:'pointer',fontFamily:'inherit'}}>
+                {(r&&r.name)||'Помещение'}
+              </button>
+              <button onClick={()=>setEstTab('all')} style={{flex:1,background:estTab==='all'?'#1e2530':T.pillBg,border:'none',borderRadius:9,padding:'7px 0',fontSize:11,fontWeight:estTab==='all'?700:400,color:estTab==='all'?'#fff':T.sub,cursor:'pointer',fontFamily:'inherit'}}>
+                {'Все помещения'}
+              </button>
             </div>
-            <div style={{display:"flex",alignItems:"center",gap:4}}>
-              <NI value={eq} onChange={v=>eE(l.k,"q",v)} w={40}/>
-              <span style={{fontSize:9,color:T.dim}}>{l.u+" ×"}</span>
-              <NI value={ep} onChange={v=>eE(l.k,"p",v)} w={46}/>
-              <span style={{fontSize:9,color:T.dim}}>{"="}</span>
-              <span style={{fontSize:11,fontWeight:600,color:T.accent,marginLeft:"auto"}}>{fmt(eq*ep)}</span>
+            <div style={{fontSize:9,fontWeight:700,color:'#4F46E5',marginBottom:4,letterSpacing:'0.8px'}}>{'МАТЕРИАЛЫ'}</div>
+            {activeMats.map(l=>{const eq=estEd[l.k]?.q??l.q;const ep=estEd[l.k]?.p??l.p;const nom=resolveNomByEstimateLine(l);return(<div key={l.k} style={{padding:'4px 0',borderBottom:'0.5px solid '+T.border}}>
+              <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:2}}>
+                {nom?.photo&&<img src={nom.photo} style={{width:30,height:30,objectFit:'cover',borderRadius:5,flexShrink:0}}/>}
+                <div style={{fontSize:10,color:T.sub,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',flex:1}}>{l.n}</div>
+              </div>
+              <div style={{display:'flex',alignItems:'center',gap:4}}>
+                <NI value={eq} onChange={v=>eE(l.k,'q',v)} w={40}/>
+                <span style={{fontSize:9,color:T.dim}}>{l.u+' ×'}</span>
+                <NI value={ep} onChange={v=>eE(l.k,'p',v)} w={46}/>
+                <span style={{fontSize:9,color:T.dim}}>{'='}</span>
+                <span style={{fontSize:11,fontWeight:600,color:T.accent,marginLeft:'auto'}}>{fmt(eq*ep)}</span>
+              </div>
+            </div>);})}
+            <div style={{display:'flex',justifyContent:'space-between',padding:'6px 0',fontSize:12,fontWeight:600,borderTop:'1.5px solid '+T.accent,marginTop:4}}><span>{'Материалы:'}</span><span style={{color:T.accent}}>{fmt(activeMatTot)}</span></div>
+            <div style={{fontSize:9,fontWeight:700,color:'#16a34a',margin:'10px 0 4px',letterSpacing:'0.8px'}}>{'РАБОТЫ'}</div>
+            {activeWorks.map(l=>{const eq=estEd[l.k]?.q??l.q;const ep=estEd[l.k]?.p??l.p;const nom=resolveNomByEstimateLine(l);return(<div key={l.k} style={{padding:'4px 0',borderBottom:'0.5px solid '+T.border}}>
+              <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:2}}>
+                {nom?.photo&&<img src={nom.photo} style={{width:30,height:30,objectFit:'cover',borderRadius:5,flexShrink:0}}/>}
+                <div style={{fontSize:10,color:T.sub,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',flex:1}}>{l.n}</div>
+              </div>
+              <div style={{display:'flex',alignItems:'center',gap:4}}>
+                <NI value={eq} onChange={v=>eE(l.k,'q',v)} w={40}/>
+                <span style={{fontSize:9,color:T.dim}}>{l.u+' ×'}</span>
+                <NI value={ep} onChange={v=>eE(l.k,'p',v)} w={46}/>
+                <span style={{fontSize:9,color:T.dim}}>{'='}</span>
+                <span style={{fontSize:11,fontWeight:600,color:T.green,marginLeft:'auto'}}>{fmt(eq*ep)}</span>
+              </div>
+            </div>);})}
+            <div style={{display:'flex',justifyContent:'space-between',padding:'6px 0',fontSize:12,fontWeight:600,borderTop:'1.5px solid '+T.green,marginTop:4}}><span>{'Работы:'}</span><span style={{color:T.green}}>{fmt(activeWorkTot)}</span></div>
+            <div style={{background:'#1e2530',borderRadius:12,padding:13,textAlign:'center',marginTop:10}}>
+              <div style={{fontSize:9,color:'rgba(255,255,255,0.4)',letterSpacing:'0.8px',marginBottom:5}}>{estTab==='room'?((r&&r.name)||'Помещение').toUpperCase():'ВСЕ ПОМЕЩЕНИЯ'}</div>
+              <div style={{fontSize:24,fontWeight:700,color:'#fff',letterSpacing:-0.5}}>{fmt(activeGrand)+' ₽'}</div>
             </div>
-          </div>);})}
-          <div style={{display:"flex",justifyContent:"space-between",padding:"6px 0",fontSize:12,fontWeight:600,borderTop:"1.5px solid "+T.accent,marginTop:4}}><span>{"Материалы:"}</span><span style={{color:T.accent}}>{fmt(matTot)}</span></div>
-
-          <div style={{fontSize:9,fontWeight:700,color:"#16a34a",margin:"10px 0 4px",letterSpacing:"0.8px"}}>{"РАБОТЫ"}</div>
-          {worksE.map(l=>{const eq=estEd[l.k]?.q??l.q;const ep=estEd[l.k]?.p??l.p;const nom=resolveNomByEstimateLine(l);return(<div key={l.k} style={{padding:"4px 0",borderBottom:"0.5px solid "+T.border}}>
-            <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
-              {nom?.photo&&<img src={nom.photo} style={{width:30,height:30,objectFit:"cover",borderRadius:5,flexShrink:0}}/>}
-              <div style={{fontSize:10,color:T.sub,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>{l.n}</div>
-            </div>
-            <div style={{display:"flex",alignItems:"center",gap:4}}>
-              <NI value={eq} onChange={v=>eE(l.k,"q",v)} w={40}/>
-              <span style={{fontSize:9,color:T.dim}}>{l.u+" ×"}</span>
-              <NI value={ep} onChange={v=>eE(l.k,"p",v)} w={46}/>
-              <span style={{fontSize:9,color:T.dim}}>{"="}</span>
-              <span style={{fontSize:11,fontWeight:600,color:T.green,marginLeft:"auto"}}>{fmt(eq*ep)}</span>
-            </div>
-          </div>);})}
-          <div style={{display:"flex",justifyContent:"space-between",padding:"6px 0",fontSize:12,fontWeight:600,borderTop:"1.5px solid "+T.green,marginTop:4}}><span>{"Работы:"}</span><span style={{color:T.green}}>{fmt(workTot)}</span></div>
-
-          <div style={{background:"#1e2530",borderRadius:12,padding:13,textAlign:"center",marginTop:10}}>
-            <div style={{fontSize:9,color:"rgba(79,70,229,0.7)",letterSpacing:"0.8px",marginBottom:5}}>{"ИТОГО"}</div>
-            <div style={{fontSize:24,fontWeight:700,color:"#fff",letterSpacing:-0.5}}>{fmt(grand)+" ₽"}</div>
-          </div>
-
-          {estEd&&Object.keys(estEd).length>0&&<button onClick={()=>setEstEd({})} style={{width:"100%",marginTop:6,background:T.pillBg,border:"1px solid "+T.border,borderRadius:10,padding:8,color:T.sub,fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>{"Сбросить правки"}</button>}
-
-          <button onClick={()=>setShowExport(true)} style={{width:"100%",marginTop:10,background:"#4F46E5",border:"none",borderRadius:11,padding:13,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{"Экспорт сметы"}</button>
-          <button onClick={()=>setShowConfigExport(true)} style={{width:"100%",marginTop:6,background:T.pillBg,border:"1px solid "+T.border,borderRadius:10,padding:10,color:T.sub,fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>{"⚙ Экспорт настроек кнопок"}</button>
-          <button onClick={()=>setShowConfigExport(true)} style={{width:"100%",marginTop:6,background:T.pillBg,border:"1px solid "+T.border,borderRadius:10,padding:10,color:T.sub,fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>{"⚙ Экспорт настроек кнопок"}</button>
-        </div>}
+            {estEd&&Object.keys(estEd).filter(k=>k!=='__tab').length>0&&<button onClick={()=>setEstEd(p=>({__tab:p.__tab}))} style={{width:'100%',marginTop:6,background:T.pillBg,border:'1px solid '+T.border,borderRadius:10,padding:8,color:T.sub,fontSize:11,cursor:'pointer',fontFamily:'inherit'}}>{'Сбросить правки'}</button>}
+            <button onClick={()=>setShowExport(true)} style={{width:'100%',marginTop:10,background:'#4F46E5',border:'none',borderRadius:11,padding:13,color:'#fff',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>{'Экспорт сметы'}</button>
+            <button onClick={()=>setShowConfigExport(true)} style={{width:'100%',marginTop:6,background:T.pillBg,border:'1px solid '+T.border,borderRadius:10,padding:10,color:T.sub,fontSize:11,cursor:'pointer',fontFamily:'inherit'}}>{'⚙ Экспорт настроек кнопок'}</button>
+          </div>);
+        })()}
       </div>
 
       {/* Config Export dialog */}
