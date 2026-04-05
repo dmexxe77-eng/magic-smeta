@@ -248,19 +248,26 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
 
   const est=buildEst(rooms,presets,globalOpts,nomSnapshot);
   const matsE=est.mats.map((l,i)=>({...l,k:"m"+i}));
-  const worksE=est.works
-    .map((l,i)=>({...l,k:"w"+i}))
-    .sort((a,b)=>(b.q||0)-(a.q||0));
+  const worksE=est.works.map((l,i)=>({...l,k:"w"+i})).sort((a,b)=>(b.q||0)-(a.q||0));
+  /* matsR/worksR вычисляем здесь чтобы eE мог найти nomId из сметы комнаты */
+  const estRoom=r?buildEst([r],presets,globalOpts,nomSnapshot):{mats:[],works:[]};
+  const matsR=estRoom.mats.map((l,i)=>({...l,k:"rm"+i}));
+  const worksR=estRoom.works.map((l,i)=>({...l,k:"rw"+i})).sort((a,b)=>(b.q||0)-(a.q||0));
   const eE=(k,f,v)=>{
     setEstEd(prev=>({...prev,[k]:{...prev[k],[f]:v}}));
-    /* При изменении цены — обновляем ТОЛЬКО nomSnapshot проекта.
-       Глобальную номенклатуру (ALL_NOM, RUNTIME_EDITED_NOMS) НЕ трогаем —
-       изменения остаются только в этом проекте */
     if(f==="p"){
-      const line=[...matsE,...worksE].find(l=>l.k===k);
+      /* Ищем nomId и в общей смете (m/w) и в смете комнаты (rm/rw) */
+      const line=[...matsE,...worksE,...matsR,...worksR].find(l=>l.k===k);
       const nomId=line?._k;
       if(nomId){
         const newSnap={...(nomSnapshotRef.current||{}),[nomId]:v};
+        nomSnapshotRef.current=newSnap;
+        setNomSnapshot(newSnap);
+        if(onSnapshotUpdate)onSnapshotUpdate(newSnap);
+        setTimeout(()=>{try{window.dispatchEvent(new Event("magicapp:saveNow"));}catch(e){}},150);
+      }
+    }
+  };
         nomSnapshotRef.current=newSnap;
         setNomSnapshot(newSnap); /* ← вызывает ре-рендер → итог пересчитывается */
         if(onSnapshotUpdate)onSnapshotUpdate(newSnap);
