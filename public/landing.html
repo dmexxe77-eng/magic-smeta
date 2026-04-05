@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MAGIC — Калькулятор натяжных потолков</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Golos+Text:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#07080f;
+  --bg2:#0d0e1a;
+  --card:#111220;
+  --border:rgba(255,255,255,0.07);
+  --acc:#4F46E5;
+  --acc2:#7c5cbf;
+  --glow:rgba(79,70,229,0.35);
+  --text:#f0f0fa;
+  --sub:#8b8fa8;
+  --dim:#4a4d62;
+  --green:#22c55e;
+  --orange:#f59e0b;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Golos Text',sans-serif;
+  font-size:16px;
+  line-height:1.6;
+  overflow-x:hidden;
+}
+
+/* ─── NOISE OVERLAY ─── */
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  pointer-events:none;z-index:1000;opacity:0.4;
+}
+
+/* ─── NAV ─── */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:18px 6vw;
+  background:rgba(7,8,15,0.8);
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+}
+.nav-logo{display:flex;align-items:center;gap:12px;}
+.nav-logo-icon{
+  width:38px;height:38px;border-radius:10px;
+  background:var(--acc);
+  display:flex;align-items:center;justify-content:center;
+}
+.nav-logo-icon svg{width:20px;height:20px;}
+.nav-brand{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;letter-spacing:2px;}
+.nav-sub{font-size:9px;color:var(--acc);letter-spacing:3px;margin-top:-2px;}
+.nav-cta{
+  background:var(--acc);border:none;border-radius:10px;
+  padding:9px 22px;color:#fff;font-size:14px;font-weight:600;
+  cursor:pointer;font-family:'Golos Text',sans-serif;
+  text-decoration:none;
+  transition:opacity .2s,transform .2s;
+}
+.nav-cta:hover{opacity:.85;transform:translateY(-1px);}
+
+/* ─── HERO ─── */
+.hero{
+  min-height:100vh;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  text-align:center;
+  padding:120px 6vw 80px;
+  position:relative;
+  overflow:hidden;
+}
+.hero-glow{
+  position:absolute;
+  top:50%;left:50%;transform:translate(-50%,-60%);
+  width:700px;height:700px;
+  background:radial-gradient(ellipse,rgba(79,70,229,0.18) 0%,transparent 70%);
+  pointer-events:none;
+  animation:pulse 6s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{opacity:.6;transform:translate(-50%,-60%) scale(1);}50%{opacity:1;transform:translate(-50%,-60%) scale(1.1);}}
+
+.hero-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(79,70,229,0.12);border:1px solid rgba(79,70,229,0.3);
+  border-radius:50px;padding:6px 16px;
+  font-size:12px;color:var(--acc);letter-spacing:1px;font-weight:600;
+  margin-bottom:32px;
+  animation:fadeUp .8s ease both;
+}
+.hero-badge::before{content:'';width:6px;height:6px;background:var(--acc);border-radius:50%;animation:blink 2s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+.hero h1{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(42px,8vw,96px);
+  font-weight:900;line-height:1.0;
+  letter-spacing:-2px;
+  margin-bottom:28px;
+  animation:fadeUp .8s .1s ease both;
+}
+.hero h1 em{font-style:italic;color:var(--acc);}
+.hero h1 .line2{display:block;color:var(--sub);font-weight:400;}
+
+.hero-desc{
+  max-width:560px;
+  font-size:18px;color:var(--sub);line-height:1.7;
+  margin-bottom:44px;
+  animation:fadeUp .8s .2s ease both;
+}
+
+.hero-btns{
+  display:flex;gap:14px;flex-wrap:wrap;justify-content:center;
+  animation:fadeUp .8s .3s ease both;
+  margin-bottom:80px;
+}
+.btn-primary{
+  background:var(--acc);border:none;border-radius:12px;
+  padding:14px 32px;color:#fff;font-size:16px;font-weight:700;
+  cursor:pointer;font-family:'Golos Text',sans-serif;
+  text-decoration:none;
+  box-shadow:0 0 40px rgba(79,70,229,.4);
+  transition:all .25s;
+}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 0 60px rgba(79,70,229,.6);}
+.btn-ghost{
+  background:transparent;border:1px solid var(--border);border-radius:12px;
+  padding:14px 28px;color:var(--sub);font-size:16px;font-weight:500;
+  cursor:pointer;font-family:'Golos Text',sans-serif;
+  text-decoration:none;transition:all .25s;
+}
+.btn-ghost:hover{border-color:var(--acc);color:var(--acc);}
+
+/* ─── MOCK PHONE ─── */
+.hero-phone{
+  position:relative;
+  width:280px;
+  animation:fadeUp .8s .4s ease both, float 5s ease-in-out infinite;
+}
+@keyframes float{0%,100%{transform:translateY(0);}50%{transform:translateY(-12px);}}
+.phone-frame{
+  background:var(--card);
+  border:1.5px solid var(--border);
+  border-radius:32px;
+  padding:12px;
+  box-shadow:0 40px 80px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.04),0 0 80px rgba(79,70,229,.15);
+}
+.phone-screen{
+  background:linear-gradient(160deg,#0d0e1a 0%,#111220 100%);
+  border-radius:24px;overflow:hidden;
+  min-height:480px;
+  position:relative;
+}
+.phone-header{
+  background:rgba(255,255,255,.03);
+  border-bottom:0.5px solid var(--border);
+  padding:12px 14px 10px;
+  display:flex;align-items:center;gap:8px;
+}
+.ph-logo{
+  width:26px;height:26px;border-radius:7px;background:var(--acc);
+  display:flex;align-items:center;justify-content:center;
+}
+.ph-brand{font-size:12px;font-weight:700;letter-spacing:1px;}
+.ph-sub{font-size:7px;color:var(--acc);letter-spacing:2px;margin-top:-1px;}
+.ph-total{margin-left:auto;text-align:right;}
+.ph-total-num{font-size:14px;font-weight:700;color:var(--text);}
+.ph-total-sub{font-size:8px;color:var(--sub);}
+
+.phone-body{padding:10px 12px;}
+.ph-rooms{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
+.ph-room{
+  background:rgba(255,255,255,.05);border:1px solid var(--border);
+  border-radius:8px;padding:5px 10px;font-size:10px;color:var(--sub);
+  cursor:pointer;
+}
+.ph-room.active{background:rgba(79,70,229,.15);border-color:var(--acc);color:var(--acc);}
+.ph-canvas{
+  background:rgba(255,255,255,.03);border-radius:10px;
+  height:120px;margin-bottom:10px;
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;
+}
+.ph-plan-svg{width:100%;height:100%;}
+
+.ph-block{
+  background:rgba(255,255,255,.03);border:0.5px solid var(--border);
+  border-radius:10px;padding:10px;margin-bottom:8px;
+}
+.ph-block-label{font-size:8px;color:var(--acc);font-weight:700;letter-spacing:1px;margin-bottom:6px;}
+.ph-row{
+  display:flex;align-items:center;gap:6px;margin-bottom:4px;
+}
+.ph-dot{width:6px;height:6px;border-radius:2px;background:var(--acc);flex-shrink:0;}
+.ph-row-name{font-size:9px;color:var(--sub);flex:1;}
+.ph-row-val{font-size:9px;font-weight:600;color:var(--text);}
+.ph-est-bar{
+  background:rgba(79,70,229,.08);border-top:0.5px solid var(--border);
+  padding:10px 12px;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.ph-est-label{font-size:9px;font-weight:700;color:var(--sub);}
+.ph-est-tabs{display:flex;gap:4px;}
+.ph-est-tab{
+  background:rgba(255,255,255,.05);border:none;border-radius:6px;
+  padding:3px 8px;font-size:9px;color:var(--sub);cursor:pointer;font-family:inherit;
+}
+.ph-est-tab.active{background:var(--acc);color:#fff;}
+
+/* ─── STATS ─── */
+.stats{
+  display:flex;gap:48px;justify-content:center;flex-wrap:wrap;
+  padding:40px 6vw;
+  border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+  animation:fadeUp .8s .5s ease both;
+}
+.stat{text-align:center;}
+.stat-num{font-family:'Playfair Display',serif;font-size:36px;font-weight:900;color:var(--acc);line-height:1;}
+.stat-label{font-size:12px;color:var(--sub);margin-top:4px;}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(28px);}to{opacity:1;transform:translateY(0);}}
+
+/* ─── SECTION COMMON ─── */
+section{padding:100px 6vw;}
+.section-badge{
+  display:inline-block;font-size:11px;font-weight:700;
+  color:var(--acc);letter-spacing:2px;
+  margin-bottom:16px;text-transform:uppercase;
+}
+.section-title{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(32px,5vw,56px);font-weight:900;
+  line-height:1.1;letter-spacing:-1px;
+  margin-bottom:18px;
+}
+.section-title em{font-style:italic;color:var(--acc);}
+.section-desc{font-size:17px;color:var(--sub);max-width:520px;line-height:1.7;}
+
+/* ─── FEATURES ─── */
+.features-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+  gap:20px;
+  margin-top:60px;
+}
+.feat-card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:28px;
+  position:relative;overflow:hidden;
+  transition:transform .25s,border-color .25s,box-shadow .25s;
+}
+.feat-card:hover{
+  transform:translateY(-4px);
+  border-color:rgba(79,70,229,.4);
+  box-shadow:0 20px 60px rgba(0,0,0,.4),0 0 40px rgba(79,70,229,.1);
+}
+.feat-card::before{
+  content:'';position:absolute;
+  top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(79,70,229,.5),transparent);
+  opacity:0;transition:opacity .3s;
+}
+.feat-card:hover::before{opacity:1;}
+.feat-icon{
+  width:48px;height:48px;border-radius:14px;
+  background:rgba(79,70,229,.12);
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;margin-bottom:16px;
+}
+.feat-title{font-size:17px;font-weight:700;margin-bottom:8px;}
+.feat-desc{font-size:14px;color:var(--sub);line-height:1.6;}
+.feat-tag{
+  display:inline-block;margin-top:14px;
+  background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);
+  color:var(--green);border-radius:6px;padding:3px 10px;font-size:11px;font-weight:600;
+}
+
+/* ─── HOW IT WORKS ─── */
+.how{background:var(--bg2);}
+.steps{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+  gap:0;margin-top:60px;position:relative;
+}
+.steps::before{
+  content:'';position:absolute;top:40px;left:10%;right:10%;height:1px;
+  background:linear-gradient(90deg,transparent,var(--border),var(--border),transparent);
+}
+.step{
+  text-align:center;padding:0 20px;position:relative;
+}
+.step-num{
+  width:80px;height:80px;border-radius:50%;
+  background:var(--card);border:1.5px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 20px;
+  font-family:'Playfair Display',serif;font-size:28px;font-weight:900;
+  color:var(--acc);position:relative;z-index:1;
+  transition:all .3s;
+}
+.step:hover .step-num{
+  background:var(--acc);color:#fff;
+  box-shadow:0 0 40px rgba(79,70,229,.5);
+}
+.step-title{font-size:15px;font-weight:700;margin-bottom:8px;}
+.step-desc{font-size:13px;color:var(--sub);}
+
+/* ─── COMPASS FEATURE ─── */
+.compass-section{
+  display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center;
+}
+@media(max-width:768px){.compass-section{grid-template-columns:1fr;gap:40px;}}
+.compass-demo{
+  display:flex;justify-content:center;
+}
+.compass-viz{
+  position:relative;width:280px;height:280px;
+}
+.compass-outer{
+  width:280px;height:280px;border-radius:50%;
+  background:var(--card);border:1.5px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  position:relative;
+  animation:spin-slow 20s linear infinite;
+  box-shadow:0 0 60px rgba(79,70,229,.15);
+}
+@keyframes spin-slow{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+.compass-inner{
+  width:180px;height:180px;border-radius:50%;
+  background:var(--bg2);border:1px solid var(--border);
+  position:absolute;
+  animation:spin-slow 20s linear infinite reverse;
+  display:flex;align-items:center;justify-content:center;
+}
+.compass-needle{
+  width:4px;height:90px;
+  position:absolute;
+  background:linear-gradient(to bottom,#e74c3c 50%,var(--acc) 50%);
+  border-radius:2px;
+  animation:needle-wobble 3s ease-in-out infinite;
+  transform-origin:50% 100%;
+}
+@keyframes needle-wobble{
+  0%,100%{transform:rotate(-5deg);}
+  50%{transform:rotate(8deg);}
+}
+.compass-text{
+  position:absolute;
+  font-family:'Playfair Display',serif;font-size:36px;font-weight:900;
+  color:var(--acc);bottom:20px;width:100%;text-align:center;
+}
+.compass-dirs{position:absolute;inset:0;}
+.compass-dir{
+  position:absolute;font-size:13px;font-weight:700;
+  width:20px;height:20px;display:flex;align-items:center;justify-content:center;
+}
+.dir-n{top:10px;left:50%;transform:translateX(-50%);color:#e74c3c;}
+.dir-s{bottom:10px;left:50%;transform:translateX(-50%);color:var(--sub);}
+.dir-e{right:10px;top:50%;transform:translateY(-50%);color:var(--acc);}
+.dir-w{left:10px;top:50%;transform:translateY(-50%);color:var(--sub);}
+
+/* ─── PRICING ─── */
+.pricing-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:20px;margin-top:60px;max-width:800px;
+}
+.price-card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:24px;padding:32px;
+  transition:transform .25s;
+}
+.price-card:hover{transform:translateY(-4px);}
+.price-card.featured{
+  border-color:var(--acc);
+  background:linear-gradient(160deg,rgba(79,70,229,.1),var(--card));
+  box-shadow:0 0 60px rgba(79,70,229,.2);
+  position:relative;
+}
+.price-card.featured::before{
+  content:'ПОПУЛЯРНОЕ';
+  position:absolute;top:-14px;left:50%;transform:translateX(-50%);
+  background:var(--acc);color:#fff;
+  font-size:10px;font-weight:700;letter-spacing:2px;
+  padding:4px 14px;border-radius:20px;
+}
+.price-name{font-size:14px;font-weight:700;color:var(--sub);letter-spacing:1px;margin-bottom:12px;}
+.price-num{
+  font-family:'Playfair Display',serif;
+  font-size:52px;font-weight:900;line-height:1;margin-bottom:6px;
+}
+.price-per{font-size:13px;color:var(--sub);margin-bottom:24px;}
+.price-features{list-style:none;margin-bottom:28px;}
+.price-features li{
+  display:flex;align-items:center;gap:10px;
+  font-size:14px;color:var(--sub);padding:7px 0;
+  border-bottom:1px solid var(--border);
+}
+.price-features li::before{content:'✓';color:var(--green);font-weight:700;}
+.price-features li.off{opacity:.4;}
+.price-features li.off::before{content:'—';color:var(--dim);}
+.price-btn{
+  width:100%;border:none;border-radius:12px;padding:12px;
+  font-size:15px;font-weight:700;cursor:pointer;
+  font-family:'Golos Text',sans-serif;
+  transition:all .25s;
+}
+.price-btn-ghost{background:transparent;border:1px solid var(--border);color:var(--sub);}
+.price-btn-ghost:hover{border-color:var(--acc);color:var(--acc);}
+.price-btn-fill{background:var(--acc);color:#fff;box-shadow:0 0 30px rgba(79,70,229,.4);}
+.price-btn-fill:hover{box-shadow:0 0 50px rgba(79,70,229,.6);transform:translateY(-1px);}
+
+/* ─── REVIEWS ─── */
+.reviews{background:var(--bg2);}
+.reviews-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+  gap:20px;margin-top:50px;
+}
+.review-card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:18px;padding:24px;
+}
+.review-stars{color:var(--orange);font-size:14px;margin-bottom:12px;letter-spacing:2px;}
+.review-text{font-size:14px;color:var(--sub);line-height:1.7;margin-bottom:16px;font-style:italic;}
+.review-author{display:flex;align-items:center;gap:10px;}
+.review-avatar{
+  width:36px;height:36px;border-radius:50%;
+  background:var(--acc);
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:700;color:#fff;
+  flex-shrink:0;
+}
+.review-name{font-size:14px;font-weight:600;}
+.review-role{font-size:12px;color:var(--dim);}
+
+/* ─── CTA ─── */
+.cta-section{
+  text-align:center;
+  background:radial-gradient(ellipse 80% 50% at 50% 50%,rgba(79,70,229,.12),transparent);
+  border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+}
+.cta-title{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(36px,6vw,72px);font-weight:900;
+  line-height:1.1;letter-spacing:-1px;margin-bottom:20px;
+}
+.cta-desc{font-size:18px;color:var(--sub);margin-bottom:40px;}
+
+/* ─── FOOTER ─── */
+footer{
+  padding:40px 6vw;
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;
+  border-top:1px solid var(--border);
+}
+.footer-brand{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;letter-spacing:2px;color:var(--dim);}
+.footer-copy{font-size:13px;color:var(--dim);}
+
+/* ─── REVEAL ON SCROLL ─── */
+.reveal{opacity:0;transform:translateY(30px);transition:opacity .7s ease,transform .7s ease;}
+.reveal.visible{opacity:1;transform:none;}
+
+/* ─── MOBILE ─── */
+@media(max-width:640px){
+  nav{padding:14px 20px;}
+  section{padding:60px 20px;}
+  .hero{padding:100px 20px 60px;}
+  .stats{gap:28px;padding:30px 20px;}
+  .steps::before{display:none;}
+  .hero-phone{width:220px;}
+  .phone-screen{min-height:380px;}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">
+    <div class="nav-logo-icon">
+      <svg viewBox="0 0 20 20" fill="none"><rect x="3" y="10" width="14" height="2" rx="1" fill="#fff"/><rect x="5" y="6" width="10" height="2" rx="1" fill="#fff" opacity="0.6"/><rect x="7" y="14" width="6" height="2" rx="1" fill="#fff" opacity="0.35"/></svg>
+    </div>
+    <div>
+      <div class="nav-brand">MAGIC</div>
+      <div class="nav-sub">STUDIO</div>
+    </div>
+  </div>
+  <a href="https://smeta-xi.vercel.app" class="nav-cta" target="_blank">Открыть приложение →</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-badge">🚀 Профессиональный инструмент мастера</div>
+  <h1>Считайте <em>точно</em>.<br><span class="line2">Закрывайте сделки быстро.</span></h1>
+  <p class="hero-desc">Умный калькулятор для мастеров натяжных потолков. Замер по компасу, расчёт сметы за 30 секунд, удобное управление клиентами.</p>
+  <div class="hero-btns">
+    <a href="https://smeta-xi.vercel.app" class="btn-primary" target="_blank">Попробовать бесплатно</a>
+    <a href="#features" class="btn-ghost">Смотреть возможности</a>
+  </div>
+
+  <!-- Phone mockup -->
+  <div class="hero-phone">
+    <div class="phone-frame">
+      <div class="phone-screen">
+        <div class="phone-header">
+          <div class="ph-logo">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><rect x="3" y="10" width="14" height="2" rx="1" fill="#4F46E5"/><rect x="5" y="6" width="10" height="2" rx="1" fill="#4F46E5" opacity="0.6"/><rect x="7" y="14" width="6" height="2" rx="1" fill="#4F46E5" opacity="0.3"/></svg>
+          </div>
+          <div><div class="ph-brand">MAGIC</div><div class="ph-sub">КАЛЬКУЛЯТОР</div></div>
+          <div class="ph-total"><div class="ph-total-num">435 356 ₽</div><div class="ph-total-sub">🔄 обновить цены</div></div>
+        </div>
+        <div class="phone-body">
+          <div class="ph-rooms">
+            <div class="ph-room active">Гостиная</div>
+            <div class="ph-room">Спальня</div>
+            <div class="ph-room">Кухня</div>
+            <div class="ph-room">+ 3</div>
+          </div>
+          <div class="ph-canvas">
+            <svg class="ph-plan-svg" viewBox="0 0 200 100">
+              <polygon points="20,10 150,10 150,60 120,80 20,80" fill="rgba(79,70,229,0.08)" stroke="#4F46E5" stroke-width="1.5"/>
+              <text x="85" y="45" text-anchor="middle" fill="#4F46E5" font-size="10" font-family="Golos Text" font-weight="600">29.9 м²</text>
+              <text x="85" y="58" text-anchor="middle" fill="#8b8fa8" font-size="8" font-family="Golos Text">21.4 м.п.</text>
+            </svg>
+          </div>
+          <div class="ph-block">
+            <div class="ph-block-label">МАТЕРИАЛЫ</div>
+            <div class="ph-row"><div class="ph-dot"></div><div class="ph-row-name">ПВХ Полотно MSD</div><div class="ph-row-val">29 890 ₽</div></div>
+            <div class="ph-row"><div class="ph-dot" style="background:#7c5cbf"></div><div class="ph-row-name">EUROKRAAB 2.0</div><div class="ph-row-val">8 764 ₽</div></div>
+          </div>
+        </div>
+        <div class="ph-est-bar">
+          <div>
+            <div class="ph-est-label">СМЕТА</div>
+          </div>
+          <div style="font-size:13px;font-weight:700;color:#f0f0fa;">435 356 ₽</div>
+          <div class="ph-est-tabs">
+            <button class="ph-est-tab active">Комната</button>
+            <button class="ph-est-tab">Все</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<div class="stats reveal">
+  <div class="stat"><div class="stat-num">30"</div><div class="stat-label">Смета за 30 секунд</div></div>
+  <div class="stat"><div class="stat-num">1267</div><div class="stat-label">Позиций номенклатуры</div></div>
+  <div class="stat"><div class="stat-num">4</div><div class="stat-label">Способа снять план</div></div>
+  <div class="stat"><div class="stat-num">∞</div><div class="stat-label">Проектов и помещений</div></div>
+</div>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="reveal">
+    <div class="section-badge">Возможности</div>
+    <h2 class="section-title">Всё что нужно<br><em>мастеру в одном</em> месте</h2>
+    <p class="section-desc">Больше никаких таблиц и ручного расчёта. Magic делает всё автоматически — от замера до сметы клиенту.</p>
+  </div>
+  <div class="features-grid reveal">
+    <div class="feat-card">
+      <div class="feat-icon">🧭</div>
+      <div class="feat-title">Замер по компасу</div>
+      <div class="feat-desc">Встаньте у стены, направьте телефон вдоль неё — компас автоматически определит направление. Введите длину и обойдите всё помещение.</div>
+      <div class="feat-tag">★ Только у нас</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🗺️</div>
+      <div class="feat-title">Обводка чертежа</div>
+      <div class="feat-desc">Загрузите фото или PDF плана квартиры и обведите контур помещения пальцем прямо на экране. Площадь посчитается сама.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🤖</div>
+      <div class="feat-title">AI-распознавание</div>
+      <div class="feat-desc">Сфотографируйте план — искусственный интеллект распознает контуры и введёт размеры автоматически без лишних нажатий.</div>
+      <div class="feat-tag">Beta</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">📐</div>
+      <div class="feat-title">Точный расчёт</div>
+      <div class="feat-desc">Автоматический учёт всех материалов: полотна, профили, крепежи, работы. С учётом углов, ниш и сложности помещения.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">📋</div>
+      <div class="feat-title">Смета за 30 секунд</div>
+      <div class="feat-desc">Готовая смета с разбивкой по материалам и работам. Цены фиксируются на момент расчёта. Экспорт в PDF одним нажатием.</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">💼</div>
+      <div class="feat-title">Управление проектами</div>
+      <div class="feat-desc">Все клиенты, статусы, платежи и история в одном месте. Отслеживайте долги, выплаты мастерам и финансы студии.</div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how" id="how">
+  <div class="reveal" style="text-align:center;">
+    <div class="section-badge">Как это работает</div>
+    <h2 class="section-title">От замера до <em>сметы</em></h2>
+    <p class="section-desc" style="margin:0 auto;">Четыре простых шага и клиент получает профессиональный расчёт.</p>
+  </div>
+  <div class="steps reveal">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-title">Создайте проект</div>
+      <div class="step-desc">Заведите карточку клиента с адресом и контактами</div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-title">Снимите план</div>
+      <div class="step-desc">Компасом, обводкой чертежа, AI или вручную</div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-title">Выберите материалы</div>
+      <div class="step-desc">Из каталога 1267 позиций с фото и актуальными ценами</div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-title">Отправьте смету</div>
+      <div class="step-desc">PDF с разбивкой по материалам и работам — клиенту в один клик</div>
+    </div>
+  </div>
+</section>
+
+<!-- COMPASS FEATURE HIGHLIGHT -->
+<section id="compass">
+  <div class="compass-section reveal">
+    <div>
+      <div class="section-badge">Фишка приложения</div>
+      <h2 class="section-title">Замер<br><em>без рулетки</em></h2>
+      <p class="section-desc">Используйте встроенный компас телефона чтобы снять план помещения. Встаньте у угла, направьте телефон вдоль каждой стены и введите её длину.</p>
+      <div style="margin-top:28px;display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:32px;height:32px;border-radius:8px;background:rgba(79,70,229,.15);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">📍</div>
+          <div style="font-size:14px;color:var(--sub);">Работает на iPhone и Android без дополнительных приборов</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:32px;height:32px;border-radius:8px;background:rgba(79,70,229,.15);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">🎯</div>
+          <div style="font-size:14px;color:var(--sub);">Автоснэппинг к 0°, 45°, 90° — прямые углы без погрешности</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:32px;height:32px;border-radius:8px;background:rgba(79,70,229,.15);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">⚡</div>
+          <div style="font-size:14px;color:var(--sub);">Площадь и периметр считаются автоматически после замыкания</div>
+        </div>
+      </div>
+    </div>
+    <div class="compass-demo">
+      <div class="compass-viz">
+        <div class="compass-outer">
+          <div class="compass-dirs">
+            <span class="compass-dir dir-n">С</span>
+            <span class="compass-dir dir-s">Ю</span>
+            <span class="compass-dir dir-e">В</span>
+            <span class="compass-dir dir-w">З</span>
+          </div>
+        </div>
+        <div class="compass-inner">
+          <div class="compass-needle"></div>
+        </div>
+        <div class="compass-text">247°</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing" style="background:var(--bg2);">
+  <div class="reveal">
+    <div class="section-badge">Тарифы</div>
+    <h2 class="section-title">Прозрачные <em>цены</em></h2>
+    <p class="section-desc">Начните бесплатно. Переходите на PRO когда захотите больше.</p>
+  </div>
+  <div class="pricing-grid reveal">
+    <div class="price-card">
+      <div class="price-name">БАЗОВЫЙ</div>
+      <div class="price-num">0 ₽</div>
+      <div class="price-per">навсегда бесплатно</div>
+      <ul class="price-features">
+        <li>Калькулятор смет</li>
+        <li>4 способа замера</li>
+        <li>Каталог номенклатур</li>
+        <li>Неограниченно проектов</li>
+        <li class="off">Финансы и аналитика</li>
+        <li class="off">Выплаты дизайнерам</li>
+      </ul>
+      <a href="https://smeta-xi.vercel.app" class="price-btn price-btn-ghost" target="_blank">Начать бесплатно</a>
+    </div>
+    <div class="price-card featured">
+      <div class="price-name">PRO</div>
+      <div class="price-num" style="color:var(--acc);">990 ₽</div>
+      <div class="price-per">в месяц</div>
+      <ul class="price-features">
+        <li>Всё из Базового</li>
+        <li>Финансы и долги</li>
+        <li>Аналитика студии</li>
+        <li>Учёт выплат дизайнерам</li>
+        <li>Приоритетная поддержка</li>
+        <li>Новые функции первым</li>
+      </ul>
+      <a href="https://smeta-xi.vercel.app" class="price-btn price-btn-fill" target="_blank">Попробовать PRO</a>
+    </div>
+  </div>
+</section>
+
+<!-- REVIEWS -->
+<section class="reviews">
+  <div class="reveal" style="text-align:center;">
+    <div class="section-badge">Отзывы</div>
+    <h2 class="section-title">Говорят <em>мастера</em></h2>
+  </div>
+  <div class="reviews-grid reveal">
+    <div class="review-card">
+      <div class="review-stars">★★★★★</div>
+      <div class="review-text">«Раньше на смету уходило полчаса в Excel. Теперь прямо на объекте за 2 минуты. Клиент сразу видит цифры — доверие растёт.»</div>
+      <div class="review-author">
+        <div class="review-avatar">РК</div>
+        <div><div class="review-name">Руслан К.</div><div class="review-role">Мастер, Хабаровск</div></div>
+      </div>
+    </div>
+    <div class="review-card">
+      <div class="review-stars">★★★★★</div>
+      <div class="review-text">«Компас — это что-то. Обошёл квартиру за 5 минут, всё сам посчитал. Площади сходятся с замерщиком. Рекомендую.»</div>
+      <div class="review-author">
+        <div class="review-avatar">АС</div>
+        <div><div class="review-name">Алексей С.</div><div class="review-role">Монтажник, 7 лет стажа</div></div>
+      </div>
+    </div>
+    <div class="review-card">
+      <div class="review-stars">★★★★★</div>
+      <div class="review-text">«Удобно вести всю студию. Вижу кто сколько должен, когда сдача, сколько заплатить дизайнеру. Раньше всё это в голове держала.»</div>
+      <div class="review-author">
+        <div class="review-avatar">МВ</div>
+        <div><div class="review-name">Мария В.</div><div class="review-role">Руководитель студии</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section reveal">
+  <h2 class="cta-title">Начните считать<br><em>умнее</em> уже сегодня</h2>
+  <p class="cta-desc">Бесплатно. Без регистрации. Работает прямо в браузере телефона.</p>
+  <div class="hero-btns" style="justify-content:center;">
+    <a href="https://smeta-xi.vercel.app" class="btn-primary" target="_blank">Открыть Magic →</a>
+  </div>
+  <p style="font-size:13px;color:var(--dim);margin-top:16px;">smeta-xi.vercel.app · Работает на iOS и Android</p>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-brand">MAGIC STUDIO</div>
+  <div class="footer-copy">© 2025 Magic. Калькулятор натяжных потолков.</div>
+</footer>
+
+<script>
+// Scroll reveal
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if(e.isIntersecting) { e.target.classList.add('visible'); }
+  });
+}, {threshold:0.1});
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// Animated compass heading
+let deg = 247;
+setInterval(()=>{
+  deg += (Math.random()-0.48)*3;
+  if(deg<0)deg+=360; if(deg>=360)deg-=360;
+  const t = document.querySelector('.compass-text');
+  if(t) t.textContent = Math.round(deg)+'°';
+},100);
+</script>
+
+</body>
+</html>
