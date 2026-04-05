@@ -3,29 +3,22 @@
     "name": "Magic Studio",
     "slug": "magic-studio",
     "version": "1.0.0",
-    "sdkVersion": "51.0.0",
     "orientation": "portrait",
     "scheme": "magic",
     "userInterfaceStyle": "light",
-    "newArchEnabled": false,
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "ru.magicstudio.app",
       "infoPlist": {
-        "NSMotionUsageDescription": "Компас используется для замера помещений"
+        "NSMotionUsageDescription": "Компас используется для замера помещений",
+        "NSCameraUsageDescription": "Камера для фотографирования планов"
       }
     },
     "android": {
       "package": "ru.magicstudio.app",
-      "adaptiveIcon": {
-        "backgroundColor": "#f7f7f5"
-      }
+      "adaptiveIcon": { "backgroundColor": "#f7f7f5" }
     },
-    "plugins": [
-      "expo-router"
-    ],
-    "web": {
-      "bundler": "metro"
-    }
+    "plugins": ["expo-router", "expo-sensors"],
+    "web": { "bundler": "metro" }
   }
 }
