@@ -3,7 +3,6 @@ module.exports = {
   content: [
     "./app/**/*.{js,jsx,ts,tsx}",
     "./src/**/*.{js,jsx,ts,tsx}",
-    "./components/**/*.{js,jsx,ts,tsx}",
   ],
   presets: [require("nativewind/preset")],
   theme: {
@@ -20,9 +19,6 @@ module.exports = {
         success: "#16a34a",
         warning: "#d97706",
         danger: "#dc2626",
-      },
-      fontFamily: {
-        sans: ["System"],
       },
     },
   },
