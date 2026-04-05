@@ -111,32 +111,10 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
   const CRD="background:#fff;border-radius:15px;padding:13px;margin-bottom:8px;";
 
   /* ══ Шапка с лого ══ */
-  const TopBar=()=>(
-    <div style={{background:T.card,padding:"14px 16px 0",borderBottom:`2.5px solid ${ACC}`}}>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",paddingBottom:12}}>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <div style={{width:36,height:36,borderRadius:9,background:DARK,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <rect x="3" y="10" width="14" height="2" rx="1" fill={ACC}/>
-              <rect x="5" y="6" width="10" height="2" rx="1" fill={ACC} opacity="0.5"/>
-              <rect x="7" y="14" width="6" height="2" rx="1" fill={ACC} opacity="0.25"/>
-            </svg>
-          </div>
-          <div>
-            <div style={{fontSize:17,fontWeight:700,color:T.text,letterSpacing:"1.5px",lineHeight:1}}>{"MAGIC"}</div>
-            <div style={{fontSize:8,color:ACC,letterSpacing:"2px",marginTop:2}}>{"STUDIO"}</div>
-          </div>
-        </div>
-        <div style={{display:"flex",gap:8,alignItems:"center"}}>
-          {isPro&&<div style={{background:DARK,color:ACC,fontSize:10,fontWeight:700,padding:"4px 12px",borderRadius:20,letterSpacing:"0.8px"}}>{"PRO"}</div>}
-          <button onClick={()=>setShowMenu(!showMenu)}
-            style={{background:T.bg,border:"none",borderRadius:9,width:34,height:34,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
-            <svg width="15" height="15" fill={DARK}><rect y="2" width="15" height="1.8" rx="0.9"/><rect y="6.6" width="15" height="1.8" rx="0.9"/><rect y="11.2" width="15" height="1.8" rx="0.9"/></svg>
-          </button>
-        </div>
-      </div>
+  const TopBar=()=>(<>
+    <AppHeader onMenu={()=>setShowMenu(!showMenu)} right={isPro?<div style={{background:DARK,color:ACC,fontSize:10,fontWeight:700,padding:"4px 12px",borderRadius:20,letterSpacing:"0.8px"}}>PRO</div>:null}/>
       {/* Tab bar */}
-      <div style={{display:"flex",margin:"0 -16px"}}>
+      <div style={{background:T.card,display:"flex",margin:"0",borderBottom:`2px solid ${ACC}`,paddingTop:2}}>
         {[{id:"home",l:"Проекты"},{id:"clients",l:"Клиенты",pro:true},{id:"designers",l:"Дизайнеры",pro:true},{id:"finance",l:"Финансы",pro:true},{id:"stats",l:"Аналитика",pro:true}].map(t=>{
           const locked=t.pro&&!isPro;
           return(
@@ -153,7 +131,7 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
           );
         })}
       </div>
-    </div>
+    </>
   );
 
   /* ══ Карточка проекта (детальный вид) ══ */
@@ -201,19 +179,12 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
     return(
       <div style={{minHeight:"100vh",background:BG,fontFamily:"'Inter',-apple-system,sans-serif",color:"#111"}}>
         {/* header */}
-        <div style={{background:T.card,padding:"12px 16px",display:"flex",alignItems:"center",gap:12,position:"sticky",top:0,zIndex:10,borderBottom:`0.5px solid #eeeef8`}}>
-          <button onClick={()=>{setSelOrder(null);setEditOrd(null);setAddPay(false);setAddExp(false);}}
-            style={{background:T.bg,border:"none",borderRadius:8,width:34,height:34,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0}}>
-            <svg width="16" height="16" fill="none" stroke={DARK} strokeWidth="2" strokeLinecap="round"><path d="M10 4L6 8l4 4"/></svg>
-          </button>
-          <div style={{flex:1,minWidth:0}}>
-            <div style={{fontWeight:700,fontSize:16,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{ord.name}</div>
-            <div style={{fontSize:11,color:T.sub,marginTop:1}}>{ord.client||"Клиент не указан"}{des.name?" · ✦ "+des.name:""}</div>
-          </div>
-          <button onClick={()=>onOpen(ord.id)} style={{display:"none"}}>
-            {"Открыть"}
-          </button>
-        </div>
+        <AppHeader
+          onBack={()=>{setSelOrder(null);setEditOrd(null);setAddPay(false);setAddExp(false);}}
+          onMenu={()=>setShowMenu(!showMenu)}
+          title={ord.name}
+          subtitle={ord.client||undefined}
+        />
 
         {/* Статусы */}
         <div style={{padding:"12px 14px 4px",display:"flex",gap:6,alignItems:"center",overflowX:"auto",background:T.card,borderBottom:"0.5px solid "+T.border}}>

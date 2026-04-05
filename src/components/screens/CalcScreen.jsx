@@ -9,6 +9,7 @@ import { P, PF, Pmp, Pap, Pcu, Ptr, DEFAULT_MAT, KK, LIGHT, OPT, PIMG, DEFAULT_F
 import { ALL_NOM, NB, addNewNom, deleteNom, DELETED_NOM_IDS, NOM_BRAND_GROUPS } from "../../data/nomenclature.jsx";
 import { PRESETS_GEN, PRbyId, USER_PRESETS_OVERRIDE, USER_FAVS_OVERRIDE, BLOCK_CFG, CALC_STATE_REF, snapNomPrices, newRoom, newR, gA, gP, buildEst, sanitizeOrdersForStorage, applyNomsSnapshot, resolveNomByEstimateLine, STATUSES} from "../../data/presets.js";
 import { btnS, N, SecH, Sel, ProfSel, ProfDD, OptsInline, ProfLine, NI, ProGate } from "../ui.jsx";
+import { AppHeader } from "../AppHeader.jsx";
 import PolyMini from "../canvas/PolyMini.jsx";
 import PolyEditorFull from "../canvas/PolyEditorFull.jsx";
 import RoomDrawer from "../builders/RoomDrawer.jsx";
@@ -256,20 +257,14 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
   const eE=(k,f,v)=>{
     setEstEd(prev=>({...prev,[k]:{...prev[k],[f]:v}}));
     if(f==="p"){
-      /* Ищем nomId и в общей смете (m/w) и в смете комнаты (rm/rw) */
       const line=[...matsE,...worksE,...matsR,...worksR].find(l=>l.k===k);
-      const nomId=line?._k;
-      if(nomId){
-        const newSnap={...(nomSnapshotRef.current||{}),[nomId]:v};
+      const rawKey=line?._k;
+      if(rawKey){
+        /* Для полотен _k = "nomId_roomId" — нужен только nomId для gPrice */
+        const actualNomId=ALL_NOM.find(n=>rawKey===n.id||rawKey.startsWith(n.id+"_"))?.id||rawKey;
+        const newSnap={...(nomSnapshotRef.current||{}),[actualNomId]:v};
         nomSnapshotRef.current=newSnap;
         setNomSnapshot(newSnap);
-        if(onSnapshotUpdate)onSnapshotUpdate(newSnap);
-        setTimeout(()=>{try{window.dispatchEvent(new Event("magicapp:saveNow"));}catch(e){}},150);
-      }
-    }
-  };
-        nomSnapshotRef.current=newSnap;
-        setNomSnapshot(newSnap); /* ← вызывает ре-рендер → итог пересчитывается */
         if(onSnapshotUpdate)onSnapshotUpdate(newSnap);
         setTimeout(()=>{try{window.dispatchEvent(new Event("magicapp:saveNow"));}catch(e){}},150);
       }
@@ -282,43 +277,28 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
   return(<div style={{minHeight:"100vh",background:"#f2f3fa",color:"#1e2530",fontFamily:"'Inter',-apple-system,system-ui,sans-serif",fontSize:12}}>
     {fileInput}
     {/* HEADER */}
-    <div style={{background:"#fff",borderBottom:"2.5px solid #4F46E5",padding:"13px 14px 0",position:"sticky",top:0,zIndex:5}}>
-      {/* Лого строка */}
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",paddingBottom:11}}>
-        <div style={{display:"flex",alignItems:"center",gap:9}}>
-          <div style={{width:32,height:32,borderRadius:8,background:"#1e2530",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-            <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><rect x="3" y="10" width="14" height="2" rx="1" fill="#4F46E5"/><rect x="5" y="6" width="10" height="2" rx="1" fill="#4F46E5" opacity="0.5"/><rect x="7" y="14" width="6" height="2" rx="1" fill="#4F46E5" opacity="0.25"/></svg>
-          </div>
-          <div>
-            <div style={{fontSize:15,fontWeight:700,color:"#1e2530",letterSpacing:"1px",lineHeight:1}}>{"MAGIC"}</div>
-            <div style={{fontSize:8,color:"#4F46E5",letterSpacing:"2px",marginTop:1}}>{"КАЛЬКУЛЯТОР"}</div>
+    <AppHeader
+      onBack={onBack}
+      onMenu={null}
+      title={null}
+      subtitle="КАЛЬКУЛЯТОР"
+      right={
+        <div style={{display:'flex',alignItems:'center',gap:6}}>
+          <div style={{textAlign:'right'}}>
+            <div style={{fontSize:15,fontWeight:700,color:'#1e2530'}}>{fmt(grand)+' ₽'}</div>
+            {onSnapshotUpdate&&<button onClick={()=>{try{const snap=snapNomPrices(rooms,CALC_STATE_REF.presets,CALC_STATE_REF.globalOpts||[]);if(Object.keys(snap).length>0){handleSnapshotUpdate(snap);setEstEd({});}}catch(e){}}} style={{background:'none',border:'none',padding:0,color:'#4F46E5',fontSize:9,cursor:'pointer',fontFamily:'inherit',lineHeight:1.2}}>{'🔄 обновить цены'}</button>}
           </div>
         </div>
-        <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <div style={{textAlign:"right"}}>
-            <div style={{fontSize:16,fontWeight:700,color:"#1e2530"}}>{fmt(grand)+" ₽"}</div>
-            {onSnapshotUpdate&&<button onClick={()=>{
-              try{
-                const snap=snapNomPrices(rooms,CALC_STATE_REF.presets,CALC_STATE_REF.globalOpts||[]);
-                if(Object.keys(snap).length>0){handleSnapshotUpdate(snap);setEstEd({});}
-              }catch(e){}
-            }} style={{background:"none",border:"none",padding:0,color:"#4F46E5",fontSize:9,cursor:"pointer",fontFamily:"inherit",lineHeight:1.2}}>{"🔄 обновить цены"}</button>}
-          </div>
-          <button onClick={onBack} style={{background:"#f2f3fa",border:"none",borderRadius:8,width:32,height:32,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0}}>
-            <svg width="14" height="14" fill="none" stroke="#1e2530" strokeWidth="2" strokeLinecap="round"><path d="M9 3L5 7l4 4"/></svg>
-          </button>
-        </div>
-      </div>
-      {/* Имя заказа + методы */}
-      <div style={{display:"flex",alignItems:"center",gap:6,paddingBottom:10}}>
-        <span style={{fontSize:11,color:"#888",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{orderName||"Заказ"}</span>
-        <div style={{display:"flex",gap:4}}>
-          <button onClick={()=>fRef.current?.click()} style={{background:"rgba(79,70,229,0.08)",border:"0.5px solid rgba(79,70,229,0.2)",borderRadius:7,padding:"4px 9px",color:"#4F46E5",fontSize:9,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{"Обводка"}</button>
-          
-          <button onClick={()=>setMode("recognize")} style={{background:"rgba(124,92,191,0.08)",border:"0.5px solid rgba(124,92,191,0.2)",borderRadius:7,padding:"4px 9px",color:"#7c5cbf",fontSize:9,fontWeight:500,cursor:"pointer",fontFamily:"inherit"}}>{"AI"}</button>
-          <button onClick={()=>setMode("compass")} style={{background:"rgba(255,149,0,0.08)",border:"0.5px solid rgba(255,149,0,0.2)",borderRadius:7,padding:"4px 9px",color:"#ff9500",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>{"Замер"}</button>
-          <button onClick={()=>setMode("manual")} style={{background:"#f2f3fa",border:"0.5px solid #eeeef8",borderRadius:7,padding:"4px 9px",color:"#888",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>{"Ручн."}</button>
-        </div>
+      }
+    />
+    {/* Имя заказа + методы */}
+    <div style={{background:'#fff',display:'flex',alignItems:'center',gap:6,padding:'8px 14px 8px',borderBottom:'0.5px solid #eeeef8'}}>
+      <span style={{fontSize:11,color:'#888',flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{orderName||'Заказ'}</span>
+      <div style={{display:'flex',gap:4}}>
+        <button onClick={()=>fRef.current?.click()} style={{background:'rgba(79,70,229,0.08)',border:'0.5px solid rgba(79,70,229,0.2)',borderRadius:7,padding:'4px 9px',color:'#4F46E5',fontSize:9,fontWeight:600,cursor:'pointer',fontFamily:'inherit'}}>{'Обводка'}</button>
+        <button onClick={()=>setMode('recognize')} style={{background:'rgba(124,92,191,0.08)',border:'0.5px solid rgba(124,92,191,0.2)',borderRadius:7,padding:'4px 9px',color:'#7c5cbf',fontSize:9,cursor:'pointer',fontFamily:'inherit'}}>{'AI'}</button>
+        <button onClick={()=>setMode('compass')} style={{background:'rgba(255,149,0,0.08)',border:'0.5px solid rgba(255,149,0,0.2)',borderRadius:7,padding:'4px 9px',color:'#ff9500',fontSize:9,cursor:'pointer',fontFamily:'inherit'}}>{'Замер'}</button>
+        <button onClick={()=>setMode('manual')} style={{background:'#f2f3fa',border:'0.5px solid #eeeef8',borderRadius:7,padding:'4px 9px',color:'#888',fontSize:9,cursor:'pointer',fontFamily:'inherit'}}>{'Ручн.'}</button>
       </div>
     </div>
 
