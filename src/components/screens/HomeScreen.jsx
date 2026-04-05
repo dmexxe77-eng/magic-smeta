@@ -17,7 +17,7 @@ import ManualBuilder from "../builders/ManualBuilder.jsx";
 import PdfPagePicker from "../builders/PdfPagePicker.jsx";
 
 import NomEditor from "./NomEditor.jsx";
-function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme,onFullExport,onSaveNow,onImport,saveStatus}){
+function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme,onFullExport,onSaveNow,onImport,saveStatus,returnOrderId}){
   const[tab,setTab]       = useState("home");
   const[showMenu,setShowMenu] = useState(false);
   const[showNomEd,setShowNomEd] = useState(false);
@@ -61,7 +61,7 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
     {id:"d2",name:"Кикоть Дмитрий",  phone:"+7 924 300-44-55",studio:"ИП Кикоть",bonusType:"pct",bonusRate:7,note:""},
   ]);
 
-  const[selOrder,setSelOrder]     = useState(null);
+  const[selOrder,setSelOrder]     = useState(returnOrderId||null);
   const[selClient,setSelClient]   = useState(null);
   const[selDesigner,setSelDesigner] = useState(null);
   const[projTab,setProjTab]       = useState("info");
