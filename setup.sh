@@ -1,11 +1,10 @@
 #!/bin/bash
-echo "🧹 Cleaning..."
+echo "🧹 Cleaning old modules..."
 rm -rf node_modules .expo package-lock.json
 
-echo "📦 Installing..."
+echo "📦 Installing (this takes 2-3 minutes)..."
 npm install --legacy-peer-deps
 
-echo "🔧 Installing missing peer deps..."
-npm install react-native-worklets react-native-reanimated babel-preset-expo --legacy-peer-deps
-
-echo "✅ Done! Run: npx expo start --clear"
+echo ""
+echo "✅ Done! Now run: npx expo start --clear"
+echo "📱 Then scan the QR code with Expo Go on your iPhone"
