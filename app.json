@@ -1,30 +1,24 @@
 {
   "expo": {
-    "name": "magic-app",
-    "slug": "magic-app",
+    "name": "Magic Studio",
+    "slug": "magic-studio",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "scheme": "magic",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "ru.magicstudio.app",
+      "infoPlist": {
+        "NSMotionUsageDescription": "Компас используется для замера помещений",
+        "NSCameraUsageDescription": "Камера для фотографирования планов"
+      }
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "package": "ru.magicstudio.app",
+      "adaptiveIcon": { "backgroundColor": "#f7f7f5" }
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    }
+    "plugins": ["expo-router", "expo-sensors"],
+    "web": { "bundler": "metro" }
   }
 }
