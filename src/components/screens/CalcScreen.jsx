@@ -91,6 +91,7 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
   const[rooms,setRooms]=useState(initRooms||[]);
   const[tab,setTab]=useState(initRooms?.[0]?.id||null);
   const[showEst,setShowEst]=useState(false);
+  const[estTab,setEstTab]=useState("room");
   const[showExport,setShowExport]=useState(false);
   const[showConfigExport,setShowConfigExport]=useState(false);
   const[expType,setExpType]=useState("total");
@@ -428,21 +429,29 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
 
       {/* ═══ НИЖНЯЯ ПАНЕЛЬ: Смета + Экспорт ═══ */}
       <div style={{background:"#fff",borderRadius:14,marginTop:10,border:"0.5px solid #eeeef8"}}>
-        <div onClick={()=>setShowEst(!showEst)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"13px 14px",cursor:"pointer"}}>
-          <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <div style={{width:28,height:28,borderRadius:7,background:"rgba(79,70,229,0.08)",display:"flex",alignItems:"center",justifyContent:"center"}}><svg width="13" height="13" fill="none" stroke="#4F46E5" strokeWidth="1.5" strokeLinecap="round"><path d="M2 4h9M2 7h7M2 10h5"/><path d="M10 8l2 2 2-3" stroke="#16a34a" strokeWidth="1.5"/></svg></div>
-            <span style={{fontSize:13,fontWeight:700,color:"#1e2530"}}>{"Смета"}</span>
-            <span style={{fontSize:10,color:"#bbb"}}>{showEst?"▲":"▼"}</span>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 14px",gap:8}}>
+          <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+            <div onClick={()=>setShowEst(!showEst)} style={{width:28,height:28,borderRadius:7,background:"rgba(79,70,229,0.08)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><svg width="13" height="13" fill="none" stroke="#4F46E5" strokeWidth="1.5" strokeLinecap="round"><path d="M2 4h9M2 7h7M2 10h5"/><path d="M10 8l2 2 2-3" stroke="#16a34a" strokeWidth="1.5"/></svg></div>
+            <span onClick={()=>setShowEst(!showEst)} style={{fontSize:13,fontWeight:700,color:"#1e2530",cursor:"pointer"}}>{"Смета"}</span>
+            <span onClick={()=>setShowEst(!showEst)} style={{fontSize:10,color:"#bbb",cursor:"pointer"}}>{showEst?"▲":"▼"}</span>
           </div>
-          <div style={{textAlign:"right"}}>
-            <div style={{fontSize:20,fontWeight:700,color:"#1e2530"}}>{fmt(grand)+" ₽"}</div>
-            <div style={{fontSize:10,color:"#aaa",marginTop:1}}>{fmt(matTot)+" мат · "+fmt(workTot)+" раб"}</div>
+          <div style={{display:"flex",gap:3,flex:1}}>
+            <button onClick={()=>setEstTab("room")} style={{flex:1,background:estTab==="room"?"#1e2530":T.pillBg,border:"none",borderRadius:8,padding:"5px 4px",fontSize:10,fontWeight:estTab==="room"?700:400,color:estTab==="room"?"#fff":T.sub,cursor:"pointer",fontFamily:"inherit",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+              {(r&&r.name)||"Помещение"}
+            </button>
+            <button onClick={()=>setEstTab("all")} style={{flex:"0 0 56px",background:estTab==="all"?"#1e2530":T.pillBg,border:"none",borderRadius:8,padding:"5px 4px",fontSize:10,fontWeight:estTab==="all"?700:400,color:estTab==="all"?"#fff":T.sub,cursor:"pointer",fontFamily:"inherit"}}>
+              {"Все"}
+            </button>
+          </div>
+          <div onClick={()=>setShowEst(!showEst)} style={{textAlign:"right",flexShrink:0,cursor:"pointer"}}>
+            <div style={{fontSize:18,fontWeight:700,color:"#1e2530"}}>{fmt(estTab==="room"?(()=>{const er=r?buildEst([r],presets,globalOpts,nomSnapshot):{mats:[],works:[]};return er.mats.reduce((s,l)=>s+l.q*l.p,0)+er.works.reduce((s,l)=>s+l.q*l.p,0);})():grand)+" ₽"}</div>
+            <div style={{fontSize:9,color:"#aaa",marginTop:1}}>{estTab==="room"?((r&&r.name)||"").slice(0,18):fmt(matTot)+" м · "+fmt(workTot)+" р"}</div>
           </div>
         </div>
         {showEst&&(()=>{
-          const estTab=estEd.__tab||'room';
-          const setEstTab=t=>setEstEd(prev=>({...prev,__tab:t}));
-          const estRoom=r?buildEst([r],presets,globalOpts,nomSnapshotRef.current):{mats:[],works:[]};
+          /* estTab now in useState */
+          /* setEstTab now in useState */
+          const estRoom=r?buildEst([r],presets,globalOpts,nomSnapshot):{mats:[],works:[]};
           const matsR=estRoom.mats.map((l,i)=>({...l,k:'rm'+i}));
           const worksR=estRoom.works.map((l,i)=>({...l,k:'rw'+i})).sort((a,b)=>(b.q||0)-(a.q||0));
           const matTotR=matsR.reduce((s,l)=>s+l.q*l.p,0);
@@ -454,14 +463,7 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
           const activeWorkTot=estTab==='room'?workTotR:workTot;
           const activeGrand=estTab==='room'?grandR:grand;
           return(<div style={{padding:'0 14px 14px'}}>
-            <div style={{display:'flex',gap:6,marginBottom:12}}>
-              <button onClick={()=>setEstTab('room')} style={{flex:1,background:estTab==='room'?'#1e2530':T.pillBg,border:'none',borderRadius:9,padding:'7px 0',fontSize:11,fontWeight:estTab==='room'?700:400,color:estTab==='room'?'#fff':T.sub,cursor:'pointer',fontFamily:'inherit'}}>
-                {(r&&r.name)||'Помещение'}
-              </button>
-              <button onClick={()=>setEstTab('all')} style={{flex:1,background:estTab==='all'?'#1e2530':T.pillBg,border:'none',borderRadius:9,padding:'7px 0',fontSize:11,fontWeight:estTab==='all'?700:400,color:estTab==='all'?'#fff':T.sub,cursor:'pointer',fontFamily:'inherit'}}>
-                {'Все помещения'}
-              </button>
-            </div>
+
             <div style={{fontSize:9,fontWeight:700,color:'#4F46E5',marginBottom:4,letterSpacing:'0.8px'}}>{'МАТЕРИАЛЫ'}</div>
             {activeMats.map(l=>{const eq=estEd[l.k]?.q??l.q;const ep=estEd[l.k]?.p??l.p;const nom=resolveNomByEstimateLine(l);return(<div key={l.k} style={{padding:'4px 0',borderBottom:'0.5px solid '+T.border}}>
               <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:2}}>
@@ -496,7 +498,7 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
               <div style={{fontSize:9,color:'rgba(255,255,255,0.4)',letterSpacing:'0.8px',marginBottom:5}}>{estTab==='room'?((r&&r.name)||'Помещение').toUpperCase():'ВСЕ ПОМЕЩЕНИЯ'}</div>
               <div style={{fontSize:24,fontWeight:700,color:'#fff',letterSpacing:-0.5}}>{fmt(activeGrand)+' ₽'}</div>
             </div>
-            {estEd&&Object.keys(estEd).filter(k=>k!=='__tab').length>0&&<button onClick={()=>setEstEd(p=>({__tab:p.__tab}))} style={{width:'100%',marginTop:6,background:T.pillBg,border:'1px solid '+T.border,borderRadius:10,padding:8,color:T.sub,fontSize:11,cursor:'pointer',fontFamily:'inherit'}}>{'Сбросить правки'}</button>}
+            {estEd&&Object.keys(estEd).filter(k=>k!=='__tab').length>0&&<button onClick={()=>setEstEd({})} style={{width:'100%',marginTop:6,background:T.pillBg,border:'1px solid '+T.border,borderRadius:10,padding:8,color:T.sub,fontSize:11,cursor:'pointer',fontFamily:'inherit'}}>{'Сбросить правки'}</button>}
             <button onClick={()=>setShowExport(true)} style={{width:'100%',marginTop:10,background:'#4F46E5',border:'none',borderRadius:11,padding:13,color:'#fff',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>{'Экспорт сметы'}</button>
             <button onClick={()=>setShowConfigExport(true)} style={{width:'100%',marginTop:6,background:T.pillBg,border:'1px solid '+T.border,borderRadius:10,padding:10,color:T.sub,fontSize:11,cursor:'pointer',fontFamily:'inherit'}}>{'⚙ Экспорт настроек кнопок'}</button>
           </div>);
