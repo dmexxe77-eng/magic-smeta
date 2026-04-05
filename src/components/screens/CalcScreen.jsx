@@ -314,7 +314,7 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
         <span style={{fontSize:11,color:"#888",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{orderName||"Заказ"}</span>
         <div style={{display:"flex",gap:4}}>
           <button onClick={()=>fRef.current?.click()} style={{background:"rgba(79,70,229,0.08)",border:"0.5px solid rgba(79,70,229,0.2)",borderRadius:7,padding:"4px 9px",color:"#4F46E5",fontSize:9,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{"Обводка"}</button>
-          {planImage&&<button onClick={()=>setMode("trace")} style={{background:"rgba(79,70,229,0.12)",border:"1px solid rgba(79,70,229,0.3)",borderRadius:8,padding:"5px 11px",color:"#4F46E5",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>{"🗺️ Чертёж"}</button>}
+          
           <button onClick={()=>setMode("recognize")} style={{background:"rgba(124,92,191,0.08)",border:"0.5px solid rgba(124,92,191,0.2)",borderRadius:7,padding:"4px 9px",color:"#7c5cbf",fontSize:9,fontWeight:500,cursor:"pointer",fontFamily:"inherit"}}>{"AI"}</button>
           <button onClick={()=>setMode("compass")} style={{background:"rgba(255,149,0,0.08)",border:"0.5px solid rgba(255,149,0,0.2)",borderRadius:7,padding:"4px 9px",color:"#ff9500",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>{"Замер"}</button>
           <button onClick={()=>setMode("manual")} style={{background:"#f2f3fa",border:"0.5px solid #eeeef8",borderRadius:7,padding:"4px 9px",color:"#888",fontSize:9,cursor:"pointer",fontFamily:"inherit"}}>{"Ручн."}</button>
@@ -351,7 +351,6 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
         <div style={{flex:1}} onClick={()=>setPolyEdit(true)}>
           <PolyMini verts={r.v} areaOverride={r.aO} perimOverride={r.pO} showBBox={r.canvas?.overcut}/>
         </div>
-        <button onClick={()=>setRoomDraw(true)} style={{background:T.accent,border:"none",borderRadius:10,padding:"0 12px",color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>✏️ Чертёж</button>
       </div>
 
       {/* Global options (protect etc.) */}
