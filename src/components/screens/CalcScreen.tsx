@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,8 +14,10 @@ import { useApp, useOrder } from '../../store/AppContext';
 import { AppHeader, Button, Card, SectionHeader, Divider, EmptyState } from '../ui';
 import { calcPoly, fmt } from '../../utils/geometry';
 import { generateId } from '../../utils/storage';
-import type { Room, EstimateLine, Vertex } from '../../types';
+import type { Room, Vertex } from '../../types';
 import CompassBuilder from '../builders/CompassBuilder';
+import CalcBlockView from '../calc/CalcBlockView';
+import { createDefaultBlocks, calcBlockTotal, getDefaultQty, type CalcBlock, type Preset } from '../../data/calcBlocks';
 
 // ─── Constants ────────────────────────────────────────────────────────
 
@@ -57,167 +59,6 @@ function RoomMini({ verts, size = 80 }: { verts: Vertex[]; size?: number }) {
   );
 }
 
-// ─── Estimate Line Row ────────────────────────────────────────────────
-
-function EstRow({
-  line,
-  edits,
-  onChangeQty,
-  onChangePrice,
-}: {
-  line: EstimateLine;
-  edits: { q?: number; p?: number };
-  onChangeQty: (v: number) => void;
-  onChangePrice: (v: number) => void;
-}) {
-  const q = edits.q ?? line.q;
-  const p = edits.p ?? line.p;
-  const total = q * p;
-
-  return (
-    <View className="py-2.5 border-b border-border">
-      <Text className="text-navy text-xs font-medium mb-1.5" numberOfLines={1}>
-        {line.n}
-      </Text>
-      <View className="flex-row items-center gap-2">
-        {/* Qty */}
-        <NumInput
-          value={q}
-          unit={line.u}
-          onChange={onChangeQty}
-          width={64}
-        />
-        <Text className="text-muted text-xs">×</Text>
-        {/* Price */}
-        <NumInput
-          value={p}
-          unit="₽"
-          onChange={onChangePrice}
-          width={64}
-        />
-        <Text className="text-muted text-xs">=</Text>
-        <Text className="text-accent text-xs font-bold ml-auto">
-          {fmt(total)} ₽
-        </Text>
-      </View>
-    </View>
-  );
-}
-
-// ─── Numeric Input ────────────────────────────────────────────────────
-
-function NumInput({
-  value,
-  unit,
-  onChange,
-  width = 60,
-}: {
-  value: number;
-  unit: string;
-  onChange: (v: number) => void;
-  width?: number;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [tmp, setTmp] = useState('');
-
-  if (editing) {
-    return (
-      <TextInput
-        value={tmp}
-        onChangeText={setTmp}
-        keyboardType="decimal-pad"
-        returnKeyType="done"
-        autoFocus
-        onBlur={() => {
-          onChange(parseFloat(tmp.replace(',', '.')) || 0);
-          setEditing(false);
-        }}
-        onSubmitEditing={() => {
-          onChange(parseFloat(tmp.replace(',', '.')) || 0);
-          setEditing(false);
-        }}
-        style={{ width }}
-        className="bg-bg border border-accent rounded-lg px-2 py-1 text-navy text-xs text-center"
-      />
-    );
-  }
-
-  return (
-    <Pressable
-      onPress={() => { setTmp(String(value)); setEditing(true); }}
-      style={{ width }}
-      className="bg-bg border border-border rounded-lg px-2 py-1 items-center"
-    >
-      <Text className="text-navy text-xs font-medium">
-        {fmt(value)} <Text className="text-muted">{unit}</Text>
-      </Text>
-    </Pressable>
-  );
-}
-
-// ─── Build simple estimate from rooms ────────────────────────────────
-// (Simplified version — real app would use full buildEst from presets)
-
-function buildSimpleEst(
-  rooms: Room[],
-  snap?: Record<string, number>
-): { mats: EstimateLine[]; works: EstimateLine[] } {
-  const mm: Record<string, { n: string; q: number; u: string; p: number }> = {};
-  const ww: Record<string, { n: string; q: number; u: string; p: number }> = {};
-
-  for (const r of rooms) {
-    if (r.on === false) continue;
-    const poly = (r.aO == null || r.pO == null) ? calcPoly(r.v) : null;
-    const area = r.aO ?? poly!.a;
-    const perim = r.pO ?? poly!.p;
-
-    // Canvas (полотно)
-    if (r.canvas.nomId) {
-      const key = r.canvas.nomId + '_' + r.id;
-      const price = snap?.[r.canvas.nomId] ?? 1000;
-      const name = `ПВХ Полотно (${r.name})`;
-      if (!mm[key]) mm[key] = { n: name, q: 0, u: 'м²', p: price };
-      mm[key].q = Math.round((mm[key].q + area) * 100) / 100;
-    } else {
-      // default canvas line
-      const key = `canvas_${r.id}`;
-      const price = snap?.['canvas_default'] ?? 1000;
-      mm[key] = { n: `Полотно (${r.name})`, q: Math.round(area * 100) / 100, u: 'м²', p: price };
-    }
-
-    // Main profile
-    if (perim > 0) {
-      const key = r.mainProf.nomId ?? 'profile_default';
-      const price = snap?.[key] ?? 360;
-      const name = 'Профиль';
-      if (!mm[key]) mm[key] = { n: name, q: 0, u: 'м', p: price };
-      mm[key].q = Math.round((mm[key].q + perim) * 100) / 100;
-    }
-
-    // Work (монтаж)
-    const workKey = 'work_mount';
-    const workPrice = snap?.[workKey] ?? 500;
-    if (!ww[workKey]) ww[workKey] = { n: 'Монтаж натяжного потолка', q: 0, u: 'м²', p: workPrice };
-    ww[workKey].q = Math.round((ww[workKey].q + area) * 100) / 100;
-
-    // Options
-    for (const opt of r.options ?? []) {
-      const price = snap?.[opt.nomId] ?? 0;
-      const key = opt.nomId;
-      if (!ww[key]) ww[key] = { n: key, q: 0, u: 'шт', p: price };
-      ww[key].q = Math.round((ww[key].q + opt.qty) * 100) / 100;
-    }
-  }
-
-  const mats = Object.entries(mm).map(([k, v], i) => ({
-    k: `m${i}`, _k: k, ...v,
-  }));
-  const works = Object.entries(ww).map(([k, v], i) => ({
-    k: `w${i}`, _k: k, ...v,
-  }));
-
-  return { mats, works };
-}
 
 // ─── Calc Screen ──────────────────────────────────────────────────────
 
@@ -233,30 +74,16 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
   const [activeRoomId, setActiveRoomId] = useState<string | null>(
     order?.rooms?.[0]?.id ?? null
   );
-  const [estTab, setEstTab] = useState<'room' | 'all'>('room');
-  const [showEst, setShowEst] = useState(false);
   const [showBuilder, setShowBuilder] = useState(false);
-  const [estEdits, setEstEdits] = useState<Record<string, { q?: number; p?: number }>>({});
+  const [blocks, setBlocks] = useState<CalcBlock[]>(createDefaultBlocks);
+  const [qtyOverrides, setQtyOverrides] = useState<Record<string, number>>({});
 
-  // Local snapshot state (triggers re-render on price edit)
-  const [nomSnap, setNomSnap] = useState<Record<string, number>>(
-    order?.nomSnapshot ?? {}
-  );
-  const snapRef = useRef(nomSnap);
-  snapRef.current = nomSnap;
-
-  // Sync state when order loads from AsyncStorage
+  // Sync activeRoomId when order loads from AsyncStorage
   useEffect(() => {
     if (order && activeRoomId == null && order.rooms.length > 0) {
       setActiveRoomId(order.rooms[0].id);
     }
   }, [order, activeRoomId]);
-
-  useEffect(() => {
-    if (order?.nomSnapshot && Object.keys(nomSnap).length === 0 && Object.keys(order.nomSnapshot).length > 0) {
-      setNomSnap(order.nomSnapshot);
-    }
-  }, [order?.nomSnapshot]);
 
   if (!order) {
     return (
@@ -270,33 +97,53 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
   const rooms = order.rooms;
   const activeRoom = rooms.find(r => r.id === activeRoomId) ?? rooms[0];
 
-  // Build estimates
-  const estAll = buildSimpleEst(rooms, nomSnap);
-  const estRoom = activeRoom ? buildSimpleEst([activeRoom], nomSnap) : { mats: [], works: [] };
+  // Area/perimeter for active room
+  const roomArea = activeRoom?.aO ?? (activeRoom ? calcPoly(activeRoom.v).a : 0);
+  const roomPerim = activeRoom?.pO ?? (activeRoom ? calcPoly(activeRoom.v).p : 0);
 
-  const activeMats = estTab === 'room' ? estRoom.mats : estAll.mats;
-  const activeWorks = estTab === 'room' ? estRoom.works : estAll.works;
-
-  // Totals with edits applied
-  const matTot = activeMats.reduce(
-    (s, l) => s + (estEdits[l.k]?.q ?? l.q) * (estEdits[l.k]?.p ?? l.p),
-    0
+  // Grand total from all blocks
+  const grand = blocks.reduce((sum, block) =>
+    sum + calcBlockTotal(block, roomArea, roomPerim, qtyOverrides), 0
   );
-  const workTot = activeWorks.reduce(
-    (s, l) => s + (estEdits[l.k]?.q ?? l.q) * (estEdits[l.k]?.p ?? l.p),
-    0
-  );
-  const grand = matTot + workTot;
 
-  const handlePriceEdit = (lineKey: string, nomId: string, field: 'q' | 'p', val: number) => {
-    setEstEdits(prev => ({ ...prev, [lineKey]: { ...prev[lineKey], [field]: val } }));
-    if (field === 'p') {
-      const newSnap = { ...snapRef.current, [nomId]: val };
-      snapRef.current = newSnap;
-      setNomSnap(newSnap);
-      updateSnapshot(order.id, newSnap);
-    }
-  };
+  // Block handlers
+  const handleToggleExpanded = useCallback((blockId: string) => {
+    setBlocks(prev => prev.map(b => b.id === blockId ? { ...b, expanded: !b.expanded } : b));
+  }, []);
+
+  const handleSelectPreset = useCallback((blockId: string, presetId: string) => {
+    setBlocks(prev => prev.map(b => b.id === blockId ? { ...b, activePresetId: presetId } : b));
+  }, []);
+
+  const handleUpdatePresets = useCallback((blockId: string, presets: Preset[]) => {
+    setBlocks(prev => prev.map(b => b.id === blockId ? { ...b, presets } : b));
+  }, []);
+
+  const handleToggleNom = useCallback((blockId: string, presetId: string, nomId: string) => {
+    setBlocks(prev => prev.map(b => {
+      if (b.id !== blockId) return b;
+      return {
+        ...b,
+        presets: b.presets.map(p => {
+          if (p.id !== presetId) return p;
+          return { ...p, noms: p.noms.map(n => n.id === nomId ? { ...n, enabled: !n.enabled } : n) };
+        }),
+      };
+    }));
+  }, []);
+
+  const handleChangeNomPrice = useCallback((blockId: string, presetId: string, nomId: string, price: number) => {
+    setBlocks(prev => prev.map(b => {
+      if (b.id !== blockId) return b;
+      return {
+        ...b,
+        presets: b.presets.map(p => {
+          if (p.id !== presetId) return p;
+          return { ...p, noms: p.noms.map(n => n.id === nomId ? { ...n, price } : n) };
+        }),
+      };
+    }));
+  }, []);
 
   const handleAddRoom = (room: Room) => {
     const updated = [...rooms, room];
@@ -323,11 +170,8 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
   };
 
   const handleRefreshPrices = () => {
-    // Reset edits and snapshot to recalculate
-    setEstEdits({});
-    const fresh: Record<string, number> = {};
-    setNomSnap(fresh);
-    updateSnapshot(order.id, fresh);
+    setQtyOverrides({});
+    setBlocks(createDefaultBlocks());
   };
 
   // Builder modal
@@ -501,116 +345,31 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
             />
           )}
 
-          {/* Estimate block */}
+          {/* Calculator blocks */}
+          {rooms.length > 0 && blocks.map(block => (
+            <CalcBlockView
+              key={block.id}
+              block={block}
+              area={roomArea}
+              perimeter={roomPerim}
+              qtyOverrides={qtyOverrides}
+              onToggleExpanded={() => handleToggleExpanded(block.id)}
+              onSelectPreset={presetId => handleSelectPreset(block.id, presetId)}
+              onUpdatePresets={presets => handleUpdatePresets(block.id, presets)}
+              onToggleNom={(presetId, nomId) => handleToggleNom(block.id, presetId, nomId)}
+              onChangeQty={(nomId, qty) => setQtyOverrides(prev => ({ ...prev, [nomId]: qty }))}
+              onChangePrice={(presetId, nomId, price) => handleChangeNomPrice(block.id, presetId, nomId, price)}
+            />
+          ))}
+
+          {/* Grand total */}
           {rooms.length > 0 && (
-            <Card className="overflow-hidden">
-              {/* Estimate header */}
-              <Pressable
-                onPress={() => setShowEst(v => !v)}
-                className="flex-row items-center justify-between px-3 py-3"
-              >
-                <View className="flex-row items-center gap-2">
-                  <View className="w-7 h-7 rounded-lg bg-accent-light items-center justify-center">
-                    <Text className="text-xs">📋</Text>
-                  </View>
-                  <Text className="text-sm font-bold text-navy">Смета</Text>
-                  <Text className="text-muted text-xs">{showEst ? '▲' : '▼'}</Text>
-                </View>
-
-                {/* Tab switcher */}
-                <View className="flex-row gap-1">
-                  <Pressable
-                    onPress={() => setEstTab('room')}
-                    className={`px-2.5 py-1 rounded-lg ${estTab === 'room' ? 'bg-navy' : 'bg-bg'}`}
-                  >
-                    <Text className={`text-[10px] font-semibold ${estTab === 'room' ? 'text-white' : 'text-muted'}`}>
-                      {activeRoom?.name?.slice(0, 10) ?? 'Комната'}
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => setEstTab('all')}
-                    className={`px-2.5 py-1 rounded-lg ${estTab === 'all' ? 'bg-navy' : 'bg-bg'}`}
-                  >
-                    <Text className={`text-[10px] font-semibold ${estTab === 'all' ? 'text-white' : 'text-muted'}`}>
-                      Все
-                    </Text>
-                  </Pressable>
-                </View>
-
-                {/* Total */}
-                <Pressable onPress={() => setShowEst(v => !v)}>
-                  <Text className="text-base font-black text-navy">{fmt(grand)} ₽</Text>
-                </Pressable>
-              </Pressable>
-
-              {showEst && (
-                <View className="px-3 pb-3 border-t border-border">
-                  {/* Mats */}
-                  {activeMats.length > 0 && (
-                    <>
-                      <Text className="text-[9px] font-bold text-accent tracking-widest mt-3 mb-1">
-                        МАТЕРИАЛЫ
-                      </Text>
-                      {activeMats.map(l => (
-                        <EstRow
-                          key={l.k}
-                          line={l}
-                          edits={estEdits[l.k] ?? {}}
-                          onChangeQty={v => handlePriceEdit(l.k, l._k, 'q', v)}
-                          onChangePrice={v => handlePriceEdit(l.k, l._k, 'p', v)}
-                        />
-                      ))}
-                      <View className="flex-row justify-between py-2 border-b border-border">
-                        <Text className="text-xs font-bold text-navy">Материалы:</Text>
-                        <Text className="text-xs font-bold text-accent">{fmt(matTot)} ₽</Text>
-                      </View>
-                    </>
-                  )}
-
-                  {/* Works */}
-                  {activeWorks.length > 0 && (
-                    <>
-                      <Text className="text-[9px] font-bold text-success tracking-widest mt-3 mb-1">
-                        РАБОТЫ
-                      </Text>
-                      {activeWorks.map(l => (
-                        <EstRow
-                          key={l.k}
-                          line={l}
-                          edits={estEdits[l.k] ?? {}}
-                          onChangeQty={v => handlePriceEdit(l.k, l._k, 'q', v)}
-                          onChangePrice={v => handlePriceEdit(l.k, l._k, 'p', v)}
-                        />
-                      ))}
-                      <View className="flex-row justify-between py-2 border-b border-border">
-                        <Text className="text-xs font-bold text-navy">Работы:</Text>
-                        <Text className="text-xs font-bold text-success">{fmt(workTot)} ₽</Text>
-                      </View>
-                    </>
-                  )}
-
-                  {/* Grand total */}
-                  <View className="bg-navy rounded-xl p-3 mt-3">
-                    <View className="flex-row justify-between">
-                      <Text className="text-white/50 text-xs font-bold tracking-wider">ИТОГО</Text>
-                      <Text className="text-white text-lg font-black">{fmt(grand)} ₽</Text>
-                    </View>
-                    <Text className="text-white/30 text-[10px] mt-0.5">
-                      {fmt(matTot)} мат · {fmt(workTot)} раб
-                    </Text>
-                  </View>
-
-                  {Object.keys(estEdits).length > 0 && (
-                    <Pressable
-                      onPress={() => setEstEdits({})}
-                      className="mt-2 py-2 items-center border border-border rounded-xl"
-                    >
-                      <Text className="text-muted text-xs">Сбросить правки</Text>
-                    </Pressable>
-                  )}
-                </View>
-              )}
-            </Card>
+            <View className="bg-navy rounded-2xl p-4">
+              <View className="flex-row justify-between">
+                <Text className="text-white/50 text-xs font-bold tracking-wider">ИТОГО</Text>
+                <Text className="text-white text-xl font-black">{fmt(grand)} ₽</Text>
+              </View>
+            </View>
           )}
         </View>
 
