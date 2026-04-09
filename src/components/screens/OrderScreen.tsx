@@ -58,34 +58,31 @@ export default function OrderScreen({ orderId }: OrderScreenProps) {
       />
 
       {/* Status bar */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        className="bg-white border-b border-border py-2"
-        contentContainerClassName="px-4 gap-2"
-      >
-        {STATUSES.map(s => (
-          <Pressable
-            key={s.id}
-            onPress={() =>
-              dispatch({ type: 'SET_ORDER_STATUS', id: order.id, status: s.id })
-            }
-            className={`px-4 py-1.5 rounded-full border ${
-              order.status === s.id
-                ? 'bg-accent border-accent'
-                : 'bg-white border-border'
-            }`}
-          >
-            <Text
-              className={`text-xs font-semibold ${
-                order.status === s.id ? 'text-white' : 'text-muted'
-              }`}
+      <View className="bg-white border-b border-border py-2">
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 16, gap: 8, alignItems: 'center' }}
+        >
+          {STATUSES.map(s => (
+            <Pressable
+              key={s.id}
+              onPress={() =>
+                dispatch({ type: 'SET_ORDER_STATUS', id: order.id, status: s.id })
+              }
+              style={{ paddingHorizontal: 16, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: order.status === s.id ? '#4F46E5' : '#e8e8e4', backgroundColor: order.status === s.id ? '#4F46E5' : '#fff' }}
             >
-              {s.label}
-            </Text>
-          </Pressable>
-        ))}
-      </ScrollView>
+              <Text
+                className={`text-xs font-semibold ${
+                  order.status === s.id ? 'text-white' : 'text-muted'
+                }`}
+              >
+                {s.label}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      </View>
 
       {/* Tabs */}
       <View className="bg-white flex-row border-b border-border">

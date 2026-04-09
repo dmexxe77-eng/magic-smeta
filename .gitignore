@@ -7,3 +7,4 @@ dist/
 web-build/
 android/
 ios/
+.claude/
