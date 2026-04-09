@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
+  Pressable,
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -65,7 +65,7 @@ export default function OrderScreen({ orderId }: OrderScreenProps) {
         contentContainerClassName="px-4 gap-2"
       >
         {STATUSES.map(s => (
-          <TouchableOpacity
+          <Pressable
             key={s.id}
             onPress={() =>
               dispatch({ type: 'SET_ORDER_STATUS', id: order.id, status: s.id })
@@ -83,14 +83,14 @@ export default function OrderScreen({ orderId }: OrderScreenProps) {
             >
               {s.label}
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         ))}
       </ScrollView>
 
       {/* Tabs */}
       <View className="bg-white flex-row border-b border-border">
         {(['info', 'finance', 'salary'] as const).map(t => (
-          <TouchableOpacity
+          <Pressable
             key={t}
             onPress={() => setTab(t)}
             className={`flex-1 py-3 border-b-2 ${
@@ -104,7 +104,7 @@ export default function OrderScreen({ orderId }: OrderScreenProps) {
             >
               {t === 'info' ? 'Инфо' : t === 'finance' ? 'Финансы' : 'Выплаты'}
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         ))}
       </View>
 

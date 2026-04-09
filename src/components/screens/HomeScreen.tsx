@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
+  Pressable,
   TextInput,
   Alert,
   Modal,
@@ -72,12 +72,12 @@ function OrderCard({
           </View>
           <View className="flex-row items-center gap-2">
             <Badge label={st.label} color={st.color} />
-            <TouchableOpacity
+            <Pressable
               onPress={onDelete}
               className="w-7 h-7 rounded-full bg-red-50 items-center justify-center"
             >
               <Text className="text-red-400 text-xs">✕</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
 
@@ -134,9 +134,9 @@ function NewOrderModal({
       <View className="flex-1 bg-white">
         <View className="flex-row items-center justify-between px-4 pt-14 pb-4 border-b border-border">
           <Text className="text-lg font-bold text-navy">Новый проект</Text>
-          <TouchableOpacity onPress={onClose}>
+          <Pressable onPress={onClose}>
             <Text className="text-muted text-base">Отмена</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
         <ScrollView className="flex-1 px-4 pt-4">
           <FormField
@@ -197,7 +197,7 @@ export default function HomeScreen() {
     return matchSearch && matchStatus;
   });
 
-  const handleDelete = (order: Order) => {
+  const handleDelete = useCallback((order: Order) => {
     Alert.alert(
       'Удалить проект',
       `Удалить «${order.name}»? Это действие нельзя отменить.`,
@@ -210,7 +210,21 @@ export default function HomeScreen() {
         },
       ]
     );
-  };
+  }, [dispatch]);
+
+  const handleOrderPress = useCallback((id: string) => {
+    router.push(`/order/${id}` as any);
+  }, [router]);
+
+  const renderOrder = useCallback(({ item: order }: { item: Order }) => (
+    <OrderCard
+      order={order}
+      onPress={() => handleOrderPress(order.id)}
+      onDelete={() => handleDelete(order)}
+    />
+  ), [handleOrderPress, handleDelete]);
+
+  const keyExtractor = useCallback((item: Order) => item.id, []);
 
   // Stats
   const inWork = state.orders.filter(
@@ -271,7 +285,7 @@ export default function HomeScreen() {
           className="mb-4"
           contentContainerClassName="px-4 gap-2"
         >
-          <TouchableOpacity
+          <Pressable
             onPress={() => setActiveStatus('all')}
             className={`px-3 py-1.5 rounded-full border ${
               activeStatus === 'all'
@@ -286,9 +300,9 @@ export default function HomeScreen() {
             >
               Все
             </Text>
-          </TouchableOpacity>
+          </Pressable>
           {STATUSES.slice(0, 5).map(s => (
-            <TouchableOpacity
+            <Pressable
               key={s.id}
               onPress={() => setActiveStatus(s.id)}
               className={`px-3 py-1.5 rounded-full border ${
@@ -304,7 +318,7 @@ export default function HomeScreen() {
               >
                 {s.label}
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           ))}
         </ScrollView>
 
@@ -323,27 +337,24 @@ export default function HomeScreen() {
             }
           />
         ) : (
-          filtered.map(order => (
-            <OrderCard
-              key={order.id}
-              order={order}
-              onPress={() => router.push(`/order/${order.id}` as any)}
-              onDelete={() => handleDelete(order)}
-            />
-          ))
+          <FlatList
+            data={filtered}
+            renderItem={renderOrder}
+            keyExtractor={keyExtractor}
+            scrollEnabled={false}
+            ListFooterComponent={<View className="h-32" />}
+          />
         )}
-
-        <View className="h-32" />
       </ScrollView>
 
       {/* FAB */}
-      <TouchableOpacity
+      <Pressable
         onPress={() => setShowNew(true)}
         className="absolute bottom-8 self-center bg-accent px-8 py-4 rounded-full shadow-lg"
         style={{ elevation: 6 }}
       >
         <Text className="text-white font-bold text-base">+ Новый проект</Text>
-      </TouchableOpacity>
+      </Pressable>
 
       <NewOrderModal
         visible={showNew}

@@ -3,7 +3,7 @@ import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
+  Pressable,
   ScrollView,
   Alert,
 } from 'react-native';
@@ -294,12 +294,12 @@ export default function CompassBuilder({
         onBack={onBack}
         rightContent={
           sides.length > 0 ? (
-            <TouchableOpacity
+            <Pressable
               onPress={undo}
               className="bg-red-50 px-3 py-1.5 rounded-lg"
             >
               <Text className="text-danger text-xs font-semibold">↩ Отмена</Text>
-            </TouchableOpacity>
+            </Pressable>
           ) : undefined
         }
       />
@@ -339,7 +339,7 @@ export default function CompassBuilder({
                   {useManual || permState !== 'granted' ? (
                     <View className="flex-row flex-wrap gap-1.5">
                       {[0, 45, 90, 135, 180, 225, 270, 315].map(a => (
-                        <TouchableOpacity
+                        <Pressable
                           key={a}
                           onPress={() => setManualAngle(a)}
                           className={`px-2 py-1 rounded-lg border ${
@@ -355,7 +355,7 @@ export default function CompassBuilder({
                           >
                             {a}°
                           </Text>
-                        </TouchableOpacity>
+                        </Pressable>
                       ))}
                     </View>
                   ) : (
@@ -379,12 +379,12 @@ export default function CompassBuilder({
                     returnKeyType="done"
                     className="flex-1 bg-card border border-border rounded-xl px-3 py-2.5 text-navy text-base"
                   />
-                  <TouchableOpacity
+                  <Pressable
                     onPress={addSide}
                     className="bg-accent px-4 py-2.5 rounded-xl items-center justify-center"
                   >
                     <Text className="text-white font-bold text-sm">+</Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
               </View>
             </View>

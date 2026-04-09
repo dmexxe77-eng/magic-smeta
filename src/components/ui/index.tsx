@@ -2,13 +2,11 @@ import React from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
+  Pressable,
   TextInput,
   ActivityIndicator,
-  type ViewStyle,
-  type TextStyle,
-  StyleSheet,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // ─── AppHeader ────────────────────────────────────────────────────────
 
@@ -27,18 +25,19 @@ export function AppHeader({
   onMenu,
   rightContent,
 }: AppHeaderProps) {
+  const insets = useSafeAreaInsets();
   return (
-    <View className="bg-white border-b border-border px-4 pt-12 pb-3">
+    <View className="bg-white border-b border-border px-4 pb-3" style={{ paddingTop: insets.top + 4 }}>
       <View className="flex-row items-center gap-3">
         {/* Logo + optional back */}
         <View className="flex-row items-center gap-2 flex-shrink-0">
           {onBack && (
-            <TouchableOpacity
+            <Pressable
               onPress={onBack}
               className="w-9 h-9 rounded-[9px] bg-bg items-center justify-center mr-1"
             >
               <Text className="text-navy text-xl font-bold">‹</Text>
-            </TouchableOpacity>
+            </Pressable>
           )}
           <View className="w-9 h-9 rounded-[9px] bg-navy items-center justify-center">
             <View className="gap-[3px]">
@@ -61,7 +60,7 @@ export function AppHeader({
         <View className="flex-1 items-end flex-row justify-end gap-2">
           {rightContent}
           {onMenu && (
-            <TouchableOpacity
+            <Pressable
               onPress={onMenu}
               className="w-9 h-9 rounded-[9px] bg-bg items-center justify-center"
             >
@@ -70,7 +69,7 @@ export function AppHeader({
                 <View className="w-[15px] h-[1.8px] rounded-sm bg-navy" />
                 <View className="w-[15px] h-[1.8px] rounded-sm bg-navy" />
               </View>
-            </TouchableOpacity>
+            </Pressable>
           )}
         </View>
       </View>
@@ -91,13 +90,13 @@ interface CardProps {
 export function Card({ children, className = '', onPress }: CardProps) {
   if (onPress) {
     return (
-      <TouchableOpacity
+      <Pressable
         onPress={onPress}
         className={`bg-card rounded-2xl border border-border ${className}`}
-        activeOpacity={0.7}
+  
       >
         {children}
-      </TouchableOpacity>
+      </Pressable>
     );
   }
   return (
@@ -152,13 +151,13 @@ export function Button({
   };
 
   return (
-    <TouchableOpacity
+    <Pressable
       onPress={onPress}
       disabled={disabled || loading}
       className={`${variants[variant]} ${sizes[size]} rounded-xl items-center justify-center ${
         disabled ? 'opacity-50' : ''
       } ${className}`}
-      activeOpacity={0.75}
+
     >
       {loading ? (
         <ActivityIndicator color="white" size="small" />
@@ -169,7 +168,7 @@ export function Button({
           {label}
         </Text>
       )}
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
@@ -196,7 +195,7 @@ export function Badge({ label, color = 'accent', onPress }: BadgeProps) {
     red: 'text-danger',
     gray: 'text-gray-600',
   };
-  const Comp = onPress ? TouchableOpacity : View;
+  const Comp = onPress ? Pressable : View;
   return (
     <Comp
       onPress={onPress}

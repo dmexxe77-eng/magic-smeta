@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, Switch, Alert } from 'react-native';
+import { View, Text, Pressable, Switch, Alert } from 'react-native';
 import { ScrollView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppHeader, Card, SectionHeader, Divider } from '../../src/components/ui';
@@ -18,7 +18,7 @@ export default function SettingsTab() {
           style: 'destructive',
           onPress: async () => {
             await AsyncStorage.clear();
-            dispatch({ type: 'SET_ORDERS', orders: [] });
+            dispatch({ type: 'RESET' });
           },
         },
       ]
@@ -73,13 +73,13 @@ export default function SettingsTab() {
 
         <Card className="p-3 mb-4">
           <SectionHeader title="Данные" />
-          <TouchableOpacity
+          <Pressable
             onPress={handleReset}
             className="flex-row items-center gap-3 py-3"
           >
             <Text className="text-xl">🗑️</Text>
             <Text className="text-danger text-sm font-medium">Сбросить все данные</Text>
-          </TouchableOpacity>
+          </Pressable>
         </Card>
 
         <Card className="p-3 mb-4">

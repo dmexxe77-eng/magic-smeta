@@ -1,14 +1,13 @@
-import React, { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
+  Pressable,
   TextInput,
   Alert,
-  Modal,
-  FlatList,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Svg, { Polygon as SvgPolygon, Line, Circle as SvgCircle, Text as SvgText } from 'react-native-svg';
 import { useApp, useOrder } from '../../store/AppContext';
@@ -144,7 +143,7 @@ function NumInput({
   }
 
   return (
-    <TouchableOpacity
+    <Pressable
       onPress={() => { setTmp(String(value)); setEditing(true); }}
       style={{ width }}
       className="bg-bg border border-border rounded-lg px-2 py-1 items-center"
@@ -152,7 +151,7 @@ function NumInput({
       <Text className="text-navy text-xs font-medium">
         {fmt(value)} <Text className="text-muted">{unit}</Text>
       </Text>
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
@@ -168,8 +167,9 @@ function buildSimpleEst(
 
   for (const r of rooms) {
     if (r.on === false) continue;
-    const area = r.aO ?? calcPoly(r.v).a;
-    const perim = r.pO ?? calcPoly(r.v).p;
+    const poly = (r.aO == null || r.pO == null) ? calcPoly(r.v) : null;
+    const area = r.aO ?? poly!.a;
+    const perim = r.pO ?? poly!.p;
 
     // Canvas (полотно)
     if (r.canvas.nomId) {
@@ -236,7 +236,6 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
   const [estTab, setEstTab] = useState<'room' | 'all'>('room');
   const [showEst, setShowEst] = useState(false);
   const [showBuilder, setShowBuilder] = useState(false);
-  const [builderMode, setBuilderMode] = useState<'compass' | 'manual'>('compass');
   const [estEdits, setEstEdits] = useState<Record<string, { q?: number; p?: number }>>({});
 
   // Local snapshot state (triggers re-render on price edit)
@@ -246,6 +245,19 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
   const snapRef = useRef(nomSnap);
   snapRef.current = nomSnap;
 
+  // Sync state when order loads from AsyncStorage
+  useEffect(() => {
+    if (order && activeRoomId == null && order.rooms.length > 0) {
+      setActiveRoomId(order.rooms[0].id);
+    }
+  }, [order, activeRoomId]);
+
+  useEffect(() => {
+    if (order?.nomSnapshot && Object.keys(nomSnap).length === 0 && Object.keys(order.nomSnapshot).length > 0) {
+      setNomSnap(order.nomSnapshot);
+    }
+  }, [order?.nomSnapshot]);
+
   if (!order) {
     return (
       <View className="flex-1 bg-bg items-center justify-center">
@@ -254,6 +266,7 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
     );
   }
 
+  const insets = useSafeAreaInsets();
   const rooms = order.rooms;
   const activeRoom = rooms.find(r => r.id === activeRoomId) ?? rooms[0];
 
@@ -332,15 +345,15 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
     <View className="flex-1 bg-bg">
       {/* Header */}
       <View className="bg-white border-b border-border">
-        <View className="flex-row items-center px-4 pt-12 pb-2 gap-3">
+        <View className="flex-row items-center px-4 pb-2 gap-3" style={{ paddingTop: insets.top + 4 }}>
           {/* Back + logo */}
           <View className="flex-row items-center gap-2 flex-shrink-0">
-            <TouchableOpacity
+            <Pressable
               onPress={() => router.back()}
               className="w-9 h-9 rounded-[9px] bg-bg items-center justify-center"
             >
               <Text className="text-navy text-xl font-bold">‹</Text>
-            </TouchableOpacity>
+            </Pressable>
             <View className="w-9 h-9 rounded-[9px] bg-navy items-center justify-center">
               <View className="gap-[3px]">
                 <View className="w-[14px] h-[2px] rounded-sm bg-accent" />
@@ -357,9 +370,9 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
           {/* Total + refresh */}
           <View className="flex-1 items-end">
             <Text className="text-base font-black text-navy">{fmt(grand)} ₽</Text>
-            <TouchableOpacity onPress={handleRefreshPrices}>
+            <Pressable onPress={handleRefreshPrices}>
               <Text className="text-[10px] text-accent">🔄 обновить цены</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
 
@@ -376,7 +389,7 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
                 { label: 'Замер 🧭', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)' },
                 { label: 'Ручн.', color: '#888', bg: '#f2f3fa', border: '#eeeef8' },
               ].map(b => (
-                <TouchableOpacity
+                <Pressable
                   key={b.label}
                   onPress={() => {
                     if (b.label.includes('Замер')) setShowBuilder(true);
@@ -388,7 +401,7 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
                   <Text style={{ color: b.color }} className="text-[10px] font-semibold">
                     {b.label}
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
               ))}
             </View>
           </ScrollView>
@@ -406,7 +419,7 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
           contentContainerClassName="px-3 gap-2"
         >
           {rooms.map(rm => (
-            <TouchableOpacity
+            <Pressable
               key={rm.id}
               onPress={() => setActiveRoomId(rm.id)}
               onLongPress={() => handleDeleteRoom(rm.id)}
@@ -432,14 +445,14 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
                   {fmt(rm.aO)} м²
                 </Text>
               )}
-            </TouchableOpacity>
+            </Pressable>
           ))}
-          <TouchableOpacity
+          <Pressable
             onPress={() => setShowBuilder(true)}
             className="px-3 py-2 rounded-xl border border-dashed border-border items-center justify-center"
           >
             <Text className="text-muted text-xs">+ Помещение</Text>
-          </TouchableOpacity>
+          </Pressable>
         </ScrollView>
 
         <View className="p-3 gap-3">
@@ -453,18 +466,23 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
                     {activeRoom.name}
                   </Text>
                   <View className="gap-1">
-                    <View className="flex-row gap-2">
-                      <Text className="text-muted text-xs">Площадь:</Text>
-                      <Text className="text-accent text-xs font-bold">
-                        {fmt(activeRoom.aO ?? calcPoly(activeRoom.v).a)} м²
-                      </Text>
-                    </View>
-                    <View className="flex-row gap-2">
-                      <Text className="text-muted text-xs">Периметр:</Text>
-                      <Text className="text-navy text-xs font-semibold">
-                        {fmt(activeRoom.pO ?? calcPoly(activeRoom.v).p)} м.п.
-                      </Text>
-                    </View>
+                    {(() => {
+                      const rp = (activeRoom.aO == null || activeRoom.pO == null) ? calcPoly(activeRoom.v) : null;
+                      const area = activeRoom.aO ?? rp!.a;
+                      const perim = activeRoom.pO ?? rp!.p;
+                      return (
+                        <>
+                          <View className="flex-row gap-2">
+                            <Text className="text-muted text-xs">Площадь:</Text>
+                            <Text className="text-accent text-xs font-bold">{fmt(area)} м²</Text>
+                          </View>
+                          <View className="flex-row gap-2">
+                            <Text className="text-muted text-xs">Периметр:</Text>
+                            <Text className="text-navy text-xs font-semibold">{fmt(perim)} м.п.</Text>
+                          </View>
+                        </>
+                      );
+                    })()}
                   </View>
                 </View>
               </View>
@@ -487,7 +505,7 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
           {rooms.length > 0 && (
             <Card className="overflow-hidden">
               {/* Estimate header */}
-              <TouchableOpacity
+              <Pressable
                 onPress={() => setShowEst(v => !v)}
                 className="flex-row items-center justify-between px-3 py-3"
               >
@@ -501,29 +519,29 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
 
                 {/* Tab switcher */}
                 <View className="flex-row gap-1">
-                  <TouchableOpacity
-                    onPress={e => { e.stopPropagation?.(); setEstTab('room'); }}
+                  <Pressable
+                    onPress={() => setEstTab('room')}
                     className={`px-2.5 py-1 rounded-lg ${estTab === 'room' ? 'bg-navy' : 'bg-bg'}`}
                   >
                     <Text className={`text-[10px] font-semibold ${estTab === 'room' ? 'text-white' : 'text-muted'}`}>
                       {activeRoom?.name?.slice(0, 10) ?? 'Комната'}
                     </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={e => { e.stopPropagation?.(); setEstTab('all'); }}
+                  </Pressable>
+                  <Pressable
+                    onPress={() => setEstTab('all')}
                     className={`px-2.5 py-1 rounded-lg ${estTab === 'all' ? 'bg-navy' : 'bg-bg'}`}
                   >
                     <Text className={`text-[10px] font-semibold ${estTab === 'all' ? 'text-white' : 'text-muted'}`}>
                       Все
                     </Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 </View>
 
                 {/* Total */}
-                <TouchableOpacity onPress={() => setShowEst(v => !v)}>
+                <Pressable onPress={() => setShowEst(v => !v)}>
                   <Text className="text-base font-black text-navy">{fmt(grand)} ₽</Text>
-                </TouchableOpacity>
-              </TouchableOpacity>
+                </Pressable>
+              </Pressable>
 
               {showEst && (
                 <View className="px-3 pb-3 border-t border-border">
@@ -583,12 +601,12 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
                   </View>
 
                   {Object.keys(estEdits).length > 0 && (
-                    <TouchableOpacity
+                    <Pressable
                       onPress={() => setEstEdits({})}
                       className="mt-2 py-2 items-center border border-border rounded-xl"
                     >
                       <Text className="text-muted text-xs">Сбросить правки</Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   )}
                 </View>
               )}

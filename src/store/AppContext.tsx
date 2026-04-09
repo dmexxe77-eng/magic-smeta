@@ -1,9 +1,10 @@
-import React, {
+import {
   createContext,
   useContext,
   useReducer,
   useEffect,
   useCallback,
+  useMemo,
   useRef,
   type ReactNode,
 } from 'react';
@@ -66,7 +67,8 @@ type Action =
   | { type: 'SET_ORDER_STATUS'; id: string; status: OrderStatus }
   | { type: 'UPDATE_SNAPSHOT'; orderId: string; snap: Record<string, number> }
   | { type: 'SET_THEME'; theme: 'light' | 'dark' }
-  | { type: 'SET_PRO'; isPro: boolean };
+  | { type: 'SET_PRO'; isPro: boolean }
+  | { type: 'RESET' };
 
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
@@ -124,6 +126,9 @@ function reducer(state: AppState, action: Action): AppState {
 
     case 'SET_PRO':
       return { ...state, isPro: action.isPro };
+
+    case 'RESET':
+      return { ...defaultState, orders: [] };
 
     default:
       return state;
@@ -223,17 +228,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  const contextValue = useMemo(
+    () => ({ state, dispatch, createOrder, updateOrderRooms, updateSnapshot, saveNow }),
+    [state, createOrder, updateOrderRooms, updateSnapshot, saveNow]
+  );
+
   return (
-    <AppContext.Provider
-      value={{
-        state,
-        dispatch,
-        createOrder,
-        updateOrderRooms,
-        updateSnapshot,
-        saveNow,
-      }}
-    >
+    <AppContext.Provider value={contextValue}>
       {children}
     </AppContext.Provider>
   );
