@@ -177,19 +177,21 @@ function CalibrationStep({
         <Text className="text-lg font-bold text-navy">
           Сторона {ALPHA[selectedSide]}–{ALPHA[(selectedSide + 1) % numSides]}
         </Text>
-        <TextInput
-          value={input}
-          onChangeText={setInput}
-          placeholder="385"
-          placeholderTextColor="#b0b0ba"
-          keyboardType="decimal-pad"
-          autoFocus
-          onSubmitEditing={submit}
-          className="bg-white border border-border rounded-xl px-4 py-3 text-navy text-2xl text-center w-40"
-        />
-        <Pressable onPress={submit} className="bg-navy px-8 py-4 rounded-xl">
-          <Text className="text-white font-bold text-base">Готово</Text>
-        </Pressable>
+        <View className="flex-row items-center gap-3">
+          <TextInput
+            value={input}
+            onChangeText={setInput}
+            placeholder="см"
+            placeholderTextColor="#b0b0ba"
+            keyboardType="number-pad"
+            autoFocus
+            onSubmitEditing={submit}
+            className="bg-white border border-border rounded-xl px-4 py-3 text-navy text-2xl text-center w-32"
+          />
+          <Pressable onPress={submit} className="bg-navy px-6 py-3 rounded-xl">
+            <Text className="text-white font-bold text-lg">OK</Text>
+          </Pressable>
+        </View>
       </View>
     </View>
   );
