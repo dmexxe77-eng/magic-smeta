@@ -283,6 +283,7 @@ export default function TraceBuilder({
     visible: false, screenX: 0, screenY: 0, imgX: 0, imgY: 0,
   });
   const magStartRef = useRef<{ x: number; y: number } | null>(null);
+  const magImgRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
   // Canvas layout offset (measured from onLayout)
   const canvasTopRef = useRef(0);
@@ -436,27 +437,23 @@ export default function TraceBuilder({
   const handleMagMove = useCallback((absX: number, absY: number) => {
     const canvasY = absY - canvasTopRef.current;
     const raw = screenToImg(absX, canvasY);
-    const snapped = magSnapPt(raw.x, raw.y); // magnetic snap in magnifier
+    const snapped = magSnapPt(raw.x, raw.y);
+    magImgRef.current = { x: snapped.x, y: snapped.y }; // save to ref (no stale closure)
     setMag({ visible: true, screenX: absX, screenY: absY, imgX: snapped.x, imgY: snapped.y });
   }, [screenToImg, magSnapPt]);
 
-  const handleMagEnd = useCallback((absX: number, absY: number) => {
-    if (!mag.visible) {
-      setMag(prev => ({ ...prev, visible: false }));
-      return;
-    }
-
-    // Place point at last magnifier position (already snapped)
-    const snapped = magSnapPt(mag.imgX, mag.imgY);
+  const handleMagEnd = useCallback(() => {
+    const imgPos = magImgRef.current; // always fresh from ref
+    const snapped = magSnapPt(imgPos.x, imgPos.y);
 
     if (snapped.closing) {
       if (scale) setStep('name'); else setStep('calibrate');
     } else {
-      setPoints(prev => [...prev, { x: mag.imgX, y: mag.imgY }]);
+      setPoints(prev => [...prev, { x: imgPos.x, y: imgPos.y }]);
     }
 
     setMag(prev => ({ ...prev, visible: false }));
-  }, [mag, magSnapPt, scale]);
+  }, [magSnapPt, scale]);
 
   // ─── Calibrate ────────────────────────────────────────────────────
 
@@ -539,7 +536,7 @@ export default function TraceBuilder({
       runOnJS(handleMagMove)(e.absoluteX, e.absoluteY);
     })
     .onEnd((e) => {
-      runOnJS(handleMagEnd)(e.absoluteX, e.absoluteY);
+      runOnJS(handleMagEnd)();
     });
 
   const pinchGesture = Gesture.Pinch()
