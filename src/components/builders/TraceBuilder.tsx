@@ -291,6 +291,7 @@ export default function TraceBuilder({
   });
   const magStartRef = useRef<{ x: number; y: number } | null>(null);
   const magImgRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const isPinchingRef = useRef(false);
 
   // Canvas layout offset (measured from onLayout)
   const canvasTopRef = useRef(0);
@@ -359,13 +360,17 @@ export default function TraceBuilder({
     setVTy(ty.value);
   }, []);
 
-  // ─── Screen to image ──────────────────────────────────────────────
+  // ─── Screen to image (uses shared values for freshness) ────────────
 
   const screenToImg = useCallback((sx: number, sy: number) => {
-    const imgX = (sx - vTx) / (fitScale * vZoom);
-    const imgY = (sy - vTy) / (fitScale * vZoom);
+    // Read shared values directly — React state may be stale during gestures
+    const curZoom = zs.value;
+    const curTx = tx.value;
+    const curTy = ty.value;
+    const imgX = (sx - curTx) / (fitScale * curZoom);
+    const imgY = (sy - curTy) / (fitScale * curZoom);
     return { x: imgX, y: imgY };
-  }, [fitScale, vZoom, vTx, vTy]);
+  }, [fitScale, zs, tx, ty]);
 
   // ─── Snap ─────────────────────────────────────────────────────────
 
@@ -452,6 +457,7 @@ export default function TraceBuilder({
   // ─── Magnifier handlers ───────────────────────────────────────────
 
   const handleMagStart = useCallback((absX: number, absY: number) => {
+    if (isPinchingRef.current) return; // don't show magnifier during zoom
     magStartRef.current = { x: absX, y: absY };
     const canvasY = absY - canvasTopRef.current;
     const raw = screenToImg(absX, canvasY);
@@ -459,10 +465,11 @@ export default function TraceBuilder({
   }, [screenToImg]);
 
   const handleMagMove = useCallback((absX: number, absY: number) => {
+    if (isPinchingRef.current) return;
     const canvasY = absY - canvasTopRef.current;
     const raw = screenToImg(absX, canvasY);
     const snapped = magSnapPt(raw.x, raw.y);
-    magImgRef.current = { x: snapped.x, y: snapped.y }; // save to ref (no stale closure)
+    magImgRef.current = { x: snapped.x, y: snapped.y };
     setMag({ visible: true, screenX: absX, screenY: absY, imgX: snapped.x, imgY: snapped.y });
   }, [screenToImg, magSnapPt]);
 
@@ -564,10 +571,12 @@ export default function TraceBuilder({
       runOnJS(handleMagEnd)();
     });
 
+  const setPinching = useCallback((v: boolean) => { isPinchingRef.current = v; if (v) setMag(m => ({ ...m, visible: false })); }, []);
+
   const pinchGesture = Gesture.Pinch()
-    .onStart(() => { savedZs.value = zs.value; })
+    .onStart(() => { savedZs.value = zs.value; runOnJS(setPinching)(true); })
     .onUpdate((e) => { zs.value = Math.max(0.5, Math.min(savedZs.value * e.scale, 10)); })
-    .onEnd(() => { runOnJS(syncView)(); });
+    .onEnd(() => { runOnJS(setPinching)(false); runOnJS(syncView)(); });
 
   const panGesture = Gesture.Pan()
     .minPointers(2)
@@ -812,8 +821,8 @@ export default function TraceBuilder({
             }}
           >
             {(() => {
-              // Magnify 2.5x relative to current zoom level
-              const magScale = fitScale * vZoom * 2.5;
+              // Magnify 2.5x relative to current zoom level (read from shared value)
+              const magScale = fitScale * zs.value * 2.5;
               return (
                 <Image
                   source={{ uri: imageUri }}
