@@ -258,9 +258,16 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
                 <Pressable
                   key={b.label}
                   onPress={() => {
-                    if (b.label === 'Обводка' || b.label === '✏️ Ред.') setShowTracer(true);
-                    else if (b.label.includes('Замер')) setShowBuilder(true);
-                    else Alert.alert('Скоро', `${b.label} — в разработке`);
+                    if (b.label === 'Обводка') {
+                      setTraceSession(null); // новая обводка — стираем старую
+                      setShowTracer(true);
+                    } else if (b.label === '✏️ Ред.') {
+                      setShowTracer(true); // возврат в существующую
+                    } else if (b.label.includes('Замер')) {
+                      setShowBuilder(true);
+                    } else {
+                      Alert.alert('Скоро', `${b.label} — в разработке`);
+                    }
                   }}
                   style={{ backgroundColor: b.bg, borderColor: b.border, borderWidth: 0.5 }}
                   className="px-2.5 py-1.5 rounded-lg"

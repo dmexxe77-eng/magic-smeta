@@ -38,6 +38,10 @@ import type { Room, Vertex } from '../../types';
 const ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 const SCREEN = Dimensions.get('window');
 const SNAP_PX = 10;
+const ROOM_COLORS = [
+  '#4F46E5', '#16a34a', '#f59e0b', '#dc2626', '#8b5cf6',
+  '#06b6d4', '#ec4899', '#84cc16', '#f97316', '#6366f1',
+];
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -125,20 +129,20 @@ function PickSourceStep({
 
 function CalibrationStep({
   points,
-  sideIdx,
   onCalibrate,
   insets,
 }: {
   points: Array<{ x: number; y: number }>;
-  sideIdx: number;
-  onCalibrate: (cm: number) => void;
+  onCalibrate: (sideIdx: number, cm: number) => void;
   insets: { top: number };
 }) {
   const [input, setInput] = useState('');
+  const [selectedSide, setSelectedSide] = useState(0);
+  const numSides = points.length;
 
   const submit = () => {
     const cm = parseFloat(input.replace(',', '.'));
-    if (cm > 0) onCalibrate(cm);
+    if (cm > 0) onCalibrate(selectedSide, cm);
   };
 
   return (
@@ -148,10 +152,30 @@ function CalibrationStep({
       </View>
       <View className="flex-1 items-center justify-center px-8 gap-5">
         <Text className="text-4xl">📏</Text>
-        <Text className="text-lg font-bold text-navy text-center">
-          Сторона {ALPHA[sideIdx]}–{ALPHA[(sideIdx + 1) % points.length]}
+        <Text className="text-sm text-muted">Выберите сторону и введите длину</Text>
+
+        {/* Side selector */}
+        <View className="flex-row flex-wrap gap-2 justify-center">
+          {Array.from({ length: numSides }).map((_, i) => (
+            <Pressable
+              key={i}
+              onPress={() => setSelectedSide(i)}
+              style={{
+                backgroundColor: selectedSide === i ? '#4F46E5' : '#f7f7f5',
+                paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10,
+                borderWidth: 1, borderColor: selectedSide === i ? '#4F46E5' : '#e8e8e4',
+              }}
+            >
+              <Text style={{ color: selectedSide === i ? '#fff' : '#555', fontSize: 13, fontWeight: '700' }}>
+                {ALPHA[i]}–{ALPHA[(i + 1) % numSides]}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        <Text className="text-lg font-bold text-navy">
+          Сторона {ALPHA[selectedSide]}–{ALPHA[(selectedSide + 1) % numSides]}
         </Text>
-        <Text className="text-muted text-sm">Введите длину в сантиметрах</Text>
         <TextInput
           value={input}
           onChangeText={setInput}
@@ -352,7 +376,11 @@ export default function TraceBuilder({
     const snapped = snapPt(raw.x, raw.y);
 
     if (snapped.closing) {
-      if (scale) setStep('name'); else setStep('calibrate');
+      if (scale) {
+        setStep('name');
+      } else {
+        setStep('calibrate');
+      }
       return;
     }
     setPoints(prev => [...prev, { x: snapped.x, y: snapped.y }]);
@@ -396,10 +424,10 @@ export default function TraceBuilder({
 
   // ─── Calibrate ────────────────────────────────────────────────────
 
-  const handleCalibrate = useCallback((cm: number) => {
+  const handleCalibrate = useCallback((sideIdx: number, cm: number) => {
     if (points.length < 2) return;
-    const p1 = points[0];
-    const p2 = points[1];
+    const p1 = points[sideIdx];
+    const p2 = points[(sideIdx + 1) % points.length];
     const pxDist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
     const newScale = pxDist / cm;
     setScale(newScale);
@@ -531,7 +559,6 @@ export default function TraceBuilder({
     return (
       <CalibrationStep
         points={points}
-        sideIdx={0}
         onCalibrate={handleCalibrate}
         insets={insets}
       />
@@ -602,17 +629,26 @@ export default function TraceBuilder({
                 resizeMode="contain"
               />
               <Svg width={imgW} height={imgH} style={StyleSheet.absoluteFill}>
-                {/* Previously traced rooms */}
+                {/* Previously traced rooms — each in unique color */}
                 {tracedRooms.map((tr, ri) => {
+                  const color = ROOM_COLORS[ri % ROOM_COLORS.length];
                   const svgPts = tr.points.map(p => imgToSvg(p.x, p.y));
                   return (
                     <G key={tr.id}>
                       <SvgPolygon
                         points={svgPts.map(p => `${p.x},${p.y}`).join(' ')}
-                        fill="rgba(34,197,94,0.12)"
-                        stroke="#22c55e"
+                        fill={`${color}18`}
+                        stroke={color}
                         strokeWidth={1.5 * inv}
                       />
+                      {/* Corner points with letters */}
+                      {svgPts.map((s, i) => (
+                        <G key={`trPt-${ri}-${i}`}>
+                          <SvgCircle cx={s.x} cy={s.y} r={4 * inv} fill={color} stroke="white" strokeWidth={1 * inv} />
+                          <SvgText x={s.x} y={s.y - 7 * inv} textAnchor="middle"
+                            fill={color} fontSize={8 * inv} fontWeight="700">{ALPHA[i]}</SvgText>
+                        </G>
+                      ))}
                       {/* Side lengths */}
                       {tr.points.map((p, i) => {
                         const cm = getSideCm(tr.points, i);
@@ -622,14 +658,14 @@ export default function TraceBuilder({
                         const s2 = imgToSvg(p2.x, p2.y);
                         return (
                           <SvgText key={`trLen-${ri}-${i}`} x={(s1.x + s2.x) / 2} y={(s1.y + s2.y) / 2 - 5 * inv}
-                            textAnchor="middle" fill="#22c55e" fontSize={8 * inv} fontWeight="600">{cm}</SvgText>
+                            textAnchor="middle" fill={color} fontSize={8 * inv} fontWeight="600">{cm}</SvgText>
                         );
                       })}
                       {/* Room name label */}
                       <SvgText
                         x={svgPts.reduce((s, p) => s + p.x, 0) / svgPts.length}
                         y={svgPts.reduce((s, p) => s + p.y, 0) / svgPts.length}
-                        textAnchor="middle" fill="#16a34a" fontSize={11 * inv} fontWeight="800"
+                        textAnchor="middle" fill={color} fontSize={11 * inv} fontWeight="800"
                       >{tr.name}</SvgText>
                     </G>
                   );
@@ -702,10 +738,10 @@ export default function TraceBuilder({
             <Image
               source={{ uri: imageUri }}
               style={{
-                width: imageSize.w * fitScale * 2.5,
-                height: imageSize.h * fitScale * 2.5,
-                marginLeft: -(mag.imgX * fitScale * 2.5 - 60),
-                marginTop: -(mag.imgY * fitScale * 2.5 - 60),
+                width: imageSize.w * fitScale * 3,
+                height: imageSize.h * fitScale * 3,
+                marginLeft: -(mag.imgX * fitScale * 3 - 60),
+                marginTop: -(mag.imgY * fitScale * 3 - 60),
               }}
               resizeMode="contain"
             />
