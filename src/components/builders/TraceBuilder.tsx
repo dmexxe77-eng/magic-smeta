@@ -810,16 +810,22 @@ export default function TraceBuilder({
               backgroundColor: '#fff',
             }}
           >
-            <Image
-              source={{ uri: imageUri }}
-              style={{
-                width: imageSize.w * fitScale * 3,
-                height: imageSize.h * fitScale * 3,
-                marginLeft: -(mag.imgX * fitScale * 3 - 60),
-                marginTop: -(mag.imgY * fitScale * 3 - 60),
-              }}
-              resizeMode="contain"
-            />
+            {(() => {
+              // Magnify 2.5x relative to current zoom level
+              const magScale = fitScale * vZoom * 2.5;
+              return (
+                <Image
+                  source={{ uri: imageUri }}
+                  style={{
+                    width: imageSize.w * magScale,
+                    height: imageSize.h * magScale,
+                    marginLeft: -(mag.imgX * magScale - 60),
+                    marginTop: -(mag.imgY * magScale - 60),
+                  }}
+                  resizeMode="contain"
+                />
+              );
+            })()}
             {/* Crosshair */}
             <View style={{ position: 'absolute', left: 58, top: 0, width: 2, height: 120, backgroundColor: 'rgba(79,70,229,0.3)' }} />
             <View style={{ position: 'absolute', left: 0, top: 58, width: 120, height: 2, backgroundColor: 'rgba(79,70,229,0.3)' }} />
