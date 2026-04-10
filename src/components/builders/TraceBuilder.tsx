@@ -552,6 +552,7 @@ export default function TraceBuilder({
 
   // Magnifier: long press + drag
   const magPanGesture = Gesture.Pan()
+    .maxPointers(1)
     .activateAfterLongPress(300)
     .onStart((e) => {
       runOnJS(handleMagStart)(e.absoluteX, e.absoluteY);
