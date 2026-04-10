@@ -782,13 +782,23 @@ export default function TraceBuilder({
         </View>
 
         {/* Magnifier overlay */}
-        {mag.visible && imageUri && (
+        {mag.visible && imageUri && (() => {
+          const magSize = 120;
+          const headerH = insets.top + 44;
+          const screenH = SCREEN.height;
+          // Show below finger if near top, above if near bottom
+          const showBelow = mag.screenY < screenH * 0.4;
+          const magTop = showBelow ? mag.screenY + 40 : mag.screenY - magSize - 20;
+          // Clamp to screen bounds
+          const clampedTop = Math.max(headerH + 10, Math.min(magTop, screenH - magSize - 80));
+          const clampedLeft = Math.max(10, Math.min(mag.screenX - magSize / 2, SCREEN.width - magSize - 10));
+          return (
           <View
             pointerEvents="none"
             style={{
               position: 'absolute',
-              left: mag.screenX - 60,
-              top: mag.screenY - 140,
+              left: clampedLeft,
+              top: clampedTop,
               width: 120,
               height: 120,
               borderRadius: 60,
@@ -813,7 +823,8 @@ export default function TraceBuilder({
             <View style={{ position: 'absolute', left: 0, top: 58, width: 120, height: 2, backgroundColor: 'rgba(79,70,229,0.3)' }} />
             <View style={{ position: 'absolute', left: 55, top: 55, width: 10, height: 10, borderRadius: 5, borderWidth: 2, borderColor: '#4F46E5' }} />
           </View>
-        )}
+          );
+        })()}
 
         {/* Bottom panel */}
         <View className="bg-white/95 border-t border-border px-4 pt-2" style={{ paddingBottom: insets.bottom + 8 }}>
