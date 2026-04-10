@@ -351,13 +351,7 @@ export default function TraceBuilder({
     let x = ix, y = iy;
     const thr = SNAP_PX / (fitScale * vZoom);
 
-    if (points.length > 0) {
-      const last = points[points.length - 1];
-      if (Math.abs(ix - last.x) < thr) x = last.x;
-      if (Math.abs(iy - last.y) < thr) y = last.y;
-    }
-
-    // Snap to first point (close)
+    // 1. Snap to first point (close polygon)
     if (points.length >= 3) {
       const first = points[0];
       if (Math.hypot(ix - first.x, iy - first.y) < thr * 2) {
@@ -365,8 +359,28 @@ export default function TraceBuilder({
       }
     }
 
+    // 2. Snap to corners of already traced rooms (магнит)
+    let minDist = thr * 1.5;
+    for (const tr of tracedRooms) {
+      for (const pt of tr.points) {
+        const d = Math.hypot(ix - pt.x, iy - pt.y);
+        if (d < minDist) {
+          minDist = d;
+          x = pt.x;
+          y = pt.y;
+        }
+      }
+    }
+
+    // 3. Snap to horizontal/vertical of previous point
+    if (points.length > 0 && x === ix && y === iy) {
+      const last = points[points.length - 1];
+      if (Math.abs(ix - last.x) < thr) x = last.x;
+      if (Math.abs(iy - last.y) < thr) y = last.y;
+    }
+
     return { x, y, closing: false };
-  }, [points, fitScale, vZoom]);
+  }, [points, tracedRooms, fitScale, vZoom]);
 
   // ─── Handle tap (quick) ────────────────────────────────────────────
 
@@ -619,7 +633,13 @@ export default function TraceBuilder({
         {/* Canvas */}
         <View
           style={{ flex: 1 }}
-          onLayout={(e) => { canvasTopRef.current = e.nativeEvent.layout.y + insets.top + 4 + 36; }}
+          onLayout={(e) => {
+            // layout.y is relative to parent (the outer View with flex:1)
+            // Header height = insets.top + 4 (padding) + ~36 (content)
+            // But absoluteY in gestures is from screen top
+            // So canvasTop = header height
+            canvasTopRef.current = insets.top + 44;
+          }}
         >
           <GestureDetector gesture={gesture}>
             <Animated.View style={[{ flex: 1 }, animStyle]}>
