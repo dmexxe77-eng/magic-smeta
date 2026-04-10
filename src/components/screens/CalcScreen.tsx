@@ -16,6 +16,7 @@ import { calcPoly, fmt } from '../../utils/geometry';
 import { generateId } from '../../utils/storage';
 import type { Room, Vertex } from '../../types';
 import CompassBuilder from '../builders/CompassBuilder';
+import TraceBuilder, { type TracedRoom } from '../builders/TraceBuilder';
 import CalcBlockView from '../calc/CalcBlockView';
 import { createDefaultBlocks, calcBlockTotal, getDefaultQty, type CalcBlock, type Preset } from '../../data/calcBlocks';
 
@@ -75,6 +76,10 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
     order?.rooms?.[0]?.id ?? null
   );
   const [showBuilder, setShowBuilder] = useState(false);
+  const [showTracer, setShowTracer] = useState(false);
+  const [savedScale, setSavedScale] = useState<number | undefined>(undefined);
+  const [savedImageUri, setSavedImageUri] = useState<string | undefined>(undefined);
+  const [savedTracedRooms, setSavedTracedRooms] = useState<TracedRoom[]>([]);
   const [blocks, setBlocks] = useState<CalcBlock[]>(createDefaultBlocks);
   const [qtyOverrides, setQtyOverrides] = useState<Record<string, number>>({});
 
@@ -150,6 +155,7 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
     updateOrderRooms(order.id, updated);
     setActiveRoomId(room.id);
     setShowBuilder(false);
+    setShowTracer(false);
   };
 
   const handleDeleteRoom = (roomId: string) => {
@@ -174,7 +180,23 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
     setBlocks(createDefaultBlocks());
   };
 
-  // Builder modal
+  // Trace builder
+  if (showTracer) {
+    return (
+      <TraceBuilder
+        existingCount={rooms.length}
+        onFinish={handleAddRoom}
+        onBack={() => setShowTracer(false)}
+        initialScale={savedScale}
+        onScaleSet={s => setSavedScale(s)}
+        initialImageUri={savedImageUri}
+        initialTracedRooms={savedTracedRooms}
+        onTracedRoomsChange={tr => setSavedTracedRooms(tr)}
+      />
+    );
+  }
+
+  // Compass builder
   if (showBuilder) {
     return (
       <CompassBuilder
@@ -236,7 +258,8 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
                 <Pressable
                   key={b.label}
                   onPress={() => {
-                    if (b.label.includes('Замер')) setShowBuilder(true);
+                    if (b.label === 'Обводка') setShowTracer(true);
+                    else if (b.label.includes('Замер')) setShowBuilder(true);
                     else Alert.alert('Скоро', `${b.label} — в разработке`);
                   }}
                   style={{ backgroundColor: b.bg, borderColor: b.border, borderWidth: 0.5 }}
