@@ -18,10 +18,10 @@ export interface DetectedCorner {
  */
 export async function detectCorners(
   imageUri: string,
-  maxCorners: number = 300,
-  blockSize: number = 3,
+  maxCorners: number = 150,
+  blockSize: number = 5,
   kFactor: number = 0.04,
-  threshold: number = 0.01,
+  threshold: number = 0.05,
 ): Promise<DetectedCorner[]> {
   try {
     // Load image via Skia — supports file://, ph://, content:// URIs
@@ -114,8 +114,8 @@ export async function detectCorners(
 
     if (maxR === 0) return [];
 
-    // Non-maximum suppression
-    const nmsR = 5;
+    // Non-maximum suppression (larger radius = fewer clustered detections)
+    const nmsR = 10;
     const corners: DetectedCorner[] = [];
     const absThr = threshold * maxR;
 

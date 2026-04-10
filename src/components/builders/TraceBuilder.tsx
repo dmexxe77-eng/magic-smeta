@@ -395,7 +395,7 @@ export default function TraceBuilder({
   // Magnetic snap: for magnifier mode — snaps to detected corners on plan
   const magSnapPt = useCallback((ix: number, iy: number) => {
     let x = ix, y = iy;
-    const thr = SNAP_PX / (fitScale * vZoom); // smaller threshold — easier to escape
+    const thr = (SNAP_PX * 0.6) / (fitScale * vZoom); // tight threshold — only very close snaps
 
     // 1. Close polygon
     if (points.length >= 3) {
