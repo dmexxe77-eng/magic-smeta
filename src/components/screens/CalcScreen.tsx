@@ -16,7 +16,7 @@ import { calcPoly, fmt } from '../../utils/geometry';
 import { generateId } from '../../utils/storage';
 import type { Room, Vertex } from '../../types';
 import CompassBuilder from '../builders/CompassBuilder';
-import TraceBuilder, { type TracedRoom } from '../builders/TraceBuilder';
+import TraceBuilder, { type TraceSession } from '../builders/TraceBuilder';
 import CalcBlockView from '../calc/CalcBlockView';
 import { createDefaultBlocks, calcBlockTotal, getDefaultQty, type CalcBlock, type Preset } from '../../data/calcBlocks';
 
@@ -77,9 +77,7 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
   );
   const [showBuilder, setShowBuilder] = useState(false);
   const [showTracer, setShowTracer] = useState(false);
-  const [savedScale, setSavedScale] = useState<number | undefined>(undefined);
-  const [savedImageUri, setSavedImageUri] = useState<string | undefined>(undefined);
-  const [savedTracedRooms, setSavedTracedRooms] = useState<TracedRoom[]>([]);
+  const [traceSession, setTraceSession] = useState<TraceSession | null>(null);
   const [blocks, setBlocks] = useState<CalcBlock[]>(createDefaultBlocks);
   const [qtyOverrides, setQtyOverrides] = useState<Record<string, number>>({});
 
@@ -185,13 +183,15 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
     return (
       <TraceBuilder
         existingCount={rooms.length}
-        onFinish={handleAddRoom}
+        onFinishAll={(newRooms) => {
+          const updated = [...rooms, ...newRooms];
+          updateOrderRooms(order.id, updated);
+          if (newRooms.length > 0) setActiveRoomId(newRooms[0].id);
+          setShowTracer(false);
+        }}
         onBack={() => setShowTracer(false)}
-        initialScale={savedScale}
-        onScaleSet={s => setSavedScale(s)}
-        initialImageUri={savedImageUri}
-        initialTracedRooms={savedTracedRooms}
-        onTracedRoomsChange={tr => setSavedTracedRooms(tr)}
+        session={traceSession}
+        onSessionChange={setTraceSession}
       />
     );
   }
@@ -251,14 +251,14 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
             <View className="flex-row gap-1.5">
               {[
                 { label: 'Обводка', color: '#4F46E5', bg: 'rgba(79,70,229,0.08)', border: 'rgba(79,70,229,0.2)' },
-                { label: 'AI', color: '#7c5cbf', bg: 'rgba(124,92,191,0.08)', border: 'rgba(124,92,191,0.2)' },
+                ...(traceSession ? [{ label: '✏️ Ред.', color: '#16a34a', bg: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.2)' }] : []),
                 { label: 'Замер 🧭', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)' },
                 { label: 'Ручн.', color: '#888', bg: '#f2f3fa', border: '#eeeef8' },
               ].map(b => (
                 <Pressable
                   key={b.label}
                   onPress={() => {
-                    if (b.label === 'Обводка') setShowTracer(true);
+                    if (b.label === 'Обводка' || b.label === '✏️ Ред.') setShowTracer(true);
                     else if (b.label.includes('Замер')) setShowBuilder(true);
                     else Alert.alert('Скоро', `${b.label} — в разработке`);
                   }}

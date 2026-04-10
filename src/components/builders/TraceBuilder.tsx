@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,11 +8,11 @@ import {
   Image,
   Dimensions,
   StyleSheet,
+  FlatList,
 } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
   runOnJS,
 } from 'react-native-reanimated';
 import {
@@ -28,6 +28,7 @@ import Svg, {
   G,
 } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { calcPoly, fmt } from '../../utils/geometry';
 import { generateId } from '../../utils/storage';
@@ -35,422 +36,495 @@ import type { Room, Vertex } from '../../types';
 
 const ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 const SCREEN = Dimensions.get('window');
-const SNAP_THRESHOLD = 10; // px для привязки к горизонтали/вертикали
+const SNAP_PX = 10;
 
 // ─── Types ──────────────────────────────────────────────────────────
 
 export interface TracedRoom {
-  points: Array<{ x: number; y: number }>; // in image pixel coords
+  id: string;
+  points: Array<{ x: number; y: number }>;
   name: string;
   closed: boolean;
 }
 
-interface TraceBuilderProps {
-  existingCount: number;
-  onFinish: (room: Room) => void;
-  onBack: () => void;
-  initialScale?: number;
-  onScaleSet?: (scale: number) => void;
-  initialImageUri?: string;
-  initialTracedRooms?: TracedRoom[];
-  onTracedRoomsChange?: (rooms: TracedRoom[]) => void;
+export interface TraceSession {
+  imageUri: string;
+  imageW: number;
+  imageH: number;
+  rooms: TracedRoom[];
+  scale: number | null; // px per cm
 }
 
-// ─── Main Component ─────────────────────────────────────────────────
+interface TraceBuilderProps {
+  existingCount: number;
+  onFinishAll: (rooms: Room[]) => void;
+  onBack: () => void;
+  session?: TraceSession | null;
+  onSessionChange?: (session: TraceSession) => void;
+}
 
-export default function TraceBuilder({
-  existingCount,
-  onFinish,
+// ─── Step: Pick Source ──────────────────────────────────────────────
+
+function PickSourceStep({
+  onImage,
+  onPdf,
   onBack,
-  initialScale,
-  onScaleSet,
-  initialImageUri,
-  initialTracedRooms,
-  onTracedRoomsChange,
-}: TraceBuilderProps) {
-  const insets = useSafeAreaInsets();
-
-  // Image state
-  const [imageUri, setImageUri] = useState<string | null>(initialImageUri ?? null);
-  const [imageSize, setImageSize] = useState({ w: 1, h: 1 });
-  const [fitScale, setFitScale] = useState(1); // how image fits on screen
-
-  // Points in image pixel coordinates
-  const [points, setPoints] = useState<Array<{ x: number; y: number }>>([]);
-  const [tracedRooms, setTracedRooms] = useState<TracedRoom[]>(initialTracedRooms ?? []);
-  const [closed, setClosed] = useState(false);
-  const [roomName, setRoomName] = useState(`Помещение ${existingCount + tracedRooms.length + 1}`);
-
-  // Calibration
-  const [scale, setScale] = useState<number | null>(initialScale ?? null); // px per cm
-  const [calibSide, setCalibSide] = useState<number | null>(null); // which side to calibrate
-  const [calibInput, setCalibInput] = useState('');
-
-  // Mode: 'point' = tap places point, 'move' = pan/zoom
-  const [mode, setMode] = useState<'point' | 'move'>('point');
-
-  // Zoom/pan state synced to React for SVG
-  const [viewZoom, setViewZoom] = useState(1);
-  const [viewTx, setViewTx] = useState(0);
-  const [viewTy, setViewTy] = useState(0);
-
-  // Shared values for gestures
-  const zoomScale = useSharedValue(1);
-  const translateX = useSharedValue(0);
-  const translateY = useSharedValue(0);
-  const savedScale = useSharedValue(1);
-  const savedTx = useSharedValue(0);
-  const savedTy = useSharedValue(0);
-
-  // ─── Pick image ───────────────────────────────────────────────────
-
-  const pickImage = useCallback(async () => {
+  insets,
+}: {
+  onImage: (uri: string, w: number, h: number) => void;
+  onPdf: () => void;
+  onBack: () => void;
+  insets: { top: number };
+}) {
+  const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       quality: 1,
       selectionLimit: 1,
     });
     if (!result.canceled && result.assets[0]) {
-      const asset = result.assets[0];
-      setImageUri(asset.uri);
-      const w = asset.width;
-      const h = asset.height;
-      setImageSize({ w, h });
-      // Fit image to screen width
-      const screenW = SCREEN.width;
-      const fs = screenW / w;
+      const a = result.assets[0];
+      onImage(a.uri, a.width, a.height);
+    }
+  };
+
+  const pickPdf = async () => {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: 'application/pdf',
+      copyToCacheDirectory: true,
+    });
+    if (!result.canceled && result.assets?.[0]) {
+      // For now treat PDF as image — full PDF renderer needs native rebuild
+      Alert.alert('PDF', 'PDF поддержка требует пересборки приложения. Пока выберите скриншот плана из галереи.');
+    }
+  };
+
+  return (
+    <View className="flex-1 bg-bg">
+      <View className="bg-white border-b border-border px-4 pb-3" style={{ paddingTop: insets.top + 4 }}>
+        <View className="flex-row items-center gap-3">
+          <Pressable onPress={onBack} className="w-9 h-9 rounded-[9px] bg-bg items-center justify-center">
+            <Text className="text-navy text-xl font-bold">‹</Text>
+          </Pressable>
+          <Text className="text-[14px] font-bold text-navy">Обводка плана</Text>
+        </View>
+      </View>
+      <View className="flex-1 items-center justify-center px-8 gap-5">
+        <Text className="text-6xl">📐</Text>
+        <Text className="text-xl font-black text-navy text-center">Выберите план</Text>
+        <Text className="text-muted text-sm text-center leading-6">
+          Загрузите чертёж или фото плана помещения.{'\n'}
+          Расставьте точки по углам — обведите контур.
+        </Text>
+        <Pressable onPress={pickImage} className="bg-accent px-8 py-4 rounded-xl w-full items-center">
+          <Text className="text-white font-bold text-base">📷 Фото из галереи</Text>
+        </Pressable>
+        <Pressable onPress={pickPdf} className="bg-navy px-8 py-4 rounded-xl w-full items-center">
+          <Text className="text-white font-bold text-base">📄 PDF документ</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+// ─── Step: Calibration ──────────────────────────────────────────────
+
+function CalibrationStep({
+  points,
+  sideIdx,
+  onCalibrate,
+  insets,
+}: {
+  points: Array<{ x: number; y: number }>;
+  sideIdx: number;
+  onCalibrate: (cm: number) => void;
+  insets: { top: number };
+}) {
+  const [input, setInput] = useState('');
+
+  const submit = () => {
+    const cm = parseFloat(input.replace(',', '.'));
+    if (cm > 0) onCalibrate(cm);
+  };
+
+  return (
+    <View className="flex-1 bg-bg">
+      <View className="bg-white border-b border-border px-4 pb-3" style={{ paddingTop: insets.top + 4 }}>
+        <Text className="text-[14px] font-bold text-navy px-4">Калибровка</Text>
+      </View>
+      <View className="flex-1 items-center justify-center px-8 gap-5">
+        <Text className="text-4xl">📏</Text>
+        <Text className="text-lg font-bold text-navy text-center">
+          Сторона {ALPHA[sideIdx]}–{ALPHA[(sideIdx + 1) % points.length]}
+        </Text>
+        <Text className="text-muted text-sm">Введите длину в сантиметрах</Text>
+        <TextInput
+          value={input}
+          onChangeText={setInput}
+          placeholder="385"
+          placeholderTextColor="#b0b0ba"
+          keyboardType="decimal-pad"
+          autoFocus
+          onSubmitEditing={submit}
+          className="bg-white border border-border rounded-xl px-4 py-3 text-navy text-2xl text-center w-40"
+        />
+        <Pressable onPress={submit} className="bg-navy px-8 py-4 rounded-xl">
+          <Text className="text-white font-bold text-base">Готово</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+// ─── Step: Name Room ────────────────────────────────────────────────
+
+function NameRoomStep({
+  area,
+  perim,
+  pointCount,
+  defaultName,
+  onConfirm,
+  onBack,
+  insets,
+}: {
+  area: number;
+  perim: number;
+  pointCount: number;
+  defaultName: string;
+  onConfirm: (name: string) => void;
+  onBack: () => void;
+  insets: { top: number };
+}) {
+  const [name, setName] = useState(defaultName);
+
+  return (
+    <View className="flex-1 bg-bg">
+      <View className="bg-white border-b border-border px-4 pb-3" style={{ paddingTop: insets.top + 4 }}>
+        <View className="flex-row items-center gap-3">
+          <Pressable onPress={onBack} className="w-9 h-9 rounded-[9px] bg-bg items-center justify-center">
+            <Text className="text-navy text-xl font-bold">‹</Text>
+          </Pressable>
+          <Text className="text-[14px] font-bold text-navy">Помещение готово</Text>
+        </View>
+      </View>
+      <View className="flex-1 px-6 pt-6 gap-4">
+        <View className="bg-green-50 border border-green-200 rounded-xl p-4">
+          <Text className="text-green-700 font-bold text-base mb-1">
+            ✓ Контур замкнут · {pointCount} точек
+          </Text>
+          <Text className="text-muted text-sm">{fmt(area)} м²  ·  {fmt(perim)} м.п.</Text>
+        </View>
+        <TextInput
+          value={name}
+          onChangeText={setName}
+          placeholder="Название помещения"
+          placeholderTextColor="#b0b0ba"
+          autoFocus
+          className="bg-white border border-border rounded-xl px-4 py-3 text-navy text-base"
+        />
+        <Pressable
+          onPress={() => onConfirm(name.trim() || defaultName)}
+          className="bg-navy rounded-xl py-3 items-center"
+        >
+          <Text className="text-white font-bold">Добавить и продолжить обводку →</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+// ─── Main TraceBuilder ──────────────────────────────────────────────
+
+export default function TraceBuilder({
+  existingCount,
+  onFinishAll,
+  onBack,
+  session: initialSession,
+  onSessionChange,
+}: TraceBuilderProps) {
+  const insets = useSafeAreaInsets();
+
+  // Session state
+  const [imageUri, setImageUri] = useState<string | null>(initialSession?.imageUri ?? null);
+  const [imageSize, setImageSize] = useState({ w: initialSession?.imageW ?? 1, h: initialSession?.imageH ?? 1 });
+  const [fitScale, setFitScale] = useState(1);
+  const [scale, setScale] = useState<number | null>(initialSession?.scale ?? null);
+  const [tracedRooms, setTracedRooms] = useState<TracedRoom[]>(initialSession?.rooms ?? []);
+
+  // Current tracing state
+  const [points, setPoints] = useState<Array<{ x: number; y: number }>>([]);
+  const [step, setStep] = useState<'pick' | 'trace' | 'calibrate' | 'name'>('pick');
+  const [mode, setMode] = useState<'point' | 'move'>('point');
+
+  // Zoom/pan synced to React
+  const [vZoom, setVZoom] = useState(1);
+  const [vTx, setVTx] = useState(0);
+  const [vTy, setVTy] = useState(0);
+
+  // Canvas layout offset (measured from onLayout)
+  const canvasTopRef = useRef(0);
+
+  // Gesture shared values
+  const zs = useSharedValue(1);
+  const tx = useSharedValue(0);
+  const ty = useSharedValue(0);
+  const savedZs = useSharedValue(1);
+  const savedTx = useSharedValue(0);
+  const savedTy = useSharedValue(0);
+
+  // ─── Init from session ─────────────────────────────────────────────
+
+  useEffect(() => {
+    if (initialSession?.imageUri) {
+      setStep('trace');
+      const fs = SCREEN.width / initialSession.imageW;
       setFitScale(fs);
     }
   }, []);
 
-  // Load image size if URI provided
-  useEffect(() => {
-    if (imageUri && imageSize.w === 1) {
-      Image.getSize(imageUri, (w, h) => {
-        setImageSize({ w, h });
-        setFitScale(SCREEN.width / w);
-      });
-    }
-  }, [imageUri]);
+  // ─── Notify parent of session changes ──────────────────────────────
 
-  // ─── Sync view state ──────────────────────────────────────────────
+  const updateSession = useCallback(() => {
+    if (!imageUri) return;
+    onSessionChange?.({
+      imageUri,
+      imageW: imageSize.w,
+      imageH: imageSize.h,
+      rooms: tracedRooms,
+      scale,
+    });
+  }, [imageUri, imageSize, tracedRooms, scale, onSessionChange]);
 
-  const syncView = useCallback(() => {
-    setViewZoom(zoomScale.value);
-    setViewTx(translateX.value);
-    setViewTy(translateY.value);
+  useEffect(() => { updateSession(); }, [tracedRooms, scale]);
+
+  // ─── Handle image selected ─────────────────────────────────────────
+
+  const handleImageSelected = useCallback((uri: string, w: number, h: number) => {
+    setImageUri(uri);
+    setImageSize({ w, h });
+    setFitScale(SCREEN.width / w);
+    setStep('trace');
   }, []);
 
-  // ─── Snap point to horizontal/vertical ────────────────────────────
+  // ─── Sync view ─────────────────────────────────────────────────────
 
-  const snapPoint = useCallback((imgX: number, imgY: number): { x: number; y: number } => {
-    if (points.length === 0) return { x: imgX, y: imgY };
-    const lastPt = points[points.length - 1];
-    let x = imgX;
-    let y = imgY;
-    const threshold = SNAP_THRESHOLD / (fitScale * viewZoom);
+  const syncView = useCallback(() => {
+    setVZoom(zs.value);
+    setVTx(tx.value);
+    setVTy(ty.value);
+  }, []);
 
-    if (Math.abs(imgX - lastPt.x) < threshold) x = lastPt.x;
-    if (Math.abs(imgY - lastPt.y) < threshold) y = lastPt.y;
+  // ─── Screen to image ──────────────────────────────────────────────
 
-    // Also snap to first point for closing
-    if (points.length >= 3) {
-      const firstPt = points[0];
-      const closeDist = Math.hypot(imgX - firstPt.x, imgY - firstPt.y);
-      if (closeDist < threshold * 2) {
-        return { x: firstPt.x, y: firstPt.y };
-      }
-    }
-
-    return { x, y };
-  }, [points, fitScale, viewZoom]);
-
-  // ─── Screen to image coordinate conversion ───────────────────────
-
-  const screenToImage = useCallback((sx: number, sy: number) => {
-    const imgX = (sx - viewTx) / (fitScale * viewZoom);
-    const imgY = (sy - viewTy) / (fitScale * viewZoom);
+  const screenToImg = useCallback((sx: number, sy: number) => {
+    const imgX = (sx - vTx) / (fitScale * vZoom);
+    const imgY = (sy - vTy) / (fitScale * vZoom);
     return { x: imgX, y: imgY };
-  }, [fitScale, viewZoom, viewTx, viewTy]);
+  }, [fitScale, vZoom, vTx, vTy]);
 
-  // ─── Handle tap to place point ────────────────────────────────────
+  // ─── Snap ─────────────────────────────────────────────────────────
 
-  const handleTap = useCallback((screenX: number, screenY: number) => {
-    if (closed || mode !== 'point') return;
+  const snapPt = useCallback((ix: number, iy: number) => {
+    let x = ix, y = iy;
+    const thr = SNAP_PX / (fitScale * vZoom);
 
-    const raw = screenToImage(screenX, screenY);
-    const snapped = snapPoint(raw.x, raw.y);
+    if (points.length > 0) {
+      const last = points[points.length - 1];
+      if (Math.abs(ix - last.x) < thr) x = last.x;
+      if (Math.abs(iy - last.y) < thr) y = last.y;
+    }
 
-    // Check if closing
+    // Snap to first point (close)
     if (points.length >= 3) {
-      const firstPt = points[0];
-      const dist = Math.hypot(snapped.x - firstPt.x, snapped.y - firstPt.y);
-      const threshold = SNAP_THRESHOLD / (fitScale * viewZoom);
-      if (dist < threshold * 2) {
-        setClosed(true);
-        if (scale) {
-          // Skip calibration, go to name
-        } else {
-          setCalibSide(0); // calibrate first side
-        }
-        return;
+      const first = points[0];
+      if (Math.hypot(ix - first.x, iy - first.y) < thr * 2) {
+        return { x: first.x, y: first.y, closing: true };
       }
     }
 
-    setPoints(prev => [...prev, snapped]);
-  }, [closed, mode, screenToImage, snapPoint, points, fitScale, viewZoom, scale]);
+    return { x, y, closing: false };
+  }, [points, fitScale, vZoom]);
 
-  // ─── Calibration ──────────────────────────────────────────────────
+  // ─── Handle tap ───────────────────────────────────────────────────
 
-  const handleCalibrate = useCallback(() => {
-    if (calibSide == null || points.length < 2) return;
-    const cm = parseFloat(calibInput.replace(',', '.'));
-    if (!cm || cm <= 0) return;
+  const handleTap = useCallback((absX: number, absY: number) => {
+    if (mode !== 'point') return;
 
-    const p1 = points[calibSide];
-    const p2 = points[(calibSide + 1) % points.length];
+    // Convert screen coords to canvas-relative
+    const canvasY = absY - canvasTopRef.current;
+    const raw = screenToImg(absX, canvasY);
+    const snapped = snapPt(raw.x, raw.y);
+
+    if (snapped.closing) {
+      // Close the polygon
+      if (scale) {
+        setStep('name');
+      } else {
+        setStep('calibrate');
+      }
+      return;
+    }
+
+    setPoints(prev => [...prev, { x: snapped.x, y: snapped.y }]);
+  }, [mode, screenToImg, snapPt, scale]);
+
+  // ─── Calibrate ────────────────────────────────────────────────────
+
+  const handleCalibrate = useCallback((cm: number) => {
+    if (points.length < 2) return;
+    const p1 = points[0];
+    const p2 = points[1];
     const pxDist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
     const newScale = pxDist / cm;
-
     setScale(newScale);
-    setCalibSide(null);
-    setCalibInput('');
-    onScaleSet?.(newScale);
-  }, [calibSide, calibInput, points, onScaleSet]);
+    setStep('name');
+  }, [points]);
 
-  // ─── Finish room ──────────────────────────────────────────────────
+  // ─── Confirm room name → add to tracedRooms → continue ───────────
 
-  const handleFinish = useCallback(() => {
-    if (!scale || points.length < 3) return;
-
-    // Convert image pixels to meters using scale
-    const verts: Vertex[] = points.map(p => ({
-      x: p.x / scale / 100, // px -> cm -> m
-      y: p.y / scale / 100,
-    }));
-
-    const poly = calcPoly(verts);
-    const room: Room = {
+  const handleConfirmRoom = useCallback((name: string) => {
+    const newRoom: TracedRoom = {
       id: generateId(),
-      name: roomName.trim() || `Помещение ${existingCount + tracedRooms.length + 1}`,
-      v: verts,
-      aO: Math.round(poly.a * 100) / 100,
-      pO: Math.round(poly.p * 100) / 100,
-      canvas: { qty: Math.round(poly.a * 100) / 100 },
-      mainProf: { qty: Math.round(poly.p * 100) / 100 },
-      options: [],
+      points: [...points],
+      name,
+      closed: true,
     };
+    setTracedRooms(prev => [...prev, newRoom]);
+    setPoints([]);
+    setStep('trace');
+  }, [points]);
 
-    // Save traced room for re-entry
-    const newTraced: TracedRoom = { points: [...points], name: room.name, closed: true };
-    const updatedTraced = [...tracedRooms, newTraced];
-    setTracedRooms(updatedTraced);
-    onTracedRoomsChange?.(updatedTraced);
+  // ─── Finish all → convert traced rooms to Room[] → send to calc ──
 
-    onFinish(room);
-  }, [scale, points, roomName, existingCount, tracedRooms, onFinish, onTracedRoomsChange]);
+  const handleFinishAll = useCallback(() => {
+    if (!scale || tracedRooms.length === 0) return;
+
+    const rooms: Room[] = tracedRooms.map((tr, idx) => {
+      const verts: Vertex[] = tr.points.map(p => ({
+        x: p.x / scale / 100,
+        y: p.y / scale / 100,
+      }));
+      const poly = calcPoly(verts);
+      return {
+        id: generateId(),
+        name: tr.name,
+        v: verts,
+        aO: Math.round(poly.a * 100) / 100,
+        pO: Math.round(poly.p * 100) / 100,
+        canvas: { qty: Math.round(poly.a * 100) / 100 },
+        mainProf: { qty: Math.round(poly.p * 100) / 100 },
+        options: [],
+      };
+    });
+
+    onFinishAll(rooms);
+  }, [scale, tracedRooms, onFinishAll]);
 
   // ─── Undo ─────────────────────────────────────────────────────────
 
   const undo = useCallback(() => {
-    if (closed) {
-      setClosed(false);
-      setCalibSide(null);
-    } else {
-      setPoints(prev => prev.slice(0, -1));
-    }
-  }, [closed]);
+    setPoints(prev => prev.slice(0, -1));
+  }, []);
 
-  // ─── New room on same plan ────────────────────────────────────────
+  // ─── Delete traced room ───────────────────────────────────────────
 
-  const startNewRoom = useCallback(() => {
-    setPoints([]);
-    setClosed(false);
-    setCalibSide(null);
-    setRoomName(`Помещение ${existingCount + tracedRooms.length + 1}`);
-  }, [existingCount, tracedRooms.length]);
+  const deleteTracedRoom = useCallback((id: string) => {
+    setTracedRooms(prev => prev.filter(r => r.id !== id));
+  }, []);
 
   // ─── Gestures ─────────────────────────────────────────────────────
 
   const tapGesture = Gesture.Tap()
     .onEnd((e) => {
       if (mode === 'point') {
-        runOnJS(handleTap)(e.absoluteX, e.absoluteY - insets.top - 44); // offset for header
+        runOnJS(handleTap)(e.absoluteX, e.absoluteY);
       }
     });
 
   const pinchGesture = Gesture.Pinch()
-    .onStart(() => {
-      savedScale.value = zoomScale.value;
-    })
-    .onUpdate((e) => {
-      zoomScale.value = Math.max(0.5, Math.min(savedScale.value * e.scale, 10));
-    })
-    .onEnd(() => {
-      runOnJS(syncView)();
-    });
+    .onStart(() => { savedZs.value = zs.value; })
+    .onUpdate((e) => { zs.value = Math.max(0.5, Math.min(savedZs.value * e.scale, 10)); })
+    .onEnd(() => { runOnJS(syncView)(); });
 
   const panGesture = Gesture.Pan()
     .minPointers(mode === 'move' ? 1 : 2)
-    .onStart(() => {
-      savedTx.value = translateX.value;
-      savedTy.value = translateY.value;
-    })
-    .onUpdate((e) => {
-      translateX.value = savedTx.value + e.translationX;
-      translateY.value = savedTy.value + e.translationY;
-    })
-    .onEnd(() => {
-      runOnJS(syncView)();
-    });
+    .onStart(() => { savedTx.value = tx.value; savedTy.value = ty.value; })
+    .onUpdate((e) => { tx.value = savedTx.value + e.translationX; ty.value = savedTy.value + e.translationY; })
+    .onEnd(() => { runOnJS(syncView)(); });
 
-  const composedGesture = Gesture.Simultaneous(
-    tapGesture,
-    Gesture.Simultaneous(pinchGesture, panGesture)
-  );
+  const gesture = Gesture.Simultaneous(tapGesture, Gesture.Simultaneous(pinchGesture, panGesture));
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: translateX.value },
-      { translateY: translateY.value },
-      { scale: zoomScale.value },
-    ],
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: tx.value }, { translateY: ty.value }, { scale: zs.value }],
   }));
 
-  // ─── Side length in cm ────────────────────────────────────────────
+  // ─── Helpers ──────────────────────────────────────────────────────
 
-  const getSideCm = useCallback((i: number) => {
-    if (!scale || i >= points.length) return null;
-    const p1 = points[i];
-    const p2 = points[(i + 1) % points.length];
-    const pxDist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-    return Math.round(pxDist / scale);
-  }, [scale, points]);
-
-  // ─── Image to SVG coordinates ─────────────────────────────────────
-
-  const imgToSvg = useCallback((imgX: number, imgY: number) => ({
-    x: imgX * fitScale,
-    y: imgY * fitScale,
+  const imgToSvg = useCallback((ix: number, iy: number) => ({
+    x: ix * fitScale,
+    y: iy * fitScale,
   }), [fitScale]);
 
-  // ─── Render: no image yet ─────────────────────────────────────────
+  const getSideCm = useCallback((pts: Array<{ x: number; y: number }>, i: number) => {
+    if (!scale) return null;
+    const p1 = pts[i];
+    const p2 = pts[(i + 1) % pts.length];
+    return Math.round(Math.hypot(p2.x - p1.x, p2.y - p1.y) / scale);
+  }, [scale]);
 
-  if (!imageUri) {
+  // ─── Render: pick source ──────────────────────────────────────────
+
+  if (step === 'pick') {
     return (
-      <View className="flex-1 bg-bg">
-        <View className="bg-white border-b border-border px-4 pb-3" style={{ paddingTop: insets.top + 4 }}>
-          <View className="flex-row items-center gap-3">
-            <Pressable onPress={onBack} className="w-9 h-9 rounded-[9px] bg-bg items-center justify-center">
-              <Text className="text-navy text-xl font-bold">‹</Text>
-            </Pressable>
-            <Text className="text-[14px] font-bold text-navy">Обводка</Text>
-          </View>
-        </View>
-        <View className="flex-1 items-center justify-center px-8 gap-5">
-          <Text className="text-6xl">📐</Text>
-          <Text className="text-xl font-black text-navy text-center">Обводка плана</Text>
-          <Text className="text-muted text-sm text-center leading-6">
-            Загрузите чертёж или фото плана помещения.{'\n'}
-            Расставьте точки по углам — обведите контур.
-          </Text>
-          <Pressable onPress={pickImage} className="bg-accent px-8 py-4 rounded-xl">
-            <Text className="text-white font-bold text-base">📷 Выбрать из галереи</Text>
-          </Pressable>
-        </View>
-      </View>
+      <PickSourceStep
+        onImage={handleImageSelected}
+        onPdf={() => {}}
+        onBack={onBack}
+        insets={insets}
+      />
     );
   }
 
   // ─── Render: calibration ──────────────────────────────────────────
 
-  if (calibSide != null) {
-    const sideIdx = calibSide;
+  if (step === 'calibrate') {
     return (
-      <View className="flex-1 bg-bg">
-        <View className="bg-white border-b border-border px-4 pb-3" style={{ paddingTop: insets.top + 4 }}>
-          <View className="flex-row items-center gap-3">
-            <Text className="text-[14px] font-bold text-navy">Калибровка</Text>
-          </View>
-        </View>
-        <View className="flex-1 items-center justify-center px-8 gap-5">
-          <Text className="text-4xl">📏</Text>
-          <Text className="text-lg font-bold text-navy text-center">
-            Введите длину стороны {ALPHA[sideIdx]}–{ALPHA[(sideIdx + 1) % points.length]}
-          </Text>
-          <Text className="text-muted text-sm text-center">в сантиметрах</Text>
-          <TextInput
-            value={calibInput}
-            onChangeText={setCalibInput}
-            placeholder="385"
-            placeholderTextColor="#b0b0ba"
-            keyboardType="decimal-pad"
-            autoFocus
-            className="bg-white border border-border rounded-xl px-4 py-3 text-navy text-2xl text-center w-40"
-          />
-          <Pressable onPress={handleCalibrate} className="bg-navy px-8 py-4 rounded-xl">
-            <Text className="text-white font-bold text-base">Готово</Text>
-          </Pressable>
-        </View>
-      </View>
+      <CalibrationStep
+        points={points}
+        sideIdx={0}
+        onCalibrate={handleCalibrate}
+        insets={insets}
+      />
     );
   }
 
-  // ─── Render: closed, enter name ───────────────────────────────────
+  // ─── Render: name room ────────────────────────────────────────────
 
-  if (closed && scale) {
-    const verts: Vertex[] = points.map(p => ({
-      x: p.x / scale / 100,
-      y: p.y / scale / 100,
-    }));
-    const poly = calcPoly(verts);
+  if (step === 'name') {
+    const verts: Vertex[] = scale
+      ? points.map(p => ({ x: p.x / scale / 100, y: p.y / scale / 100 }))
+      : [];
+    const poly = verts.length >= 3 ? calcPoly(verts) : { a: 0, p: 0 };
+    const defaultName = `Помещение ${existingCount + tracedRooms.length + 1}`;
 
     return (
-      <View className="flex-1 bg-bg">
-        <View className="bg-white border-b border-border px-4 pb-3" style={{ paddingTop: insets.top + 4 }}>
-          <View className="flex-row items-center gap-3">
-            <Pressable onPress={undo} className="w-9 h-9 rounded-[9px] bg-bg items-center justify-center">
-              <Text className="text-navy text-xl font-bold">‹</Text>
-            </Pressable>
-            <Text className="text-[14px] font-bold text-navy">Помещение готово</Text>
-          </View>
-        </View>
-        <View className="flex-1 px-6 pt-6 gap-4">
-          <View className="bg-green-50 border border-green-200 rounded-xl p-4">
-            <Text className="text-green-700 font-bold text-base mb-1">
-              ✓ Контур замкнут · {points.length} точек
-            </Text>
-            <Text className="text-muted text-sm">
-              {fmt(poly.a)} м²  ·  {fmt(poly.p)} м.п.
-            </Text>
-          </View>
-
-          <TextInput
-            value={roomName}
-            onChangeText={setRoomName}
-            placeholder="Название помещения"
-            placeholderTextColor="#b0b0ba"
-            className="bg-white border border-border rounded-xl px-4 py-3 text-navy text-base"
-          />
-
-          <View className="flex-row gap-3">
-            <Pressable onPress={undo} className="flex-1 border border-border rounded-xl py-3 items-center">
-              <Text className="text-muted font-semibold">↩ Изменить</Text>
-            </Pressable>
-            <Pressable onPress={handleFinish} className="flex-[2] bg-navy rounded-xl py-3 items-center">
-              <Text className="text-white font-bold">Добавить →</Text>
-            </Pressable>
-          </View>
-        </View>
-      </View>
+      <NameRoomStep
+        area={poly.a}
+        perim={poly.p}
+        pointCount={points.length}
+        defaultName={defaultName}
+        onConfirm={handleConfirmRoom}
+        onBack={() => setStep('trace')}
+        insets={insets}
+      />
     );
   }
 
-  // ─── Render: main tracing screen ──────────────────────────────────
+  // ─── Render: main tracing ─────────────────────────────────────────
 
   const imgW = imageSize.w * fitScale;
   const imgH = imageSize.h * fitScale;
-  const invZoom = 1 / viewZoom;
+  const inv = 1 / vZoom;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -463,7 +537,7 @@ export default function TraceBuilder({
                 <Text className="text-navy text-lg font-bold">‹</Text>
               </Pressable>
               <Text className="text-sm font-bold text-navy">
-                Точка {ALPHA[points.length] ?? '?'}
+                {points.length > 0 ? `Точка ${ALPHA[points.length] ?? '?'}` : 'Обводка'}
               </Text>
               {points.length > 0 && (
                 <Pressable onPress={undo} className="bg-red-50 px-2 py-1 rounded-lg">
@@ -471,201 +545,152 @@ export default function TraceBuilder({
                 </Pressable>
               )}
             </View>
-            <Text className="text-muted text-xs">
-              {points.length} точ. · {tracedRooms.length} пом.
-            </Text>
+            <Text className="text-muted text-xs">{tracedRooms.length} пом.</Text>
           </View>
         </View>
 
         {/* Canvas */}
-        <GestureDetector gesture={composedGesture}>
-          <Animated.View style={[{ flex: 1 }, animatedStyle]}>
-            {/* Image */}
-            <Image
-              source={{ uri: imageUri }}
-              style={{ width: imgW, height: imgH }}
-              resizeMode="contain"
-            />
-
-            {/* SVG overlay — inside Animated.View so it moves with image */}
-            <Svg
-              width={imgW}
-              height={imgH}
-              style={StyleSheet.absoluteFill}
-            >
-              {/* Previously traced rooms */}
-              {tracedRooms.map((tr, ri) => {
-                const polyPts = tr.points.map(p => imgToSvg(p.x, p.y));
-                return (
-                  <G key={`tr-${ri}`}>
-                    <SvgPolygon
-                      points={polyPts.map(p => `${p.x},${p.y}`).join(' ')}
-                      fill="rgba(34,197,94,0.1)"
-                      stroke="#22c55e"
-                      strokeWidth={1.5 * invZoom}
-                    />
-                    {/* Room name */}
-                    {polyPts.length > 0 && (
+        <View
+          style={{ flex: 1 }}
+          onLayout={(e) => { canvasTopRef.current = e.nativeEvent.layout.y + insets.top + 4 + 36; }}
+        >
+          <GestureDetector gesture={gesture}>
+            <Animated.View style={[{ flex: 1 }, animStyle]}>
+              <Image
+                source={{ uri: imageUri! }}
+                style={{ width: imgW, height: imgH }}
+                resizeMode="contain"
+              />
+              <Svg width={imgW} height={imgH} style={StyleSheet.absoluteFill}>
+                {/* Previously traced rooms */}
+                {tracedRooms.map((tr, ri) => {
+                  const svgPts = tr.points.map(p => imgToSvg(p.x, p.y));
+                  return (
+                    <G key={tr.id}>
+                      <SvgPolygon
+                        points={svgPts.map(p => `${p.x},${p.y}`).join(' ')}
+                        fill="rgba(34,197,94,0.12)"
+                        stroke="#22c55e"
+                        strokeWidth={1.5 * inv}
+                      />
+                      {/* Side lengths */}
+                      {tr.points.map((p, i) => {
+                        const cm = getSideCm(tr.points, i);
+                        if (!cm) return null;
+                        const s1 = imgToSvg(p.x, p.y);
+                        const p2 = tr.points[(i + 1) % tr.points.length];
+                        const s2 = imgToSvg(p2.x, p2.y);
+                        return (
+                          <SvgText key={`trLen-${ri}-${i}`} x={(s1.x + s2.x) / 2} y={(s1.y + s2.y) / 2 - 5 * inv}
+                            textAnchor="middle" fill="#22c55e" fontSize={8 * inv} fontWeight="600">{cm}</SvgText>
+                        );
+                      })}
+                      {/* Room name label */}
                       <SvgText
-                        x={polyPts.reduce((s, p) => s + p.x, 0) / polyPts.length}
-                        y={polyPts.reduce((s, p) => s + p.y, 0) / polyPts.length}
-                        textAnchor="middle"
-                        fill="#22c55e"
-                        fontSize={11 * invZoom}
-                        fontWeight="700"
-                      >
-                        {tr.name}
-                      </SvgText>
-                    )}
-                  </G>
-                );
-              })}
+                        x={svgPts.reduce((s, p) => s + p.x, 0) / svgPts.length}
+                        y={svgPts.reduce((s, p) => s + p.y, 0) / svgPts.length}
+                        textAnchor="middle" fill="#16a34a" fontSize={11 * inv} fontWeight="800"
+                      >{tr.name}</SvgText>
+                    </G>
+                  );
+                })}
 
-              {/* Current polygon fill */}
-              {points.length >= 3 && (
-                <SvgPolygon
-                  points={points.map(p => {
-                    const s = imgToSvg(p.x, p.y);
-                    return `${s.x},${s.y}`;
-                  }).join(' ')}
-                  fill="rgba(79,70,229,0.08)"
-                  stroke="none"
-                />
-              )}
-
-              {/* Lines between points */}
-              {points.map((p, i) => {
-                if (i === 0) return null;
-                const s1 = imgToSvg(points[i - 1].x, points[i - 1].y);
-                const s2 = imgToSvg(p.x, p.y);
-                return (
-                  <Line
-                    key={`line-${i}`}
-                    x1={s1.x} y1={s1.y}
-                    x2={s2.x} y2={s2.y}
-                    stroke="#4F46E5"
-                    strokeWidth={2 * invZoom}
+                {/* Current polygon fill */}
+                {points.length >= 3 && (
+                  <SvgPolygon
+                    points={points.map(p => { const s = imgToSvg(p.x, p.y); return `${s.x},${s.y}`; }).join(' ')}
+                    fill="rgba(79,70,229,0.08)" stroke="none"
                   />
-                );
-              })}
+                )}
 
-              {/* Closing line if closed */}
-              {closed && points.length >= 3 && (() => {
-                const s1 = imgToSvg(points[points.length - 1].x, points[points.length - 1].y);
-                const s2 = imgToSvg(points[0].x, points[0].y);
-                return (
-                  <Line
-                    x1={s1.x} y1={s1.y}
-                    x2={s2.x} y2={s2.y}
-                    stroke="#4F46E5"
-                    strokeWidth={2 * invZoom}
-                  />
-                );
-              })()}
+                {/* Lines */}
+                {points.map((p, i) => {
+                  if (i === 0) return null;
+                  const s1 = imgToSvg(points[i - 1].x, points[i - 1].y);
+                  const s2 = imgToSvg(p.x, p.y);
+                  return <Line key={`l-${i}`} x1={s1.x} y1={s1.y} x2={s2.x} y2={s2.y} stroke="#4F46E5" strokeWidth={2 * inv} />;
+                })}
 
-              {/* Side lengths */}
-              {scale && points.map((p, i) => {
-                if (i === points.length - 1 && !closed) return null;
-                const p2 = points[(i + 1) % points.length];
-                const s1 = imgToSvg(p.x, p.y);
-                const s2 = imgToSvg(p2.x, p2.y);
-                const mx = (s1.x + s2.x) / 2;
-                const my = (s1.y + s2.y) / 2;
-                const cm = getSideCm(i);
-                if (!cm) return null;
-                return (
-                  <SvgText
-                    key={`len-${i}`}
-                    x={mx}
-                    y={my - 6 * invZoom}
-                    textAnchor="middle"
-                    fill="#4F46E5"
-                    fontSize={9 * invZoom}
-                    fontWeight="600"
-                  >
-                    {cm}
-                  </SvgText>
-                );
-              })}
+                {/* Side lengths for current */}
+                {scale && points.map((p, i) => {
+                  if (i >= points.length - 1) return null;
+                  const cm = getSideCm(points, i);
+                  if (!cm) return null;
+                  const s1 = imgToSvg(p.x, p.y);
+                  const p2 = points[i + 1];
+                  const s2 = imgToSvg(p2.x, p2.y);
+                  return (
+                    <SvgText key={`cl-${i}`} x={(s1.x + s2.x) / 2} y={(s1.y + s2.y) / 2 - 5 * inv}
+                      textAnchor="middle" fill="#4F46E5" fontSize={8 * inv} fontWeight="600">{cm}</SvgText>
+                  );
+                })}
 
-              {/* Points with letters */}
-              {points.map((p, i) => {
-                const s = imgToSvg(p.x, p.y);
-                const isFirst = i === 0;
-                const isLast = i === points.length - 1;
-                return (
-                  <G key={`pt-${i}`}>
-                    <SvgCircle
-                      cx={s.x}
-                      cy={s.y}
-                      r={6 * invZoom}
-                      fill={isFirst ? '#16a34a' : isLast ? '#f59e0b' : '#4F46E5'}
-                      stroke="white"
-                      strokeWidth={1.5 * invZoom}
-                    />
-                    <SvgText
-                      x={s.x}
-                      y={s.y - 10 * invZoom}
-                      textAnchor="middle"
-                      fill="#4F46E5"
-                      fontSize={10 * invZoom}
-                      fontWeight="800"
-                    >
-                      {ALPHA[i]}
-                    </SvgText>
-                  </G>
-                );
-              })}
-            </Svg>
-          </Animated.View>
-        </GestureDetector>
+                {/* Points with letters */}
+                {points.map((p, i) => {
+                  const s = imgToSvg(p.x, p.y);
+                  return (
+                    <G key={`p-${i}`}>
+                      <SvgCircle cx={s.x} cy={s.y} r={6 * inv}
+                        fill={i === 0 ? '#16a34a' : '#4F46E5'} stroke="white" strokeWidth={1.5 * inv} />
+                      <SvgText x={s.x} y={s.y - 10 * inv} textAnchor="middle"
+                        fill="#4F46E5" fontSize={10 * inv} fontWeight="800">{ALPHA[i]}</SvgText>
+                    </G>
+                  );
+                })}
+              </Svg>
+            </Animated.View>
+          </GestureDetector>
+        </View>
 
         {/* Bottom panel */}
-        <View className="bg-white/95 border-t border-border px-4 py-3" style={{ paddingBottom: insets.bottom + 8 }}>
+        <View className="bg-white/95 border-t border-border px-4 pt-2" style={{ paddingBottom: insets.bottom + 8 }}>
+          {/* Traced rooms list */}
+          {tracedRooms.length > 0 && (
+            <View className="flex-row gap-2 mb-2 flex-wrap">
+              {tracedRooms.map(tr => (
+                <View key={tr.id} className="bg-green-50 border border-green-200 px-2 py-1 rounded-lg flex-row items-center gap-1">
+                  <Text className="text-green-700 text-xs font-semibold">{tr.name}</Text>
+                  <Pressable onPress={() => deleteTracedRoom(tr.id)}>
+                    <Text className="text-red-400 text-xs">✕</Text>
+                  </Pressable>
+                </View>
+              ))}
+            </View>
+          )}
+
           <View className="flex-row items-center justify-between">
             {/* Mode toggle */}
             <View className="flex-row gap-2">
               <Pressable
                 onPress={() => setMode('point')}
-                style={{
-                  backgroundColor: mode === 'point' ? '#4F46E5' : '#f7f7f5',
-                  paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10,
-                }}
+                style={{ backgroundColor: mode === 'point' ? '#4F46E5' : '#f7f7f5', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10 }}
               >
-                <Text style={{ color: mode === 'point' ? '#fff' : '#888', fontSize: 12, fontWeight: '700' }}>
-                  ✏️ Точки
-                </Text>
+                <Text style={{ color: mode === 'point' ? '#fff' : '#888', fontSize: 12, fontWeight: '700' }}>✏️ Точки</Text>
               </Pressable>
               <Pressable
                 onPress={() => setMode('move')}
-                style={{
-                  backgroundColor: mode === 'move' ? '#f59e0b' : '#f7f7f5',
-                  paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10,
-                }}
+                style={{ backgroundColor: mode === 'move' ? '#f59e0b' : '#f7f7f5', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10 }}
               >
-                <Text style={{ color: mode === 'move' ? '#fff' : '#888', fontSize: 12, fontWeight: '700' }}>
-                  ✋ Двигать
-                </Text>
+                <Text style={{ color: mode === 'move' ? '#fff' : '#888', fontSize: 12, fontWeight: '700' }}>✋ Двигать</Text>
               </Pressable>
             </View>
 
-            {/* Close button */}
-            {points.length >= 3 && !closed && (
-              <Pressable
-                onPress={() => {
-                  setClosed(true);
-                  if (!scale) setCalibSide(0);
-                }}
-                className="bg-green-500 px-4 py-2 rounded-xl"
-              >
-                <Text className="text-white font-bold text-xs">✓ Замкнуть</Text>
-              </Pressable>
-            )}
-
-            {/* Info */}
-            <Text className="text-muted text-xs">
-              {scale ? `1px = ${(1/scale).toFixed(3)}см` : 'нет масштаба'}
-            </Text>
+            {/* Close / Finish buttons */}
+            <View className="flex-row gap-2">
+              {points.length >= 3 && (
+                <Pressable
+                  onPress={() => { if (scale) setStep('name'); else setStep('calibrate'); }}
+                  className="bg-green-500 px-3 py-2 rounded-xl"
+                >
+                  <Text className="text-white font-bold text-xs">✓ Замкнуть</Text>
+                </Pressable>
+              )}
+              {tracedRooms.length > 0 && points.length === 0 && (
+                <Pressable onPress={handleFinishAll} className="bg-navy px-4 py-2 rounded-xl">
+                  <Text className="text-white font-bold text-xs">Готово →</Text>
+                </Pressable>
+              )}
+            </View>
           </View>
         </View>
       </View>
