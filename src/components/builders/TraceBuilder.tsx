@@ -347,11 +347,12 @@ export default function TraceBuilder({
 
   // ─── Snap ─────────────────────────────────────────────────────────
 
+  // Simple snap: only close polygon + h/v align (for quick tap)
   const snapPt = useCallback((ix: number, iy: number) => {
     let x = ix, y = iy;
     const thr = SNAP_PX / (fitScale * vZoom);
 
-    // 1. Snap to first point (close polygon)
+    // Close polygon
     if (points.length >= 3) {
       const first = points[0];
       if (Math.hypot(ix - first.x, iy - first.y) < thr * 2) {
@@ -359,8 +360,31 @@ export default function TraceBuilder({
       }
     }
 
-    // 2. Snap to corners of already traced rooms (магнит)
-    let minDist = thr * 1.5;
+    // H/V align with previous point
+    if (points.length > 0) {
+      const last = points[points.length - 1];
+      if (Math.abs(ix - last.x) < thr) x = last.x;
+      if (Math.abs(iy - last.y) < thr) y = last.y;
+    }
+
+    return { x, y, closing: false };
+  }, [points, fitScale, vZoom]);
+
+  // Magnetic snap: for magnifier mode — snaps to traced room corners
+  const magSnapPt = useCallback((ix: number, iy: number) => {
+    let x = ix, y = iy;
+    const thr = SNAP_PX * 2 / (fitScale * vZoom); // wider threshold for magnet
+
+    // Close polygon
+    if (points.length >= 3) {
+      const first = points[0];
+      if (Math.hypot(ix - first.x, iy - first.y) < thr * 2) {
+        return { x: first.x, y: first.y, closing: true };
+      }
+    }
+
+    // Snap to corners of traced rooms (магнит)
+    let minDist = thr;
     for (const tr of tracedRooms) {
       for (const pt of tr.points) {
         const d = Math.hypot(ix - pt.x, iy - pt.y);
@@ -372,8 +396,8 @@ export default function TraceBuilder({
       }
     }
 
-    // 3. Snap to horizontal/vertical of previous point
-    if (points.length > 0 && x === ix && y === iy) {
+    // H/V align with previous point (if no corner snap)
+    if (x === ix && y === iy && points.length > 0) {
       const last = points[points.length - 1];
       if (Math.abs(ix - last.x) < thr) x = last.x;
       if (Math.abs(iy - last.y) < thr) y = last.y;
@@ -412,9 +436,9 @@ export default function TraceBuilder({
   const handleMagMove = useCallback((absX: number, absY: number) => {
     const canvasY = absY - canvasTopRef.current;
     const raw = screenToImg(absX, canvasY);
-    const snapped = snapPt(raw.x, raw.y);
+    const snapped = magSnapPt(raw.x, raw.y); // magnetic snap in magnifier
     setMag({ visible: true, screenX: absX, screenY: absY, imgX: snapped.x, imgY: snapped.y });
-  }, [screenToImg, snapPt]);
+  }, [screenToImg, magSnapPt]);
 
   const handleMagEnd = useCallback((absX: number, absY: number) => {
     if (!mag.visible) {
@@ -422,19 +446,17 @@ export default function TraceBuilder({
       return;
     }
 
-    // Place point at magnifier position
-    const canvasY = absY - canvasTopRef.current;
-    const raw = screenToImg(absX, canvasY);
-    const snapped = snapPt(raw.x, raw.y);
+    // Place point at last magnifier position (already snapped)
+    const snapped = magSnapPt(mag.imgX, mag.imgY);
 
     if (snapped.closing) {
       if (scale) setStep('name'); else setStep('calibrate');
     } else {
-      setPoints(prev => [...prev, { x: snapped.x, y: snapped.y }]);
+      setPoints(prev => [...prev, { x: mag.imgX, y: mag.imgY }]);
     }
 
     setMag(prev => ({ ...prev, visible: false }));
-  }, [mag.visible, screenToImg, snapPt, scale]);
+  }, [mag, magSnapPt, scale]);
 
   // ─── Calibrate ────────────────────────────────────────────────────
 
