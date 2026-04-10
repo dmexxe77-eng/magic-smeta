@@ -367,7 +367,7 @@ export default function TraceBuilder({
 
   // ─── Snap ─────────────────────────────────────────────────────────
 
-  // Simple snap: only close polygon + h/v align (for quick tap)
+  // Simple snap: close polygon + h/v align to CURRENT polygon only
   const snapPt = useCallback((ix: number, iy: number) => {
     let x = ix, y = iy;
     const thr = SNAP_PX / (fitScale * vZoom);
@@ -380,7 +380,7 @@ export default function TraceBuilder({
       }
     }
 
-    // H/V align with previous point
+    // H/V align ONLY with current polygon's last point
     if (points.length > 0) {
       const last = points[points.length - 1];
       if (Math.abs(ix - last.x) < thr) x = last.x;
@@ -390,7 +390,7 @@ export default function TraceBuilder({
     return { x, y, closing: false };
   }, [points, fitScale, vZoom]);
 
-  // Magnetic snap: for magnifier mode — snaps to detected + traced corners
+  // Magnetic snap: for magnifier mode — snaps to detected corners on plan
   const magSnapPt = useCallback((ix: number, iy: number) => {
     let x = ix, y = iy;
     const thr = SNAP_PX * 2 / (fitScale * vZoom);
@@ -414,19 +414,7 @@ export default function TraceBuilder({
       }
     }
 
-    // 3. Snap to corners of traced rooms
-    for (const tr of tracedRooms) {
-      for (const pt of tr.points) {
-        const d = Math.hypot(ix - pt.x, iy - pt.y);
-        if (d < minDist) {
-          minDist = d;
-          x = pt.x;
-          y = pt.y;
-        }
-      }
-    }
-
-    // 4. H/V align (if no corner snap)
+    // 3. H/V align to CURRENT polygon only (not old rooms)
     if (x === ix && y === iy && points.length > 0) {
       const last = points[points.length - 1];
       if (Math.abs(ix - last.x) < thr) x = last.x;
@@ -434,7 +422,7 @@ export default function TraceBuilder({
     }
 
     return { x, y, closing: false };
-  }, [points, tracedRooms, detectedCorners, fitScale, vZoom]);
+  }, [points, detectedCorners, fitScale, vZoom]);
 
   // ─── Handle tap (quick) ────────────────────────────────────────────
 
