@@ -33,6 +33,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { calcPoly, fmt } from '../../utils/geometry';
 import { generateId } from '../../utils/storage';
+import { detectCorners, type DetectedCorner } from '../../utils/cornerDetector';
 import type { Room, Vertex } from '../../types';
 
 const ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -269,6 +270,10 @@ export default function TraceBuilder({
   const [scale, setScale] = useState<number | null>(initialSession?.scale ?? null);
   const [tracedRooms, setTracedRooms] = useState<TracedRoom[]>(initialSession?.rooms ?? []);
 
+  // Corner detection
+  const [detectedCorners, setDetectedCorners] = useState<DetectedCorner[]>([]);
+  const [cornerStatus, setCornerStatus] = useState<'idle' | 'detecting' | 'done'>('idle');
+
   // Current tracing state
   const [points, setPoints] = useState<Array<{ x: number; y: number }>>([]);
   const [step, setStep] = useState<'pick' | 'trace' | 'calibrate' | 'name'>('pick');
@@ -321,6 +326,20 @@ export default function TraceBuilder({
 
   useEffect(() => { updateSession(); }, [tracedRooms, scale]);
 
+  // ─── Detect corners when image is loaded ────────────────────────────
+
+  useEffect(() => {
+    if (imageUri && cornerStatus === 'idle') {
+      setCornerStatus('detecting');
+      detectCorners(imageUri, 300).then(corners => {
+        setDetectedCorners(corners);
+        setCornerStatus('done');
+      }).catch(() => {
+        setCornerStatus('done');
+      });
+    }
+  }, [imageUri, cornerStatus]);
+
   // ─── Handle image selected ─────────────────────────────────────────
 
   const handleImageSelected = useCallback((uri: string, w: number, h: number) => {
@@ -371,12 +390,12 @@ export default function TraceBuilder({
     return { x, y, closing: false };
   }, [points, fitScale, vZoom]);
 
-  // Magnetic snap: for magnifier mode — snaps to traced room corners
+  // Magnetic snap: for magnifier mode — snaps to detected + traced corners
   const magSnapPt = useCallback((ix: number, iy: number) => {
     let x = ix, y = iy;
-    const thr = SNAP_PX * 2 / (fitScale * vZoom); // wider threshold for magnet
+    const thr = SNAP_PX * 2 / (fitScale * vZoom);
 
-    // Close polygon
+    // 1. Close polygon
     if (points.length >= 3) {
       const first = points[0];
       if (Math.hypot(ix - first.x, iy - first.y) < thr * 2) {
@@ -384,8 +403,18 @@ export default function TraceBuilder({
       }
     }
 
-    // Snap to corners of traced rooms (магнит)
+    // 2. Snap to detected corners on the plan image (Harris)
     let minDist = thr;
+    for (const c of detectedCorners) {
+      const d = Math.hypot(ix - c.x, iy - c.y);
+      if (d < minDist) {
+        minDist = d;
+        x = c.x;
+        y = c.y;
+      }
+    }
+
+    // 3. Snap to corners of traced rooms
     for (const tr of tracedRooms) {
       for (const pt of tr.points) {
         const d = Math.hypot(ix - pt.x, iy - pt.y);
@@ -397,7 +426,7 @@ export default function TraceBuilder({
       }
     }
 
-    // H/V align with previous point (if no corner snap)
+    // 4. H/V align (if no corner snap)
     if (x === ix && y === iy && points.length > 0) {
       const last = points[points.length - 1];
       if (Math.abs(ix - last.x) < thr) x = last.x;
@@ -405,7 +434,7 @@ export default function TraceBuilder({
     }
 
     return { x, y, closing: false };
-  }, [points, tracedRooms, fitScale, vZoom]);
+  }, [points, tracedRooms, detectedCorners, fitScale, vZoom]);
 
   // ─── Handle tap (quick) ────────────────────────────────────────────
 
@@ -645,7 +674,9 @@ export default function TraceBuilder({
                 </Pressable>
               )}
             </View>
-            <Text className="text-muted text-xs">{tracedRooms.length} пом.</Text>
+            <Text className="text-muted text-xs">
+              {cornerStatus === 'detecting' ? '🔍' : cornerStatus === 'done' ? `🧲${detectedCorners.length}` : ''} · {tracedRooms.length} пом.
+            </Text>
           </View>
         </View>
 
