@@ -393,7 +393,7 @@ export default function TraceBuilder({
   // Magnetic snap: for magnifier mode — snaps to detected corners on plan
   const magSnapPt = useCallback((ix: number, iy: number) => {
     let x = ix, y = iy;
-    const thr = SNAP_PX * 2 / (fitScale * vZoom);
+    const thr = SNAP_PX / (fitScale * vZoom); // smaller threshold — easier to escape
 
     // 1. Close polygon
     if (points.length >= 3) {
@@ -403,22 +403,27 @@ export default function TraceBuilder({
       }
     }
 
-    // 2. Snap to detected corners on the plan image (Harris)
-    let minDist = thr;
+    // 2. Snap to detected corners (only the closest within threshold)
+    let bestCorner: DetectedCorner | null = null;
+    let bestDist = thr;
     for (const c of detectedCorners) {
       const d = Math.hypot(ix - c.x, iy - c.y);
-      if (d < minDist) {
-        minDist = d;
-        x = c.x;
-        y = c.y;
+      if (d < bestDist) {
+        bestDist = d;
+        bestCorner = c;
       }
     }
+    if (bestCorner) {
+      x = bestCorner.x;
+      y = bestCorner.y;
+    }
 
-    // 3. H/V align to CURRENT polygon only (not old rooms)
+    // 3. H/V align to CURRENT polygon only (weaker threshold)
     if (x === ix && y === iy && points.length > 0) {
+      const hvThr = thr * 0.7;
       const last = points[points.length - 1];
-      if (Math.abs(ix - last.x) < thr) x = last.x;
-      if (Math.abs(iy - last.y) < thr) y = last.y;
+      if (Math.abs(ix - last.x) < hvThr) x = last.x;
+      if (Math.abs(iy - last.y) < hvThr) y = last.y;
     }
 
     return { x, y, closing: false };
