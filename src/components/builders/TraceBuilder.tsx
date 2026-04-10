@@ -28,7 +28,8 @@ import Svg, {
   G,
 } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
-import * as DocumentPicker from 'expo-document-picker';
+// DocumentPicker requires native rebuild — disabled for now
+// import * as DocumentPicker from 'expo-document-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { calcPoly, fmt } from '../../utils/geometry';
 import { generateId } from '../../utils/storage';
@@ -89,14 +90,7 @@ function PickSourceStep({
   };
 
   const pickPdf = async () => {
-    const result = await DocumentPicker.getDocumentAsync({
-      type: 'application/pdf',
-      copyToCacheDirectory: true,
-    });
-    if (!result.canceled && result.assets?.[0]) {
-      // For now treat PDF as image — full PDF renderer needs native rebuild
-      Alert.alert('PDF', 'PDF поддержка требует пересборки приложения. Пока выберите скриншот плана из галереи.');
-    }
+    Alert.alert('PDF', 'PDF поддержка будет добавлена после пересборки. Пока выберите скриншот плана из галереи.');
   };
 
   return (
@@ -254,12 +248,17 @@ export default function TraceBuilder({
   // Current tracing state
   const [points, setPoints] = useState<Array<{ x: number; y: number }>>([]);
   const [step, setStep] = useState<'pick' | 'trace' | 'calibrate' | 'name'>('pick');
-  const [mode, setMode] = useState<'point' | 'move'>('point');
 
   // Zoom/pan synced to React
   const [vZoom, setVZoom] = useState(1);
   const [vTx, setVTx] = useState(0);
   const [vTy, setVTy] = useState(0);
+
+  // Magnifier state
+  const [mag, setMag] = useState<{ visible: boolean; screenX: number; screenY: number; imgX: number; imgY: number }>({
+    visible: false, screenX: 0, screenY: 0, imgX: 0, imgY: 0,
+  });
+  const magStartRef = useRef<{ x: number; y: number } | null>(null);
 
   // Canvas layout offset (measured from onLayout)
   const canvasTopRef = useRef(0);
@@ -345,28 +344,55 @@ export default function TraceBuilder({
     return { x, y, closing: false };
   }, [points, fitScale, vZoom]);
 
-  // ─── Handle tap ───────────────────────────────────────────────────
+  // ─── Handle tap (quick) ────────────────────────────────────────────
 
   const handleTap = useCallback((absX: number, absY: number) => {
-    if (mode !== 'point') return;
-
-    // Convert screen coords to canvas-relative
     const canvasY = absY - canvasTopRef.current;
     const raw = screenToImg(absX, canvasY);
     const snapped = snapPt(raw.x, raw.y);
 
     if (snapped.closing) {
-      // Close the polygon
-      if (scale) {
-        setStep('name');
-      } else {
-        setStep('calibrate');
-      }
+      if (scale) setStep('name'); else setStep('calibrate');
+      return;
+    }
+    setPoints(prev => [...prev, { x: snapped.x, y: snapped.y }]);
+  }, [screenToImg, snapPt, scale]);
+
+  // ─── Magnifier handlers ───────────────────────────────────────────
+
+  const handleMagStart = useCallback((absX: number, absY: number) => {
+    magStartRef.current = { x: absX, y: absY };
+    const canvasY = absY - canvasTopRef.current;
+    const raw = screenToImg(absX, canvasY);
+    setMag({ visible: true, screenX: absX, screenY: absY, imgX: raw.x, imgY: raw.y });
+  }, [screenToImg]);
+
+  const handleMagMove = useCallback((absX: number, absY: number) => {
+    const canvasY = absY - canvasTopRef.current;
+    const raw = screenToImg(absX, canvasY);
+    const snapped = snapPt(raw.x, raw.y);
+    setMag({ visible: true, screenX: absX, screenY: absY, imgX: snapped.x, imgY: snapped.y });
+  }, [screenToImg, snapPt]);
+
+  const handleMagEnd = useCallback((absX: number, absY: number) => {
+    if (!mag.visible) {
+      setMag(prev => ({ ...prev, visible: false }));
       return;
     }
 
-    setPoints(prev => [...prev, { x: snapped.x, y: snapped.y }]);
-  }, [mode, screenToImg, snapPt, scale]);
+    // Place point at magnifier position
+    const canvasY = absY - canvasTopRef.current;
+    const raw = screenToImg(absX, canvasY);
+    const snapped = snapPt(raw.x, raw.y);
+
+    if (snapped.closing) {
+      if (scale) setStep('name'); else setStep('calibrate');
+    } else {
+      setPoints(prev => [...prev, { x: snapped.x, y: snapped.y }]);
+    }
+
+    setMag(prev => ({ ...prev, visible: false }));
+  }, [mag.visible, screenToImg, snapPt, scale]);
 
   // ─── Calibrate ────────────────────────────────────────────────────
 
@@ -436,9 +462,20 @@ export default function TraceBuilder({
 
   const tapGesture = Gesture.Tap()
     .onEnd((e) => {
-      if (mode === 'point') {
-        runOnJS(handleTap)(e.absoluteX, e.absoluteY);
-      }
+      runOnJS(handleTap)(e.absoluteX, e.absoluteY);
+    });
+
+  // Magnifier: long press + drag
+  const magPanGesture = Gesture.Pan()
+    .activateAfterLongPress(300)
+    .onStart((e) => {
+      runOnJS(handleMagStart)(e.absoluteX, e.absoluteY);
+    })
+    .onUpdate((e) => {
+      runOnJS(handleMagMove)(e.absoluteX, e.absoluteY);
+    })
+    .onEnd((e) => {
+      runOnJS(handleMagEnd)(e.absoluteX, e.absoluteY);
     });
 
   const pinchGesture = Gesture.Pinch()
@@ -447,12 +484,15 @@ export default function TraceBuilder({
     .onEnd(() => { runOnJS(syncView)(); });
 
   const panGesture = Gesture.Pan()
-    .minPointers(mode === 'move' ? 1 : 2)
+    .minPointers(2)
     .onStart(() => { savedTx.value = tx.value; savedTy.value = ty.value; })
     .onUpdate((e) => { tx.value = savedTx.value + e.translationX; ty.value = savedTy.value + e.translationY; })
     .onEnd(() => { runOnJS(syncView)(); });
 
-  const gesture = Gesture.Simultaneous(tapGesture, Gesture.Simultaneous(pinchGesture, panGesture));
+  const gesture = Gesture.Race(
+    magPanGesture,
+    Gesture.Simultaneous(tapGesture, Gesture.Simultaneous(pinchGesture, panGesture))
+  );
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: tx.value }, { translateY: ty.value }, { scale: zs.value }],
@@ -642,6 +682,40 @@ export default function TraceBuilder({
           </GestureDetector>
         </View>
 
+        {/* Magnifier overlay */}
+        {mag.visible && imageUri && (
+          <View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              left: mag.screenX - 60,
+              top: mag.screenY - 140,
+              width: 120,
+              height: 120,
+              borderRadius: 60,
+              borderWidth: 3,
+              borderColor: '#4F46E5',
+              overflow: 'hidden',
+              backgroundColor: '#fff',
+            }}
+          >
+            <Image
+              source={{ uri: imageUri }}
+              style={{
+                width: imageSize.w * fitScale * 2.5,
+                height: imageSize.h * fitScale * 2.5,
+                marginLeft: -(mag.imgX * fitScale * 2.5 - 60),
+                marginTop: -(mag.imgY * fitScale * 2.5 - 60),
+              }}
+              resizeMode="contain"
+            />
+            {/* Crosshair */}
+            <View style={{ position: 'absolute', left: 58, top: 0, width: 2, height: 120, backgroundColor: 'rgba(79,70,229,0.3)' }} />
+            <View style={{ position: 'absolute', left: 0, top: 58, width: 120, height: 2, backgroundColor: 'rgba(79,70,229,0.3)' }} />
+            <View style={{ position: 'absolute', left: 55, top: 55, width: 10, height: 10, borderRadius: 5, borderWidth: 2, borderColor: '#4F46E5' }} />
+          </View>
+        )}
+
         {/* Bottom panel */}
         <View className="bg-white/95 border-t border-border px-4 pt-2" style={{ paddingBottom: insets.bottom + 8 }}>
           {/* Traced rooms list */}
@@ -659,23 +733,9 @@ export default function TraceBuilder({
           )}
 
           <View className="flex-row items-center justify-between">
-            {/* Mode toggle */}
-            <View className="flex-row gap-2">
-              <Pressable
-                onPress={() => setMode('point')}
-                style={{ backgroundColor: mode === 'point' ? '#4F46E5' : '#f7f7f5', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10 }}
-              >
-                <Text style={{ color: mode === 'point' ? '#fff' : '#888', fontSize: 12, fontWeight: '700' }}>✏️ Точки</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => setMode('move')}
-                style={{ backgroundColor: mode === 'move' ? '#f59e0b' : '#f7f7f5', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10 }}
-              >
-                <Text style={{ color: mode === 'move' ? '#fff' : '#888', fontSize: 12, fontWeight: '700' }}>✋ Двигать</Text>
-              </Pressable>
-            </View>
-
-            {/* Close / Finish buttons */}
+            <Text className="text-muted text-xs">
+              Тап = точка · Зажми = лупа · 2 пальца = двигать
+            </Text>
             <View className="flex-row gap-2">
               {points.length >= 3 && (
                 <Pressable
