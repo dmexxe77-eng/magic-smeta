@@ -163,7 +163,7 @@ export function createDefaultBlocks(): CalcBlock[] {
       id: 'extra_profile',
       title: 'ДОП. ПРОФИЛЬ',
       icon: '📐',
-      bindTo: 'perimeter',
+      bindTo: 'qty',
       expanded: false,
       activePresetId: 'pr_ap_10',
       presets: [
@@ -208,7 +208,7 @@ export function createDefaultBlocks(): CalcBlock[] {
       id: 'linear_light',
       title: 'ЛИНЕЙНОЕ ОСВЕЩЕНИЕ',
       icon: '💫',
-      bindTo: 'perimeter',
+      bindTo: 'qty',
       expanded: false,
       activePresetId: 'pr_ll_19',
       presets: [
@@ -228,7 +228,7 @@ export function createDefaultBlocks(): CalcBlock[] {
       id: 'curtains',
       title: 'ШТОРЫ',
       icon: '🪟',
-      bindTo: 'perimeter',
+      bindTo: 'qty',
       expanded: false,
       activePresetId: 'pr_cu_23',
       presets: [

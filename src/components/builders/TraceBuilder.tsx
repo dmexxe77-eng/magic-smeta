@@ -360,16 +360,15 @@ export default function TraceBuilder({
     setVTy(ty.value);
   }, []);
 
-  // ─── Canvas-relative to image coordinates ──────────────────────────
-  // Uses e.x/e.y from gesture (relative to GestureDetector view)
-  // NOT absoluteX/absoluteY — avoids header offset issues entirely
+  // ─── Screen absolute to image coordinates ──────────────────────────
+  // absoluteX/Y → subtract canvas top → undo translate → undo scale → undo fitScale
 
-  const canvasToImg = useCallback((cx: number, cy: number) => {
-    const curZoom = zs.value;
-    const curTx = tx.value;
-    const curTy = ty.value;
-    const imgX = (cx - curTx) / (fitScale * curZoom);
-    const imgY = (cy - curTy) / (fitScale * curZoom);
+  const screenToImg = useCallback((absX: number, absY: number) => {
+    const cx = absX;
+    const cy = absY - canvasTopRef.current;
+    const z = zs.value;
+    const imgX = (cx - tx.value) / (fitScale * z);
+    const imgY = (cy - ty.value) / (fitScale * z);
     return { x: imgX, y: imgY };
   }, [fitScale, zs, tx, ty]);
 
@@ -378,7 +377,7 @@ export default function TraceBuilder({
   // Simple snap: close polygon + h/v align to CURRENT polygon only
   const snapPt = useCallback((ix: number, iy: number) => {
     let x = ix, y = iy;
-    const thr = SNAP_PX / (fitScale * vZoom);
+    const thr = SNAP_PX / (fitScale * zs.value);
 
     // Close polygon
     if (points.length >= 3) {
@@ -396,12 +395,12 @@ export default function TraceBuilder({
     }
 
     return { x, y, closing: false };
-  }, [points, fitScale, vZoom]);
+  }, [points, fitScale, zs]);
 
   // Magnetic snap: for magnifier mode — snaps to detected corners on plan
   const magSnapPt = useCallback((ix: number, iy: number) => {
     let x = ix, y = iy;
-    const thr = (SNAP_PX * 0.6) / (fitScale * vZoom); // tight threshold — only very close snaps
+    const thr = (SNAP_PX * 0.6) / (fitScale * zs.value);
 
     // 1. Close polygon
     if (points.length >= 3) {
@@ -435,12 +434,12 @@ export default function TraceBuilder({
     }
 
     return { x, y, closing: false };
-  }, [points, detectedCorners, fitScale, vZoom]);
+  }, [points, detectedCorners, fitScale, zs]);
 
   // ─── Handle tap (quick) ────────────────────────────────────────────
 
-  const handleTap = useCallback((cx: number, cy: number) => {
-    const raw = canvasToImg(cx, cy);
+  const handleTap = useCallback((absX: number, absY: number) => {
+    const raw = screenToImg(absX, absY);
     const snapped = snapPt(raw.x, raw.y);
 
     if (snapped.closing) {
@@ -452,24 +451,24 @@ export default function TraceBuilder({
       return;
     }
     setPoints(prev => [...prev, { x: snapped.x, y: snapped.y }]);
-  }, [canvasToImg, snapPt, scale]);
+  }, [screenToImg, snapPt, scale]);
 
   // ─── Magnifier handlers ───────────────────────────────────────────
 
-  const handleMagStart = useCallback((cx: number, cy: number, absX: number, absY: number) => {
+  const handleMagStart = useCallback((absX: number, absY: number) => {
     if (isPinchingRef.current) return;
     magStartRef.current = { x: absX, y: absY };
-    const raw = canvasToImg(cx, cy);
+    const raw = screenToImg(absX, absY);
     setMag({ visible: true, screenX: absX, screenY: absY, imgX: raw.x, imgY: raw.y });
-  }, [canvasToImg]);
+  }, [screenToImg]);
 
-  const handleMagMove = useCallback((cx: number, cy: number, absX: number, absY: number) => {
+  const handleMagMove = useCallback((absX: number, absY: number) => {
     if (isPinchingRef.current) return;
-    const raw = canvasToImg(cx, cy);
+    const raw = screenToImg(absX, absY);
     const snapped = magSnapPt(raw.x, raw.y);
     magImgRef.current = { x: snapped.x, y: snapped.y };
     setMag({ visible: true, screenX: absX, screenY: absY, imgX: snapped.x, imgY: snapped.y });
-  }, [canvasToImg, magSnapPt]);
+  }, [screenToImg, magSnapPt]);
 
   const handleMagEnd = useCallback(() => {
     const imgPos = magImgRef.current; // always fresh from ref
@@ -552,7 +551,7 @@ export default function TraceBuilder({
 
   const tapGesture = Gesture.Tap()
     .onEnd((e) => {
-      runOnJS(handleTap)(e.x, e.y);
+      runOnJS(handleTap)(e.absoluteX, e.absoluteY);
     });
 
   // Magnifier: long press + drag
@@ -560,10 +559,10 @@ export default function TraceBuilder({
     .maxPointers(1)
     .activateAfterLongPress(300)
     .onStart((e) => {
-      runOnJS(handleMagStart)(e.x, e.y, e.absoluteX, e.absoluteY);
+      runOnJS(handleMagStart)(e.absoluteX, e.absoluteY);
     })
     .onUpdate((e) => {
-      runOnJS(handleMagMove)(e.x, e.y, e.absoluteX, e.absoluteY);
+      runOnJS(handleMagMove)(e.absoluteX, e.absoluteY);
     })
     .onEnd(() => {
       runOnJS(handleMagEnd)();
@@ -686,15 +685,12 @@ export default function TraceBuilder({
         {/* Canvas — clipped, image doesn't go behind header */}
         <View
           style={{ flex: 1, overflow: 'hidden' }}
-          ref={(ref) => {
-            if (ref) {
-              // measureInWindow gives absolute screen coordinates reliably
-              setTimeout(() => {
-                (ref as any).measureInWindow?.((x: number, y: number, w: number, h: number) => {
-                  if (y > 0) canvasTopRef.current = y;
-                });
-              }, 100);
-            }
+          onLayout={(e) => {
+            const { y, height } = e.nativeEvent.layout;
+            // y is relative to parent (the flex:1 View inside GestureHandlerRootView)
+            // parent starts after header, so canvasTop = header height
+            // Header: paddingTop(insets.top+4) + content(~32) + paddingBottom(8) + border(1)
+            canvasTopRef.current = insets.top + 45;
           }}
         >
           <GestureDetector gesture={gesture}>
