@@ -360,19 +360,16 @@ export default function TraceBuilder({
     setVTy(ty.value);
   }, []);
 
-  // ─── Screen to image (uses shared values for freshness) ────────────
+  // ─── Canvas-relative to image coordinates ──────────────────────────
+  // Uses e.x/e.y from gesture (relative to GestureDetector view)
+  // NOT absoluteX/absoluteY — avoids header offset issues entirely
 
-  const screenToImg = useCallback((absX: number, absY: number) => {
-    // absX/absY are screen-absolute from gesture
-    // canvasTopRef.current = distance from screen top to canvas top
-    const canvasX = absX;
-    const canvasY = absY - canvasTopRef.current;
-    // Invert the Animated.View transform: translate then scale
+  const canvasToImg = useCallback((cx: number, cy: number) => {
     const curZoom = zs.value;
     const curTx = tx.value;
     const curTy = ty.value;
-    const imgX = (canvasX - curTx) / (fitScale * curZoom);
-    const imgY = (canvasY - curTy) / (fitScale * curZoom);
+    const imgX = (cx - curTx) / (fitScale * curZoom);
+    const imgY = (cy - curTy) / (fitScale * curZoom);
     return { x: imgX, y: imgY };
   }, [fitScale, zs, tx, ty]);
 
@@ -442,8 +439,8 @@ export default function TraceBuilder({
 
   // ─── Handle tap (quick) ────────────────────────────────────────────
 
-  const handleTap = useCallback((absX: number, absY: number) => {
-    const raw = screenToImg(absX, absY);
+  const handleTap = useCallback((cx: number, cy: number) => {
+    const raw = canvasToImg(cx, cy);
     const snapped = snapPt(raw.x, raw.y);
 
     if (snapped.closing) {
@@ -455,24 +452,24 @@ export default function TraceBuilder({
       return;
     }
     setPoints(prev => [...prev, { x: snapped.x, y: snapped.y }]);
-  }, [screenToImg, snapPt, scale]);
+  }, [canvasToImg, snapPt, scale]);
 
   // ─── Magnifier handlers ───────────────────────────────────────────
 
-  const handleMagStart = useCallback((absX: number, absY: number) => {
+  const handleMagStart = useCallback((cx: number, cy: number, absX: number, absY: number) => {
     if (isPinchingRef.current) return;
     magStartRef.current = { x: absX, y: absY };
-    const raw = screenToImg(absX, absY);
+    const raw = canvasToImg(cx, cy);
     setMag({ visible: true, screenX: absX, screenY: absY, imgX: raw.x, imgY: raw.y });
-  }, [screenToImg]);
+  }, [canvasToImg]);
 
-  const handleMagMove = useCallback((absX: number, absY: number) => {
+  const handleMagMove = useCallback((cx: number, cy: number, absX: number, absY: number) => {
     if (isPinchingRef.current) return;
-    const raw = screenToImg(absX, absY);
+    const raw = canvasToImg(cx, cy);
     const snapped = magSnapPt(raw.x, raw.y);
     magImgRef.current = { x: snapped.x, y: snapped.y };
     setMag({ visible: true, screenX: absX, screenY: absY, imgX: snapped.x, imgY: snapped.y });
-  }, [screenToImg, magSnapPt]);
+  }, [canvasToImg, magSnapPt]);
 
   const handleMagEnd = useCallback(() => {
     const imgPos = magImgRef.current; // always fresh from ref
@@ -555,7 +552,7 @@ export default function TraceBuilder({
 
   const tapGesture = Gesture.Tap()
     .onEnd((e) => {
-      runOnJS(handleTap)(e.absoluteX, e.absoluteY);
+      runOnJS(handleTap)(e.x, e.y);
     });
 
   // Magnifier: long press + drag
@@ -563,12 +560,12 @@ export default function TraceBuilder({
     .maxPointers(1)
     .activateAfterLongPress(300)
     .onStart((e) => {
-      runOnJS(handleMagStart)(e.absoluteX, e.absoluteY);
+      runOnJS(handleMagStart)(e.x, e.y, e.absoluteX, e.absoluteY);
     })
     .onUpdate((e) => {
-      runOnJS(handleMagMove)(e.absoluteX, e.absoluteY);
+      runOnJS(handleMagMove)(e.x, e.y, e.absoluteX, e.absoluteY);
     })
-    .onEnd((e) => {
+    .onEnd(() => {
       runOnJS(handleMagEnd)();
     });
 
@@ -689,13 +686,15 @@ export default function TraceBuilder({
         {/* Canvas — clipped, image doesn't go behind header */}
         <View
           style={{ flex: 1, overflow: 'hidden' }}
-          onLayout={(e) => {
-            // Use pageY from measure for accurate offset
-            (e.target as any).measure?.((x: number, y: number, w: number, h: number, px: number, py: number) => {
-              canvasTopRef.current = py;
-            });
-            // Fallback
-            if (!canvasTopRef.current) canvasTopRef.current = insets.top + 48;
+          ref={(ref) => {
+            if (ref) {
+              // measureInWindow gives absolute screen coordinates reliably
+              setTimeout(() => {
+                (ref as any).measureInWindow?.((x: number, y: number, w: number, h: number) => {
+                  if (y > 0) canvasTopRef.current = y;
+                });
+              }, 100);
+            }
           }}
         >
           <GestureDetector gesture={gesture}>

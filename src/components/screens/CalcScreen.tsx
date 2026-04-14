@@ -18,7 +18,7 @@ import type { Room, Vertex } from '../../types';
 import CompassBuilder from '../builders/CompassBuilder';
 import TraceBuilder, { type TraceSession } from '../builders/TraceBuilder';
 import CalcBlockView from '../calc/CalcBlockView';
-import { createDefaultBlocks, calcBlockTotal, getDefaultQty, type CalcBlock, type Preset } from '../../data/calcBlocks';
+import { createDefaultBlocks, calcBlockTotal, type CalcBlock, type Preset } from '../../data/calcBlocks';
 
 // ─── Constants ────────────────────────────────────────────────────────
 
@@ -79,7 +79,8 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
   const [showTracer, setShowTracer] = useState(false);
   const [traceSession, setTraceSession] = useState<TraceSession | null>(null);
   const [blocks, setBlocks] = useState<CalcBlock[]>(createDefaultBlocks);
-  const [qtyOverrides, setQtyOverrides] = useState<Record<string, number>>({});
+  const [mainQtys, setMainQtys] = useState<Record<string, number>>({});  // block main qty overrides
+  const [optQtys, setOptQtys] = useState<Record<string, number>>({});    // option quantities
 
   // Sync activeRoomId when order loads from AsyncStorage
   useEffect(() => {
@@ -106,7 +107,7 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
 
   // Grand total from all blocks
   const grand = blocks.reduce((sum, block) =>
-    sum + calcBlockTotal(block, roomArea, roomPerim, qtyOverrides), 0
+    sum + calcBlockTotal(block, roomArea, roomPerim, mainQtys[block.id], optQtys), 0
   );
 
   // Block handlers
@@ -122,27 +123,17 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
     setBlocks(prev => prev.map(b => b.id === blockId ? { ...b, presets } : b));
   }, []);
 
-  const handleToggleNom = useCallback((blockId: string, presetId: string, nomId: string) => {
+  const handleToggleNom = useCallback((blockId: string, side: 'items' | 'options', nomId: string) => {
     setBlocks(prev => prev.map(b => {
       if (b.id !== blockId) return b;
       return {
         ...b,
         presets: b.presets.map(p => {
-          if (p.id !== presetId) return p;
-          return { ...p, noms: p.noms.map(n => n.id === nomId ? { ...n, enabled: !n.enabled } : n) };
-        }),
-      };
-    }));
-  }, []);
-
-  const handleChangeNomPrice = useCallback((blockId: string, presetId: string, nomId: string, price: number) => {
-    setBlocks(prev => prev.map(b => {
-      if (b.id !== blockId) return b;
-      return {
-        ...b,
-        presets: b.presets.map(p => {
-          if (p.id !== presetId) return p;
-          return { ...p, noms: p.noms.map(n => n.id === nomId ? { ...n, price } : n) };
+          if (p.id !== b.activePresetId) return p;
+          return {
+            ...p,
+            [side]: p[side].map((r: any) => r.nomId === nomId ? { ...r, enabled: !r.enabled } : r),
+          };
         }),
       };
     }));
@@ -174,7 +165,8 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
   };
 
   const handleRefreshPrices = () => {
-    setQtyOverrides({});
+    setMainQtys({});
+    setOptQtys({});
     setBlocks(createDefaultBlocks());
   };
 
@@ -382,13 +374,14 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
               block={block}
               area={roomArea}
               perimeter={roomPerim}
-              qtyOverrides={qtyOverrides}
+              mainQty={mainQtys[block.id]}
+              optQtys={optQtys}
               onToggleExpanded={() => handleToggleExpanded(block.id)}
               onSelectPreset={presetId => handleSelectPreset(block.id, presetId)}
               onUpdatePresets={presets => handleUpdatePresets(block.id, presets)}
-              onToggleNom={(presetId, nomId) => handleToggleNom(block.id, presetId, nomId)}
-              onChangeQty={(nomId, qty) => setQtyOverrides(prev => ({ ...prev, [nomId]: qty }))}
-              onChangePrice={(presetId, nomId, price) => handleChangeNomPrice(block.id, presetId, nomId, price)}
+              onToggleNom={(side, nomId) => handleToggleNom(block.id, side, nomId)}
+              onChangeMainQty={qty => setMainQtys(prev => ({ ...prev, [block.id]: qty }))}
+              onChangeOptQty={(nomId, qty) => setOptQtys(prev => ({ ...prev, [nomId]: qty }))}
             />
           ))}
 
