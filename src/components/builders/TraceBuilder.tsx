@@ -458,22 +458,35 @@ export default function TraceBuilder({
     setPoints(prev => [...prev, { x: snapped.x, y: snapped.y }]);
   }, [localToImg, snapPt, scale]);
 
-  // ─── Magnifier handlers ───────────────────────────────────────────
+  // ─── Magnifier handlers (delta-based — works at any zoom) ──────────
+  // Track finger movement as delta from start, convert to image pixels
 
-  const handleMagStart = useCallback((localX: number, localY: number, absX: number, absY: number) => {
+  const handleMagStart = useCallback((absX: number, absY: number) => {
     if (isPinchingRef.current) return;
     magStartRef.current = { x: absX, y: absY };
-    const raw = localToImg(localX, localY);
+    // Get initial image position from tap point
+    const raw = localToImg(absX - 0, absY - canvasTopRef.current);
+    magImgRef.current = { x: raw.x, y: raw.y };
     setMag({ visible: true, screenX: absX, screenY: absY, imgX: raw.x, imgY: raw.y });
   }, [localToImg]);
 
-  const handleMagMove = useCallback((localX: number, localY: number, absX: number, absY: number) => {
-    if (isPinchingRef.current) return;
-    const raw = localToImg(localX, localY);
-    const snapped = magSnapPt(raw.x, raw.y);
+  const handleMagMove = useCallback((absX: number, absY: number) => {
+    if (isPinchingRef.current || !magStartRef.current) return;
+    // Delta in screen pixels from start
+    const dx = absX - magStartRef.current.x;
+    const dy = absY - magStartRef.current.y;
+    // Convert delta to image pixels (divide by current zoom * fitScale)
+    const z = zs.value;
+    const deltaImgX = dx / (fitScale * z);
+    const deltaImgY = dy / (fitScale * z);
+    // Apply delta to initial image position
+    const startImg = localToImg(magStartRef.current.x, magStartRef.current.y - canvasTopRef.current);
+    const newImgX = startImg.x + deltaImgX;
+    const newImgY = startImg.y + deltaImgY;
+    const snapped = magSnapPt(newImgX, newImgY);
     magImgRef.current = { x: snapped.x, y: snapped.y };
     setMag({ visible: true, screenX: absX, screenY: absY, imgX: snapped.x, imgY: snapped.y });
-  }, [localToImg, magSnapPt]);
+  }, [localToImg, magSnapPt, fitScale, zs]);
 
   const handleMagEnd = useCallback(() => {
     const imgPos = magImgRef.current; // always fresh from ref
@@ -564,10 +577,10 @@ export default function TraceBuilder({
     .maxPointers(1)
     .activateAfterLongPress(300)
     .onStart((e) => {
-      runOnJS(handleMagStart)(e.x, e.y, e.absoluteX, e.absoluteY);
+      runOnJS(handleMagStart)(e.absoluteX, e.absoluteY);
     })
     .onUpdate((e) => {
-      runOnJS(handleMagMove)(e.x, e.y, e.absoluteX, e.absoluteY);
+      runOnJS(handleMagMove)(e.absoluteX, e.absoluteY);
     })
     .onEnd(() => {
       runOnJS(handleMagEnd)();
