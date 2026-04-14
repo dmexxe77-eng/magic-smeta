@@ -360,17 +360,22 @@ export default function TraceBuilder({
     setVTy(ty.value);
   }, []);
 
-  // ─── Screen absolute to image coordinates ──────────────────────────
-  // absoluteX/Y → subtract canvas top → undo translate → undo scale → undo fitScale
+  // ─── Convert to image coordinates ──────────────────────────────────
+  // For e.x/e.y (relative to GestureDetector = canvas container):
+  //   no canvasTopRef needed
+  // For e.absoluteX/Y (screen absolute):
+  //   subtract canvasTopRef from Y
 
-  const screenToImg = useCallback((absX: number, absY: number) => {
-    const cx = absX;
-    const cy = absY - canvasTopRef.current;
+  const localToImg = useCallback((cx: number, cy: number) => {
     const z = zs.value;
     const imgX = (cx - tx.value) / (fitScale * z);
     const imgY = (cy - ty.value) / (fitScale * z);
     return { x: imgX, y: imgY };
   }, [fitScale, zs, tx, ty]);
+
+  const screenToImg = useCallback((absX: number, absY: number) => {
+    return localToImg(absX, absY - canvasTopRef.current);
+  }, [localToImg]);
 
   // ─── Snap ─────────────────────────────────────────────────────────
 
@@ -438,8 +443,8 @@ export default function TraceBuilder({
 
   // ─── Handle tap (quick) ────────────────────────────────────────────
 
-  const handleTap = useCallback((absX: number, absY: number) => {
-    const raw = screenToImg(absX, absY);
+  const handleTap = useCallback((localX: number, localY: number) => {
+    const raw = localToImg(localX, localY);
     const snapped = snapPt(raw.x, raw.y);
 
     if (snapped.closing) {
@@ -451,24 +456,24 @@ export default function TraceBuilder({
       return;
     }
     setPoints(prev => [...prev, { x: snapped.x, y: snapped.y }]);
-  }, [screenToImg, snapPt, scale]);
+  }, [localToImg, snapPt, scale]);
 
   // ─── Magnifier handlers ───────────────────────────────────────────
 
-  const handleMagStart = useCallback((absX: number, absY: number) => {
+  const handleMagStart = useCallback((localX: number, localY: number, absX: number, absY: number) => {
     if (isPinchingRef.current) return;
     magStartRef.current = { x: absX, y: absY };
-    const raw = screenToImg(absX, absY);
+    const raw = localToImg(localX, localY);
     setMag({ visible: true, screenX: absX, screenY: absY, imgX: raw.x, imgY: raw.y });
-  }, [screenToImg]);
+  }, [localToImg]);
 
-  const handleMagMove = useCallback((absX: number, absY: number) => {
+  const handleMagMove = useCallback((localX: number, localY: number, absX: number, absY: number) => {
     if (isPinchingRef.current) return;
-    const raw = screenToImg(absX, absY);
+    const raw = localToImg(localX, localY);
     const snapped = magSnapPt(raw.x, raw.y);
     magImgRef.current = { x: snapped.x, y: snapped.y };
     setMag({ visible: true, screenX: absX, screenY: absY, imgX: snapped.x, imgY: snapped.y });
-  }, [screenToImg, magSnapPt]);
+  }, [localToImg, magSnapPt]);
 
   const handleMagEnd = useCallback(() => {
     const imgPos = magImgRef.current; // always fresh from ref
@@ -551,7 +556,7 @@ export default function TraceBuilder({
 
   const tapGesture = Gesture.Tap()
     .onEnd((e) => {
-      runOnJS(handleTap)(e.absoluteX, e.absoluteY);
+      runOnJS(handleTap)(e.x, e.y);
     });
 
   // Magnifier: long press + drag
@@ -559,10 +564,10 @@ export default function TraceBuilder({
     .maxPointers(1)
     .activateAfterLongPress(300)
     .onStart((e) => {
-      runOnJS(handleMagStart)(e.absoluteX, e.absoluteY);
+      runOnJS(handleMagStart)(e.x, e.y, e.absoluteX, e.absoluteY);
     })
     .onUpdate((e) => {
-      runOnJS(handleMagMove)(e.absoluteX, e.absoluteY);
+      runOnJS(handleMagMove)(e.x, e.y, e.absoluteX, e.absoluteY);
     })
     .onEnd(() => {
       runOnJS(handleMagEnd)();
