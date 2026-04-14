@@ -362,13 +362,17 @@ export default function TraceBuilder({
 
   // ─── Screen to image (uses shared values for freshness) ────────────
 
-  const screenToImg = useCallback((sx: number, sy: number) => {
-    // Read shared values directly — React state may be stale during gestures
+  const screenToImg = useCallback((absX: number, absY: number) => {
+    // absX/absY are screen-absolute from gesture
+    // canvasTopRef.current = distance from screen top to canvas top
+    const canvasX = absX;
+    const canvasY = absY - canvasTopRef.current;
+    // Invert the Animated.View transform: translate then scale
     const curZoom = zs.value;
     const curTx = tx.value;
     const curTy = ty.value;
-    const imgX = (sx - curTx) / (fitScale * curZoom);
-    const imgY = (sy - curTy) / (fitScale * curZoom);
+    const imgX = (canvasX - curTx) / (fitScale * curZoom);
+    const imgY = (canvasY - curTy) / (fitScale * curZoom);
     return { x: imgX, y: imgY };
   }, [fitScale, zs, tx, ty]);
 
@@ -439,8 +443,7 @@ export default function TraceBuilder({
   // ─── Handle tap (quick) ────────────────────────────────────────────
 
   const handleTap = useCallback((absX: number, absY: number) => {
-    const canvasY = absY - canvasTopRef.current;
-    const raw = screenToImg(absX, canvasY);
+    const raw = screenToImg(absX, absY);
     const snapped = snapPt(raw.x, raw.y);
 
     if (snapped.closing) {
@@ -457,17 +460,15 @@ export default function TraceBuilder({
   // ─── Magnifier handlers ───────────────────────────────────────────
 
   const handleMagStart = useCallback((absX: number, absY: number) => {
-    if (isPinchingRef.current) return; // don't show magnifier during zoom
+    if (isPinchingRef.current) return;
     magStartRef.current = { x: absX, y: absY };
-    const canvasY = absY - canvasTopRef.current;
-    const raw = screenToImg(absX, canvasY);
+    const raw = screenToImg(absX, absY);
     setMag({ visible: true, screenX: absX, screenY: absY, imgX: raw.x, imgY: raw.y });
   }, [screenToImg]);
 
   const handleMagMove = useCallback((absX: number, absY: number) => {
     if (isPinchingRef.current) return;
-    const canvasY = absY - canvasTopRef.current;
-    const raw = screenToImg(absX, canvasY);
+    const raw = screenToImg(absX, absY);
     const snapped = magSnapPt(raw.x, raw.y);
     magImgRef.current = { x: snapped.x, y: snapped.y };
     setMag({ visible: true, screenX: absX, screenY: absY, imgX: snapped.x, imgY: snapped.y });
@@ -685,15 +686,16 @@ export default function TraceBuilder({
           </View>
         </View>
 
-        {/* Canvas */}
+        {/* Canvas — clipped, image doesn't go behind header */}
         <View
-          style={{ flex: 1 }}
+          style={{ flex: 1, overflow: 'hidden' }}
           onLayout={(e) => {
-            // layout.y is relative to parent (the outer View with flex:1)
-            // Header height = insets.top + 4 (padding) + ~36 (content)
-            // But absoluteY in gestures is from screen top
-            // So canvasTop = header height
-            canvasTopRef.current = insets.top + 44;
+            // Use pageY from measure for accurate offset
+            (e.target as any).measure?.((x: number, y: number, w: number, h: number, px: number, py: number) => {
+              canvasTopRef.current = py;
+            });
+            // Fallback
+            if (!canvasTopRef.current) canvasTopRef.current = insets.top + 48;
           }}
         >
           <GestureDetector gesture={gesture}>
