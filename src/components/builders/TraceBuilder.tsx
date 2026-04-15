@@ -388,15 +388,20 @@ export default function TraceBuilder({ existingCount, onFinishAll, onBack, sessi
       if (holdTimerRef.current) { clearTimeout(holdTimerRef.current); holdTimerRef.current = null; }
       g.startDist = 0;
 
-      // Loupe release — place point
+      // Loupe release — place point at loupe position (already snapped)
       if (loupeRef.current && loupe) {
         loupeRef.current = false;
-        const snapped = snapPt(loupe.imgX, loupe.imgY, true);
-        if (snapped.closing) {
-          if (scale) setStep('name'); else setStep('calibrate');
-        } else {
-          placePoint(snapped.x, snapped.y);
+        // Check closing
+        if (points.length >= 3) {
+          const f = points[0];
+          const thr = SNAP_PX / zoomRef.current;
+          if (Math.hypot(loupe.imgX - f.x, loupe.imgY - f.y) < thr * 2) {
+            if (scale) setStep('name'); else setStep('calibrate');
+            setLoupe(null);
+            return;
+          }
         }
+        placePoint(loupe.imgX, loupe.imgY);
         setLoupe(null);
         return;
       }
