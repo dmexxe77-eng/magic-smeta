@@ -1,8 +1,14 @@
 /**
- * Corner Detection for architectural building plans
+ * Corner Detection for architectural plans
  *
- * Strategy: Harris on grayscale + post-filter near dark wall lines.
- * Only keeps corners where dark pixels exist in 2+ directions nearby.
+ * Works with any plan style:
+ * - Black lines on white/colored background
+ * - Gray hatched walls on white
+ * - Colored contour lines (pink, blue)
+ *
+ * Approach: Harris on EDGE MAP (not raw grayscale).
+ * Edge map captures boundaries regardless of color.
+ * Post-filter: corner must be at intersection of edges in 2+ directions.
  */
 
 import { Skia } from '@shopify/react-native-skia';
@@ -37,45 +43,56 @@ export async function detectCorners(
     if (!pixelData) return [];
     const pixels = new Uint8Array(pixelData);
 
-    // Grayscale (0-255)
-    const gray = new Uint8Array(sw * sh);
+    // Grayscale
+    const gray = new Float32Array(sw * sh);
     for (let i = 0; i < sw * sh; i++) {
-      gray[i] = Math.round(0.299 * pixels[i * 4] + 0.587 * pixels[i * 4 + 1] + 0.114 * pixels[i * 4 + 2]);
+      gray[i] = (0.299 * pixels[i * 4] + 0.587 * pixels[i * 4 + 1] + 0.114 * pixels[i * 4 + 2]) / 255;
     }
 
-    // Find dark threshold — wall lines are typically the darkest 15% of pixels
-    const hist = new Uint32Array(256);
-    for (let i = 0; i < sw * sh; i++) hist[gray[i]]++;
-    let cumulative = 0;
-    let darkThreshold = 80;
-    const targetDark = sw * sh * 0.15;
-    for (let v = 0; v < 256; v++) {
-      cumulative += hist[v];
-      if (cumulative >= targetDark) { darkThreshold = v; break; }
-    }
-
-    // Boolean dark map
-    const isDark = new Uint8Array(sw * sh);
-    for (let i = 0; i < sw * sh; i++) isDark[i] = gray[i] <= darkThreshold ? 1 : 0;
-
-    // Sobel on grayscale (float normalized)
-    const grayF = new Float32Array(sw * sh);
-    for (let i = 0; i < sw * sh; i++) grayF[i] = gray[i] / 255;
-
-    const Ix = new Float32Array(sw * sh);
-    const Iy = new Float32Array(sw * sh);
+    // ── Step 1: Sobel edge magnitude ────────────────────────────────
+    // This captures ALL edges — color transitions, line boundaries, etc.
+    const edgeMag = new Float32Array(sw * sh);
     for (let y = 1; y < sh - 1; y++) {
       for (let x = 1; x < sw - 1; x++) {
         const i = y * sw + x;
-        Ix[i] = -grayF[(y-1)*sw+(x-1)] + grayF[(y-1)*sw+(x+1)]
-               - 2*grayF[y*sw+(x-1)] + 2*grayF[y*sw+(x+1)]
-               - grayF[(y+1)*sw+(x-1)] + grayF[(y+1)*sw+(x+1)];
-        Iy[i] = -grayF[(y-1)*sw+(x-1)] - 2*grayF[(y-1)*sw+x] - grayF[(y-1)*sw+(x+1)]
-               + grayF[(y+1)*sw+(x-1)] + 2*grayF[(y+1)*sw+x] + grayF[(y+1)*sw+(x+1)];
+        const gx = -gray[(y-1)*sw+(x-1)] + gray[(y-1)*sw+(x+1)]
+                   - 2*gray[y*sw+(x-1)] + 2*gray[y*sw+(x+1)]
+                   - gray[(y+1)*sw+(x-1)] + gray[(y+1)*sw+(x+1)];
+        const gy = -gray[(y-1)*sw+(x-1)] - 2*gray[(y-1)*sw+x] - gray[(y-1)*sw+(x+1)]
+                   + gray[(y+1)*sw+(x-1)] + 2*gray[(y+1)*sw+x] + gray[(y+1)*sw+(x+1)];
+        edgeMag[i] = Math.sqrt(gx * gx + gy * gy);
       }
     }
 
-    // Harris response
+    // ── Step 2: Edge threshold — find strong edges ──────────────────
+    let maxEdge = 0;
+    for (let i = 0; i < sw * sh; i++) if (edgeMag[i] > maxEdge) maxEdge = i;
+    // Actually find max value
+    maxEdge = 0;
+    for (let i = 0; i < sw * sh; i++) if (edgeMag[i] > maxEdge) maxEdge = edgeMag[i];
+
+    const edgeThreshold = maxEdge * 0.15; // top 85% edges are "strong"
+    const isEdge = new Uint8Array(sw * sh);
+    for (let i = 0; i < sw * sh; i++) isEdge[i] = edgeMag[i] > edgeThreshold ? 1 : 0;
+
+    // ── Step 3: Harris on edge map ──────────────────────────────────
+    // Compute gradients on the EDGE map (not grayscale)
+    const Ix = new Float32Array(sw * sh);
+    const Iy = new Float32Array(sw * sh);
+    const edgeF = new Float32Array(sw * sh);
+    for (let i = 0; i < sw * sh; i++) edgeF[i] = edgeMag[i] / (maxEdge || 1);
+
+    for (let y = 1; y < sh - 1; y++) {
+      for (let x = 1; x < sw - 1; x++) {
+        const i = y * sw + x;
+        Ix[i] = -edgeF[(y-1)*sw+(x-1)] + edgeF[(y-1)*sw+(x+1)]
+               - 2*edgeF[y*sw+(x-1)] + 2*edgeF[y*sw+(x+1)]
+               - edgeF[(y+1)*sw+(x-1)] + edgeF[(y+1)*sw+(x+1)];
+        Iy[i] = -edgeF[(y-1)*sw+(x-1)] - 2*edgeF[(y-1)*sw+x] - edgeF[(y-1)*sw+(x+1)]
+               + edgeF[(y+1)*sw+(x-1)] + 2*edgeF[(y+1)*sw+x] + edgeF[(y+1)*sw+(x+1)];
+      }
+    }
+
     const blockSize = 5;
     const kFactor = 0.04;
     const R = new Float32Array(sw * sh);
@@ -103,10 +120,10 @@ export async function detectCorners(
 
     if (maxR === 0) return [];
 
-    // NMS + dark-line filter
-    const nmsR = 8;
+    // ── Step 4: NMS + edge intersection filter ──────────────────────
+    const nmsR = 10;
     const corners: DetectedCorner[] = [];
-    const absThr = 0.03 * maxR;
+    const absThr = 0.05 * maxR;
 
     for (let y = nmsR; y < sh - nmsR; y++) {
       for (let x = nmsR; x < sw - nmsR; x++) {
@@ -123,29 +140,43 @@ export async function detectCorners(
         }
         if (!isMax) continue;
 
-        // POST-FILTER: must have dark pixels nearby in at least 2 directions
-        // Check 4 rays from the corner point (up, down, left, right)
-        const rayLen = 6;
-        let darkDirs = 0;
-        // Up
-        let hasDark = false;
-        for (let d = 1; d <= rayLen && !hasDark; d++) if (y - d >= 0 && isDark[(y - d) * sw + x]) hasDark = true;
-        if (hasDark) darkDirs++;
-        // Down
-        hasDark = false;
-        for (let d = 1; d <= rayLen && !hasDark; d++) if (y + d < sh && isDark[(y + d) * sw + x]) hasDark = true;
-        if (hasDark) darkDirs++;
-        // Left
-        hasDark = false;
-        for (let d = 1; d <= rayLen && !hasDark; d++) if (x - d >= 0 && isDark[y * sw + (x - d)]) hasDark = true;
-        if (hasDark) darkDirs++;
-        // Right
-        hasDark = false;
-        for (let d = 1; d <= rayLen && !hasDark; d++) if (x + d < sw && isDark[y * sw + (x + d)]) hasDark = true;
-        if (hasDark) darkDirs++;
+        // Must be near strong edges in 2+ perpendicular directions
+        // Check 4 rays: find edges along each
+        const rayLen = 8;
+        let edgeDirs = 0;
 
-        // Must have dark lines in at least 2 directions (= corner of wall)
-        if (darkDirs < 2) continue;
+        // Horizontal edges (check up and down)
+        let hasH = false;
+        for (let d = -rayLen; d <= rayLen && !hasH; d++) {
+          if (d === 0) continue;
+          const cy = y + d;
+          if (cy >= 0 && cy < sh && isEdge[cy * sw + x]) {
+            // Check if this edge pixel has horizontal extent
+            let hExtent = 0;
+            for (let dx = -3; dx <= 3; dx++) {
+              if (x + dx >= 0 && x + dx < sw && isEdge[cy * sw + (x + dx)]) hExtent++;
+            }
+            if (hExtent >= 3) hasH = true;
+          }
+        }
+        if (hasH) edgeDirs++;
+
+        // Vertical edges (check left and right)
+        let hasV = false;
+        for (let d = -rayLen; d <= rayLen && !hasV; d++) {
+          if (d === 0) continue;
+          const cx = x + d;
+          if (cx >= 0 && cx < sw && isEdge[y * sw + cx]) {
+            let vExtent = 0;
+            for (let dy = -3; dy <= 3; dy++) {
+              if (y + dy >= 0 && y + dy < sh && isEdge[(y + dy) * sw + cx]) vExtent++;
+            }
+            if (vExtent >= 3) hasV = true;
+          }
+        }
+        if (hasV) edgeDirs++;
+
+        if (edgeDirs < 2) continue;
 
         corners.push({ x: x / sc, y: y / sc, strength: val });
       }
