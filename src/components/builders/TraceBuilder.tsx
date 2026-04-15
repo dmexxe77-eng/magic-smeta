@@ -578,18 +578,34 @@ export default function TraceBuilder({ existingCount, onFinishAll, onBack, sessi
         {/* Loupe circle — follows finger, flips when near edge */}
         {loupe && imageUri && (() => {
           const sz = 130;
-          const offsetX = 20; // distance from finger
-          const offsetY = sz + 20;
-          // Default: above-right of finger
-          let lLeft = loupe.fingerX + offsetX;
-          let lTop = loupe.fingerY - offsetY;
-          // Flip horizontal if near right edge
-          if (lLeft + sz > SCREEN.width - 10) lLeft = loupe.fingerX - sz - offsetX;
-          // Flip vertical if near top
-          if (lTop < insets.top + 50) lTop = loupe.fingerY + 30;
-          // Clamp
-          lLeft = Math.max(5, Math.min(lLeft, SCREEN.width - sz - 5));
-          lTop = Math.max(insets.top + 50, Math.min(lTop, SCREEN.height - sz - 50));
+          const gap = 40; // distance from finger to loupe edge
+          const fx = loupe.fingerX;
+          const fy = loupe.fingerY;
+          const sw = SCREEN.width;
+          const sh = SCREEN.height;
+
+          // Try 4 positions: top-right, top-left, bottom-right, bottom-left
+          // Pick the one with most space
+          const positions = [
+            { x: fx + gap, y: fy - sz - gap },       // top-right
+            { x: fx - sz - gap, y: fy - sz - gap },   // top-left
+            { x: fx + gap, y: fy + gap },              // bottom-right
+            { x: fx - sz - gap, y: fy + gap },         // bottom-left
+          ];
+
+          // Score each position by how much it fits on screen
+          let best = positions[0];
+          let bestScore = -1;
+          for (const pos of positions) {
+            const onScreenX = Math.max(0, Math.min(pos.x, sw - sz) === pos.x ? 1 : 0);
+            const onScreenY = pos.y > insets.top + 40 && pos.y + sz < sh - 60 ? 1 : 0;
+            const distFromFinger = Math.hypot(pos.x + sz/2 - fx, pos.y + sz/2 - fy);
+            const score = onScreenX + onScreenY + distFromFinger / 200;
+            if (score > bestScore) { bestScore = score; best = pos; }
+          }
+
+          const lLeft = Math.max(5, Math.min(best.x, sw - sz - 5));
+          const lTop = Math.max(insets.top + 45, Math.min(best.y, sh - sz - 60));
           const magZoom = Math.max(zoom * 2.5, 2);
           return (
             <View pointerEvents="none" style={{
