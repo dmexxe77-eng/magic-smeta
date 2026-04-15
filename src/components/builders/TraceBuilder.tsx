@@ -193,6 +193,9 @@ export default function TraceBuilder({ existingCount, onFinishAll, onBack, sessi
   const [corners, setCorners] = useState<DetectedCorner[]>([]);
   const [cornerStatus, setCornerStatus] = useState<'idle' | 'detecting' | 'done'>('idle');
 
+  // Header height — touch Y offset
+  const headerH = useRef(0);
+
   // Gesture tracking
   const gestRef = useRef({ startX: 0, startY: 0, moved: false, isPinch: false, startDist: 0, startZoom: 1, lastX: 0, lastY: 0 });
 
@@ -225,14 +228,17 @@ export default function TraceBuilder({ existingCount, onFinishAll, onBack, sessi
 
   // ─── Coordinate conversion (web-style) ────────────────────────────
 
+  // img2screen: for SVG rendering (canvas-local coordinates)
   const img2screen = useCallback((ix: number, iy: number) => ({
     x: ix * zoomRef.current + panRef.current.x,
     y: iy * zoomRef.current + panRef.current.y,
   }), []);
 
+  // screen2img: from absolute touch coordinates to image pixels
+  // Subtracts headerH because touch Y is screen-absolute but pan.y is canvas-relative
   const screen2img = useCallback((sx: number, sy: number) => ({
     x: (sx - panRef.current.x) / zoomRef.current,
-    y: (sy - panRef.current.y) / zoomRef.current,
+    y: (sy - headerH.current - panRef.current.y) / zoomRef.current,
   }), []);
 
   // ─── Snap ─────────────────────────────────────────────────────────
@@ -458,7 +464,8 @@ export default function TraceBuilder({ existingCount, onFinishAll, onBack, sessi
   return (
     <View className="flex-1 bg-black">
       {/* Header */}
-      <View className="bg-white/95 border-b border-border px-4 pb-2 z-10" style={{ paddingTop: insets.top + 4 }}>
+      <View className="bg-white/95 border-b border-border px-4 pb-2 z-10" style={{ paddingTop: insets.top + 4 }}
+        onLayout={(e) => { headerH.current = e.nativeEvent.layout.height; }}>
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center gap-2">
             <Pressable onPress={onBack} className="w-8 h-8 rounded-lg bg-bg items-center justify-center">
@@ -568,14 +575,16 @@ export default function TraceBuilder({ existingCount, onFinishAll, onBack, sessi
           })()}
         </Svg>
 
-        {/* Loupe circle — opposite corner from finger */}
+        {/* Loupe circle — near finger but offset above */}
         {loupe && imageUri && (() => {
           const sz = 130;
-          const screenH = SCREEN.height;
-          const showBottom = loupe.fingerY < screenH * 0.4;
-          const showRight = loupe.fingerX < SCREEN.width * 0.5;
-          const lTop = showBottom ? screenH - sz - insets.bottom - 80 : insets.top + 60;
-          const lLeft = showRight ? SCREEN.width - sz - 15 : 15;
+          // Position above finger, clamped to screen
+          let lTop = loupe.fingerY - sz - 30;
+          let lLeft = loupe.fingerX - sz / 2;
+          // If too high, show below finger
+          if (lTop < insets.top + 50) lTop = loupe.fingerY + 40;
+          // Clamp horizontal
+          lLeft = Math.max(10, Math.min(lLeft, SCREEN.width - sz - 10));
           const magZoom = Math.max(zoom * 2.5, 2);
           return (
             <View pointerEvents="none" style={{
