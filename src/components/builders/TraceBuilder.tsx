@@ -21,7 +21,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { calcPoly, fmt } from '../../utils/geometry';
 import { generateId } from '../../utils/storage';
-import { detectCorners, type DetectedCorner } from '../../utils/cornerDetector';
+import { loadImagePixels, snapToCorner as pixelSnap } from '../../utils/cornerDetector';
 import type { Room, Vertex } from '../../types';
 
 const ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -190,9 +190,8 @@ export default function TraceBuilder({ existingCount, onFinishAll, onBack, sessi
   const loupeRef = useRef(false);
   const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Corner detection
-  const [corners, setCorners] = useState<DetectedCorner[]>([]);
-  const [cornerStatus, setCornerStatus] = useState<'idle' | 'detecting' | 'done'>('idle');
+  // Pixel data for real-time corner snap
+  const [pixelsLoaded, setPixelsLoaded] = useState(false);
 
   // Header height — touch Y offset
   const headerH = useRef(0);
@@ -212,14 +211,13 @@ export default function TraceBuilder({ existingCount, onFinishAll, onBack, sessi
     }
   }, [imageUri, imgNat]);
 
-  // ─── Corner detection ─────────────────────────────────────────────
+  // ─── Load pixel data for real-time corner snap ──────────────────
 
   useEffect(() => {
-    if (imageUri && cornerStatus === 'idle') {
-      setCornerStatus('detecting');
-      detectCorners(imageUri, 100).then(c => { setCorners(c); setCornerStatus('done'); }).catch(() => setCornerStatus('done'));
+    if (imageUri && !pixelsLoaded) {
+      loadImagePixels(imageUri).then(ok => setPixelsLoaded(ok));
     }
-  }, [imageUri, cornerStatus]);
+  }, [imageUri, pixelsLoaded]);
 
   // ─── Session sync ─────────────────────────────────────────────────
 
@@ -249,16 +247,17 @@ export default function TraceBuilder({ existingCount, onFinishAll, onBack, sessi
 
     let x = ix, y = iy;
 
-    // Corner snap (only in loupe mode)
-    if (useCorners) {
-      let best = thr * 0.8;
-      for (const c of corners) {
-        const d = Math.hypot(ix - c.x, iy - c.y);
-        if (d < best) { best = d; x = c.x; y = c.y; }
+    // Real-time corner snap (Sobel, like web version)
+    if (useCorners && pixelsLoaded) {
+      const mode = useCorners ? 'loupe' : 'tap';
+      const result = pixelSnap(ix, iy, imgNat.w, zoomRef.current, mode);
+      if (result.snapped) {
+        x = result.x;
+        y = result.y;
       }
     }
 
-    // H/V align to current polygon
+    // H/V align to current polygon (if no corner snap)
     if (x === ix && y === iy && points.length > 0) {
       const last = points[points.length - 1];
       if (Math.abs(ix - last.x) < thr) x = last.x;
@@ -266,7 +265,7 @@ export default function TraceBuilder({ existingCount, onFinishAll, onBack, sessi
     }
 
     return { x, y, closing: false };
-  }, [points, corners]);
+  }, [points, pixelsLoaded, imgNat.w]);
 
   // ─── Place point ──────────────────────────────────────────────────
 
@@ -497,7 +496,7 @@ export default function TraceBuilder({ existingCount, onFinishAll, onBack, sessi
             )}
           </View>
           <Text className="text-muted text-xs">
-            {cornerStatus === 'detecting' ? '🔍' : cornerStatus === 'done' ? `🧲${corners.length}` : ''} · {tracedRooms.length} пом.
+            {pixelsLoaded ? '🧲' : '🔍'} · {tracedRooms.length} пом.
           </Text>
         </View>
       </View>
@@ -592,10 +591,9 @@ export default function TraceBuilder({ existingCount, onFinishAll, onBack, sessi
           const sw = SCREEN.width;
           const sh = SCREEN.height;
 
-          const d = 70;
-          // Almost above finger — small horizontal offset, large vertical
-          const offX = 20;  // slight horizontal shift
-          const offY = d;   // mostly vertical
+          const d = 140; // 2x further from finger
+          const offX = 30;
+          const offY = d;
           const candidates = [
             { x: fx + offX - sz/2, y: fy - sz - offY, pri: 4 },     // above-right (best)
             { x: fx - offX - sz/2, y: fy - sz - offY, pri: 3 },     // above-left
