@@ -342,8 +342,14 @@ export default function TraceBuilder({ existingCount, onFinishAll, onBack, sessi
 
         panRef.current = { x: newPanX + dx, y: newPanY + dy };
         zoomRef.current = nz;
-        setPan(panRef.current);
-        setZoom(nz);
+        // Throttle via rAF — don't setState every touch move
+        if (!rafRef.current) {
+          rafRef.current = requestAnimationFrame(() => {
+            setPan({ ...panRef.current });
+            setZoom(zoomRef.current);
+            rafRef.current = null;
+          });
+        }
         return;
       }
 
@@ -504,39 +510,41 @@ export default function TraceBuilder({ existingCount, onFinishAll, onBack, sessi
           position: 'absolute',
           left: pan.x,
           top: pan.y,
-          width: imgW * zoom,
-          height: imgH * zoom,
+          width: imgW,
+          height: imgH,
+          transform: [{ scale: zoom }],
+          transformOrigin: 'top left',
         }}>
           <Image
             source={{ uri: imageUri! }}
-            style={{ width: imgW * zoom, height: imgH * zoom }}
+            style={{ width: imgW, height: imgH }}
             resizeMode="stretch"
           />
-          {/* SVG in image-pixel coords, scaled by container */}
-          <Svg width={imgW * zoom} height={imgH * zoom} viewBox={`0 0 ${imgW} ${imgH}`}
+          {/* SVG in image-pixel coords, scaled by transform */}
+          <Svg width={imgW} height={imgH} viewBox={`0 0 ${imgW} ${imgH}`}
             style={StyleSheet.absoluteFill}>
             {/* Traced rooms */}
             {tracedRooms.map((tr, ri) => {
               const color = ROOM_COLORS[ri % ROOM_COLORS.length];
               return (
                 <G key={tr.id}>
-                  <SvgPolygon points={tr.points.map(p => `${p.x},${p.y}`).join(' ')} fill={`${color}18`} stroke={color} strokeWidth={1.5 / zoom} />
+                  <SvgPolygon points={tr.points.map(p => `${p.x},${p.y}`).join(' ')} fill={`${color}18`} stroke={color} strokeWidth={1.5} />
                   {tr.points.map((p, i) => (
                     <G key={`tp-${ri}-${i}`}>
-                      <SvgCircle cx={p.x} cy={p.y} r={4 / zoom} fill={color} stroke="white" strokeWidth={1 / zoom} />
-                      <SvgText x={p.x} y={p.y - 7 / zoom} textAnchor="middle" fill={color} fontSize={8 / zoom} fontWeight="700">{ALPHA[i]}</SvgText>
+                      <SvgCircle cx={p.x} cy={p.y} r={4} fill={color} stroke="white" strokeWidth={1} />
+                      <SvgText x={p.x} y={p.y - 7} textAnchor="middle" fill={color} fontSize={8} fontWeight="700">{ALPHA[i]}</SvgText>
                     </G>
                   ))}
                   {tr.points.map((p, i) => {
                     const cm = getSideCm(tr.points, i);
                     if (!cm) return null;
                     const p2 = tr.points[(i + 1) % tr.points.length];
-                    return <SvgText key={`tl-${ri}-${i}`} x={(p.x+p2.x)/2} y={(p.y+p2.y)/2 - 5 / zoom}
-                      textAnchor="middle" fill={color} fontSize={8 / zoom} fontWeight="600">{cm}</SvgText>;
+                    return <SvgText key={`tl-${ri}-${i}`} x={(p.x+p2.x)/2} y={(p.y+p2.y)/2 - 5}
+                      textAnchor="middle" fill={color} fontSize={8} fontWeight="600">{cm}</SvgText>;
                   })}
                   <SvgText x={tr.points.reduce((s,p)=>s+p.x,0)/tr.points.length}
                     y={tr.points.reduce((s,p)=>s+p.y,0)/tr.points.length}
-                    textAnchor="middle" fill={color} fontSize={11 / zoom} fontWeight="800">{tr.name}</SvgText>
+                    textAnchor="middle" fill={color} fontSize={11} fontWeight="800">{tr.name}</SvgText>
                 </G>
               );
             })}
@@ -549,7 +557,7 @@ export default function TraceBuilder({ existingCount, onFinishAll, onBack, sessi
             {/* Lines */}
             {points.map((p, i) => {
               if (i === 0) return null;
-              return <Line key={`l-${i}`} x1={points[i-1].x} y1={points[i-1].y} x2={p.x} y2={p.y} stroke="#4F46E5" strokeWidth={2 / zoom} />;
+              return <Line key={`l-${i}`} x1={points[i-1].x} y1={points[i-1].y} x2={p.x} y2={p.y} stroke="#4F46E5" strokeWidth={2} />;
             })}
 
             {/* Side lengths */}
@@ -558,20 +566,20 @@ export default function TraceBuilder({ existingCount, onFinishAll, onBack, sessi
               const cm = getSideCm(points, i);
               if (!cm) return null;
               const p2 = points[i + 1];
-              return <SvgText key={`cl-${i}`} x={(p.x+p2.x)/2} y={(p.y+p2.y)/2 - 5 / zoom}
-                textAnchor="middle" fill="#4F46E5" fontSize={8 / zoom} fontWeight="600">{cm}</SvgText>;
+              return <SvgText key={`cl-${i}`} x={(p.x+p2.x)/2} y={(p.y+p2.y)/2 - 5}
+                textAnchor="middle" fill="#4F46E5" fontSize={8} fontWeight="600">{cm}</SvgText>;
             })}
 
             {/* Points with letters */}
             {points.map((p, i) => (
               <G key={`p-${i}`}>
-                <SvgCircle cx={p.x} cy={p.y} r={6 / zoom} fill={i === 0 ? '#16a34a' : '#4F46E5'} stroke="white" strokeWidth={1.5 / zoom} />
-                <SvgText x={p.x} y={p.y - 10 / zoom} textAnchor="middle" fill="#4F46E5" fontSize={10 / zoom} fontWeight="800">{ALPHA[i]}</SvgText>
+                <SvgCircle cx={p.x} cy={p.y} r={6} fill={i === 0 ? '#16a34a' : '#4F46E5'} stroke="white" strokeWidth={1.5} />
+                <SvgText x={p.x} y={p.y - 10} textAnchor="middle" fill="#4F46E5" fontSize={10} fontWeight="800">{ALPHA[i]}</SvgText>
               </G>
             ))}
 
             {/* Loupe crosshair */}
-            {loupe && <SvgCircle cx={loupe.imgX} cy={loupe.imgY} r={4 / zoom} fill="none" stroke="#f59e0b" strokeWidth={2 / zoom} />}
+            {loupe && <SvgCircle cx={loupe.imgX} cy={loupe.imgY} r={4} fill="none" stroke="#f59e0b" strokeWidth={2} />}
           </Svg>
         </View>
 
