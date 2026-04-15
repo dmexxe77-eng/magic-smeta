@@ -229,12 +229,6 @@ export default function TraceBuilder({ existingCount, onFinishAll, onBack, sessi
 
   // ─── Coordinate conversion (web-style) ────────────────────────────
 
-  // img2screen: for SVG rendering (canvas-local coordinates)
-  const img2screen = useCallback((ix: number, iy: number) => ({
-    x: ix * zoomRef.current + panRef.current.x,
-    y: iy * zoomRef.current + panRef.current.y,
-  }), []);
-
   // screen2img: from absolute touch coordinates to image pixels
   // Subtracts headerH because touch Y is screen-absolute but pan.y is canvas-relative
   const screen2img = useCallback((sx: number, sy: number) => ({
@@ -504,92 +498,82 @@ export default function TraceBuilder({ existingCount, onFinishAll, onBack, sessi
 
       {/* Canvas — PanResponder handles all touches */}
       <View style={{ flex: 1, overflow: 'hidden' }} {...panResponder.panHandlers}>
-        {/* Image — positioned via left/top + scale, like web version */}
-        <Image
-          source={{ uri: imageUri! }}
-          style={{
-            position: 'absolute',
-            left: pan.x,
-            top: pan.y,
-            width: imgW * zoom,
-            height: imgH * zoom,
-          }}
-          resizeMode="stretch"
-        />
+        {/* Image + SVG in same transformed container — SVG uses image coords */}
+        {/* Only the container transform changes on pan/zoom, SVG content stays static */}
+        <View style={{
+          position: 'absolute',
+          left: pan.x,
+          top: pan.y,
+          width: imgW * zoom,
+          height: imgH * zoom,
+        }}>
+          <Image
+            source={{ uri: imageUri! }}
+            style={{ width: imgW * zoom, height: imgH * zoom }}
+            resizeMode="stretch"
+          />
+          {/* SVG in image-pixel coords, scaled by container */}
+          <Svg width={imgW * zoom} height={imgH * zoom} viewBox={`0 0 ${imgW} ${imgH}`}
+            style={StyleSheet.absoluteFill}>
+            {/* Traced rooms */}
+            {tracedRooms.map((tr, ri) => {
+              const color = ROOM_COLORS[ri % ROOM_COLORS.length];
+              return (
+                <G key={tr.id}>
+                  <SvgPolygon points={tr.points.map(p => `${p.x},${p.y}`).join(' ')} fill={`${color}18`} stroke={color} strokeWidth={1.5 / zoom} />
+                  {tr.points.map((p, i) => (
+                    <G key={`tp-${ri}-${i}`}>
+                      <SvgCircle cx={p.x} cy={p.y} r={4 / zoom} fill={color} stroke="white" strokeWidth={1 / zoom} />
+                      <SvgText x={p.x} y={p.y - 7 / zoom} textAnchor="middle" fill={color} fontSize={8 / zoom} fontWeight="700">{ALPHA[i]}</SvgText>
+                    </G>
+                  ))}
+                  {tr.points.map((p, i) => {
+                    const cm = getSideCm(tr.points, i);
+                    if (!cm) return null;
+                    const p2 = tr.points[(i + 1) % tr.points.length];
+                    return <SvgText key={`tl-${ri}-${i}`} x={(p.x+p2.x)/2} y={(p.y+p2.y)/2 - 5 / zoom}
+                      textAnchor="middle" fill={color} fontSize={8 / zoom} fontWeight="600">{cm}</SvgText>;
+                  })}
+                  <SvgText x={tr.points.reduce((s,p)=>s+p.x,0)/tr.points.length}
+                    y={tr.points.reduce((s,p)=>s+p.y,0)/tr.points.length}
+                    textAnchor="middle" fill={color} fontSize={11 / zoom} fontWeight="800">{tr.name}</SvgText>
+                </G>
+              );
+            })}
 
-        {/* SVG overlay — same coordinate system */}
-        <Svg style={StyleSheet.absoluteFill} width="100%" height="100%">
-          {/* Traced rooms */}
-          {tracedRooms.map((tr, ri) => {
-            const color = ROOM_COLORS[ri % ROOM_COLORS.length];
-            const svgPts = tr.points.map(p => img2screen(p.x, p.y));
-            return (
-              <G key={tr.id}>
-                <SvgPolygon points={svgPts.map(p => `${p.x},${p.y}`).join(' ')} fill={`${color}18`} stroke={color} strokeWidth={1.5} />
-                {svgPts.map((s, i) => (
-                  <G key={`tp-${ri}-${i}`}>
-                    <SvgCircle cx={s.x} cy={s.y} r={4} fill={color} stroke="white" strokeWidth={1} />
-                    <SvgText x={s.x} y={s.y - 7} textAnchor="middle" fill={color} fontSize={8} fontWeight="700">{ALPHA[i]}</SvgText>
-                  </G>
-                ))}
-                {tr.points.map((p, i) => {
-                  const cm = getSideCm(tr.points, i);
-                  if (!cm) return null;
-                  const s1 = img2screen(p.x, p.y);
-                  const p2 = tr.points[(i + 1) % tr.points.length];
-                  const s2 = img2screen(p2.x, p2.y);
-                  return <SvgText key={`tl-${ri}-${i}`} x={(s1.x+s2.x)/2} y={(s1.y+s2.y)/2 - 5}
-                    textAnchor="middle" fill={color} fontSize={8} fontWeight="600">{cm}</SvgText>;
-                })}
-                <SvgText x={svgPts.reduce((s,p)=>s+p.x,0)/svgPts.length} y={svgPts.reduce((s,p)=>s+p.y,0)/svgPts.length}
-                  textAnchor="middle" fill={color} fontSize={11} fontWeight="800">{tr.name}</SvgText>
-              </G>
-            );
-          })}
+            {/* Current polygon fill */}
+            {points.length >= 3 && (
+              <SvgPolygon points={points.map(p => `${p.x},${p.y}`).join(' ')} fill="rgba(79,70,229,0.08)" stroke="none" />
+            )}
 
-          {/* Current polygon */}
-          {points.length >= 3 && (
-            <SvgPolygon points={points.map(p => { const s = img2screen(p.x, p.y); return `${s.x},${s.y}`; }).join(' ')}
-              fill="rgba(79,70,229,0.08)" stroke="none" />
-          )}
+            {/* Lines */}
+            {points.map((p, i) => {
+              if (i === 0) return null;
+              return <Line key={`l-${i}`} x1={points[i-1].x} y1={points[i-1].y} x2={p.x} y2={p.y} stroke="#4F46E5" strokeWidth={2 / zoom} />;
+            })}
 
-          {/* Lines */}
-          {points.map((p, i) => {
-            if (i === 0) return null;
-            const s1 = img2screen(points[i-1].x, points[i-1].y);
-            const s2 = img2screen(p.x, p.y);
-            return <Line key={`l-${i}`} x1={s1.x} y1={s1.y} x2={s2.x} y2={s2.y} stroke="#4F46E5" strokeWidth={2} />;
-          })}
+            {/* Side lengths */}
+            {scale && points.map((p, i) => {
+              if (i >= points.length - 1) return null;
+              const cm = getSideCm(points, i);
+              if (!cm) return null;
+              const p2 = points[i + 1];
+              return <SvgText key={`cl-${i}`} x={(p.x+p2.x)/2} y={(p.y+p2.y)/2 - 5 / zoom}
+                textAnchor="middle" fill="#4F46E5" fontSize={8 / zoom} fontWeight="600">{cm}</SvgText>;
+            })}
 
-          {/* Side lengths */}
-          {scale && points.map((p, i) => {
-            if (i >= points.length - 1) return null;
-            const cm = getSideCm(points, i);
-            if (!cm) return null;
-            const s1 = img2screen(p.x, p.y);
-            const p2 = points[i + 1];
-            const s2 = img2screen(p2.x, p2.y);
-            return <SvgText key={`cl-${i}`} x={(s1.x+s2.x)/2} y={(s1.y+s2.y)/2 - 5}
-              textAnchor="middle" fill="#4F46E5" fontSize={8} fontWeight="600">{cm}</SvgText>;
-          })}
-
-          {/* Points */}
-          {points.map((p, i) => {
-            const s = img2screen(p.x, p.y);
-            return (
+            {/* Points with letters */}
+            {points.map((p, i) => (
               <G key={`p-${i}`}>
-                <SvgCircle cx={s.x} cy={s.y} r={6} fill={i === 0 ? '#16a34a' : '#4F46E5'} stroke="white" strokeWidth={1.5} />
-                <SvgText x={s.x} y={s.y - 10} textAnchor="middle" fill="#4F46E5" fontSize={10} fontWeight="800">{ALPHA[i]}</SvgText>
+                <SvgCircle cx={p.x} cy={p.y} r={6 / zoom} fill={i === 0 ? '#16a34a' : '#4F46E5'} stroke="white" strokeWidth={1.5 / zoom} />
+                <SvgText x={p.x} y={p.y - 10 / zoom} textAnchor="middle" fill="#4F46E5" fontSize={10 / zoom} fontWeight="800">{ALPHA[i]}</SvgText>
               </G>
-            );
-          })}
+            ))}
 
-          {/* Loupe crosshair on image */}
-          {loupe && (() => {
-            const s = img2screen(loupe.imgX, loupe.imgY);
-            return <SvgCircle cx={s.x} cy={s.y} r={4} fill="none" stroke="#f59e0b" strokeWidth={2} />;
-          })()}
-        </Svg>
+            {/* Loupe crosshair */}
+            {loupe && <SvgCircle cx={loupe.imgX} cy={loupe.imgY} r={4 / zoom} fill="none" stroke="#f59e0b" strokeWidth={2 / zoom} />}
+          </Svg>
+        </View>
 
         {/* Loupe circle — follows finger, flips when near edge */}
         {loupe && imageUri && (() => {
