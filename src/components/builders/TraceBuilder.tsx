@@ -592,27 +592,21 @@ export default function TraceBuilder({ existingCount, onFinishAll, onBack, sessi
           const sw = SCREEN.width;
           const sh = SCREEN.height;
 
-          // 8 positions around finger, pick best fitting
-          const positions = [
-            { x: fx + gap, y: fy - sz/2 },             // right
-            { x: fx - sz - gap, y: fy - sz/2 },        // left
-            { x: fx - sz/2, y: fy - sz - gap },         // top
-            { x: fx - sz/2, y: fy + gap },               // bottom
-            { x: fx + gap, y: fy - sz - gap },           // top-right
-            { x: fx - sz - gap, y: fy - sz - gap },     // top-left
-            { x: fx + gap, y: fy + gap },                 // bottom-right
-            { x: fx - sz - gap, y: fy + gap },           // bottom-left
+          const d = 55; // distance from finger (further away)
+          // Priority order: top-right, top-left, bottom-right, bottom-left
+          const candidates = [
+            { x: fx + d, y: fy - sz - d, pri: 4 },      // top-right (best)
+            { x: fx - sz - d, y: fy - sz - d, pri: 3 },  // top-left
+            { x: fx + d, y: fy + d, pri: 2 },              // bottom-right
+            { x: fx - sz - d, y: fy + d, pri: 1 },         // bottom-left
           ];
 
-          let best = positions[0];
+          let best = candidates[0];
           let bestScore = -Infinity;
-          for (const pos of positions) {
-            // Fully on screen = good
-            const fitX = pos.x >= 5 && pos.x + sz <= sw - 5 ? 2 : 0;
-            const fitY = pos.y >= insets.top + 45 && pos.y + sz <= sh - 60 ? 2 : 0;
-            // Prefer further from finger
-            const dist = Math.hypot(pos.x + sz/2 - fx, pos.y + sz/2 - fy);
-            const score = fitX + fitY + dist / 100;
+          for (const pos of candidates) {
+            const fitsX = pos.x >= 5 && pos.x + sz <= sw - 5;
+            const fitsY = pos.y >= insets.top + 45 && pos.y + sz <= sh - 60;
+            const score = (fitsX && fitsY ? 10 : 0) + pos.pri;
             if (score > bestScore) { bestScore = score; best = pos; }
           }
 

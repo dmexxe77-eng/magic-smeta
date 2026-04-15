@@ -1,11 +1,8 @@
 /**
- * Corner Detection for building plans
+ * Corner Detection for architectural building plans
  *
- * Tuned for architectural drawings:
- * - Binarization to isolate wall lines (dark lines on light background)
- * - Large block size to ignore text/numbers
- * - Strong NMS to avoid clusters
- * - Only detects where dark lines meet at ~90°
+ * Strategy: Harris on grayscale + post-filter near dark wall lines.
+ * Only keeps corners where dark pixels exist in 2+ directions nearby.
  */
 
 import { Skia } from '@shopify/react-native-skia';
@@ -27,56 +24,59 @@ export async function detectCorners(
 
     const w = skImage.width();
     const h = skImage.height();
-
-    // Downsample to max 500px for speed
     const sc = Math.min(1, 500 / Math.max(w, h));
     const sw = Math.round(w * sc);
     const sh = Math.round(h * sc);
 
     const surface = Skia.Surface.Make(sw, sh);
     if (!surface) return [];
-
     const canvas = surface.getCanvas();
     canvas.drawImageRect(skImage, Skia.XYWHRect(0, 0, w, h), Skia.XYWHRect(0, 0, sw, sh), Skia.Paint());
     const snapshot = surface.makeImageSnapshot();
     const pixelData = snapshot.readPixels(0, 0, { width: sw, height: sh, colorType: 4, alphaType: 1 });
     if (!pixelData) return [];
-
     const pixels = new Uint8Array(pixelData);
 
-    // ── Step 1: Grayscale + binarize (dark lines = 1, light areas = 0) ──
-    const bin = new Float32Array(sw * sh);
-
-    // Find threshold using Otsu-like method (simplified)
-    let totalBright = 0;
+    // Grayscale (0-255)
+    const gray = new Uint8Array(sw * sh);
     for (let i = 0; i < sw * sh; i++) {
-      totalBright += 0.299 * pixels[i * 4] + 0.587 * pixels[i * 4 + 1] + 0.114 * pixels[i * 4 + 2];
-    }
-    const avgBright = totalBright / (sw * sh);
-    const threshold = avgBright * 0.55; // darker than average = wall line
-
-    for (let i = 0; i < sw * sh; i++) {
-      const brightness = 0.299 * pixels[i * 4] + 0.587 * pixels[i * 4 + 1] + 0.114 * pixels[i * 4 + 2];
-      bin[i] = brightness < threshold ? 1.0 : 0.0;
+      gray[i] = Math.round(0.299 * pixels[i * 4] + 0.587 * pixels[i * 4 + 1] + 0.114 * pixels[i * 4 + 2]);
     }
 
-    // ── Step 2: Sobel on binarized image ────────────────────────────
+    // Find dark threshold — wall lines are typically the darkest 15% of pixels
+    const hist = new Uint32Array(256);
+    for (let i = 0; i < sw * sh; i++) hist[gray[i]]++;
+    let cumulative = 0;
+    let darkThreshold = 80;
+    const targetDark = sw * sh * 0.15;
+    for (let v = 0; v < 256; v++) {
+      cumulative += hist[v];
+      if (cumulative >= targetDark) { darkThreshold = v; break; }
+    }
+
+    // Boolean dark map
+    const isDark = new Uint8Array(sw * sh);
+    for (let i = 0; i < sw * sh; i++) isDark[i] = gray[i] <= darkThreshold ? 1 : 0;
+
+    // Sobel on grayscale (float normalized)
+    const grayF = new Float32Array(sw * sh);
+    for (let i = 0; i < sw * sh; i++) grayF[i] = gray[i] / 255;
+
     const Ix = new Float32Array(sw * sh);
     const Iy = new Float32Array(sw * sh);
-
     for (let y = 1; y < sh - 1; y++) {
       for (let x = 1; x < sw - 1; x++) {
         const i = y * sw + x;
-        Ix[i] = -bin[(y-1)*sw+(x-1)] + bin[(y-1)*sw+(x+1)]
-               - 2*bin[y*sw+(x-1)] + 2*bin[y*sw+(x+1)]
-               - bin[(y+1)*sw+(x-1)] + bin[(y+1)*sw+(x+1)];
-        Iy[i] = -bin[(y-1)*sw+(x-1)] - 2*bin[(y-1)*sw+x] - bin[(y-1)*sw+(x+1)]
-               + bin[(y+1)*sw+(x-1)] + 2*bin[(y+1)*sw+x] + bin[(y+1)*sw+(x+1)];
+        Ix[i] = -grayF[(y-1)*sw+(x-1)] + grayF[(y-1)*sw+(x+1)]
+               - 2*grayF[y*sw+(x-1)] + 2*grayF[y*sw+(x+1)]
+               - grayF[(y+1)*sw+(x-1)] + grayF[(y+1)*sw+(x+1)];
+        Iy[i] = -grayF[(y-1)*sw+(x-1)] - 2*grayF[(y-1)*sw+x] - grayF[(y-1)*sw+(x+1)]
+               + grayF[(y+1)*sw+(x-1)] + 2*grayF[(y+1)*sw+x] + grayF[(y+1)*sw+(x+1)];
       }
     }
 
-    // ── Step 3: Harris response with large block ────────────────────
-    const blockSize = 7;  // large block — ignores small features
+    // Harris response
+    const blockSize = 5;
     const kFactor = 0.04;
     const R = new Float32Array(sw * sh);
     const half = Math.floor(blockSize / 2);
@@ -103,16 +103,17 @@ export async function detectCorners(
 
     if (maxR === 0) return [];
 
-    // ── Step 4: Strong NMS with large radius ────────────────────────
-    const nmsR = 15; // large radius — no clusters
+    // NMS + dark-line filter
+    const nmsR = 8;
     const corners: DetectedCorner[] = [];
-    const absThr = 0.08 * maxR; // only strong corners
+    const absThr = 0.03 * maxR;
 
     for (let y = nmsR; y < sh - nmsR; y++) {
       for (let x = nmsR; x < sw - nmsR; x++) {
         const val = R[y * sw + x];
         if (val < absThr) continue;
 
+        // NMS
         let isMax = true;
         for (let dy = -nmsR; dy <= nmsR && isMax; dy++) {
           for (let dx = -nmsR; dx <= nmsR && isMax; dx++) {
@@ -120,10 +121,33 @@ export async function detectCorners(
             if (R[(y + dy) * sw + (x + dx)] > val) isMax = false;
           }
         }
+        if (!isMax) continue;
 
-        if (isMax) {
-          corners.push({ x: x / sc, y: y / sc, strength: val });
-        }
+        // POST-FILTER: must have dark pixels nearby in at least 2 directions
+        // Check 4 rays from the corner point (up, down, left, right)
+        const rayLen = 6;
+        let darkDirs = 0;
+        // Up
+        let hasDark = false;
+        for (let d = 1; d <= rayLen && !hasDark; d++) if (y - d >= 0 && isDark[(y - d) * sw + x]) hasDark = true;
+        if (hasDark) darkDirs++;
+        // Down
+        hasDark = false;
+        for (let d = 1; d <= rayLen && !hasDark; d++) if (y + d < sh && isDark[(y + d) * sw + x]) hasDark = true;
+        if (hasDark) darkDirs++;
+        // Left
+        hasDark = false;
+        for (let d = 1; d <= rayLen && !hasDark; d++) if (x - d >= 0 && isDark[y * sw + (x - d)]) hasDark = true;
+        if (hasDark) darkDirs++;
+        // Right
+        hasDark = false;
+        for (let d = 1; d <= rayLen && !hasDark; d++) if (x + d < sw && isDark[y * sw + (x + d)]) hasDark = true;
+        if (hasDark) darkDirs++;
+
+        // Must have dark lines in at least 2 directions (= corner of wall)
+        if (darkDirs < 2) continue;
+
+        corners.push({ x: x / sc, y: y / sc, strength: val });
       }
     }
 
