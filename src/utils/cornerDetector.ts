@@ -109,10 +109,10 @@ export function snapToCorner(
     return d[py * w + px];
   };
 
-  // Search radius adapts to zoom — smaller when zoomed in (more precise)
+  // Small search radius — only snap when very close to a corner
   const R = mode === 'loupe'
-    ? Math.min(20, Math.max(8, Math.round(15 / (zoom * sc))))
-    : Math.min(10, Math.max(5, Math.round(8 / (zoom * sc))));
+    ? Math.min(10, Math.max(4, Math.round(7 / (zoom * sc))))
+    : Math.min(6, Math.max(3, Math.round(4 / (zoom * sc))));
 
   let bx = cx, by = cy, bs = -1;
 
