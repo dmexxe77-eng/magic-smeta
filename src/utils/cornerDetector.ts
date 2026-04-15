@@ -126,7 +126,7 @@ export function snapToCorner(
 
       // Corner = strong gradient in BOTH directions
       const cornerScore = Math.min(Math.abs(gx), Math.abs(gy));
-      if (cornerScore < 40) continue;
+      if (cornerScore < 80) continue;
 
       // Prefer closer matches
       const dist = Math.hypot(x - cx, y - cy);
