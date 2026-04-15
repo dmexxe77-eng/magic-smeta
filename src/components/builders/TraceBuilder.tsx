@@ -575,16 +575,15 @@ export default function TraceBuilder({ existingCount, onFinishAll, onBack, sessi
           })()}
         </Svg>
 
-        {/* Loupe circle — near finger but offset above */}
+        {/* Loupe circle — opposite corner from finger (like web version) */}
         {loupe && imageUri && (() => {
           const sz = 130;
-          // Position above finger, clamped to screen
-          let lTop = loupe.fingerY - sz - 30;
-          let lLeft = loupe.fingerX - sz / 2;
-          // If too high, show below finger
-          if (lTop < insets.top + 50) lTop = loupe.fingerY + 40;
-          // Clamp horizontal
-          lLeft = Math.max(10, Math.min(lLeft, SCREEN.width - sz - 10));
+          const lTop = loupe.fingerY < SCREEN.height * 0.5
+            ? SCREEN.height - sz - insets.bottom - 80
+            : insets.top + 60;
+          const lLeft = loupe.fingerX < SCREEN.width * 0.5
+            ? SCREEN.width - sz - 15
+            : 15;
           const magZoom = Math.max(zoom * 2.5, 2);
           return (
             <View pointerEvents="none" style={{
