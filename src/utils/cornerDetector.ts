@@ -109,10 +109,10 @@ export function snapToCorner(
     return d[py * w + px];
   };
 
-  // Small search radius — only snap when very close to a corner
+  // Tiny search radius — snap only when nearly on top of corner
   const R = mode === 'loupe'
-    ? Math.min(10, Math.max(4, Math.round(7 / (zoom * sc))))
-    : Math.min(6, Math.max(3, Math.round(4 / (zoom * sc))));
+    ? Math.min(8, Math.max(3, Math.round(5 / (zoom * sc))))
+    : Math.min(5, Math.max(2, Math.round(3 / (zoom * sc))));
 
   let bx = cx, by = cy, bs = -1;
 
@@ -125,8 +125,11 @@ export function snapToCorner(
                - gray(x-1,y-1) - 2*gray(x,y-1) - gray(x+1,y-1);
 
       // Corner = strong gradient in BOTH directions
-      const cornerScore = Math.min(Math.abs(gx), Math.abs(gy));
-      if (cornerScore < 80) continue;
+      const agx = Math.abs(gx), agy = Math.abs(gy);
+      // Both must be significant (not just an edge)
+      if (agx < 60 || agy < 60) continue;
+      const cornerScore = Math.min(agx, agy);
+      if (cornerScore < 100) continue;
 
       // Prefer closer matches
       const dist = Math.hypot(x - cx, y - cy);
