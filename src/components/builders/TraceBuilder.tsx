@@ -183,6 +183,7 @@ export default function TraceBuilder({ existingCount, onFinishAll, onBack, sessi
   const panRef = useRef(pan);
   zoomRef.current = zoom;
   panRef.current = pan;
+  const rafRef = useRef<number | null>(null);
 
   // Magnifier
   const [loupe, setLoupe] = useState<{ imgX: number; imgY: number; fingerX: number; fingerY: number } | null>(null);
@@ -311,7 +312,7 @@ export default function TraceBuilder({ existingCount, onFinishAll, onBack, sessi
       const g = gestRef.current;
       const touches = evt.nativeEvent.touches;
 
-      // Pinch zoom (2 fingers)
+      // Pinch zoom (2 fingers) — zoom toward center of fingers
       if (touches && touches.length >= 2) {
         g.isPinch = true;
         g.moved = true;
@@ -322,7 +323,7 @@ export default function TraceBuilder({ existingCount, onFinishAll, onBack, sessi
         const t0 = touches[0], t1 = touches[1];
         const dist = Math.hypot(t1.pageX - t0.pageX, t1.pageY - t0.pageY);
         const cx = (t0.pageX + t1.pageX) / 2;
-        const cy = (t0.pageY + t1.pageY) / 2;
+        const cy = (t0.pageY + t1.pageY) / 2 - headerH.current;
 
         if (!g.startDist) {
           g.startDist = dist;
@@ -332,13 +333,22 @@ export default function TraceBuilder({ existingCount, onFinishAll, onBack, sessi
           return;
         }
 
+        const oldZoom = zoomRef.current;
         const nz = Math.max(0.05, Math.min(15, g.startZoom * (dist / g.startDist)));
+
+        // Zoom toward center of pinch (like web's handleWheel)
+        const newPanX = cx - (cx - panRef.current.x) * (nz / oldZoom);
+        const newPanY = cy - (cy - panRef.current.y) * (nz / oldZoom);
+
+        // Also apply pan delta
         const dx = cx - g.lastX;
         const dy = cy - g.lastY;
         g.lastX = cx;
         g.lastY = cy;
 
-        setPan(p => ({ x: p.x + dx, y: p.y + dy }));
+        panRef.current = { x: newPanX + dx, y: newPanY + dy };
+        zoomRef.current = nz;
+        setPan(panRef.current);
         setZoom(nz);
         return;
       }
@@ -361,10 +371,16 @@ export default function TraceBuilder({ existingCount, onFinishAll, onBack, sessi
         return;
       }
 
-      // Pan mode (if moved enough)
+      // Pan mode (if moved enough) — throttled via rAF
       if (g.moved) {
         if (holdTimerRef.current) { clearTimeout(holdTimerRef.current); holdTimerRef.current = null; }
-        setPan(p => ({ x: p.x + dx, y: p.y + dy }));
+        panRef.current = { x: panRef.current.x + dx, y: panRef.current.y + dy };
+        if (!rafRef.current) {
+          rafRef.current = requestAnimationFrame(() => {
+            setPan({ ...panRef.current });
+            rafRef.current = null;
+          });
+        }
       }
     },
 
@@ -575,15 +591,21 @@ export default function TraceBuilder({ existingCount, onFinishAll, onBack, sessi
           })()}
         </Svg>
 
-        {/* Loupe circle — opposite corner from finger (like web version) */}
+        {/* Loupe circle — follows finger, flips when near edge */}
         {loupe && imageUri && (() => {
           const sz = 130;
-          const lTop = loupe.fingerY < SCREEN.height * 0.5
-            ? SCREEN.height - sz - insets.bottom - 80
-            : insets.top + 60;
-          const lLeft = loupe.fingerX < SCREEN.width * 0.5
-            ? SCREEN.width - sz - 15
-            : 15;
+          const offsetX = 20; // distance from finger
+          const offsetY = sz + 20;
+          // Default: above-right of finger
+          let lLeft = loupe.fingerX + offsetX;
+          let lTop = loupe.fingerY - offsetY;
+          // Flip horizontal if near right edge
+          if (lLeft + sz > SCREEN.width - 10) lLeft = loupe.fingerX - sz - offsetX;
+          // Flip vertical if near top
+          if (lTop < insets.top + 50) lTop = loupe.fingerY + 30;
+          // Clamp
+          lLeft = Math.max(5, Math.min(lLeft, SCREEN.width - sz - 5));
+          lTop = Math.max(insets.top + 50, Math.min(lTop, SCREEN.height - sz - 50));
           const magZoom = Math.max(zoom * 2.5, 2);
           return (
             <View pointerEvents="none" style={{
