@@ -592,23 +592,27 @@ export default function TraceBuilder({ existingCount, onFinishAll, onBack, sessi
           const sw = SCREEN.width;
           const sh = SCREEN.height;
 
-          // Try 4 positions: top-right, top-left, bottom-right, bottom-left
-          // Pick the one with most space
+          // 8 positions around finger, pick best fitting
           const positions = [
-            { x: fx + gap, y: fy - sz - gap },       // top-right
-            { x: fx - sz - gap, y: fy - sz - gap },   // top-left
-            { x: fx + gap, y: fy + gap },              // bottom-right
-            { x: fx - sz - gap, y: fy + gap },         // bottom-left
+            { x: fx + gap, y: fy - sz/2 },             // right
+            { x: fx - sz - gap, y: fy - sz/2 },        // left
+            { x: fx - sz/2, y: fy - sz - gap },         // top
+            { x: fx - sz/2, y: fy + gap },               // bottom
+            { x: fx + gap, y: fy - sz - gap },           // top-right
+            { x: fx - sz - gap, y: fy - sz - gap },     // top-left
+            { x: fx + gap, y: fy + gap },                 // bottom-right
+            { x: fx - sz - gap, y: fy + gap },           // bottom-left
           ];
 
-          // Score each position by how much it fits on screen
           let best = positions[0];
-          let bestScore = -1;
+          let bestScore = -Infinity;
           for (const pos of positions) {
-            const onScreenX = Math.max(0, Math.min(pos.x, sw - sz) === pos.x ? 1 : 0);
-            const onScreenY = pos.y > insets.top + 40 && pos.y + sz < sh - 60 ? 1 : 0;
-            const distFromFinger = Math.hypot(pos.x + sz/2 - fx, pos.y + sz/2 - fy);
-            const score = onScreenX + onScreenY + distFromFinger / 200;
+            // Fully on screen = good
+            const fitX = pos.x >= 5 && pos.x + sz <= sw - 5 ? 2 : 0;
+            const fitY = pos.y >= insets.top + 45 && pos.y + sz <= sh - 60 ? 2 : 0;
+            // Prefer further from finger
+            const dist = Math.hypot(pos.x + sz/2 - fx, pos.y + sz/2 - fy);
+            const score = fitX + fitY + dist / 100;
             if (score > bestScore) { bestScore = score; best = pos; }
           }
 
