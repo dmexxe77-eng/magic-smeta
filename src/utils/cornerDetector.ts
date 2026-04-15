@@ -126,21 +126,35 @@ export function snapToCorner(
 
       // Corner = strong gradient in BOTH directions
       const agx = Math.abs(gx), agy = Math.abs(gy);
-      // Both must be significant (not just an edge)
-      if (agx < 60 || agy < 60) continue;
+      if (agx < 50 || agy < 50) continue;
       const cornerScore = Math.min(agx, agy);
-      if (cornerScore < 100) continue;
+      if (cornerScore < 80) continue;
 
-      // Prefer closer matches
+      // Heavy distance penalty — strongly prefer closest corner
       const dist = Math.hypot(x - cx, y - cy);
       const distPenalty = dist / R;
-      const score = cornerScore * (1 - distPenalty * 0.7);
+      const score = cornerScore * (1 - distPenalty * 0.85);
 
       if (score > bs) { bs = score; bx = x; by = y; }
     }
   }
 
-  // Convert back to natural image pixels
+  // Refine: find exact maximum in 2px neighborhood
+  if (bs > 0) {
+    let rbx = bx, rby = by, rbs = bs;
+    for (let dy = -2; dy <= 2; dy++) {
+      for (let dx = -2; dx <= 2; dx++) {
+        const rx = bx + dx, ry = by + dy;
+        if (rx < 1 || ry < 1 || rx >= w - 1 || ry >= h - 1) continue;
+        const rgx = gray(rx+1,ry-1)+2*gray(rx+1,ry)+gray(rx+1,ry+1)-gray(rx-1,ry-1)-2*gray(rx-1,ry)-gray(rx-1,ry+1);
+        const rgy = gray(rx-1,ry+1)+2*gray(rx,ry+1)+gray(rx+1,ry+1)-gray(rx-1,ry-1)-2*gray(rx,ry-1)-gray(rx+1,ry-1);
+        const rs = Math.min(Math.abs(rgx), Math.abs(rgy));
+        if (rs > rbs) { rbs = rs; rbx = rx; rby = ry; }
+      }
+    }
+    bx = rbx; by = rby;
+  }
+
   return {
     x: bx / sc,
     y: by / sc,
