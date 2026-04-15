@@ -592,14 +592,15 @@ export default function TraceBuilder({ existingCount, onFinishAll, onBack, sessi
           const sw = SCREEN.width;
           const sh = SCREEN.height;
 
-          const d = 70; // distance from finger
-          // Diagonal positions (45° angle from finger) — between vertical and horizontal
-          const diag = Math.round(d * 0.7); // 45° offset component
+          const d = 70;
+          // Almost above finger — small horizontal offset, large vertical
+          const offX = 20;  // slight horizontal shift
+          const offY = d;   // mostly vertical
           const candidates = [
-            { x: fx + diag, y: fy - sz - diag, pri: 4 },       // top-right diagonal (best)
-            { x: fx - sz - diag, y: fy - sz - diag, pri: 3 },  // top-left diagonal
-            { x: fx + diag, y: fy + diag, pri: 2 },              // bottom-right diagonal
-            { x: fx - sz - diag, y: fy + diag, pri: 1 },         // bottom-left diagonal
+            { x: fx + offX - sz/2, y: fy - sz - offY, pri: 4 },     // above-right (best)
+            { x: fx - offX - sz/2, y: fy - sz - offY, pri: 3 },     // above-left
+            { x: fx + offX - sz/2, y: fy + offY, pri: 2 },           // below-right
+            { x: fx - offX - sz/2, y: fy + offY, pri: 1 },           // below-left
           ];
 
           let best = candidates[0];
