@@ -1,9 +1,9 @@
 /**
- * Corner snap — web-version approach
+ * Corner snap — Harris corner detection with central differences
  *
- * NOT pre-computed. Called in real-time when user taps/moves loupe.
- * Scans pixels in small radius around touch point.
- * Corner = pixel where Sobel gradient is strong in BOTH X and Y.
+ * Uses central difference gradients (no 3×3 Sobel blur) for sharp localization,
+ * 5×5 Gaussian-weighted structure tensor for robust corner detection,
+ * and parabolic sub-pixel refinement for pixel-perfect accuracy.
  */
 
 import { Skia } from '@shopify/react-native-skia';
@@ -38,8 +38,8 @@ export async function loadImagePixels(imageUri: string): Promise<boolean> {
     const w = skImage.width();
     const h = skImage.height();
 
-    // Higher resolution cache for precise corner detection (loupe needs sub-pixel accuracy)
-    const sc = Math.min(1, 2000 / Math.max(w, h));
+    // High resolution cache — more pixels = more precise corner localization
+    const sc = Math.min(1, 3000 / Math.max(w, h));
     const sw = Math.round(w * sc);
     const sh = Math.round(h * sc);
 
@@ -75,10 +75,19 @@ export function getPixelScale(naturalW: number): number {
   return cachedW / naturalW;
 }
 
+// Gaussian kernel 5×5 (σ≈1.0, sum=273)
+const GAUSS5 = [
+  1, 4, 7, 4, 1,
+  4,16,26,16, 4,
+  7,26,41,26, 7,
+  4,16,26,16, 4,
+  1, 4, 7, 4, 1,
+];
+
 /**
- * Snap to nearest corner using Harris corner detection.
- * Harris finds the exact intersection point of two lines/edges,
- * unlike Sobel which responds to edge transitions.
+ * Snap to nearest corner using Harris detection with central differences.
+ * Central differences give gradient at the exact pixel (no Sobel 3×3 blur),
+ * 5×5 Gaussian window gives precise, robust corner localization.
  */
 export function snapToCorner(
   imgX: number,
@@ -96,55 +105,47 @@ export function snapToCorner(
   const h = cachedH;
   const d = cachedGray;
 
-  const gray = (x: number, y: number): number => {
-    const px = Math.max(0, Math.min(w - 1, Math.round(x)));
-    const py = Math.max(0, Math.min(h - 1, Math.round(y)));
-    return d[py * w + px];
-  };
+  // Direct array access (faster than function call in hot loop)
+  const g = (x: number, y: number): number =>
+    d[Math.max(0, Math.min(h - 1, y)) * w + Math.max(0, Math.min(w - 1, x))];
 
-  // Sobel gradient at a pixel
-  const sobelX = (x: number, y: number): number =>
-    gray(x+1,y-1) + 2*gray(x+1,y) + gray(x+1,y+1) - gray(x-1,y-1) - 2*gray(x-1,y) - gray(x-1,y+1);
-  const sobelY = (x: number, y: number): number =>
-    gray(x-1,y+1) + 2*gray(x,y+1) + gray(x+1,y+1) - gray(x-1,y-1) - 2*gray(x,y-1) - gray(x+1,y-1);
-
-  // Harris corner response at a pixel (structure tensor over 3×3 window)
+  // Harris response using central differences + 5×5 Gaussian structure tensor
   const harrisAt = (px: number, py: number): number => {
     let sxx = 0, syy = 0, sxy = 0;
-    for (let wy = -1; wy <= 1; wy++) {
-      for (let wx = -1; wx <= 1; wx++) {
-        const ix = sobelX(px + wx, py + wy);
-        const iy = sobelY(px + wx, py + wy);
-        sxx += ix * ix;
-        syy += iy * iy;
-        sxy += ix * iy;
+    let gi = 0;
+    for (let wy = -2; wy <= 2; wy++) {
+      for (let wx = -2; wx <= 2; wx++) {
+        const qx = px + wx, qy = py + wy;
+        // Central difference: exact gradient at pixel (no 3×3 smoothing)
+        const ix = g(qx + 1, qy) - g(qx - 1, qy);
+        const iy = g(qx, qy + 1) - g(qx, qy - 1);
+        const gw = GAUSS5[gi++];
+        sxx += gw * ix * ix;
+        syy += gw * iy * iy;
+        sxy += gw * ix * iy;
       }
     }
-    // Harris: det(M) - k * trace(M)²  where k=0.04
-    return (sxx * syy - sxy * sxy) - 0.04 * (sxx + syy) * (sxx + syy);
+    // Harris: det(M) - k * trace(M)²
+    return (sxx * syy - sxy * sxy) - 0.05 * (sxx + syy) * (sxx + syy);
   };
 
-  // Search radius — tight, only snap when close to a real corner
-  const natRadius = mode === 'loupe' ? 10 : 6;
-  const R = Math.min(8, Math.max(3, Math.round(natRadius * sc)));
+  // Search radius — tight, only snap when close
+  const natRadius = mode === 'loupe' ? 12 : 7;
+  const R = Math.min(10, Math.max(3, Math.round(natRadius * sc)));
 
   let bx = cx, by = cy, bs = -1;
 
   for (let y = Math.max(3, cy - R); y <= Math.min(h - 4, cy + R); y++) {
     for (let x = Math.max(3, cx - R); x <= Math.min(w - 4, cx + R); x++) {
-      // Local contrast check first (fast reject for uniform areas)
-      let minV = 255, maxV = 0;
-      for (let dy = -2; dy <= 2; dy++) {
-        for (let dx = -2; dx <= 2; dx++) {
-          const v = gray(x + dx, y + dy);
-          if (v < minV) minV = v;
-          if (v > maxV) maxV = v;
-        }
-      }
-      if (maxV - minV < 60) continue;
+      // Fast contrast reject — skip uniform areas
+      const c = g(x, y);
+      const tl = g(x-2,y-2), tr = g(x+2,y-2), bl = g(x-2,y+2), br = g(x+2,y+2);
+      const lo = Math.min(c, tl, tr, bl, br);
+      const hi = Math.max(c, tl, tr, bl, br);
+      if (hi - lo < 50) continue;
 
       const hr = harrisAt(x, y);
-      if (hr < 500000) continue; // only strong corners
+      if (hr < 100000) continue; // only real corners
 
       // Distance penalty — prefer closest corner
       const dist = Math.hypot(x - cx, y - cy);
@@ -154,13 +155,13 @@ export function snapToCorner(
     }
   }
 
-  // Refine: find exact Harris maximum in 2px neighborhood
+  // Refine: find exact Harris peak in 3px neighborhood
   if (bs > 0) {
-    let rbx = bx, rby = by, rbs = -1;
-    for (let dy = -2; dy <= 2; dy++) {
-      for (let dx = -2; dx <= 2; dx++) {
+    let rbx = bx, rby = by, rbs = -Infinity;
+    for (let dy = -3; dy <= 3; dy++) {
+      for (let dx = -3; dx <= 3; dx++) {
         const rx = bx + dx, ry = by + dy;
-        if (rx < 3 || ry < 3 || rx >= w - 3 || ry >= h - 3) continue;
+        if (rx < 3 || ry < 3 || rx >= w - 4 || ry >= h - 4) continue;
         const rs = harrisAt(rx, ry);
         if (rs > rbs) { rbs = rs; rbx = rx; rby = ry; }
       }
@@ -168,20 +169,20 @@ export function snapToCorner(
     bx = rbx; by = rby;
   }
 
-  // Sub-pixel refinement via parabolic interpolation on Harris response
+  // Sub-pixel refinement: 2D parabolic fit on Harris response
   let subX = bx, subY = by;
-  if (bs > 0 && bx > 3 && by > 3 && bx < w - 4 && by < h - 4) {
+  if (bs > 0 && bx > 4 && by > 4 && bx < w - 5 && by < h - 5) {
     const h0 = harrisAt(bx, by);
-    // Parabolic fit in X
     const hL = harrisAt(bx - 1, by), hR = harrisAt(bx + 1, by);
+    const hU = harrisAt(bx, by - 1), hD = harrisAt(bx, by + 1);
+    // Parabolic fit in X
     const denomX = hL + hR - 2 * h0;
-    if (denomX !== 0) {
+    if (denomX < 0) { // concave down = peak
       subX = bx + Math.max(-0.5, Math.min(0.5, (hL - hR) / (2 * denomX)));
     }
     // Parabolic fit in Y
-    const hU = harrisAt(bx, by - 1), hD = harrisAt(bx, by + 1);
     const denomY = hU + hD - 2 * h0;
-    if (denomY !== 0) {
+    if (denomY < 0) {
       subY = by + Math.max(-0.5, Math.min(0.5, (hU - hD) / (2 * denomY)));
     }
   }
