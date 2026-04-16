@@ -76,14 +76,9 @@ export function getPixelScale(naturalW: number): number {
 }
 
 /**
- * Snap to nearest corner in real-time (web-version approach)
- *
- * @param imgX - touch point in natural image pixels
- * @param imgY - touch point in natural image pixels
- * @param naturalW - natural image width
- * @param zoom - current zoom level
- * @param mode - 'tap' (small radius) or 'loupe' (larger radius)
- * @returns snapped point in natural image pixels, or original if no corner found
+ * Snap to nearest corner using Harris corner detection.
+ * Harris finds the exact intersection point of two lines/edges,
+ * unlike Sobel which responds to edge transitions.
  */
 export function snapToCorner(
   imgX: number,
@@ -95,10 +90,8 @@ export function snapToCorner(
   if (!cachedGray) return { x: imgX, y: imgY, snapped: false };
 
   const sc = cachedW / naturalW;
-  // Convert to cached pixel coords
   const cx = Math.round(imgX * sc);
   const cy = Math.round(imgY * sc);
-
   const w = cachedW;
   const h = cachedH;
   const d = cachedGray;
@@ -109,27 +102,37 @@ export function snapToCorner(
     return d[py * w + px];
   };
 
-  // Tight search radius — only snap when finger is very close to a real corner
+  // Sobel gradient at a pixel
+  const sobelX = (x: number, y: number): number =>
+    gray(x+1,y-1) + 2*gray(x+1,y) + gray(x+1,y+1) - gray(x-1,y-1) - 2*gray(x-1,y) - gray(x-1,y+1);
+  const sobelY = (x: number, y: number): number =>
+    gray(x-1,y+1) + 2*gray(x,y+1) + gray(x+1,y+1) - gray(x-1,y-1) - 2*gray(x,y-1) - gray(x+1,y-1);
+
+  // Harris corner response at a pixel (structure tensor over 3×3 window)
+  const harrisAt = (px: number, py: number): number => {
+    let sxx = 0, syy = 0, sxy = 0;
+    for (let wy = -1; wy <= 1; wy++) {
+      for (let wx = -1; wx <= 1; wx++) {
+        const ix = sobelX(px + wx, py + wy);
+        const iy = sobelY(px + wx, py + wy);
+        sxx += ix * ix;
+        syy += iy * iy;
+        sxy += ix * iy;
+      }
+    }
+    // Harris: det(M) - k * trace(M)²  where k=0.04
+    return (sxx * syy - sxy * sxy) - 0.04 * (sxx + syy) * (sxx + syy);
+  };
+
+  // Search radius — tight, only snap when close to a real corner
   const natRadius = mode === 'loupe' ? 10 : 6;
   const R = Math.min(8, Math.max(3, Math.round(natRadius * sc)));
 
   let bx = cx, by = cy, bs = -1;
 
-  for (let y = Math.max(2, cy - R); y <= Math.min(h - 3, cy + R); y++) {
-    for (let x = Math.max(2, cx - R); x <= Math.min(w - 3, cx + R); x++) {
-      // Sobel 3x3
-      const gx = gray(x+1,y-1) + 2*gray(x+1,y) + gray(x+1,y+1)
-               - gray(x-1,y-1) - 2*gray(x-1,y) - gray(x-1,y+1);
-      const gy = gray(x-1,y+1) + 2*gray(x,y+1) + gray(x+1,y+1)
-               - gray(x-1,y-1) - 2*gray(x,y-1) - gray(x+1,y-1);
-
-      // Corner = strong gradient in BOTH directions — strict thresholds
-      const agx = Math.abs(gx), agy = Math.abs(gy);
-      if (agx < 100 || agy < 100) continue;
-      const cornerScore = Math.min(agx, agy);
-      if (cornerScore < 150) continue;
-
-      // Local contrast check — must have real dark/light transition (wall lines)
+  for (let y = Math.max(3, cy - R); y <= Math.min(h - 4, cy + R); y++) {
+    for (let x = Math.max(3, cx - R); x <= Math.min(w - 4, cx + R); x++) {
+      // Local contrast check first (fast reject for uniform areas)
       let minV = 255, maxV = 0;
       for (let dy = -2; dy <= 2; dy++) {
         for (let dx = -2; dx <= 2; dx++) {
@@ -138,53 +141,48 @@ export function snapToCorner(
           if (v > maxV) maxV = v;
         }
       }
-      if (maxV - minV < 60) continue; // skip low-contrast areas (noise, uniform background)
+      if (maxV - minV < 60) continue;
 
-      // Heavy distance penalty — strongly prefer closest corner
+      const hr = harrisAt(x, y);
+      if (hr < 500000) continue; // only strong corners
+
+      // Distance penalty — prefer closest corner
       const dist = Math.hypot(x - cx, y - cy);
-      const distPenalty = dist / R;
-      const score = cornerScore * (1 - distPenalty * 0.85);
+      const score = hr * (1 - (dist / R) * 0.7);
 
       if (score > bs) { bs = score; bx = x; by = y; }
     }
   }
 
-  // Refine: find exact maximum in 2px neighborhood
+  // Refine: find exact Harris maximum in 2px neighborhood
   if (bs > 0) {
-    let rbx = bx, rby = by, rbs = bs;
+    let rbx = bx, rby = by, rbs = -1;
     for (let dy = -2; dy <= 2; dy++) {
       for (let dx = -2; dx <= 2; dx++) {
         const rx = bx + dx, ry = by + dy;
-        if (rx < 1 || ry < 1 || rx >= w - 1 || ry >= h - 1) continue;
-        const rgx = gray(rx+1,ry-1)+2*gray(rx+1,ry)+gray(rx+1,ry+1)-gray(rx-1,ry-1)-2*gray(rx-1,ry)-gray(rx-1,ry+1);
-        const rgy = gray(rx-1,ry+1)+2*gray(rx,ry+1)+gray(rx+1,ry+1)-gray(rx-1,ry-1)-2*gray(rx,ry-1)-gray(rx+1,ry-1);
-        const rs = Math.min(Math.abs(rgx), Math.abs(rgy));
+        if (rx < 3 || ry < 3 || rx >= w - 3 || ry >= h - 3) continue;
+        const rs = harrisAt(rx, ry);
         if (rs > rbs) { rbs = rs; rbx = rx; rby = ry; }
       }
     }
     bx = rbx; by = rby;
   }
 
-  // Sub-pixel refinement via parabolic interpolation
+  // Sub-pixel refinement via parabolic interpolation on Harris response
   let subX = bx, subY = by;
-  if (bs > 0 && bx > 1 && by > 1 && bx < w - 2 && by < h - 2) {
-    const cornerAt = (px: number, py: number): number => {
-      const gxv = gray(px+1,py-1)+2*gray(px+1,py)+gray(px+1,py+1)-gray(px-1,py-1)-2*gray(px-1,py)-gray(px-1,py+1);
-      const gyv = gray(px-1,py+1)+2*gray(px,py+1)+gray(px+1,py+1)-gray(px-1,py-1)-2*gray(px,py-1)-gray(px+1,py-1);
-      return Math.min(Math.abs(gxv), Math.abs(gyv));
-    };
-    const sc0 = cornerAt(bx, by);
+  if (bs > 0 && bx > 3 && by > 3 && bx < w - 4 && by < h - 4) {
+    const h0 = harrisAt(bx, by);
     // Parabolic fit in X
-    const sL = cornerAt(bx - 1, by), sR = cornerAt(bx + 1, by);
-    if (sL + sR - 2 * sc0 !== 0) {
-      const dx = (sL - sR) / (2 * (sL + sR - 2 * sc0));
-      subX = bx + Math.max(-0.5, Math.min(0.5, dx));
+    const hL = harrisAt(bx - 1, by), hR = harrisAt(bx + 1, by);
+    const denomX = hL + hR - 2 * h0;
+    if (denomX !== 0) {
+      subX = bx + Math.max(-0.5, Math.min(0.5, (hL - hR) / (2 * denomX)));
     }
     // Parabolic fit in Y
-    const sU = cornerAt(bx, by - 1), sD = cornerAt(bx, by + 1);
-    if (sU + sD - 2 * sc0 !== 0) {
-      const dy = (sU - sD) / (2 * (sU + sD - 2 * sc0));
-      subY = by + Math.max(-0.5, Math.min(0.5, dy));
+    const hU = harrisAt(bx, by - 1), hD = harrisAt(bx, by + 1);
+    const denomY = hU + hD - 2 * h0;
+    if (denomY !== 0) {
+      subY = by + Math.max(-0.5, Math.min(0.5, (hU - hD) / (2 * denomY)));
     }
   }
 
