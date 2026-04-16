@@ -75,13 +75,11 @@ export function getPixelScale(naturalW: number): number {
   return cachedW / naturalW;
 }
 
-// Gaussian kernel 5×5 (σ≈1.0, sum=273)
-const GAUSS5 = [
-  1, 4, 7, 4, 1,
-  4,16,26,16, 4,
-  7,26,41,26, 7,
-  4,16,26,16, 4,
-  1, 4, 7, 4, 1,
+// Gaussian kernel 3×3 (σ≈0.7, sum=16) — sharp localization for clean plans
+const GAUSS3 = [
+  1, 2, 1,
+  2, 4, 2,
+  1, 2, 1,
 ];
 
 /**
@@ -109,29 +107,28 @@ export function snapToCorner(
   const g = (x: number, y: number): number =>
     d[Math.max(0, Math.min(h - 1, y)) * w + Math.max(0, Math.min(w - 1, x))];
 
-  // Harris response using central differences + 5×5 Gaussian structure tensor
+  // Harris response using central differences + 3×3 Gaussian structure tensor
+  // Smaller window = sharper corner localization (exactly at line intersection)
   const harrisAt = (px: number, py: number): number => {
     let sxx = 0, syy = 0, sxy = 0;
     let gi = 0;
-    for (let wy = -2; wy <= 2; wy++) {
-      for (let wx = -2; wx <= 2; wx++) {
+    for (let wy = -1; wy <= 1; wy++) {
+      for (let wx = -1; wx <= 1; wx++) {
         const qx = px + wx, qy = py + wy;
-        // Central difference: exact gradient at pixel (no 3×3 smoothing)
         const ix = g(qx + 1, qy) - g(qx - 1, qy);
         const iy = g(qx, qy + 1) - g(qx, qy - 1);
-        const gw = GAUSS5[gi++];
+        const gw = GAUSS3[gi++];
         sxx += gw * ix * ix;
         syy += gw * iy * iy;
         sxy += gw * ix * iy;
       }
     }
-    // Harris: det(M) - k * trace(M)²
     return (sxx * syy - sxy * sxy) - 0.05 * (sxx + syy) * (sxx + syy);
   };
 
-  // Search radius — tight, only snap when close
-  const natRadius = mode === 'loupe' ? 12 : 7;
-  const R = Math.min(10, Math.max(3, Math.round(natRadius * sc)));
+  // Very tight search radius — snap only when nearly on top of corner
+  const natRadius = mode === 'loupe' ? 6 : 3;
+  const R = Math.min(6, Math.max(2, Math.round(natRadius * sc)));
 
   let bx = cx, by = cy, bs = -1;
 
@@ -142,24 +139,24 @@ export function snapToCorner(
       const tl = g(x-2,y-2), tr = g(x+2,y-2), bl = g(x-2,y+2), br = g(x+2,y+2);
       const lo = Math.min(c, tl, tr, bl, br);
       const hi = Math.max(c, tl, tr, bl, br);
-      if (hi - lo < 50) continue;
+      if (hi - lo < 70) continue;
 
       const hr = harrisAt(x, y);
-      if (hr < 100000) continue; // only real corners
+      if (hr < 500000) continue; // only very strong corners
 
-      // Distance penalty — prefer closest corner
+      // Heavy distance penalty — snap weakens fast with distance
       const dist = Math.hypot(x - cx, y - cy);
-      const score = hr * (1 - (dist / R) * 0.7);
+      const score = hr * (1 - (dist / R) * 0.9);
 
       if (score > bs) { bs = score; bx = x; by = y; }
     }
   }
 
-  // Refine: find exact Harris peak in 3px neighborhood
+  // Refine: find exact Harris peak in 2px neighborhood
   if (bs > 0) {
     let rbx = bx, rby = by, rbs = -Infinity;
-    for (let dy = -3; dy <= 3; dy++) {
-      for (let dx = -3; dx <= 3; dx++) {
+    for (let dy = -2; dy <= 2; dy++) {
+      for (let dx = -2; dx <= 2; dx++) {
         const rx = bx + dx, ry = by + dy;
         if (rx < 3 || ry < 3 || rx >= w - 4 || ry >= h - 4) continue;
         const rs = harrisAt(rx, ry);
