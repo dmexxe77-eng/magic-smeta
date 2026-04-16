@@ -38,8 +38,8 @@ export async function loadImagePixels(imageUri: string): Promise<boolean> {
     const w = skImage.width();
     const h = skImage.height();
 
-    // Keep reasonable size for pixel scanning
-    const sc = Math.min(1, 800 / Math.max(w, h));
+    // Higher resolution cache for precise corner detection (loupe needs sub-pixel accuracy)
+    const sc = Math.min(1, 2000 / Math.max(w, h));
     const sw = Math.round(w * sc);
     const sh = Math.round(h * sc);
 
@@ -109,26 +109,36 @@ export function snapToCorner(
     return d[py * w + px];
   };
 
-  // Tiny search radius — snap only when nearly on top of corner
-  const R = mode === 'loupe'
-    ? Math.min(8, Math.max(3, Math.round(5 / (zoom * sc))))
-    : Math.min(5, Math.max(2, Math.round(3 / (zoom * sc))));
+  // Tight search radius — only snap when finger is very close to a real corner
+  const natRadius = mode === 'loupe' ? 10 : 6;
+  const R = Math.min(8, Math.max(3, Math.round(natRadius * sc)));
 
   let bx = cx, by = cy, bs = -1;
 
-  for (let y = Math.max(1, cy - R); y <= Math.min(h - 2, cy + R); y++) {
-    for (let x = Math.max(1, cx - R); x <= Math.min(w - 2, cx + R); x++) {
+  for (let y = Math.max(2, cy - R); y <= Math.min(h - 3, cy + R); y++) {
+    for (let x = Math.max(2, cx - R); x <= Math.min(w - 3, cx + R); x++) {
       // Sobel 3x3
       const gx = gray(x+1,y-1) + 2*gray(x+1,y) + gray(x+1,y+1)
                - gray(x-1,y-1) - 2*gray(x-1,y) - gray(x-1,y+1);
       const gy = gray(x-1,y+1) + 2*gray(x,y+1) + gray(x+1,y+1)
                - gray(x-1,y-1) - 2*gray(x,y-1) - gray(x+1,y-1);
 
-      // Corner = strong gradient in BOTH directions
+      // Corner = strong gradient in BOTH directions — strict thresholds
       const agx = Math.abs(gx), agy = Math.abs(gy);
-      if (agx < 50 || agy < 50) continue;
+      if (agx < 100 || agy < 100) continue;
       const cornerScore = Math.min(agx, agy);
-      if (cornerScore < 80) continue;
+      if (cornerScore < 150) continue;
+
+      // Local contrast check — must have real dark/light transition (wall lines)
+      let minV = 255, maxV = 0;
+      for (let dy = -2; dy <= 2; dy++) {
+        for (let dx = -2; dx <= 2; dx++) {
+          const v = gray(x + dx, y + dy);
+          if (v < minV) minV = v;
+          if (v > maxV) maxV = v;
+        }
+      }
+      if (maxV - minV < 60) continue; // skip low-contrast areas (noise, uniform background)
 
       // Heavy distance penalty — strongly prefer closest corner
       const dist = Math.hypot(x - cx, y - cy);
@@ -155,9 +165,32 @@ export function snapToCorner(
     bx = rbx; by = rby;
   }
 
+  // Sub-pixel refinement via parabolic interpolation
+  let subX = bx, subY = by;
+  if (bs > 0 && bx > 1 && by > 1 && bx < w - 2 && by < h - 2) {
+    const cornerAt = (px: number, py: number): number => {
+      const gxv = gray(px+1,py-1)+2*gray(px+1,py)+gray(px+1,py+1)-gray(px-1,py-1)-2*gray(px-1,py)-gray(px-1,py+1);
+      const gyv = gray(px-1,py+1)+2*gray(px,py+1)+gray(px+1,py+1)-gray(px-1,py-1)-2*gray(px,py-1)-gray(px+1,py-1);
+      return Math.min(Math.abs(gxv), Math.abs(gyv));
+    };
+    const sc0 = cornerAt(bx, by);
+    // Parabolic fit in X
+    const sL = cornerAt(bx - 1, by), sR = cornerAt(bx + 1, by);
+    if (sL + sR - 2 * sc0 !== 0) {
+      const dx = (sL - sR) / (2 * (sL + sR - 2 * sc0));
+      subX = bx + Math.max(-0.5, Math.min(0.5, dx));
+    }
+    // Parabolic fit in Y
+    const sU = cornerAt(bx, by - 1), sD = cornerAt(bx, by + 1);
+    if (sU + sD - 2 * sc0 !== 0) {
+      const dy = (sU - sD) / (2 * (sU + sD - 2 * sc0));
+      subY = by + Math.max(-0.5, Math.min(0.5, dy));
+    }
+  }
+
   return {
-    x: bx / sc,
-    y: by / sc,
+    x: subX / sc,
+    y: subY / sc,
     snapped: bs > 0,
   };
 }
