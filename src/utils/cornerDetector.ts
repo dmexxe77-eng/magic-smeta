@@ -38,8 +38,8 @@ export async function loadImagePixels(imageUri: string): Promise<boolean> {
     const w = skImage.width();
     const h = skImage.height();
 
-    // High resolution cache — more pixels = more precise corner localization
-    const sc = Math.min(1, 3000 / Math.max(w, h));
+    // Full resolution — no downscaling, pixel-perfect corner detection
+    const sc = Math.min(1, 5000 / Math.max(w, h));
     const sw = Math.round(w * sc);
     const sh = Math.round(h * sc);
 
@@ -152,35 +152,37 @@ export function snapToCorner(
     }
   }
 
-  // Sub-pixel refinement: cornerSubPix (OpenCV algorithm)
-  // Finds the exact point where all edge gradient vectors converge.
-  // Solves: A * q = b, where A = Σ(∇I·∇Iᵀ), b = Σ(∇I·∇Iᵀ · p)
-  // This gives the geometric intersection of the edges — the true corner point.
+  // Sub-pixel refinement: gradient-weighted cornerSubPix
+  // Weighted version — edge pixels (strong gradient) contribute more,
+  // noise/flat pixels contribute less. Finds the geometric line intersection.
   let subX = bx, subY = by;
-  if (bs > 0 && bx > 4 && by > 4 && bx < w - 5 && by < h - 5) {
+  if (bs > 0 && bx > 5 && by > 5 && bx < w - 6 && by < h - 6) {
     let qx = bx, qy = by;
-    for (let iter = 0; iter < 10; iter++) {
+    for (let iter = 0; iter < 15; iter++) {
       const iqx = Math.round(qx), iqy = Math.round(qy);
       let a00 = 0, a01 = 0, a11 = 0, b0 = 0, b1 = 0;
-      for (let wy = -3; wy <= 3; wy++) {
-        for (let wx = -3; wx <= 3; wx++) {
+      for (let wy = -4; wy <= 4; wy++) {
+        for (let wx = -4; wx <= 4; wx++) {
           const px = iqx + wx, py = iqy + wy;
           const ix = g(px + 1, py) - g(px - 1, py);
           const iy = g(px, py + 1) - g(px, py - 1);
-          a00 += ix * ix;
-          a01 += ix * iy;
-          a11 += iy * iy;
-          b0 += ix * ix * px + ix * iy * py;
-          b1 += ix * iy * px + iy * iy * py;
+          // Weight by gradient magnitude — edges matter more
+          const mag = Math.sqrt(ix * ix + iy * iy);
+          if (mag < 10) continue; // skip flat areas
+          const wix = ix * mag, wiy = iy * mag;
+          a00 += wix * ix;
+          a01 += wix * iy;
+          a11 += wiy * iy;
+          b0 += wix * ix * px + wix * iy * py;
+          b1 += wiy * ix * px + wiy * iy * py;
         }
       }
       const det = a00 * a11 - a01 * a01;
       if (Math.abs(det) < 1e-6) break;
       const nqx = (a11 * b0 - a01 * b1) / det;
       const nqy = (a00 * b1 - a01 * b0) / det;
-      if (Math.hypot(nqx - qx, nqy - qy) < 0.01) { qx = nqx; qy = nqy; break; }
+      if (Math.hypot(nqx - qx, nqy - qy) < 0.001) { qx = nqx; qy = nqy; break; }
       qx = nqx; qy = nqy;
-      // Don't drift too far from Harris detection
       if (Math.hypot(qx - bx, qy - by) > 3) { qx = bx; qy = by; break; }
     }
     subX = qx; subY = qy;
