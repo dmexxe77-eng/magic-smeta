@@ -84,23 +84,27 @@ export interface Order {
 
 // ─── Nomenclature ────────────────────────────────────────────────────
 
-export type NomType = 'canvas' | 'profile' | 'work' | 'option';
+export type NomType = 'canvas' | 'profile' | 'work' | 'option' | 'light';
 
 export interface NomItem {
   id: string;
   name: string;
   price: number;
+  purchasePrice?: number;  // закупочная цена
+  image?: string;          // file URI from image picker
   unit: string;
   type: NomType;
-  brand?: string;
-  photo?: string;       // blob URL or base64
+  brand?: string;          // folder id for custom items
+  category?: string;       // display category
+  section?: string;        // sub-group (KRAAB, Clamp...)
+  bindTo?: 'area' | 'perimeter' | 'qty' | 'none';
 }
 
-export interface NomBrandGroup {
+export interface NomFolder {
   id: string;
   name: string;
-  color: string;
-  base: boolean;
+  icon?: string;
+  isDefault?: boolean;
 }
 
 // ─── Estimate ────────────────────────────────────────────────────────
@@ -126,6 +130,7 @@ export interface AppState {
   noms: NomItem[];
   editedNoms: Partial<NomItem>[];
   deletedNomIds: string[];
+  nomFolders: NomFolder[];
   presets: string[];
   sharedFavs: Record<string, boolean>;
   globalOpts: RoomOption[];

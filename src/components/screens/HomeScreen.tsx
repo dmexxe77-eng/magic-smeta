@@ -20,6 +20,7 @@ import {
   EmptyState,
   Divider,
 } from '../ui';
+import { AppMenu } from '../ui/AppMenu';
 import { fmt } from '../../utils/geometry';
 import type { Order, OrderStatus } from '../../types';
 
@@ -185,6 +186,7 @@ export default function HomeScreen() {
   const { state, dispatch } = useApp();
   const router = useRouter();
   const [showNew, setShowNew] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   const [search, setSearch] = useState('');
   const [activeStatus, setActiveStatus] = useState<OrderStatus | 'all'>('all');
 
@@ -234,7 +236,7 @@ export default function HomeScreen() {
   return (
     <View className="flex-1 bg-bg">
       <AppHeader
-        onMenu={() => {/* TODO: menu */}}
+        onMenu={() => setShowMenu(true)}
         rightContent={
           state.isPro ? (
             <View className="bg-navy px-3 py-1 rounded-full">
@@ -364,6 +366,8 @@ export default function HomeScreen() {
           router.push(`/order/${id}` as any);
         }}
       />
+
+      <AppMenu visible={showMenu} onClose={() => setShowMenu(false)} />
     </View>
   );
 }

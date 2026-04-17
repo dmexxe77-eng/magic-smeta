@@ -8,7 +8,7 @@ import {
   useRef,
   type ReactNode,
 } from 'react';
-import type { AppState, Order, Room, NomItem, OrderStatus } from '../types';
+import type { AppState, Order, Room, NomItem, NomFolder, OrderStatus } from '../types';
 import { saveAppState, loadAppState, generateId } from '../utils/storage';
 import { calcPoly } from '../utils/geometry';
 
@@ -48,6 +48,7 @@ const defaultState: AppState = {
   noms: [],
   editedNoms: [],
   deletedNomIds: [],
+  nomFolders: [],
   presets: [],
   sharedFavs: {},
   globalOpts: [],
@@ -68,7 +69,14 @@ type Action =
   | { type: 'UPDATE_SNAPSHOT'; orderId: string; snap: Record<string, number> }
   | { type: 'SET_THEME'; theme: 'light' | 'dark' }
   | { type: 'SET_PRO'; isPro: boolean }
-  | { type: 'RESET' };
+  | { type: 'RESET' }
+  // Nomenclature
+  | { type: 'ADD_NOM_FOLDER'; folder: NomFolder }
+  | { type: 'DELETE_NOM_FOLDER'; folderId: string }
+  | { type: 'UPDATE_NOM_FOLDER'; folderId: string; patch: Partial<NomFolder> }
+  | { type: 'ADD_CUSTOM_NOM'; nom: NomItem }
+  | { type: 'UPDATE_NOM'; id: string; patch: Partial<NomItem> }
+  | { type: 'DELETE_NOM'; id: string };
 
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
@@ -129,6 +137,63 @@ function reducer(state: AppState, action: Action): AppState {
 
     case 'RESET':
       return { ...defaultState, orders: [] };
+
+    // ── Nomenclature folders ──
+    case 'ADD_NOM_FOLDER':
+      return { ...state, nomFolders: [...state.nomFolders, action.folder] };
+
+    case 'DELETE_NOM_FOLDER':
+      return { ...state, nomFolders: state.nomFolders.filter(f => f.id !== action.folderId) };
+
+    case 'UPDATE_NOM_FOLDER':
+      return {
+        ...state,
+        nomFolders: state.nomFolders.map(f =>
+          f.id === action.folderId ? { ...f, ...action.patch } : f
+        ),
+      };
+
+    // ── Nomenclature items ──
+    case 'ADD_CUSTOM_NOM':
+      return { ...state, noms: [...state.noms, action.nom] };
+
+    case 'UPDATE_NOM': {
+      // Check if it's a custom item
+      const isCustom = state.noms.some(n => n.id === action.id);
+      if (isCustom) {
+        return {
+          ...state,
+          noms: state.noms.map(n =>
+            n.id === action.id ? { ...n, ...action.patch } : n
+          ),
+        };
+      }
+      // It's a hardcoded item — upsert into editedNoms
+      const existing = state.editedNoms.findIndex(e => e.id === action.id);
+      if (existing >= 0) {
+        return {
+          ...state,
+          editedNoms: state.editedNoms.map((e, i) =>
+            i === existing ? { ...e, ...action.patch } : e
+          ),
+        };
+      }
+      return {
+        ...state,
+        editedNoms: [...state.editedNoms, { id: action.id, ...action.patch }],
+      };
+    }
+
+    case 'DELETE_NOM': {
+      const isCustomNom = state.noms.some(n => n.id === action.id);
+      if (isCustomNom) {
+        return { ...state, noms: state.noms.filter(n => n.id !== action.id) };
+      }
+      return {
+        ...state,
+        deletedNomIds: [...state.deletedNomIds, action.id],
+      };
+    }
 
     default:
       return state;
