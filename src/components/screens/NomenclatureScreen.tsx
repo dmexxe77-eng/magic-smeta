@@ -37,11 +37,15 @@ function NomRow({ item, onPress }: { item: NomItem; onPress: () => void }) {
       className="flex-row items-center bg-card border border-border rounded-2xl mx-4 mb-2 px-3 py-3"
     >
       {/* Image */}
-      <View className="w-[50px] h-[50px] rounded-xl bg-bg border border-border items-center justify-center mr-3 overflow-hidden">
+      <View style={{
+        width: 50, height: 50, borderRadius: 12,
+        backgroundColor: '#f7f7f5', borderWidth: 1, borderColor: '#e8e8e4',
+        alignItems: 'center', justifyContent: 'center', marginRight: 12, overflow: 'hidden',
+      }}>
         {item.image ? (
-          <Image source={{ uri: item.image }} className="w-full h-full" resizeMode="cover" />
+          <Image source={{ uri: item.image }} style={{ width: 50, height: 50 }} resizeMode="cover" />
         ) : (
-          <Text className="text-muted text-lg">📦</Text>
+          <Text style={{ color: '#6b6b7a', fontSize: 18 }}>📦</Text>
         )}
       </View>
 

@@ -125,19 +125,38 @@ export function NomItemEditor({
 
         <ScrollView className="flex-1 px-4 pt-4" keyboardShouldPersistTaps="handled">
           {/* Image */}
-          <Pressable
-            onPress={handlePickImage}
-            className="self-center w-[100px] h-[100px] rounded-2xl bg-bg border-2 border-dashed border-border items-center justify-center mb-5 overflow-hidden"
-          >
+          <View style={{ alignItems: 'center', marginBottom: 20 }}>
+            <Pressable
+              onPress={handlePickImage}
+              style={{
+                width: 100, height: 100, borderRadius: 16,
+                backgroundColor: '#f7f7f5', borderWidth: 2,
+                borderStyle: image ? 'solid' : 'dashed',
+                borderColor: image ? '#4F46E5' : '#e8e8e4',
+                alignItems: 'center', justifyContent: 'center',
+                overflow: 'hidden',
+              }}
+            >
+              {image ? (
+                <Image source={{ uri: image }} style={{ width: 100, height: 100 }} resizeMode="cover" />
+              ) : (
+                <View style={{ alignItems: 'center' }}>
+                  <Text style={{ fontSize: 24, marginBottom: 4 }}>📷</Text>
+                  <Text style={{ color: '#6b6b7a', fontSize: 10 }}>Добавить фото</Text>
+                </View>
+              )}
+            </Pressable>
             {image ? (
-              <Image source={{ uri: image }} className="w-full h-full" resizeMode="cover" />
-            ) : (
-              <View className="items-center">
-                <Text className="text-2xl mb-1">📷</Text>
-                <Text className="text-muted text-[10px]">Фото</Text>
+              <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+                <Pressable onPress={handlePickImage}>
+                  <Text style={{ color: '#4F46E5', fontSize: 12, fontWeight: '600' }}>Изменить</Text>
+                </Pressable>
+                <Pressable onPress={() => setImage('')}>
+                  <Text style={{ color: '#dc2626', fontSize: 12, fontWeight: '600' }}>Удалить</Text>
+                </Pressable>
               </View>
-            )}
-          </Pressable>
+            ) : null}
+          </View>
 
           {/* Name */}
           <FormField
