@@ -152,36 +152,38 @@ export function snapToCorner(
     }
   }
 
-  // Refine: find exact Harris peak in 2px neighborhood
-  if (bs > 0) {
-    let rbx = bx, rby = by, rbs = -Infinity;
-    for (let dy = -2; dy <= 2; dy++) {
-      for (let dx = -2; dx <= 2; dx++) {
-        const rx = bx + dx, ry = by + dy;
-        if (rx < 3 || ry < 3 || rx >= w - 4 || ry >= h - 4) continue;
-        const rs = harrisAt(rx, ry);
-        if (rs > rbs) { rbs = rs; rbx = rx; rby = ry; }
-      }
-    }
-    bx = rbx; by = rby;
-  }
-
-  // Sub-pixel refinement: 2D parabolic fit on Harris response
+  // Sub-pixel refinement: cornerSubPix (OpenCV algorithm)
+  // Finds the exact point where all edge gradient vectors converge.
+  // Solves: A * q = b, where A = Σ(∇I·∇Iᵀ), b = Σ(∇I·∇Iᵀ · p)
+  // This gives the geometric intersection of the edges — the true corner point.
   let subX = bx, subY = by;
   if (bs > 0 && bx > 4 && by > 4 && bx < w - 5 && by < h - 5) {
-    const h0 = harrisAt(bx, by);
-    const hL = harrisAt(bx - 1, by), hR = harrisAt(bx + 1, by);
-    const hU = harrisAt(bx, by - 1), hD = harrisAt(bx, by + 1);
-    // Parabolic fit in X
-    const denomX = hL + hR - 2 * h0;
-    if (denomX < 0) { // concave down = peak
-      subX = bx + Math.max(-0.5, Math.min(0.5, (hL - hR) / (2 * denomX)));
+    let qx = bx, qy = by;
+    for (let iter = 0; iter < 10; iter++) {
+      const iqx = Math.round(qx), iqy = Math.round(qy);
+      let a00 = 0, a01 = 0, a11 = 0, b0 = 0, b1 = 0;
+      for (let wy = -3; wy <= 3; wy++) {
+        for (let wx = -3; wx <= 3; wx++) {
+          const px = iqx + wx, py = iqy + wy;
+          const ix = g(px + 1, py) - g(px - 1, py);
+          const iy = g(px, py + 1) - g(px, py - 1);
+          a00 += ix * ix;
+          a01 += ix * iy;
+          a11 += iy * iy;
+          b0 += ix * ix * px + ix * iy * py;
+          b1 += ix * iy * px + iy * iy * py;
+        }
+      }
+      const det = a00 * a11 - a01 * a01;
+      if (Math.abs(det) < 1e-6) break;
+      const nqx = (a11 * b0 - a01 * b1) / det;
+      const nqy = (a00 * b1 - a01 * b0) / det;
+      if (Math.hypot(nqx - qx, nqy - qy) < 0.01) { qx = nqx; qy = nqy; break; }
+      qx = nqx; qy = nqy;
+      // Don't drift too far from Harris detection
+      if (Math.hypot(qx - bx, qy - by) > 3) { qx = bx; qy = by; break; }
     }
-    // Parabolic fit in Y
-    const denomY = hU + hD - 2 * h0;
-    if (denomY < 0) {
-      subY = by + Math.max(-0.5, Math.min(0.5, (hU - hD) / (2 * denomY)));
-    }
+    subX = qx; subY = qy;
   }
 
   return {
