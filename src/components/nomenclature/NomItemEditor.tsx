@@ -52,19 +52,22 @@ export function NomItemEditor({
   const [brand, setBrand] = useState(nom.brand || '');
 
   const handlePickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Нет доступа', 'Разрешите доступ к фотобиблиотеке в настройках');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 0.7,
-      allowsEditing: true,
-      aspect: [1, 1],
-    });
-    if (!result.canceled && result.assets[0]) {
-      setImage(result.assets[0].uri);
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Нет доступа', 'Разрешите доступ к фотобиблиотеке в настройках');
+        return;
+      }
+      // Small delay to avoid modal-on-modal crash on iOS
+      await new Promise(r => setTimeout(r, 300));
+      const result = await ImagePicker.launchImageLibraryAsync({
+        quality: 0.7,
+      });
+      if (!result.canceled && result.assets?.[0]) {
+        setImage(result.assets[0].uri);
+      }
+    } catch (e) {
+      console.warn('ImagePicker error:', e);
     }
   };
 
