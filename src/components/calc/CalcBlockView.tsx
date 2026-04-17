@@ -10,8 +10,8 @@ import {
   Alert,
 } from 'react-native';
 import type { CalcBlock, Preset, NomRef } from '../../data/calcBlocks';
-import { getNom, getNomPrice, calcPresetTotal, getDefaultMainQty } from '../../data/calcBlocks';
-import { ALL_NOMS, type NomItem } from '../../data/nomenclature';
+import { getNom, getNomPrice, calcPresetTotal, getDefaultMainQty, getAllNoms } from '../../data/calcBlocks';
+import type { NomItem } from '../../data/nomenclature';
 import { fmt } from '../../utils/geometry';
 
 // ─── Inline Qty Editor ──────────────────────────────────────────────
@@ -138,20 +138,20 @@ function PresetEditView({ preset, onSave, onCancel }: { preset: Preset; onSave: 
 
   // Selected items first, then search results
   const filteredNoms = useMemo(() => {
-    const selected = ALL_NOMS.filter(n => itemIds.has(n.id));
+    const selected = getAllNoms().filter(n => itemIds.has(n.id));
     const q = searchItems.toLowerCase().trim();
     const rest = q
-      ? ALL_NOMS.filter(n => !itemIds.has(n.id) && n.name.toLowerCase().includes(q))
-      : ALL_NOMS.filter(n => !itemIds.has(n.id)).slice(0, 10);
+      ? getAllNoms().filter(n => !itemIds.has(n.id) && n.name.toLowerCase().includes(q))
+      : getAllNoms().filter(n => !itemIds.has(n.id)).slice(0, 10);
     return [...selected, ...rest];
   }, [searchItems, itemIds]);
 
   const filteredOpts = useMemo(() => {
-    const selected = ALL_NOMS.filter(n => optIds.has(n.id));
+    const selected = getAllNoms().filter(n => optIds.has(n.id));
     const q = searchOpts.toLowerCase().trim();
     const rest = q
-      ? ALL_NOMS.filter(n => !optIds.has(n.id) && n.name.toLowerCase().includes(q))
-      : ALL_NOMS.filter(n => !optIds.has(n.id)).slice(0, 10);
+      ? getAllNoms().filter(n => !optIds.has(n.id) && n.name.toLowerCase().includes(q))
+      : getAllNoms().filter(n => !optIds.has(n.id)).slice(0, 10);
     return [...selected, ...rest];
   }, [searchOpts, optIds]);
 

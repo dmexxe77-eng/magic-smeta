@@ -36,8 +36,22 @@ export interface CalcBlock {
 
 // ─── Helpers ────────────────────────────────────────────────────────
 
+// Optional merged noms array — if provided, uses user-edited data
+let _mergedNoms: NomItem[] | null = null;
+
+/** Set the merged noms array (call from CalcScreen with useNomenclature) */
+export function setMergedNoms(noms: any[]) {
+  _mergedNoms = noms as NomItem[];
+}
+
 export function getNom(nomId: string): NomItem | undefined {
-  return ALL_NOMS.find(n => n.id === nomId);
+  const source = _mergedNoms || ALL_NOMS;
+  return source.find(n => n.id === nomId);
+}
+
+/** Get all available noms (merged if set, otherwise hardcoded) */
+export function getAllNoms(): NomItem[] {
+  return _mergedNoms || ALL_NOMS as NomItem[];
 }
 
 export function getNomPrice(ref: NomRef): number {
@@ -51,12 +65,10 @@ export function calcPresetTotal(
   optQtys: Record<string, number>,
 ): number {
   let total = 0;
-  // Items: each uses mainQty
   for (const ref of preset.items) {
     if (!ref.enabled) continue;
     total += mainQty * getNomPrice(ref);
   }
-  // Options: each has its own qty
   for (const ref of preset.options) {
     if (!ref.enabled) continue;
     const qty = optQtys[ref.nomId] ?? 0;

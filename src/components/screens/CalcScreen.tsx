@@ -18,7 +18,8 @@ import type { Room, Vertex } from '../../types';
 import CompassBuilder from '../builders/CompassBuilder';
 import TraceBuilder, { type TraceSession } from '../builders/TraceBuilder';
 import CalcBlockView from '../calc/CalcBlockView';
-import { createDefaultBlocks, calcBlockTotal, type CalcBlock, type Preset } from '../../data/calcBlocks';
+import { createDefaultBlocks, calcBlockTotal, setMergedNoms, type CalcBlock, type Preset } from '../../data/calcBlocks';
+import { useNomenclature } from '../../hooks/useNomenclature';
 
 // ─── Constants ────────────────────────────────────────────────────────
 
@@ -71,6 +72,10 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
   const { state, dispatch, updateOrderRooms, updateSnapshot } = useApp();
   const order = useOrder(orderId);
   const router = useRouter();
+  const { mergedNoms } = useNomenclature();
+
+  // Sync merged noms to calcBlocks so getNom/getNomPrice use user-edited data
+  useEffect(() => { setMergedNoms(mergedNoms); }, [mergedNoms]);
 
   const [activeRoomId, setActiveRoomId] = useState<string | null>(
     order?.rooms?.[0]?.id ?? null
