@@ -152,38 +152,43 @@ export function snapToCorner(
     }
   }
 
-  // Sub-pixel refinement: gradient-weighted cornerSubPix
-  // Weighted version — edge pixels (strong gradient) contribute more,
-  // noise/flat pixels contribute less. Finds the geometric line intersection.
+  // Sub-pixel refinement: two-pass gradient-weighted cornerSubPix
+  // Pass 1: 9×9 window — coarse convergence to corner area
+  // Pass 2: 5×5 window — tight refinement at exact intersection
+  // Weighted by mag² × Gaussian(distance) — nearby strong edges dominate
   let subX = bx, subY = by;
-  if (bs > 0 && bx > 5 && by > 5 && bx < w - 6 && by < h - 6) {
+  if (bs > 0 && bx > 6 && by > 6 && bx < w - 7 && by < h - 7) {
     let qx = bx, qy = by;
-    for (let iter = 0; iter < 15; iter++) {
-      const iqx = Math.round(qx), iqy = Math.round(qy);
-      let a00 = 0, a01 = 0, a11 = 0, b0 = 0, b1 = 0;
-      for (let wy = -4; wy <= 4; wy++) {
-        for (let wx = -4; wx <= 4; wx++) {
-          const px = iqx + wx, py = iqy + wy;
-          const ix = g(px + 1, py) - g(px - 1, py);
-          const iy = g(px, py + 1) - g(px, py - 1);
-          // Weight by gradient magnitude — edges matter more
-          const mag = Math.sqrt(ix * ix + iy * iy);
-          if (mag < 10) continue; // skip flat areas
-          const wix = ix * mag, wiy = iy * mag;
-          a00 += wix * ix;
-          a01 += wix * iy;
-          a11 += wiy * iy;
-          b0 += wix * ix * px + wix * iy * py;
-          b1 += wiy * ix * px + wiy * iy * py;
+    const passes: [number, number][] = [[4, 3.0], [2, 1.5]]; // [halfWin, sigma]
+    for (const [hw, sigma] of passes) {
+      const s2 = 2 * sigma * sigma;
+      for (let iter = 0; iter < 15; iter++) {
+        const iqx = Math.round(qx), iqy = Math.round(qy);
+        let a00 = 0, a01 = 0, a11 = 0, b0 = 0, b1 = 0;
+        for (let wy = -hw; wy <= hw; wy++) {
+          for (let wx = -hw; wx <= hw; wx++) {
+            const px = iqx + wx, py = iqy + wy;
+            const ix = g(px + 1, py) - g(px - 1, py);
+            const iy = g(px, py + 1) - g(px, py - 1);
+            const mag2 = ix * ix + iy * iy;
+            if (mag2 < 100) continue; // skip flat areas
+            // Spatial Gaussian × gradient magnitude²
+            const sw = Math.exp(-(wx * wx + wy * wy) / s2) * mag2;
+            a00 += sw * ix * ix;
+            a01 += sw * ix * iy;
+            a11 += sw * iy * iy;
+            b0 += sw * (ix * ix * px + ix * iy * py);
+            b1 += sw * (ix * iy * px + iy * iy * py);
+          }
         }
+        const det = a00 * a11 - a01 * a01;
+        if (Math.abs(det) < 1e-6) break;
+        const nqx = (a11 * b0 - a01 * b1) / det;
+        const nqy = (a00 * b1 - a01 * b0) / det;
+        if (Math.hypot(nqx - qx, nqy - qy) < 0.001) { qx = nqx; qy = nqy; break; }
+        qx = nqx; qy = nqy;
+        if (Math.hypot(qx - bx, qy - by) > 4) { qx = bx; qy = by; break; }
       }
-      const det = a00 * a11 - a01 * a01;
-      if (Math.abs(det) < 1e-6) break;
-      const nqx = (a11 * b0 - a01 * b1) / det;
-      const nqy = (a00 * b1 - a01 * b0) / det;
-      if (Math.hypot(nqx - qx, nqy - qy) < 0.001) { qx = nqx; qy = nqy; break; }
-      qx = nqx; qy = nqy;
-      if (Math.hypot(qx - bx, qy - by) > 3) { qx = bx; qy = by; break; }
     }
     subX = qx; subY = qy;
   }
