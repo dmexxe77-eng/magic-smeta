@@ -196,36 +196,56 @@ export default function NomenclatureScreen() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          className="mb-3"
-          contentContainerClassName="px-4 gap-2 py-1"
+          style={{ maxHeight: 44, marginBottom: 8 }}
+          contentContainerStyle={{ paddingHorizontal: 16, gap: 8, alignItems: 'center' }}
         >
-          {allFolders.map(f => (
-            <Pressable
-              key={f.id}
-              onPress={() => setActiveFolder(f.id)}
-              onLongPress={() => handleDeleteFolder(f)}
-              className={`px-3 py-2 rounded-xl border ${
-                activeFolder === f.id
-                  ? 'bg-navy border-navy'
-                  : 'bg-card border-border'
-              }`}
-            >
-              <Text
-                className={`text-xs font-bold ${
-                  activeFolder === f.id ? 'text-white' : 'text-navy'
-                }`}
+          {allFolders.map(f => {
+            const active = activeFolder === f.id;
+            return (
+              <Pressable
+                key={f.id}
+                onPress={() => setActiveFolder(f.id)}
+                onLongPress={() => handleDeleteFolder(f)}
+                style={{
+                  paddingHorizontal: 14,
+                  height: 34,
+                  borderRadius: 17,
+                  borderWidth: 1,
+                  borderColor: active ? '#1e2030' : '#e8e8e4',
+                  backgroundColor: active ? '#1e2030' : '#ffffff',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
               >
-                {f.icon ? `${f.icon} ` : ''}{f.name}
-              </Text>
-            </Pressable>
-          ))}
+                <Text
+                  style={{
+                    fontSize: 12,
+                    fontWeight: '700',
+                    color: active ? '#ffffff' : '#1e2030',
+                  }}
+                  numberOfLines={1}
+                >
+                  {f.name}
+                </Text>
+              </Pressable>
+            );
+          })}
 
-          {/* Add folder button */}
           <Pressable
             onPress={handleNewFolder}
-            className="px-3 py-2 rounded-xl border border-dashed border-accent bg-accent-light"
+            style={{
+              paddingHorizontal: 14,
+              height: 34,
+              borderRadius: 17,
+              borderWidth: 1,
+              borderStyle: 'dashed',
+              borderColor: '#4F46E5',
+              backgroundColor: '#eeeeff',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
           >
-            <Text className="text-accent text-xs font-bold">+ Папка</Text>
+            <Text style={{ fontSize: 12, fontWeight: '700', color: '#4F46E5' }}>+ Папка</Text>
           </Pressable>
         </ScrollView>
       )}
