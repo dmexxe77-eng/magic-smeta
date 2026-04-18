@@ -75,8 +75,8 @@ export function getAngles(verts: Vertex[]): number[] {
     if (ang < 0) ang += 2 * Math.PI;
     let deg = 360 - (ang * 180) / Math.PI;
     if (deg < 0) deg += 360;
-    if (Math.abs(deg - 90) < 15) deg = 90;   // snap to 90° within ±15°
-    if (Math.abs(deg - 270) < 15) deg = 270; // snap to 270° within ±15°
+    if (Math.abs(deg - 90) < 45) deg = 90;   // snap to 90° within ±45°
+    if (Math.abs(deg - 270) < 45) deg = 270; // snap to 270° within ±45°
     return Math.round(deg);
   });
 }
