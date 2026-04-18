@@ -12,7 +12,8 @@
       "infoPlist": {
         "NSMotionUsageDescription": "Компас используется для замера помещений",
         "NSCameraUsageDescription": "Камера для фотографирования планов",
-        "NSPhotoLibraryUsageDescription": "Выбор фото для номенклатур и планов"
+        "NSPhotoLibraryUsageDescription": "Выбор фото для номенклатур и планов",
+        "UIRequiresFullScreen": true
       }
     },
     "android": {
