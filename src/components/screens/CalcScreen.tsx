@@ -389,34 +389,34 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
             />
           )}
 
-          {/* Calculator blocks with room options inserted after canvas */}
-          {rooms.length > 0 && blocks.map((block, idx) => (
-            <View key={block.id}>
-              <CalcBlockView
-                block={block}
-                area={roomArea}
-                perimeter={roomPerim}
-                mainQty={mainQtys[block.id]}
-                optQtys={optQtys}
-                onToggleExpanded={() => handleToggleExpanded(block.id)}
-                onSelectPreset={presetId => handleSelectPreset(block.id, presetId)}
-                onUpdatePresets={presets => handleUpdatePresets(block.id, presets)}
-                onToggleNom={(side, nomId) => handleToggleNom(block.id, side, nomId)}
-                onChangeMainQty={qty => setMainQtys(prev => ({ ...prev, [block.id]: qty }))}
-                onChangeOptQty={(nomId, qty) => setOptQtys(prev => ({ ...prev, [nomId]: qty }))}
-              />
-              {/* Insert Room Options block after Canvas (idx 0) */}
-              {idx === 0 && (
-                <RoomOptionsBlock
-                  area={roomArea}
-                  perimeter={roomPerim}
-                  optionIds={roomOptIds}
-                  enabled={roomOptEnabled}
-                  onToggle={(id) => setRoomOptEnabled(prev => ({ ...prev, [id]: !prev[id] }))}
-                  onUpdateOptions={(ids) => setRoomOptIds(ids)}
-                />
-              )}
-            </View>
+          {/* Room Options above Canvas */}
+          {rooms.length > 0 && (
+            <RoomOptionsBlock
+              area={roomArea}
+              perimeter={roomPerim}
+              optionIds={roomOptIds}
+              enabled={roomOptEnabled}
+              onToggle={(id) => setRoomOptEnabled(prev => ({ ...prev, [id]: !prev[id] }))}
+              onUpdateOptions={(ids) => setRoomOptIds(ids)}
+            />
+          )}
+
+          {/* Calculator blocks */}
+          {rooms.length > 0 && blocks.map(block => (
+            <CalcBlockView
+              key={block.id}
+              block={block}
+              area={roomArea}
+              perimeter={roomPerim}
+              mainQty={mainQtys[block.id]}
+              optQtys={optQtys}
+              onToggleExpanded={() => handleToggleExpanded(block.id)}
+              onSelectPreset={presetId => handleSelectPreset(block.id, presetId)}
+              onUpdatePresets={presets => handleUpdatePresets(block.id, presets)}
+              onToggleNom={(side, nomId) => handleToggleNom(block.id, side, nomId)}
+              onChangeMainQty={qty => setMainQtys(prev => ({ ...prev, [block.id]: qty }))}
+              onChangeOptQty={(nomId, qty) => setOptQtys(prev => ({ ...prev, [nomId]: qty }))}
+            />
           ))}
 
           {/* Grand total */}

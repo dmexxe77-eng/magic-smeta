@@ -59,29 +59,29 @@ export default function RoomOptionsBlock({
   return (
     <View style={{
       backgroundColor: '#ffffff',
-      borderRadius: 14, borderWidth: 1, borderColor: '#e8e8e4',
+      borderRadius: 12, borderWidth: 1, borderColor: '#e8e8e4',
       marginBottom: 8,
-      paddingHorizontal: 14, paddingVertical: 12,
+      paddingHorizontal: 12, paddingVertical: 8,
     }}>
       {/* Header */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: optionIds.length > 0 ? 8 : 0 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: optionIds.length > 0 ? 4 : 0 }}>
         <Text style={{
           flex: 1,
-          fontSize: 11, fontWeight: '700',
+          fontSize: 9, fontWeight: '700',
           color: '#9ca3af',
-          letterSpacing: 1.5,
+          letterSpacing: 1.2,
         }}>
           ДОП. ОПЦИИ ПОМЕЩЕНИЯ
         </Text>
         <Pressable
           onPress={() => setShowEditor(true)}
           style={{
-            width: 26, height: 26, borderRadius: 6,
+            width: 22, height: 22, borderRadius: 5,
             backgroundColor: '#f3f4f6',
             alignItems: 'center', justifyContent: 'center',
           }}
         >
-          <GearIcon size={14} />
+          <GearIcon size={12} />
         </Pressable>
       </View>
 
@@ -98,21 +98,21 @@ export default function RoomOptionsBlock({
             onPress={() => onToggle(id)}
             style={{
               flexDirection: 'row', alignItems: 'center',
-              paddingVertical: 6, gap: 10,
+              paddingVertical: 3, gap: 8,
             }}
           >
-            <CheckCircle checked={isOn} size={22} />
+            <CheckCircle checked={isOn} size={16} />
             <View style={{ flex: 1 }}>
-              <Text style={{ color: '#1e2030', fontSize: 13, fontWeight: '500' }} numberOfLines={1}>
+              <Text style={{ color: '#1e2030', fontSize: 11, fontWeight: '500' }} numberOfLines={1}>
                 {nom.name}
               </Text>
-              <Text style={{ color: '#9ca3af', fontSize: 11, marginTop: 1 }}>
+              <Text style={{ color: '#9ca3af', fontSize: 9 }}>
                 {fmt(qty)} {unitLabel(nom.bindTo)} × {fmt(nom.price)}
               </Text>
             </View>
             <Text style={{
               color: isOn ? '#4F46E5' : '#d1d5db',
-              fontSize: 14, fontWeight: '700',
+              fontSize: 11, fontWeight: '700',
             }}>
               {fmt(itemTotal)}
             </Text>
