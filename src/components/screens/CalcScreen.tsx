@@ -91,6 +91,9 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
   // Room options (protection, etc) — separate mini-block
   const [roomOptIds, setRoomOptIds] = useState<string[]>(['w_prot', 'w_floor']);
   const [roomOptEnabled, setRoomOptEnabled] = useState<Record<string, boolean>>({});
+  const [roomOptBindings, setRoomOptBindings] = useState<Record<string, 'area' | 'perimeter'>>({
+    w_prot: 'perimeter', w_floor: 'area',
+  });
 
   // Sync activeRoomId when order loads from AsyncStorage
   useEffect(() => {
@@ -120,7 +123,8 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
     if (!roomOptEnabled[id]) return sum;
     const nom = mergedNoms.find(n => n.id === id);
     if (!nom) return sum;
-    const qty = nom.bindTo === 'area' ? roomArea : nom.bindTo === 'perimeter' ? roomPerim : 1;
+    const binding = roomOptBindings[id] || (nom.bindTo === 'area' ? 'area' : 'perimeter');
+    const qty = binding === 'area' ? roomArea : roomPerim;
     return sum + qty * nom.price;
   }, 0);
 
@@ -396,8 +400,9 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
               perimeter={roomPerim}
               optionIds={roomOptIds}
               enabled={roomOptEnabled}
+              bindings={roomOptBindings}
               onToggle={(id) => setRoomOptEnabled(prev => ({ ...prev, [id]: !prev[id] }))}
-              onUpdateOptions={(ids) => setRoomOptIds(ids)}
+              onUpdateOptions={(ids, bnds) => { setRoomOptIds(ids); setRoomOptBindings(bnds); }}
             />
           )}
 

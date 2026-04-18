@@ -25,36 +25,42 @@ const CheckCircle = ({ checked, size = 22 }: { checked: boolean; size?: number }
   </Svg>
 );
 
+type Binding = 'area' | 'perimeter';
+
 interface RoomOptionsBlockProps {
   area: number;
   perimeter: number;
   optionIds: string[];
   enabled: Record<string, boolean>;
+  bindings: Record<string, Binding>; // override per-nom binding
   onToggle: (nomId: string) => void;
-  onUpdateOptions: (ids: string[]) => void;
+  onUpdateOptions: (ids: string[], bindings: Record<string, Binding>) => void;
 }
 
-function qtyForNom(nomBindTo: string | undefined, area: number, perimeter: number): number {
-  switch (nomBindTo) {
-    case 'area': return area;
-    case 'perimeter': return perimeter;
-    default: return 1;
-  }
+function qtyForBinding(binding: Binding, area: number, perimeter: number): number {
+  return binding === 'area' ? area : perimeter;
 }
 
-function unitLabel(bindTo: string | undefined): string {
-  switch (bindTo) {
-    case 'area': return 'м²';
-    case 'perimeter': return 'м.п.';
-    default: return 'шт';
-  }
+function unitLabel(binding: Binding): string {
+  return binding === 'area' ? 'м²' : 'м.п.';
+}
+
+// Default binding for a nom: uses its own bindTo or falls back to perimeter
+function defaultBinding(nomBindTo: string | undefined): Binding {
+  return nomBindTo === 'area' ? 'area' : 'perimeter';
 }
 
 export default function RoomOptionsBlock({
-  area, perimeter, optionIds, enabled,
+  area, perimeter, optionIds, enabled, bindings,
   onToggle, onUpdateOptions,
 }: RoomOptionsBlockProps) {
   const [showEditor, setShowEditor] = useState(false);
+
+  const getBinding = (nomId: string): Binding => {
+    if (bindings[nomId]) return bindings[nomId];
+    const nom = getNom(nomId);
+    return defaultBinding(nom?.bindTo);
+  };
 
   return (
     <View style={{
@@ -90,7 +96,8 @@ export default function RoomOptionsBlock({
         const nom = getNom(id);
         if (!nom) return null;
         const isOn = !!enabled[id];
-        const qty = qtyForNom(nom.bindTo, area, perimeter);
+        const binding = getBinding(id);
+        const qty = qtyForBinding(binding, area, perimeter);
         const itemTotal = isOn ? qty * nom.price : 0;
         return (
           <Pressable
@@ -107,7 +114,7 @@ export default function RoomOptionsBlock({
                 {nom.name}
               </Text>
               <Text style={{ color: '#9ca3af', fontSize: 9 }}>
-                {fmt(qty)} {unitLabel(nom.bindTo)} × {fmt(nom.price)}
+                {fmt(qty)} {unitLabel(binding)} × {fmt(nom.price)}
               </Text>
             </View>
             <Text style={{
@@ -124,7 +131,8 @@ export default function RoomOptionsBlock({
         visible={showEditor}
         onClose={() => setShowEditor(false)}
         currentIds={optionIds}
-        onSave={(ids) => { onUpdateOptions(ids); setShowEditor(false); }}
+        currentBindings={bindings}
+        onSave={(ids, bnds) => { onUpdateOptions(ids, bnds); setShowEditor(false); }}
       />
     </View>
   );
@@ -133,20 +141,25 @@ export default function RoomOptionsBlock({
 // ─── Editor Modal ──────────────────────────────────────────────────
 
 function EditOptionsModal({
-  visible, onClose, currentIds, onSave,
+  visible, onClose, currentIds, currentBindings, onSave,
 }: {
   visible: boolean;
   onClose: () => void;
   currentIds: string[];
-  onSave: (ids: string[]) => void;
+  currentBindings: Record<string, Binding>;
+  onSave: (ids: string[], bindings: Record<string, Binding>) => void;
 }) {
   const insets = useSafeAreaInsets();
   const [selected, setSelected] = useState(new Set(currentIds));
+  const [bindings, setBindings] = useState<Record<string, Binding>>(currentBindings);
   const [search, setSearch] = useState('');
 
   useEffect(() => {
-    if (visible) setSelected(new Set(currentIds));
-  }, [visible, currentIds]);
+    if (visible) {
+      setSelected(new Set(currentIds));
+      setBindings(currentBindings);
+    }
+  }, [visible, currentIds, currentBindings]);
 
   const allNoms = getAllNoms();
   const filtered = useMemo(() => {
@@ -161,9 +174,22 @@ function EditOptionsModal({
   const toggle = (id: string) => {
     setSelected(prev => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+        // Auto-set binding from nom.bindTo if not already set
+        if (!bindings[id]) {
+          const nom = getNom(id);
+          setBindings(b => ({ ...b, [id]: defaultBinding(nom?.bindTo) }));
+        }
+      }
       return next;
     });
+  };
+
+  const setBinding = (id: string, b: Binding) => {
+    setBindings(prev => ({ ...prev, [id]: b }));
   };
 
   return (
@@ -175,7 +201,7 @@ function EditOptionsModal({
           borderBottomWidth: 1, borderBottomColor: '#e8e8e4',
         }}>
           <Text style={{ fontSize: 18, fontWeight: '700', color: '#1e2030', flex: 1 }}>Опции помещения</Text>
-          <Pressable onPress={() => onSave(Array.from(selected))} style={{ paddingHorizontal: 12, paddingVertical: 8 }}>
+          <Pressable onPress={() => onSave(Array.from(selected), bindings)} style={{ paddingHorizontal: 12, paddingVertical: 8 }}>
             <Text style={{ color: '#4F46E5', fontSize: 16, fontWeight: '600' }}>Готово</Text>
           </Pressable>
         </View>
@@ -197,22 +223,59 @@ function EditOptionsModal({
         <ScrollView style={{ flex: 1, paddingHorizontal: 12 }}>
           {filtered.map(nom => {
             const isSel = selected.has(nom.id);
+            const binding = bindings[nom.id] || defaultBinding(nom.bindTo);
             return (
-              <Pressable
+              <View
                 key={nom.id}
-                onPress={() => toggle(nom.id)}
                 style={{
-                  flexDirection: 'row', alignItems: 'center',
                   paddingVertical: 10, paddingHorizontal: 12,
-                  borderBottomWidth: 1, borderBottomColor: '#e8e8e4', gap: 10,
+                  borderBottomWidth: 1, borderBottomColor: '#e8e8e4',
                 }}
               >
-                <CheckCircle checked={isSel} size={22} />
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: '#1e2030', fontSize: 13, fontWeight: '500' }}>{nom.name}</Text>
-                  <Text style={{ color: '#6b6b7a', fontSize: 11 }}>{fmt(nom.price)} ₽/{nom.unit}</Text>
-                </View>
-              </Pressable>
+                <Pressable
+                  onPress={() => toggle(nom.id)}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
+                >
+                  <CheckCircle checked={isSel} size={22} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: '#1e2030', fontSize: 13, fontWeight: '500' }}>{nom.name}</Text>
+                    <Text style={{ color: '#6b6b7a', fontSize: 11 }}>{fmt(nom.price)} ₽/{nom.unit}</Text>
+                  </View>
+                </Pressable>
+
+                {/* Area/Perimeter toggle for selected items */}
+                {isSel && (
+                  <View style={{ flexDirection: 'row', marginTop: 8, marginLeft: 32, gap: 6 }}>
+                    <Text style={{ color: '#6b6b7a', fontSize: 11, alignSelf: 'center', marginRight: 4 }}>
+                      Считать от:
+                    </Text>
+                    <Pressable
+                      onPress={() => setBinding(nom.id, 'area')}
+                      style={{
+                        paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6,
+                        backgroundColor: binding === 'area' ? '#4F46E5' : '#f7f7f5',
+                        borderWidth: 1, borderColor: binding === 'area' ? '#4F46E5' : '#e8e8e4',
+                      }}
+                    >
+                      <Text style={{ color: binding === 'area' ? '#ffffff' : '#1e2030', fontSize: 11, fontWeight: '600' }}>
+                        Площадь (м²)
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => setBinding(nom.id, 'perimeter')}
+                      style={{
+                        paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6,
+                        backgroundColor: binding === 'perimeter' ? '#4F46E5' : '#f7f7f5',
+                        borderWidth: 1, borderColor: binding === 'perimeter' ? '#4F46E5' : '#e8e8e4',
+                      }}
+                    >
+                      <Text style={{ color: binding === 'perimeter' ? '#ffffff' : '#1e2030', fontSize: 11, fontWeight: '600' }}>
+                        Периметр (м.п.)
+                      </Text>
+                    </Pressable>
+                  </View>
+                )}
+              </View>
             );
           })}
           <View style={{ height: 40 }} />
