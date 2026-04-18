@@ -17,6 +17,7 @@ import { generateId } from '../../utils/storage';
 import type { Room, Vertex } from '../../types';
 import CompassBuilder from '../builders/CompassBuilder';
 import TraceBuilder, { type TraceSession } from '../builders/TraceBuilder';
+import PlanEditor from '../builders/PlanEditor';
 import CalcBlockView from '../calc/CalcBlockView';
 import RoomOptionsBlock from '../calc/RoomOptionsBlock';
 import { createDefaultBlocks, calcBlockTotal, setMergedNoms, type CalcBlock, type Preset } from '../../data/calcBlocks';
@@ -83,6 +84,8 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
   );
   const [showBuilder, setShowBuilder] = useState(false);
   const [showTracer, setShowTracer] = useState(false);
+  const [showPlanEditor, setShowPlanEditor] = useState(false);
+  const [editingPlanRoomId, setEditingPlanRoomId] = useState<string | null>(null);
   const [traceSession, setTraceSession] = useState<TraceSession | null>(null);
   const [blocks, setBlocks] = useState<CalcBlock[]>(createDefaultBlocks);
   const [mainQtys, setMainQtys] = useState<Record<string, number>>({});  // block main qty overrides
@@ -228,6 +231,49 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
     );
   }
 
+  // Plan editor (manual polygon editor)
+  if (showPlanEditor) {
+    const existing = editingPlanRoomId ? rooms.find(r => r.id === editingPlanRoomId) : null;
+    return (
+      <PlanEditor
+        initialVerts={existing?.v}
+        initialName={existing?.name || `Помещение ${rooms.length + 1}`}
+        onFinish={(verts, name) => {
+          const poly = calcPoly(verts);
+          if (editingPlanRoomId && existing) {
+            // Update existing room
+            const updated = rooms.map(r => r.id === editingPlanRoomId ? {
+              ...r,
+              name,
+              v: verts,
+              aO: Math.round(poly.a * 100) / 100,
+              pO: Math.round(poly.p * 100) / 100,
+            } : r);
+            updateOrderRooms(order.id, updated);
+          } else {
+            // New room
+            const newRoom: Room = {
+              id: generateId(),
+              name,
+              v: verts,
+              aO: Math.round(poly.a * 100) / 100,
+              pO: Math.round(poly.p * 100) / 100,
+              canvas: { qty: Math.round(poly.a * 100) / 100 },
+              mainProf: { qty: Math.round(poly.p * 100) / 100 },
+              options: [],
+            };
+            const updated = [...rooms, newRoom];
+            updateOrderRooms(order.id, updated);
+            setActiveRoomId(newRoom.id);
+          }
+          setShowPlanEditor(false);
+          setEditingPlanRoomId(null);
+        }}
+        onCancel={() => { setShowPlanEditor(false); setEditingPlanRoomId(null); }}
+      />
+    );
+  }
+
   return (
     <View className="flex-1 bg-bg">
       {/* Header */}
@@ -280,14 +326,15 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
                   key={b.label}
                   onPress={() => {
                     if (b.label === 'Обводка') {
-                      setTraceSession(null); // новая обводка — стираем старую
+                      setTraceSession(null);
                       setShowTracer(true);
                     } else if (b.label === '✏️ Ред.') {
-                      setShowTracer(true); // возврат в существующую
+                      setShowTracer(true);
                     } else if (b.label.includes('Замер')) {
                       setShowBuilder(true);
-                    } else {
-                      Alert.alert('Скоро', `${b.label} — в разработке`);
+                    } else if (b.label === 'Ручн.') {
+                      setEditingPlanRoomId(null);
+                      setShowPlanEditor(true);
                     }
                   }}
                   style={{ backgroundColor: b.bg, borderColor: b.border, borderWidth: 0.5 }}
@@ -355,7 +402,12 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
           {activeRoom ? (
             <Card className="p-3">
               <View className="flex-row gap-3 items-start">
-                <RoomMini verts={activeRoom.v} size={90} />
+                <Pressable onPress={() => { setEditingPlanRoomId(activeRoom.id); setShowPlanEditor(true); }}>
+                  <RoomMini verts={activeRoom.v} size={90} />
+                  <Text style={{ color: '#4F46E5', fontSize: 10, textAlign: 'center', marginTop: 2, fontWeight: '600' }}>
+                    ✏️ Редактор
+                  </Text>
+                </Pressable>
                 <View className="flex-1">
                   <Text className="text-base font-bold text-navy mb-1">
                     {activeRoom.name}
@@ -399,10 +451,11 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
               title="Нет помещений"
               desc="Добавьте помещение с помощью компаса, обводки или вручную"
               action={
-                <Button
-                  label="🧭 Добавить по компасу"
-                  onPress={() => setShowBuilder(true)}
-                />
+                <View style={{ gap: 8 }}>
+                  <Button label="🧭 Компас" onPress={() => setShowBuilder(true)} />
+                  <Button label="✏️ Обводка" onPress={() => setShowTracer(true)} variant="secondary" />
+                  <Button label="📐 Вручную (редактор чертежа)" onPress={() => { setEditingPlanRoomId(null); setShowPlanEditor(true); }} variant="ghost" />
+                </View>
               }
             />
           )}
