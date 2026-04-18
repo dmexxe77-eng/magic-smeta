@@ -152,6 +152,44 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
     setBlocks(prev => prev.map(b => b.id === blockId ? { ...b, presets } : b));
   }, []);
 
+  // Clone a block (create duplicate with different id)
+  const handleDuplicateBlock = useCallback((blockId: string) => {
+    setBlocks(prev => {
+      const idx = prev.findIndex(b => b.id === blockId);
+      if (idx < 0) return prev;
+      const src = prev[idx];
+      // Generate unique id
+      const baseId = src.id.replace(/_copy\d*$/, '');
+      let n = 1;
+      while (prev.some(b => b.id === `${baseId}_copy${n}`)) n++;
+      const clone: CalcBlock = {
+        ...src,
+        id: `${baseId}_copy${n}`,
+        title: `${src.title.replace(/\s+\(\d+\)$/, '')} (${n + 1})`,
+        // Deep clone presets
+        presets: src.presets.map(p => ({
+          ...p,
+          items: p.items.map(r => ({ ...r })),
+          options: p.options.map(r => ({ ...r })),
+        })),
+      };
+      const next = [...prev];
+      next.splice(idx + 1, 0, clone);
+      return next;
+    });
+  }, []);
+
+  // Delete a cloned block
+  const handleDeleteBlock = useCallback((blockId: string) => {
+    Alert.alert('Удалить блок', 'Убрать эту копию блока?', [
+      { text: 'Отмена', style: 'cancel' },
+      {
+        text: 'Удалить', style: 'destructive',
+        onPress: () => setBlocks(prev => prev.filter(b => b.id !== blockId)),
+      },
+    ]);
+  }, []);
+
   const handleToggleNom = useCallback((blockId: string, side: 'items' | 'options', nomId: string) => {
     setBlocks(prev => prev.map(b => {
       if (b.id !== blockId) return b;
@@ -474,22 +512,27 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
           )}
 
           {/* Calculator blocks */}
-          {rooms.length > 0 && blocks.map(block => (
-            <CalcBlockView
-              key={block.id}
-              block={block}
-              area={roomArea}
-              perimeter={roomPerim}
-              mainQty={mainQtys[block.id]}
-              optQtys={optQtys}
-              onToggleExpanded={() => handleToggleExpanded(block.id)}
-              onSelectPreset={presetId => handleSelectPreset(block.id, presetId)}
-              onUpdatePresets={presets => handleUpdatePresets(block.id, presets)}
-              onToggleNom={(side, nomId) => handleToggleNom(block.id, side, nomId)}
-              onChangeMainQty={qty => setMainQtys(prev => ({ ...prev, [block.id]: qty }))}
-              onChangeOptQty={(nomId, qty) => setOptQtys(prev => ({ ...prev, [nomId]: qty }))}
-            />
-          ))}
+          {rooms.length > 0 && blocks.map(block => {
+            const isClone = block.id.includes('_copy');
+            return (
+              <CalcBlockView
+                key={block.id}
+                block={block}
+                area={roomArea}
+                perimeter={roomPerim}
+                mainQty={mainQtys[block.id]}
+                optQtys={optQtys}
+                onToggleExpanded={() => handleToggleExpanded(block.id)}
+                onSelectPreset={presetId => handleSelectPreset(block.id, presetId)}
+                onUpdatePresets={presets => handleUpdatePresets(block.id, presets)}
+                onToggleNom={(side, nomId) => handleToggleNom(block.id, side, nomId)}
+                onChangeMainQty={qty => setMainQtys(prev => ({ ...prev, [block.id]: qty }))}
+                onChangeOptQty={(nomId, qty) => setOptQtys(prev => ({ ...prev, [nomId]: qty }))}
+                onDuplicate={() => handleDuplicateBlock(block.id)}
+                onDelete={isClone ? () => handleDeleteBlock(block.id) : undefined}
+              />
+            );
+          })}
 
           {/* Grand total */}
           {rooms.length > 0 && (

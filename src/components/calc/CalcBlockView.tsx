@@ -284,12 +284,15 @@ interface CalcBlockViewProps {
   onToggleNom: (side: 'items' | 'options', nomId: string) => void;
   onChangeMainQty: (qty: number) => void;
   onChangeOptQty: (nomId: string, qty: number) => void;
+  onDuplicate?: () => void;  // clone this block (e.g. for multiple different additional profiles)
+  onDelete?: () => void;     // delete this block (only for cloned blocks)
 }
 
 export default function CalcBlockView({
   block, area, perimeter, mainQty, optQtys,
   onToggleExpanded, onSelectPreset, onUpdatePresets,
   onToggleNom, onChangeMainQty, onChangeOptQty,
+  onDuplicate, onDelete,
 }: CalcBlockViewProps) {
   const [showEditor, setShowEditor] = useState(false);
   const activePreset = block.presets.find(p => p.id === block.activePresetId);
@@ -310,6 +313,31 @@ export default function CalcBlockView({
         </View>
         <View className="flex-row items-center gap-2">
           <Text className="text-xs font-bold text-accent">{fmt(blockTotal)} ₽</Text>
+          {onDuplicate && (
+            <Pressable
+              onPress={onDuplicate}
+              style={{
+                width: 26, height: 26, borderRadius: 6,
+                backgroundColor: '#eeeeff',
+                alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              <Text style={{ color: '#4F46E5', fontSize: 16, fontWeight: '800', lineHeight: 18 }}>+</Text>
+            </Pressable>
+          )}
+          {onDelete && (
+            <Pressable
+              onPress={onDelete}
+              onLongPress={onDelete}
+              style={{
+                width: 26, height: 26, borderRadius: 6,
+                backgroundColor: '#fee2e2',
+                alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              <Text style={{ color: '#dc2626', fontSize: 13, fontWeight: '800', lineHeight: 14 }}>×</Text>
+            </Pressable>
+          )}
           <Pressable
             onPress={() => setShowEditor(true)}
             style={{
