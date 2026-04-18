@@ -21,6 +21,7 @@ import {
   Divider,
 } from '../ui';
 import { AppMenu } from '../ui/AppMenu';
+import { useResponsive } from '../../hooks/useResponsive';
 import { fmt } from '../../utils/geometry';
 import type { Order, OrderStatus } from '../../types';
 
@@ -185,6 +186,7 @@ function NewOrderModal({
 export default function HomeScreen() {
   const { state, dispatch } = useApp();
   const router = useRouter();
+  const { containerStyle } = useResponsive();
   const [showNew, setShowNew] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [search, setSearch] = useState('');
@@ -246,7 +248,7 @@ export default function HomeScreen() {
         }
       />
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={containerStyle}>
         {/* Stats card */}
         <View className="bg-navy mx-4 mt-4 rounded-2xl p-4 mb-4">
           <Text className="text-white/50 text-[10px] font-bold tracking-widest mb-2">

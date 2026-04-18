@@ -15,6 +15,7 @@ import { useNomenclature, getFolderId } from '../../hooks/useNomenclature';
 import { generateId } from '../../utils/storage';
 import { AppHeader, Badge, Button, EmptyState } from '../ui';
 import { NomItemEditor } from '../nomenclature/NomItemEditor';
+import { useResponsive } from '../../hooks/useResponsive';
 import type { NomItem, NomFolder } from '../../types';
 
 // ─── Type labels ──────────────────────────────────────────────────────
@@ -75,6 +76,7 @@ export default function NomenclatureScreen() {
   const router = useRouter();
   const { dispatch } = useApp();
   const { allFolders, getItemsForFolder, searchNoms } = useNomenclature();
+  const { containerStyle } = useResponsive();
 
   const [activeFolder, setActiveFolder] = useState(allFolders[0]?.id || '_polotna');
   const [search, setSearch] = useState('');
@@ -184,6 +186,7 @@ export default function NomenclatureScreen() {
         onBack={() => router.back()}
       />
 
+     <View style={[{ flex: 1 }, containerStyle]}>
       {/* Search */}
       <View className="mx-4 mt-3 mb-2">
         <TextInput
@@ -275,6 +278,8 @@ export default function NomenclatureScreen() {
           ListFooterComponent={<View className="h-24" />}
         />
       )}
+
+     </View>
 
       {/* FAB */}
       <Pressable

@@ -7,7 +7,7 @@
     "scheme": "magic",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": false,
+      "supportsTablet": true,
       "bundleIdentifier": "ru.magicstudio.app",
       "infoPlist": {
         "NSMotionUsageDescription": "Компас используется для замера помещений",
