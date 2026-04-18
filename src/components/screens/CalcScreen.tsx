@@ -12,7 +12,7 @@ import { useRouter } from 'expo-router';
 import Svg, { Polygon as SvgPolygon, Line, Circle as SvgCircle, Text as SvgText } from 'react-native-svg';
 import { useApp, useOrder } from '../../store/AppContext';
 import { AppHeader, Button, Card, SectionHeader, Divider, EmptyState } from '../ui';
-import { calcPoly, fmt } from '../../utils/geometry';
+import { calcPoly, countAngles, fmt } from '../../utils/geometry';
 import { generateId } from '../../utils/storage';
 import type { Room, Vertex } from '../../types';
 import CompassBuilder from '../builders/CompassBuilder';
@@ -362,6 +362,7 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
                       const rp = (activeRoom.aO == null || activeRoom.pO == null) ? calcPoly(activeRoom.v) : null;
                       const area = activeRoom.aO ?? rp!.a;
                       const perim = activeRoom.pO ?? rp!.p;
+                      const angles = countAngles(activeRoom.v);
                       return (
                         <>
                           <View className="flex-row gap-2">
@@ -372,6 +373,18 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
                             <Text className="text-muted text-xs">Периметр:</Text>
                             <Text className="text-navy text-xs font-semibold">{fmt(perim)} м.п.</Text>
                           </View>
+                          {angles.total > 0 && (
+                            <View className="flex-row gap-3 mt-0.5">
+                              <View className="flex-row gap-1 items-center">
+                                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#16a34a' }} />
+                                <Text style={{ fontSize: 11, color: '#16a34a', fontWeight: '700' }}>{angles.inner}вн</Text>
+                              </View>
+                              <View className="flex-row gap-1 items-center">
+                                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#dc2626' }} />
+                                <Text style={{ fontSize: 11, color: '#dc2626', fontWeight: '700' }}>{angles.outer}вш</Text>
+                              </View>
+                            </View>
+                          )}
                         </>
                       );
                     })()}
