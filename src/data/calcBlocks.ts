@@ -116,7 +116,10 @@ export function createDefaultBlocks(): CalcBlock[] {
             { nomId: 'c_msd', enabled: true },
             { nomId: 'w_mont_pvh', enabled: true },
           ],
-          options: [],
+          options: [
+            { nomId: 'o_inner', enabled: true },
+            { nomId: 'o_outer', enabled: true },
+          ],
         },
         {
           id: 'pr_tkan', name: 'Ткань',
@@ -124,7 +127,10 @@ export function createDefaultBlocks(): CalcBlock[] {
             { nomId: 'c_tkan', enabled: true },
             { nomId: 'w_mont_tk', enabled: true },
           ],
-          options: [],
+          options: [
+            { nomId: 'o_inner', enabled: true },
+            { nomId: 'o_outer', enabled: true },
+          ],
         },
         {
           id: 'pr_trans', name: 'Транслюцидное',
@@ -132,7 +138,10 @@ export function createDefaultBlocks(): CalcBlock[] {
             { nomId: 'c_trans', enabled: true },
             { nomId: 'w_mont_pvh', enabled: true },
           ],
-          options: [],
+          options: [
+            { nomId: 'o_inner', enabled: true },
+            { nomId: 'o_outer', enabled: true },
+          ],
         },
       ],
     },
