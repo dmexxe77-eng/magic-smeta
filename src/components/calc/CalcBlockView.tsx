@@ -15,15 +15,15 @@ import { getNom, getNomPrice, calcPresetTotal, getDefaultMainQty, getAllNoms } f
 import type { NomItem } from '../../data/nomenclature';
 import { fmt } from '../../utils/geometry';
 
-// ─── Star Icon ──────────────────────────────────────────────────────
-const StarIcon = ({ size = 22, color = '#f59e0b' }: { size?: number; color?: string }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24">
+// ─── Star Icon (outlined) ───────────────────────────────────────────
+const StarIcon = ({ size = 18, color = '#9ca3af' }: { size?: number; color?: string }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path
       d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-      fill={color}
-      stroke="#d97706"
-      strokeWidth="0.5"
+      stroke={color}
+      strokeWidth="1.8"
       strokeLinejoin="round"
+      strokeLinecap="round"
     />
   </Svg>
 );
@@ -310,8 +310,15 @@ export default function CalcBlockView({
         </View>
         <View className="flex-row items-center gap-2">
           <Text className="text-xs font-bold text-accent">{fmt(blockTotal)} ₽</Text>
-          <Pressable onPress={() => setShowEditor(true)} className="px-1.5">
-            <StarIcon size={22} />
+          <Pressable
+            onPress={() => setShowEditor(true)}
+            style={{
+              width: 32, height: 32, borderRadius: 16,
+              backgroundColor: '#eeeeff',
+              alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            <StarIcon size={18} />
           </Pressable>
           <Text className="text-muted" style={{ fontSize: 8, opacity: 0.5 }}>{block.expanded ? '▲' : '▼'}</Text>
         </View>
