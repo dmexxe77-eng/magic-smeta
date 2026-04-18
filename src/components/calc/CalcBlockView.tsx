@@ -313,7 +313,7 @@ export default function CalcBlockView({
           <Pressable
             onPress={() => setShowEditor(true)}
             style={{
-              width: 32, height: 32, borderRadius: 16,
+              width: 32, height: 32, borderRadius: 8,
               backgroundColor: '#eeeeff',
               alignItems: 'center', justifyContent: 'center',
             }}
