@@ -88,12 +88,17 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
   const [mainQtys, setMainQtys] = useState<Record<string, number>>({});  // block main qty overrides
   const [optQtys, setOptQtys] = useState<Record<string, number>>({});    // option quantities
 
-  // Room options (protection, etc) — separate mini-block
+  // Room options (protection, etc) — mini-block ABOVE canvas
   const [roomOptIds, setRoomOptIds] = useState<string[]>(['w_prot', 'w_floor']);
   const [roomOptEnabled, setRoomOptEnabled] = useState<Record<string, boolean>>({});
   const [roomOptBindings, setRoomOptBindings] = useState<Record<string, 'area' | 'perimeter'>>({
     w_prot: 'perimeter', w_floor: 'area',
   });
+
+  // Canvas-specific options — mini-block AFTER ПОТОЛОК block
+  const [canvasOptIds, setCanvasOptIds] = useState<string[]>([]);
+  const [canvasOptEnabled, setCanvasOptEnabled] = useState<Record<string, boolean>>({});
+  const [canvasOptBindings, setCanvasOptBindings] = useState<Record<string, 'area' | 'perimeter'>>({});
 
   // Sync activeRoomId when order loads from AsyncStorage
   useEffect(() => {
@@ -118,20 +123,24 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
   const roomArea = activeRoom?.aO ?? (activeRoom ? calcPoly(activeRoom.v).a : 0);
   const roomPerim = activeRoom?.pO ?? (activeRoom ? calcPoly(activeRoom.v).p : 0);
 
-  // Room options total
-  const roomOptTotal = roomOptIds.reduce((sum, id) => {
-    if (!roomOptEnabled[id]) return sum;
-    const nom = mergedNoms.find(n => n.id === id);
-    if (!nom) return sum;
-    const binding = roomOptBindings[id] || (nom.bindTo === 'area' ? 'area' : 'perimeter');
-    const qty = binding === 'area' ? roomArea : roomPerim;
-    return sum + qty * nom.price;
-  }, 0);
+  // Options total helper
+  const calcOptsTotal = (ids: string[], enabled: Record<string, boolean>, bindings: Record<string, 'area' | 'perimeter'>) => {
+    return ids.reduce((sum, id) => {
+      if (!enabled[id]) return sum;
+      const nom = mergedNoms.find(n => n.id === id);
+      if (!nom) return sum;
+      const binding = bindings[id] || (nom.bindTo === 'area' ? 'area' : 'perimeter');
+      const qty = binding === 'area' ? roomArea : roomPerim;
+      return sum + qty * nom.price;
+    }, 0);
+  };
+  const roomOptTotal = calcOptsTotal(roomOptIds, roomOptEnabled, roomOptBindings);
+  const canvasOptTotal = calcOptsTotal(canvasOptIds, canvasOptEnabled, canvasOptBindings);
 
   // Grand total from all blocks
   const grand = blocks.reduce((sum, block) =>
     sum + calcBlockTotal(block, roomArea, roomPerim, mainQtys[block.id], optQtys), 0
-  ) + roomOptTotal;
+  ) + roomOptTotal + canvasOptTotal;
 
   // Block handlers
   const handleToggleExpanded = useCallback((blockId: string) => {
@@ -417,22 +426,36 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
             />
           )}
 
-          {/* Calculator blocks */}
-          {rooms.length > 0 && blocks.map(block => (
-            <CalcBlockView
-              key={block.id}
-              block={block}
-              area={roomArea}
-              perimeter={roomPerim}
-              mainQty={mainQtys[block.id]}
-              optQtys={optQtys}
-              onToggleExpanded={() => handleToggleExpanded(block.id)}
-              onSelectPreset={presetId => handleSelectPreset(block.id, presetId)}
-              onUpdatePresets={presets => handleUpdatePresets(block.id, presets)}
-              onToggleNom={(side, nomId) => handleToggleNom(block.id, side, nomId)}
-              onChangeMainQty={qty => setMainQtys(prev => ({ ...prev, [block.id]: qty }))}
-              onChangeOptQty={(nomId, qty) => setOptQtys(prev => ({ ...prev, [nomId]: qty }))}
-            />
+          {/* Calculator blocks with canvas options inserted after ПОТОЛОК */}
+          {rooms.length > 0 && blocks.map((block, idx) => (
+            <View key={block.id}>
+              <CalcBlockView
+                block={block}
+                area={roomArea}
+                perimeter={roomPerim}
+                mainQty={mainQtys[block.id]}
+                optQtys={optQtys}
+                onToggleExpanded={() => handleToggleExpanded(block.id)}
+                onSelectPreset={presetId => handleSelectPreset(block.id, presetId)}
+                onUpdatePresets={presets => handleUpdatePresets(block.id, presets)}
+                onToggleNom={(side, nomId) => handleToggleNom(block.id, side, nomId)}
+                onChangeMainQty={qty => setMainQtys(prev => ({ ...prev, [block.id]: qty }))}
+                onChangeOptQty={(nomId, qty) => setOptQtys(prev => ({ ...prev, [nomId]: qty }))}
+              />
+              {/* Canvas options after ПОТОЛОК (first block) */}
+              {idx === 0 && (
+                <RoomOptionsBlock
+                  title="ОПЦИИ ПОЛОТНА"
+                  area={roomArea}
+                  perimeter={roomPerim}
+                  optionIds={canvasOptIds}
+                  enabled={canvasOptEnabled}
+                  bindings={canvasOptBindings}
+                  onToggle={(id) => setCanvasOptEnabled(prev => ({ ...prev, [id]: !prev[id] }))}
+                  onUpdateOptions={(ids, bnds) => { setCanvasOptIds(ids); setCanvasOptBindings(bnds); }}
+                />
+              )}
+            </View>
           ))}
 
           {/* Grand total */}

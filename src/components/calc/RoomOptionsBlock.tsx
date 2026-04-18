@@ -35,6 +35,7 @@ interface RoomOptionsBlockProps {
   bindings: Record<string, Binding>; // override per-nom binding
   onToggle: (nomId: string) => void;
   onUpdateOptions: (ids: string[], bindings: Record<string, Binding>) => void;
+  title?: string;
 }
 
 function qtyForBinding(binding: Binding, area: number, perimeter: number): number {
@@ -53,6 +54,7 @@ function defaultBinding(nomBindTo: string | undefined): Binding {
 export default function RoomOptionsBlock({
   area, perimeter, optionIds, enabled, bindings,
   onToggle, onUpdateOptions,
+  title = 'ДОП. ОПЦИИ ПОМЕЩЕНИЯ',
 }: RoomOptionsBlockProps) {
   const [showEditor, setShowEditor] = useState(false);
 
@@ -77,7 +79,7 @@ export default function RoomOptionsBlock({
           color: '#9ca3af',
           letterSpacing: 1.2,
         }}>
-          ДОП. ОПЦИИ ПОМЕЩЕНИЯ
+          {title}
         </Text>
         <Pressable
           onPress={() => setShowEditor(true)}
