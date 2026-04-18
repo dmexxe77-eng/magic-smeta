@@ -18,6 +18,7 @@ import type { Room, Vertex } from '../../types';
 import CompassBuilder from '../builders/CompassBuilder';
 import TraceBuilder, { type TraceSession } from '../builders/TraceBuilder';
 import CalcBlockView from '../calc/CalcBlockView';
+import RoomOptionsBlock from '../calc/RoomOptionsBlock';
 import { createDefaultBlocks, calcBlockTotal, setMergedNoms, type CalcBlock, type Preset } from '../../data/calcBlocks';
 import { useNomenclature } from '../../hooks/useNomenclature';
 
@@ -87,6 +88,10 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
   const [mainQtys, setMainQtys] = useState<Record<string, number>>({});  // block main qty overrides
   const [optQtys, setOptQtys] = useState<Record<string, number>>({});    // option quantities
 
+  // Room options (protection, etc) — separate mini-block
+  const [roomOptIds, setRoomOptIds] = useState<string[]>(['w_prot', 'w_floor']);
+  const [roomOptEnabled, setRoomOptEnabled] = useState<Record<string, boolean>>({});
+
   // Sync activeRoomId when order loads from AsyncStorage
   useEffect(() => {
     if (order && activeRoomId == null && order.rooms.length > 0) {
@@ -110,10 +115,19 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
   const roomArea = activeRoom?.aO ?? (activeRoom ? calcPoly(activeRoom.v).a : 0);
   const roomPerim = activeRoom?.pO ?? (activeRoom ? calcPoly(activeRoom.v).p : 0);
 
+  // Room options total
+  const roomOptTotal = roomOptIds.reduce((sum, id) => {
+    if (!roomOptEnabled[id]) return sum;
+    const nom = mergedNoms.find(n => n.id === id);
+    if (!nom) return sum;
+    const qty = nom.bindTo === 'area' ? roomArea : nom.bindTo === 'perimeter' ? roomPerim : 1;
+    return sum + qty * nom.price;
+  }, 0);
+
   // Grand total from all blocks
   const grand = blocks.reduce((sum, block) =>
     sum + calcBlockTotal(block, roomArea, roomPerim, mainQtys[block.id], optQtys), 0
-  );
+  ) + roomOptTotal;
 
   // Block handlers
   const handleToggleExpanded = useCallback((blockId: string) => {
@@ -181,7 +195,10 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
       <TraceBuilder
         existingCount={rooms.length}
         onFinishAll={(newRooms) => {
-          const updated = [...rooms, ...newRooms];
+          // Dedupe: replace rooms with same id, append truly new ones
+          const newIds = new Set(newRooms.map(r => r.id));
+          const kept = rooms.filter(r => !newIds.has(r.id));
+          const updated = [...kept, ...newRooms];
           updateOrderRooms(order.id, updated);
           if (newRooms.length > 0) setActiveRoomId(newRooms[0].id);
           setShowTracer(false);
@@ -372,22 +389,34 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
             />
           )}
 
-          {/* Calculator blocks */}
-          {rooms.length > 0 && blocks.map(block => (
-            <CalcBlockView
-              key={block.id}
-              block={block}
-              area={roomArea}
-              perimeter={roomPerim}
-              mainQty={mainQtys[block.id]}
-              optQtys={optQtys}
-              onToggleExpanded={() => handleToggleExpanded(block.id)}
-              onSelectPreset={presetId => handleSelectPreset(block.id, presetId)}
-              onUpdatePresets={presets => handleUpdatePresets(block.id, presets)}
-              onToggleNom={(side, nomId) => handleToggleNom(block.id, side, nomId)}
-              onChangeMainQty={qty => setMainQtys(prev => ({ ...prev, [block.id]: qty }))}
-              onChangeOptQty={(nomId, qty) => setOptQtys(prev => ({ ...prev, [nomId]: qty }))}
-            />
+          {/* Calculator blocks with room options inserted after canvas */}
+          {rooms.length > 0 && blocks.map((block, idx) => (
+            <View key={block.id}>
+              <CalcBlockView
+                block={block}
+                area={roomArea}
+                perimeter={roomPerim}
+                mainQty={mainQtys[block.id]}
+                optQtys={optQtys}
+                onToggleExpanded={() => handleToggleExpanded(block.id)}
+                onSelectPreset={presetId => handleSelectPreset(block.id, presetId)}
+                onUpdatePresets={presets => handleUpdatePresets(block.id, presets)}
+                onToggleNom={(side, nomId) => handleToggleNom(block.id, side, nomId)}
+                onChangeMainQty={qty => setMainQtys(prev => ({ ...prev, [block.id]: qty }))}
+                onChangeOptQty={(nomId, qty) => setOptQtys(prev => ({ ...prev, [nomId]: qty }))}
+              />
+              {/* Insert Room Options block after Canvas (idx 0) */}
+              {idx === 0 && (
+                <RoomOptionsBlock
+                  area={roomArea}
+                  perimeter={roomPerim}
+                  optionIds={roomOptIds}
+                  enabled={roomOptEnabled}
+                  onToggle={(id) => setRoomOptEnabled(prev => ({ ...prev, [id]: !prev[id] }))}
+                  onUpdateOptions={(ids) => setRoomOptIds(ids)}
+                />
+              )}
+            </View>
           ))}
 
           {/* Grand total */}

@@ -446,7 +446,9 @@ export default function TraceBuilder({ existingCount, onFinishAll, onBack, sessi
       const verts: Vertex[] = tr.points.map(p => ({ x: p.x / scale / 100, y: p.y / scale / 100 }));
       const poly = calcPoly(verts);
       return {
-        id: generateId(), name: tr.name, v: verts,
+        id: tr.id,  // preserve original id so CalcScreen can dedupe
+        name: tr.name,
+        v: verts,
         aO: Math.round(poly.a * 100) / 100, pO: Math.round(poly.p * 100) / 100,
         canvas: { qty: Math.round(poly.a * 100) / 100 },
         mainProf: { qty: Math.round(poly.p * 100) / 100 },
