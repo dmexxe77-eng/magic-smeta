@@ -30,12 +30,21 @@ const TYPE_LABELS: Record<string, { label: string; color: 'accent' | 'green' | '
 
 // ─── Nom Row ──────────────────────────────────────────────────────────
 
-function NomRow({ item, onPress }: { item: NomItem; onPress: () => void }) {
+function NomRow({ item, onPress, isTablet }: { item: NomItem; onPress: () => void; isTablet: boolean }) {
   const tl = TYPE_LABELS[item.type] || TYPE_LABELS.option;
   return (
     <Pressable
       onPress={onPress}
-      className="flex-row items-center bg-card border border-border rounded-2xl mx-4 mb-2 px-3 py-3"
+      style={{
+        flexDirection: 'row', alignItems: 'center',
+        backgroundColor: '#ffffff',
+        borderWidth: 1, borderColor: '#e8e8e4',
+        borderRadius: 16,
+        marginHorizontal: isTablet ? 8 : 16,
+        marginBottom: 8,
+        paddingHorizontal: 12, paddingVertical: 12,
+        flex: isTablet ? 1 : undefined,
+      }}
     >
       {/* Image */}
       <View style={{
@@ -51,19 +60,19 @@ function NomRow({ item, onPress }: { item: NomItem; onPress: () => void }) {
       </View>
 
       {/* Name + type */}
-      <View className="flex-1 mr-2">
-        <Text className="text-navy font-semibold text-sm" numberOfLines={1}>{item.name}</Text>
-        <View className="flex-row items-center gap-2 mt-1">
+      <View style={{ flex: 1, marginRight: 8 }}>
+        <Text style={{ color: '#1e2030', fontWeight: '600', fontSize: 14 }} numberOfLines={1}>{item.name}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
           <Badge label={tl.label} color={tl.color} />
-          <Text className="text-muted text-xs">{item.unit}</Text>
+          <Text style={{ color: '#6b6b7a', fontSize: 12 }}>{item.unit}</Text>
         </View>
       </View>
 
       {/* Prices */}
-      <View className="items-end">
-        <Text className="text-navy font-bold text-sm">{item.price} ₽</Text>
+      <View style={{ alignItems: 'flex-end' }}>
+        <Text style={{ color: '#1e2030', fontWeight: '700', fontSize: 14 }}>{item.price} ₽</Text>
         {item.purchasePrice != null && item.purchasePrice > 0 && (
-          <Text className="text-muted text-xs mt-0.5">закуп {item.purchasePrice} ₽</Text>
+          <Text style={{ color: '#6b6b7a', fontSize: 11, marginTop: 2 }}>закуп {item.purchasePrice} ₽</Text>
         )}
       </View>
     </Pressable>
@@ -76,7 +85,7 @@ export default function NomenclatureScreen() {
   const router = useRouter();
   const { dispatch } = useApp();
   const { allFolders, getItemsForFolder, searchNoms } = useNomenclature();
-  const { containerStyle } = useResponsive();
+  const { containerStyle, isTablet, numColumns } = useResponsive();
 
   const [activeFolder, setActiveFolder] = useState(allFolders[0]?.id || '_polotna');
   const [search, setSearch] = useState('');
@@ -173,8 +182,8 @@ export default function NomenclatureScreen() {
   };
 
   const renderItem = useCallback(({ item }: { item: NomItem }) => (
-    <NomRow item={item} onPress={() => handleEditItem(item)} />
-  ), []);
+    <NomRow item={item} onPress={() => handleEditItem(item)} isTablet={isTablet} />
+  ), [isTablet]);
 
   const keyExtractor = useCallback((item: NomItem) => item.id, []);
 
@@ -274,6 +283,9 @@ export default function NomenclatureScreen() {
           data={items}
           renderItem={renderItem}
           keyExtractor={keyExtractor}
+          numColumns={numColumns}
+          key={`cols-${numColumns}`}
+          columnWrapperStyle={numColumns > 1 ? { paddingHorizontal: 8 } : undefined}
           showsVerticalScrollIndicator={false}
           ListFooterComponent={<View className="h-24" />}
         />
