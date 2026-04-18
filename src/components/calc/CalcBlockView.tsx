@@ -49,7 +49,7 @@ function QtyCell({ value, onChange, small }: { value: number; onChange: (v: numb
   }
   return (
     <Pressable
-      onPress={() => { setTmp(String(value)); setEditing(true); }}
+      onPress={() => { setTmp(value === 0 ? '' : String(value)); setEditing(true); }}
       style={{ width: small ? 40 : 50, paddingHorizontal: 4, paddingVertical: 2, borderWidth: 1, borderColor: '#e8e8e4', borderRadius: 6, backgroundColor: '#f7f7f5', alignItems: 'center' }}
     >
       <Text style={{ fontSize: 11, color: '#1e2030', fontWeight: '600' }}>{value > 0 ? fmt(value) : '—'}</Text>

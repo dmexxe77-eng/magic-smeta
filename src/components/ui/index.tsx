@@ -245,6 +245,13 @@ export function FormField({
       <TextInput
         value={value}
         onChangeText={onChangeText}
+        onFocus={() => {
+          // Clear "0" on focus for numeric inputs to avoid having to manually delete it
+          if ((keyboardType === 'numeric' || keyboardType === 'decimal-pad') && value === '0') {
+            onChangeText('');
+          }
+        }}
+        selectTextOnFocus
         placeholder={placeholder}
         placeholderTextColor="#b0b0ba"
         keyboardType={keyboardType}
