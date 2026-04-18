@@ -373,18 +373,16 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
                             <Text className="text-muted text-xs">Периметр:</Text>
                             <Text className="text-navy text-xs font-semibold">{fmt(perim)} м.п.</Text>
                           </View>
-                          {angles.total > 0 && (
-                            <View className="flex-row gap-3 mt-0.5">
-                              <View className="flex-row gap-1 items-center">
-                                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#16a34a' }} />
-                                <Text style={{ fontSize: 11, color: '#16a34a', fontWeight: '700' }}>{angles.inner}вн</Text>
-                              </View>
-                              <View className="flex-row gap-1 items-center">
-                                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#dc2626' }} />
-                                <Text style={{ fontSize: 11, color: '#dc2626', fontWeight: '700' }}>{angles.outer}вш</Text>
-                              </View>
+                          <View className="flex-row gap-3 mt-0.5">
+                            <View className="flex-row gap-1 items-center">
+                              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#16a34a' }} />
+                              <Text style={{ fontSize: 11, color: '#16a34a', fontWeight: '700' }}>{angles.inner}вн</Text>
                             </View>
-                          )}
+                            <View className="flex-row gap-1 items-center">
+                              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#dc2626' }} />
+                              <Text style={{ fontSize: 11, color: '#dc2626', fontWeight: '700' }}>{angles.outer}вш</Text>
+                            </View>
+                          </View>
                         </>
                       );
                     })()}
