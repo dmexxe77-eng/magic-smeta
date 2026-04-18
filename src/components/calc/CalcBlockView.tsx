@@ -296,8 +296,10 @@ export default function CalcBlockView({
         </View>
         <View className="flex-row items-center gap-2">
           <Text className="text-xs font-bold text-accent">{fmt(blockTotal)} ₽</Text>
-          <Pressable onPress={() => setShowEditor(true)} className="px-1.5"><Text className="text-muted text-sm">≡</Text></Pressable>
-          <Text className="text-muted text-xs">{block.expanded ? '▲' : '▼'}</Text>
+          <Pressable onPress={() => setShowEditor(true)} className="px-1.5">
+            <Text style={{ color: '#f59e0b', fontSize: 20 }}>★</Text>
+          </Pressable>
+          <Text className="text-muted" style={{ fontSize: 8, opacity: 0.5 }}>{block.expanded ? '▲' : '▼'}</Text>
         </View>
       </Pressable>
 
