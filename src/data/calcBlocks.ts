@@ -94,7 +94,7 @@ export function getDefaultMainQty(block: CalcBlock, area: number, perimeter: num
   switch (block.bindTo) {
     case 'area': return Math.round(area * 100) / 100;
     case 'perimeter': return Math.round(perimeter * 100) / 100;
-    case 'qty': return 1;
+    case 'qty': return 0;  // Доп. блоки: пользователь вводит количество вручную
   }
 }
 

@@ -64,8 +64,8 @@ function PresetEditorModal({
       <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
         <View className="flex-1 bg-white">
           <View className="flex-row items-center justify-between px-4 pt-14 pb-3 border-b border-border">
-            <Text className="text-lg font-bold text-navy">Избранные кнопки</Text>
-            <Pressable onPress={() => { onSave(presets); onClose(); }} className="w-10 h-10 items-center justify-center">
+            <Text className="text-lg font-bold text-navy flex-1">Избранные кнопки</Text>
+            <Pressable onPress={() => { onSave(presets); onClose(); }} className="px-3 py-2">
               <Text className="text-accent text-base font-semibold">Готово</Text>
             </Pressable>
           </View>
