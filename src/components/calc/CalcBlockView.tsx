@@ -313,12 +313,12 @@ export default function CalcBlockView({
           <Pressable
             onPress={() => setShowEditor(true)}
             style={{
-              width: 32, height: 32, borderRadius: 8,
+              width: 26, height: 26, borderRadius: 6,
               backgroundColor: '#eeeeff',
               alignItems: 'center', justifyContent: 'center',
             }}
           >
-            <StarIcon size={18} />
+            <StarIcon size={14} />
           </Pressable>
           <Text className="text-muted" style={{ fontSize: 8, opacity: 0.5 }}>{block.expanded ? '▲' : '▼'}</Text>
         </View>
