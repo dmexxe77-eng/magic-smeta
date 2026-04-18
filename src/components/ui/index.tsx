@@ -28,29 +28,37 @@ export function AppHeader({
   const insets = useSafeAreaInsets();
   return (
     <View className="bg-white border-b border-border px-4 pb-3" style={{ paddingTop: insets.top + 4 }}>
-      <View className="flex-row items-center gap-3">
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         {/* Logo + optional back */}
-        <View className="flex-row items-center gap-2 flex-shrink-0">
+        <View style={{ flexDirection: 'row', alignItems: 'center', flexShrink: 0 }}>
           {onBack && (
             <Pressable
               onPress={onBack}
-              className="w-9 h-9 rounded-[9px] bg-bg items-center justify-center mr-1"
+              style={{
+                width: 36, height: 36, borderRadius: 9,
+                backgroundColor: '#f7f7f5',
+                alignItems: 'center', justifyContent: 'center', marginRight: 8,
+              }}
             >
-              <Text className="text-navy text-xl font-bold">‹</Text>
+              <Text style={{ color: '#1e2030', fontSize: 20, fontWeight: '700' }}>‹</Text>
             </Pressable>
           )}
-          <View className="w-9 h-9 rounded-[9px] bg-navy items-center justify-center">
-            <View className="gap-[3px]">
-              <View className="w-[14px] h-[2px] rounded-sm bg-accent" />
-              <View className="w-[10px] h-[2px] rounded-sm bg-accent opacity-60" />
-              <View className="w-[7px] h-[2px] rounded-sm bg-accent opacity-30" />
+          <View style={{
+            width: 36, height: 36, borderRadius: 9,
+            backgroundColor: '#1e2030',
+            alignItems: 'center', justifyContent: 'center',
+          }}>
+            <View style={{ gap: 3 }}>
+              <View style={{ width: 14, height: 2, borderRadius: 1, backgroundColor: '#4F46E5' }} />
+              <View style={{ width: 10, height: 2, borderRadius: 1, backgroundColor: '#4F46E5', opacity: 0.6 }} />
+              <View style={{ width: 7, height: 2, borderRadius: 1, backgroundColor: '#4F46E5', opacity: 0.3 }} />
             </View>
           </View>
-          <View>
-            <Text className="text-[14px] font-bold tracking-widest text-navy">
+          <View style={{ marginLeft: 10 }}>
+            <Text style={{ fontSize: 14, fontWeight: '700', letterSpacing: 2, color: '#1e2030' }}>
               {title ?? 'MAGIC'}
             </Text>
-            <Text className="text-[9px] font-semibold tracking-[3px] text-accent -mt-0.5">
+            <Text style={{ fontSize: 9, fontWeight: '600', letterSpacing: 3, color: '#4F46E5', marginTop: -2 }}>
               {subtitle ?? 'STUDIO'}
             </Text>
           </View>
