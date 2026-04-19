@@ -3,7 +3,7 @@
     "name": "Magic Studio",
     "slug": "magic-studio",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "scheme": "magic",
     "userInterfaceStyle": "light",
     "ios": {
