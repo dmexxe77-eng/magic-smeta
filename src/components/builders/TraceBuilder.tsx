@@ -185,7 +185,10 @@ export default function TraceBuilder({ existingNames, onFinishAll, onBack, sessi
   const [magnetEnabled, setMagnetEnabled] = useState(true);
   const [showGrid, setShowGrid] = useState(true);
   const magnetRef = useRef(true);
+  const gridRef = useRef(true);
   magnetRef.current = magnetEnabled;
+  gridRef.current = showGrid;
+  const GRID_STEP = 40; // image pixels — также шаг snap к сетке
   const [points, setPoints] = useState<Array<{ x: number; y: number }>>([]);
   const [step, setStep] = useState<'pick' | 'pickPdf' | 'trace' | 'calibrate' | 'name'>(initialSession?.imageUri ? 'trace' : 'pick');
 
@@ -272,11 +275,23 @@ export default function TraceBuilder({ existingNames, onFinishAll, onBack, sessi
       }
     }
 
-    // H/V align to current polygon (if no corner snap)
-    if (x === ix && y === iy && points.length > 0) {
+    const cornerSnapped = x !== ix || y !== iy;
+
+    // H/V align to current polygon (only if corner snap didn't fire)
+    if (!cornerSnapped && points.length > 0) {
       const last = points[points.length - 1];
       if (Math.abs(ix - last.x) < thr) x = last.x;
       if (Math.abs(iy - last.y) < thr) y = last.y;
+    }
+
+    // Grid snap — fallback when nothing else matched
+    if (!cornerSnapped && gridRef.current) {
+      const gx = Math.round(x / GRID_STEP) * GRID_STEP;
+      const gy = Math.round(y / GRID_STEP) * GRID_STEP;
+      // Snap zone scales with zoom — feels consistent on screen
+      const snapDist = 14 / zoomRef.current;
+      if (Math.abs(x - gx) < snapDist) x = gx;
+      if (Math.abs(y - gy) < snapDist) y = gy;
     }
 
     return { x, y, closing: false };
@@ -581,27 +596,20 @@ export default function TraceBuilder({ existingNames, onFinishAll, onBack, sessi
           {/* SVG in image-pixel coords, scaled by transform */}
           <Svg width={imgW} height={imgH} viewBox={`0 0 ${imgW} ${imgH}`}
             style={StyleSheet.absoluteFill}>
-            {/* Grid overlay — minor every 25px, major every 100px */}
+            {/* Grid overlay — uniform step, also used as snap target */}
             {showGrid && (() => {
-              const minor = 25;
-              const major = 100;
+              const step = GRID_STEP;
               const lines: any[] = [];
-              for (let x = 0; x <= imgW; x += minor) {
-                const isMajor = x % major === 0;
+              for (let x = 0; x <= imgW; x += step) {
                 lines.push(
                   <Line key={`gx-${x}`} x1={x} y1={0} x2={x} y2={imgH}
-                    stroke={isMajor ? '#4F46E5' : '#94a3b8'}
-                    strokeWidth={isMajor ? 0.6 : 0.3}
-                    opacity={isMajor ? 0.35 : 0.18} />
+                    stroke="#4F46E5" strokeWidth={0.4} opacity={0.22} />
                 );
               }
-              for (let y = 0; y <= imgH; y += minor) {
-                const isMajor = y % major === 0;
+              for (let y = 0; y <= imgH; y += step) {
                 lines.push(
                   <Line key={`gy-${y}`} x1={0} y1={y} x2={imgW} y2={y}
-                    stroke={isMajor ? '#4F46E5' : '#94a3b8'}
-                    strokeWidth={isMajor ? 0.6 : 0.3}
-                    opacity={isMajor ? 0.35 : 0.18} />
+                    stroke="#4F46E5" strokeWidth={0.4} opacity={0.22} />
                 );
               }
               return <G>{lines}</G>;
