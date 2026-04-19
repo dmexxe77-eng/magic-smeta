@@ -25,6 +25,7 @@ import { InnerCornerIcon, OuterCornerIcon } from '../ui/CornerIcons';
 import { createDefaultBlocks, calcBlockTotal, setMergedNoms, type CalcBlock, type Preset } from '../../data/calcBlocks';
 import { useNomenclature } from '../../hooks/useNomenclature';
 import { nextRoomName } from '../../utils/roomName';
+import { useResponsive } from '../../hooks/useResponsive';
 
 // ─── Constants ────────────────────────────────────────────────────────
 
@@ -128,6 +129,7 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
   }
 
   const insets = useSafeAreaInsets();
+  const { isLandscape } = useResponsive();
   const rooms = order.rooms;
   const activeRoom = rooms.find(r => r.id === activeRoomId) ?? rooms[0];
 
@@ -336,8 +338,8 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
   };
 
   const handleRefreshPrices = () => {
-    setMainQtys({});
-    setOptQtys({});
+    setMainQtysAll({});
+    setOptQtysAll({});
     setBlocks(createDefaultBlocks());
   };
 
@@ -623,7 +625,8 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
             />
           )}
 
-          {/* Calculator blocks */}
+          {/* Calculator blocks — в landscape 2 колонки */}
+          <View style={isLandscape ? { flexDirection: 'row', flexWrap: 'wrap', gap: 8 } : undefined}>
           {rooms.length > 0 && blocks.map(block => {
             const isClone = block.id.includes('_copy');
             const hasOverride = !!(block.perRoomPreset && activeRoomId && perRoomPresets[activeRoomId]?.[block.id]);
@@ -636,36 +639,38 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
               ? mainProfileQtyFor(activeRoomId, roomPerim)
               : mainQtys[block.id];
             return (
-              <CalcBlockView
-                key={block.id}
-                block={effectiveBlock}
-                area={roomArea}
-                perimeter={roomPerim}
-                mainQty={mainQtyShown}
-                optQtys={optQtys}
-                onToggleExpanded={() => handleToggleExpanded(block.id)}
-                onSelectPreset={presetId => handleSelectPreset(block.id, presetId)}
-                onUpdatePresets={presets => handleUpdatePresets(block.id, presets)}
-                onToggleNom={(side, nomId) => handleToggleNom(block.id, side, nomId)}
-                onChangeMainQty={qty => activeRoomId && setMainQtysAll(prev => ({
-                  ...prev,
-                  [activeRoomId]: { ...(prev[activeRoomId] ?? {}), [block.id]: qty },
-                }))}
-                onChangeOptQty={(nomId, qty) => activeRoomId && setOptQtysAll(prev => ({
-                  ...prev,
-                  [activeRoomId]: { ...(prev[activeRoomId] ?? {}), [nomId]: qty },
-                }))}
-                isSyncedToProject={block.perRoomPreset ? !hasOverride : undefined}
-                onToggleSyncToProject={block.perRoomPreset ? (next) => handleToggleSync(block.id, next) : undefined}
-                isSubtractFromMain={block.canSubtractFromMain ? !!subtractFromMain[block.id] : undefined}
-                onToggleSubtractFromMain={block.canSubtractFromMain
-                  ? (next) => setSubtractFromMain(prev => ({ ...prev, [block.id]: next }))
-                  : undefined}
-                onDuplicate={() => handleDuplicateBlock(block.id)}
-                onDelete={isClone ? () => handleDeleteBlock(block.id) : undefined}
-              />
+              <View key={block.id} style={isLandscape ? { width: '49%' } : undefined}>
+                <CalcBlockView
+                  block={effectiveBlock}
+                  area={roomArea}
+                  perimeter={roomPerim}
+                  mainQty={mainQtyShown}
+                  optQtys={optQtys}
+                  onToggleExpanded={() => handleToggleExpanded(block.id)}
+                  onSelectPreset={presetId => handleSelectPreset(block.id, presetId)}
+                  onUpdatePresets={presets => handleUpdatePresets(block.id, presets)}
+                  onToggleNom={(side, nomId) => handleToggleNom(block.id, side, nomId)}
+                  onChangeMainQty={qty => activeRoomId && setMainQtysAll(prev => ({
+                    ...prev,
+                    [activeRoomId]: { ...(prev[activeRoomId] ?? {}), [block.id]: qty },
+                  }))}
+                  onChangeOptQty={(nomId, qty) => activeRoomId && setOptQtysAll(prev => ({
+                    ...prev,
+                    [activeRoomId]: { ...(prev[activeRoomId] ?? {}), [nomId]: qty },
+                  }))}
+                  isSyncedToProject={block.perRoomPreset ? !hasOverride : undefined}
+                  onToggleSyncToProject={block.perRoomPreset ? (next) => handleToggleSync(block.id, next) : undefined}
+                  isSubtractFromMain={block.canSubtractFromMain ? !!subtractFromMain[block.id] : undefined}
+                  onToggleSubtractFromMain={block.canSubtractFromMain
+                    ? (next) => setSubtractFromMain(prev => ({ ...prev, [block.id]: next }))
+                    : undefined}
+                  onDuplicate={() => handleDuplicateBlock(block.id)}
+                  onDelete={isClone ? () => handleDeleteBlock(block.id) : undefined}
+                />
+              </View>
             );
           })}
+          </View>
 
           {/* Room total — tap → estimate for this room only */}
           {activeRoom && (
