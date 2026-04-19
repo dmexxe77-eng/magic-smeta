@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
-  Calculator, ShoppingCart, Wrench, FileText, MapPin, Phone,
+  Calculator, ShoppingCart, Wrench, FileText, MapPin, Phone, Lock,
 } from 'lucide-react-native';
 import { useApp, useOrder } from '../../store/AppContext';
 import { AppHeader, Badge, Button, Card, SectionHeader, Divider, Touchable } from '../ui';
@@ -356,17 +356,19 @@ export default function OrderScreen({ orderId }: OrderScreenProps) {
                 {fmt(totalPaid)} ₽
               </Text>
             </View>
-            <Text className="text-muted text-sm text-center py-8">
-              🔒 Доступно в PRO
-            </Text>
+            <View className="flex-row items-center justify-center py-8 gap-2">
+              <Lock size={14} color="#5C5C6B" strokeWidth={2} />
+              <Text className="text-muted text-sm">Доступно в PRO</Text>
+            </View>
           </View>
         )}
 
         {tab === 'salary' && (
           <View className="p-4">
-            <Text className="text-muted text-sm text-center py-8">
-              🔒 Доступно в PRO
-            </Text>
+            <View className="flex-row items-center justify-center py-8 gap-2">
+              <Lock size={14} color="#5C5C6B" strokeWidth={2} />
+              <Text className="text-muted text-sm">Доступно в PRO</Text>
+            </View>
           </View>
         )}
 

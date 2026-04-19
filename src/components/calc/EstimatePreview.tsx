@@ -2,10 +2,12 @@ import { useState, useMemo } from 'react';
 import { View, Text, Modal, Pressable, ScrollView, Alert } from 'react-native';
 import Svg, { Polygon as SvgPolygon } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Share2 } from 'lucide-react-native';
 import { fmt, calcPoly } from '../../utils/geometry';
 import { buildEstimate, MODE_LABELS, type EstimateMode, type EstimateLine, type EstimateData } from '../../utils/estimate';
 import type { CalcBlock } from '../../data/calcBlocks';
 import type { Room, NomItem, Vertex } from '../../types';
+import { Touchable } from '../ui';
 
 interface Props {
   visible: boolean;
@@ -80,30 +82,32 @@ export default function EstimatePreview({
               <Text className="text-base font-bold text-navy" numberOfLines={1}>
                 {scope ? scope : orderName}
               </Text>
-              {scope && <Text className="text-muted text-[10px]">{orderName}</Text>}
+              {scope && <Text className="text-muted text-xs">{orderName}</Text>}
             </View>
-            <Pressable onPress={onClose} className="px-3 py-2">
+            <Touchable haptic="light" onPress={onClose} className="px-3 py-2">
               <Text className="text-accent text-sm font-semibold">Закрыть</Text>
-            </Pressable>
+            </Touchable>
           </View>
 
           {/* Mode segmented control */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
             {MODES.map(m => (
-              <Pressable
+              <Touchable
                 key={m}
+                haptic="selection"
+                scale={0.96}
                 onPress={() => setMode(m)}
                 style={{
                   paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999,
-                  backgroundColor: mode === m ? '#1e2030' : '#f7f7f5',
-                  borderWidth: 1, borderColor: mode === m ? '#1e2030' : '#e8e8e4',
+                  backgroundColor: mode === m ? '#1E2030' : '#FAFAF9',
+                  borderWidth: 1, borderColor: mode === m ? '#1E2030' : '#E6E6E1',
                 }}
               >
                 <Text style={{
                   fontSize: 12, fontWeight: '700',
-                  color: mode === m ? '#fff' : '#6b6b7a',
+                  color: mode === m ? '#fff' : '#5C5C6B',
                 }}>{MODE_LABELS[m]}</Text>
-              </Pressable>
+              </Touchable>
             ))}
           </ScrollView>
 
@@ -111,29 +115,31 @@ export default function EstimatePreview({
           {/* Группировка (только если несколько комнат) + чертёж */}
           <View className="flex-row items-center mt-2 gap-2">
             {!scope && rooms.length > 1 && (
-              <View className="flex-row" style={{ borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: '#e8e8e4' }}>
-                <Pressable
+              <View className="flex-row" style={{ borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: '#E6E6E1' }}>
+                <Touchable
+                  haptic="selection"
                   onPress={() => setGrouping('aggregate')}
                   style={{
-                    paddingHorizontal: 10, paddingVertical: 5,
-                    backgroundColor: grouping === 'aggregate' ? '#4F46E5' : '#fff',
+                    paddingHorizontal: 10, paddingVertical: 6,
+                    backgroundColor: grouping === 'aggregate' ? '#5E5CE6' : '#fff',
                   }}
                 >
-                  <Text style={{ fontSize: 11, fontWeight: '700', color: grouping === 'aggregate' ? '#fff' : '#6b6b7a' }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: grouping === 'aggregate' ? '#fff' : '#5C5C6B' }}>
                     Общая
                   </Text>
-                </Pressable>
-                <Pressable
+                </Touchable>
+                <Touchable
+                  haptic="selection"
                   onPress={() => setGrouping('per-room')}
                   style={{
-                    paddingHorizontal: 10, paddingVertical: 5,
-                    backgroundColor: grouping === 'per-room' ? '#4F46E5' : '#fff',
+                    paddingHorizontal: 10, paddingVertical: 6,
+                    backgroundColor: grouping === 'per-room' ? '#5E5CE6' : '#fff',
                   }}
                 >
-                  <Text style={{ fontSize: 11, fontWeight: '700', color: grouping === 'per-room' ? '#fff' : '#6b6b7a' }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: grouping === 'per-room' ? '#fff' : '#5C5C6B' }}>
                     По помещениям
                   </Text>
-                </Pressable>
+                </Touchable>
               </View>
             )}
             <ColToggle label="С чертежом" on={withDrawings} onPress={() => setWithDrawings(v => !v)} />
@@ -205,7 +211,7 @@ export default function EstimatePreview({
                   {withDrawings && room.v.length >= 3 && (
                     <View className="bg-white border border-border rounded-b-2xl px-4 py-3 items-center">
                       <RoomDrawing verts={room.v} />
-                      <Text className="text-muted text-[10px] mt-1">
+                      <Text className="text-muted text-xs mt-1">
                         S = {fmt(room.aO ?? calcPoly(room.v).a)} м² · P = {fmt(room.pO ?? calcPoly(room.v).p)} м.п.
                       </Text>
                     </View>
@@ -227,12 +233,14 @@ export default function EstimatePreview({
             </Text>
             <Text className="text-white text-2xl font-black">{fmt(grandTotal)} ₽</Text>
           </View>
-          <Pressable
+          <Touchable
+            haptic="medium"
             onPress={handleExport}
-            className="bg-accent rounded-xl py-3 items-center"
+            className="bg-accent rounded-xl py-3 flex-row items-center justify-center gap-2"
           >
-            <Text className="text-white text-sm font-bold">📤  Экспорт сметы</Text>
-          </Pressable>
+            <Share2 size={16} color="#FFFFFF" strokeWidth={2.5} />
+            <Text className="text-white text-sm font-bold">Экспорт сметы</Text>
+          </Touchable>
         </View>
       </View>
     </Modal>
@@ -242,18 +250,20 @@ export default function EstimatePreview({
 // ─── Column toggle pill ───────────────────────────────────────────────
 function ColToggle({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
   return (
-    <Pressable
+    <Touchable
+      haptic="selection"
+      scale={0.94}
       onPress={onPress}
       style={{
-        paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999,
-        backgroundColor: on ? '#4F46E5' : '#f7f7f5',
-        borderWidth: 1, borderColor: on ? '#4F46E5' : '#e8e8e4',
+        paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999,
+        backgroundColor: on ? '#5E5CE6' : '#FAFAF9',
+        borderWidth: 1, borderColor: on ? '#5E5CE6' : '#E6E6E1',
       }}
     >
-      <Text style={{ fontSize: 10, fontWeight: '700', color: on ? '#fff' : '#6b6b7a' }}>
+      <Text style={{ fontSize: 11, fontWeight: '700', color: on ? '#fff' : '#5C5C6B' }}>
         {label}
       </Text>
-    </Pressable>
+    </Touchable>
   );
 }
 

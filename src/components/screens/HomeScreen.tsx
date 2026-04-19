@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Search, Plus, X as XIcon } from 'lucide-react-native';
+import { Search, Plus, X as XIcon, FolderOpen } from 'lucide-react-native';
 import { useApp } from '../../store/AppContext';
 import {
   AppHeader,
@@ -348,10 +348,10 @@ export default function HomeScreen() {
         }
         ListEmptyComponent={
           <EmptyState
-            icon="📋"
+            icon={<FolderOpen size={32} strokeWidth={1.5} color="#5C5C6B" />}
             title="Проектов нет"
             desc="Создайте первый проект чтобы начать работу"
-            action={<Button label="+ Новый проект" onPress={() => setShowNew(true)} size="md" />}
+            action={<Button label="Новый проект" onPress={() => setShowNew(true)} size="md" />}
           />
         }
         initialNumToRender={8}

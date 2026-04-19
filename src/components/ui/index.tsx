@@ -421,15 +421,21 @@ export function EmptyState({
   desc,
   action,
 }: {
-  icon: string;
+  icon: string | React.ReactNode;
   title: string;
   desc?: string;
   action?: React.ReactNode;
 }) {
   return (
     <View className="flex-1 items-center justify-center px-8 py-16">
-      <Text className="text-5xl mb-4">{icon}</Text>
-      <Text className="text-navy font-bold text-lg text-center mb-2">
+      {typeof icon === 'string' ? (
+        <Text className="text-5xl mb-4">{icon}</Text>
+      ) : (
+        <View className="mb-4 w-16 h-16 rounded-2xl bg-surface2 items-center justify-center">
+          {icon}
+        </View>
+      )}
+      <Text className="text-ink font-bold text-lg text-center mb-2">
         {title}
       </Text>
       {desc && (
