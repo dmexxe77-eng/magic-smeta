@@ -57,26 +57,41 @@ export function buildVerticesFromSides(
 }
 
 /**
- * Get angles at each vertex (in degrees), matching web version algorithm.
- * Uses atan2-based signed angle and snaps to 90°/270° within ±15° tolerance.
+ * Get interior angles at each vertex (in degrees).
+ * Orientation-aware: works regardless of CW/CCW vertex order.
+ *
+ * Convention: 90° = выпуклый (convex/inner corner of room), 270° = вогнутый (reflex/niche).
  */
 export function getAngles(verts: Vertex[]): number[] {
   const n = verts.length;
   if (n < 3) return [];
-  // Convert to mm for better numerical precision (web version does same)
+  // mm for numerical precision
   const pts = verts.map(v => [v.x * 1000, v.y * 1000]);
+
+  // Signed shoelace — sign tells us vertex winding direction in screen coords (Y-down).
+  let signedArea = 0;
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    signedArea += pts[i][0] * pts[j][1] - pts[j][0] * pts[i][1];
+  }
+  const cwInScreen = signedArea > 0; // Y-down: positive shoelace = visually clockwise
+
   return pts.map((_, i) => {
     const a = pts[(i - 1 + n) % n];
     const b = pts[i];
     const c = pts[(i + 1) % n];
     const ba = [a[0] - b[0], a[1] - b[1]];
     const bc = [c[0] - b[0], c[1] - b[1]];
+    // Signed angle from BA to BC, CCW positive in math coords
     let ang = Math.atan2(bc[1], bc[0]) - Math.atan2(ba[1], ba[0]);
     if (ang < 0) ang += 2 * Math.PI;
-    let deg = 360 - (ang * 180) / Math.PI;
-    if (deg < 0) deg += 360;
-    if (Math.abs(deg - 90) < 45) deg = 90;   // snap to 90° within ±45°
-    if (Math.abs(deg - 270) < 45) deg = 270; // snap to 270° within ±45°
+    let deg = (ang * 180) / Math.PI; // [0, 360)
+    // For visually CW polygon (signedArea > 0) the formula yields the EXTERIOR angle.
+    // Convert to interior. For visually CCW it's already interior.
+    if (cwInScreen) deg = 360 - deg;
+
+    if (Math.abs(deg - 90) < 45) deg = 90;
+    if (Math.abs(deg - 270) < 45) deg = 270;
     return Math.round(deg);
   });
 }
