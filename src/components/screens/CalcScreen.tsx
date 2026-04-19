@@ -557,8 +557,10 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
             <View className="bg-navy rounded-2xl p-4">
               <View className="flex-row justify-between items-baseline">
                 <View>
-                  <Text className="text-white/50 text-[10px] font-bold tracking-widest">ПОМЕЩЕНИЕ</Text>
-                  <Text className="text-white/70 text-xs font-semibold mt-0.5" numberOfLines={1}>
+                  <Text style={{ color: '#a5b4fc', fontSize: 10, fontWeight: '700', letterSpacing: 2 }}>
+                    ПОМЕЩЕНИЕ
+                  </Text>
+                  <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700', marginTop: 2 }} numberOfLines={1}>
                     {activeRoom.name}
                   </Text>
                 </View>
