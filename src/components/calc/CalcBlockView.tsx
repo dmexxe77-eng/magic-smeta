@@ -283,14 +283,15 @@ interface CalcBlockViewProps {
   onChangeOptQty: (nomId: string, qty: number) => void;
   onDuplicate?: () => void;  // clone this block (e.g. for multiple different additional profiles)
   onDelete?: () => void;     // delete this block (only for cloned blocks)
-  onApplyToAllRooms?: () => void;  // for perRoomPreset blocks: apply current preset to all rooms
+  isSyncedToProject?: boolean;             // perRoomPreset: галочка ВКЛ — пресет синхронизирован с global
+  onToggleSyncToProject?: (next: boolean) => void;
 }
 
 export default function CalcBlockView({
   block, area, perimeter, mainQty, optQtys,
   onToggleExpanded, onSelectPreset, onUpdatePresets,
   onToggleNom, onChangeMainQty, onChangeOptQty,
-  onDuplicate, onDelete, onApplyToAllRooms,
+  onDuplicate, onDelete, isSyncedToProject, onToggleSyncToProject,
 }: CalcBlockViewProps) {
   const [showEditor, setShowEditor] = useState(false);
   const activePreset = block.presets.find(p => p.id === block.activePresetId);
@@ -371,20 +372,29 @@ export default function CalcBlockView({
             ))}
           </ScrollView>
 
-          {/* «Применить ко всем помещениям» — для perRoomPreset блоков */}
-          {onApplyToAllRooms && (
+          {/* «Применять ко всем помещениям» чекбокс — для perRoomPreset блоков */}
+          {onToggleSyncToProject && (
             <Pressable
-              onPress={onApplyToAllRooms}
-              className="flex-row items-center px-3 pb-1.5 gap-1.5"
+              onPress={() => onToggleSyncToProject(!isSyncedToProject)}
+              className="flex-row items-center px-3 pb-1.5 gap-2"
+              hitSlop={6}
             >
               <View style={{
-                width: 14, height: 14, borderRadius: 3, borderWidth: 1.5, borderColor: '#4F46E5',
+                width: 16, height: 16, borderRadius: 4,
+                borderWidth: 1.5,
+                borderColor: isSyncedToProject ? '#4F46E5' : '#b0b0ba',
+                backgroundColor: isSyncedToProject ? '#4F46E5' : 'transparent',
                 alignItems: 'center', justifyContent: 'center',
               }}>
-                <Text style={{ color: '#4F46E5', fontSize: 10, fontWeight: '900', lineHeight: 11 }}>↺</Text>
+                {isSyncedToProject && (
+                  <Text style={{ color: '#fff', fontSize: 11, fontWeight: '900', lineHeight: 12 }}>✓</Text>
+                )}
               </View>
-              <Text className="text-accent text-[10px] font-semibold">
-                Применить «{activePreset.name}» ко всем помещениям
+              <Text style={{
+                fontSize: 11, fontWeight: '600',
+                color: isSyncedToProject ? '#4F46E5' : '#6b6b7a',
+              }}>
+                Применять ко всем помещениям
               </Text>
             </Pressable>
           )}

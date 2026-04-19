@@ -183,19 +183,36 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
     }
   }, [blocks, activeRoomId]);
 
-  // Apply current room's preset to ALL rooms (for perRoomPreset blocks)
-  const handleApplyToAllRooms = useCallback((blockId: string, presetId: string) => {
-    setBlocks(prev => prev.map(b => b.id === blockId ? { ...b, activePresetId: presetId } : b));
-    // Clear all overrides for this block
-    setPerRoomPresets(prev => {
-      const next: Record<string, Record<string, string>> = {};
-      for (const [rid, ovs] of Object.entries(prev)) {
-        const { [blockId]: _, ...rest } = ovs;
-        if (Object.keys(rest).length > 0) next[rid] = rest;
-      }
-      return next;
-    });
-  }, []);
+  // Toggle "synced to project" checkbox for current room
+  // ON  → удалить override этой комнаты (вернуться к глобальному) И применить current preset как global
+  //       (так пресет, выбранный в этой комнате, становится «глобальным» и применяется ко всем,
+  //        у которых стоит галочка / нет override)
+  // OFF → записать override = текущий effective preset (отвязать от global)
+  const handleToggleSync = useCallback((blockId: string, next: boolean) => {
+    if (!activeRoomId) return;
+    const block = blocks.find(b => b.id === blockId);
+    if (!block) return;
+    const currentEffective = perRoomPresets[activeRoomId]?.[blockId] ?? block.activePresetId;
+
+    if (next) {
+      // Поставили галочку: текущий пресет становится глобальным; убираем override этой комнаты
+      setBlocks(prev => prev.map(b => b.id === blockId ? { ...b, activePresetId: currentEffective } : b));
+      setPerRoomPresets(prev => {
+        const roomOvs = { ...(prev[activeRoomId] ?? {}) };
+        delete roomOvs[blockId];
+        const next: Record<string, Record<string, string>> = { ...prev };
+        if (Object.keys(roomOvs).length > 0) next[activeRoomId] = roomOvs;
+        else delete next[activeRoomId];
+        return next;
+      });
+    } else {
+      // Сняли галочку: фиксируем текущий пресет как override для этой комнаты
+      setPerRoomPresets(prev => ({
+        ...prev,
+        [activeRoomId]: { ...(prev[activeRoomId] ?? {}), [blockId]: currentEffective },
+      }));
+    }
+  }, [blocks, activeRoomId, perRoomPresets]);
 
   // Get effective preset id for a block in given room (override or block default)
   const getEffectivePresetId = useCallback((block: CalcBlock, roomId: string | null): string => {
@@ -579,6 +596,7 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
           {/* Calculator blocks */}
           {rooms.length > 0 && blocks.map(block => {
             const isClone = block.id.includes('_copy');
+            const hasOverride = !!(block.perRoomPreset && activeRoomId && perRoomPresets[activeRoomId]?.[block.id]);
             const effectivePresetId = getEffectivePresetId(block, activeRoomId);
             const effectiveBlock = effectivePresetId !== block.activePresetId
               ? { ...block, activePresetId: effectivePresetId }
@@ -597,7 +615,8 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
                 onToggleNom={(side, nomId) => handleToggleNom(block.id, side, nomId)}
                 onChangeMainQty={qty => setMainQtys(prev => ({ ...prev, [block.id]: qty }))}
                 onChangeOptQty={(nomId, qty) => setOptQtys(prev => ({ ...prev, [nomId]: qty }))}
-                onApplyToAllRooms={block.perRoomPreset ? () => handleApplyToAllRooms(block.id, effectivePresetId) : undefined}
+                isSyncedToProject={block.perRoomPreset ? !hasOverride : undefined}
+                onToggleSyncToProject={block.perRoomPreset ? (next) => handleToggleSync(block.id, next) : undefined}
                 onDuplicate={() => handleDuplicateBlock(block.id)}
                 onDelete={isClone ? () => handleDeleteBlock(block.id) : undefined}
               />
