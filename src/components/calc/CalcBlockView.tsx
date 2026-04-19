@@ -333,6 +333,10 @@ export default function CalcBlockView({
     const next = [...block.presets];
     [next[idx], next[swap]] = [next[swap], next[idx]];
     onUpdatePresets(next);
+    // Тот, кто оказался на первом месте — автоматически становится выбранным
+    if (next[0].id !== block.activePresetId) {
+      onSelectPreset(next[0].id);
+    }
   };
 
   const effectiveMainQty = mainQty ?? getDefaultMainQty(block, area, perimeter);
