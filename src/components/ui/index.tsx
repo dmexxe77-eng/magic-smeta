@@ -1,12 +1,133 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   View,
   Text,
   Pressable,
   TextInput,
   ActivityIndicator,
+  Animated,
+  type PressableProps,
+  type ViewStyle,
+  type StyleProp,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
+
+// ─── Touchable (animated press + haptics) ────────────────────────────
+
+type HapticType = 'light' | 'medium' | 'heavy' | 'selection' | 'warning' | 'success' | 'none';
+
+const HAPTIC_MAP: Record<Exclude<HapticType, 'none'>, () => Promise<void>> = {
+  light:     () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light),
+  medium:    () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium),
+  heavy:     () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy),
+  selection: () => Haptics.selectionAsync(),
+  warning:   () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning),
+  success:   () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success),
+};
+
+interface TouchableProps extends Omit<PressableProps, 'style' | 'children'> {
+  children: React.ReactNode;
+  haptic?: HapticType;
+  scale?: number;          // default 0.97
+  style?: StyleProp<ViewStyle>;
+  className?: string;
+}
+
+export function Touchable({
+  children,
+  haptic = 'light',
+  scale = 0.97,
+  onPress,
+  style,
+  className,
+  ...rest
+}: TouchableProps) {
+  const anim = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.timing(anim, { toValue: scale, duration: 80, useNativeDriver: true }).start();
+  };
+  const handlePressOut = () => {
+    Animated.timing(anim, { toValue: 1, duration: 120, useNativeDriver: true }).start();
+  };
+  const handlePress = (e: any) => {
+    if (haptic !== 'none') {
+      HAPTIC_MAP[haptic]().catch(() => {});
+    }
+    onPress?.(e);
+  };
+
+  return (
+    <Pressable
+      {...rest}
+      onPress={handlePress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }, style as any]}
+      className={className}
+    >
+      <Animated.View style={{ transform: [{ scale: anim }] }}>
+        {children}
+      </Animated.View>
+    </Pressable>
+  );
+}
+
+// ─── Toggle (replacement for native Switch — bigger, accessible) ─────
+
+export function Toggle({ value, onValueChange, color = '#5E5CE6' }: {
+  value: boolean; onValueChange: (v: boolean) => void; color?: string;
+}) {
+  return (
+    <Pressable
+      onPress={() => {
+        Haptics.selectionAsync().catch(() => {});
+        onValueChange(!value);
+      }}
+      hitSlop={{ top: 12, right: 12, bottom: 12, left: 12 }}
+      style={{
+        width: 36, height: 20, borderRadius: 10, padding: 2,
+        backgroundColor: value ? color : '#D4D4CF',
+        justifyContent: 'center',
+      }}
+    >
+      <View style={{
+        width: 16, height: 16, borderRadius: 8, backgroundColor: '#fff',
+        marginLeft: value ? 16 : 0,
+      }} />
+    </Pressable>
+  );
+}
+
+// ─── Checkbox ────────────────────────────────────────────────────────
+
+export function Checkbox({ checked, onToggle, label, color = '#5E5CE6' }: {
+  checked: boolean; onToggle: () => void; label?: string; color?: string;
+}) {
+  return (
+    <Pressable
+      onPress={() => { Haptics.selectionAsync().catch(() => {}); onToggle(); }}
+      hitSlop={6}
+      className="flex-row items-center gap-2"
+    >
+      <View style={{
+        width: 18, height: 18, borderRadius: 4,
+        borderWidth: 1.5,
+        borderColor: checked ? color : '#9999A3',
+        backgroundColor: checked ? color : 'transparent',
+        alignItems: 'center', justifyContent: 'center',
+      }}>
+        {checked && <Text style={{ color: '#fff', fontSize: 12, fontWeight: '900', lineHeight: 13 }}>✓</Text>}
+      </View>
+      {label && (
+        <Text style={{ fontSize: 12, fontWeight: '600', color: checked ? color : '#5C5C6B' }}>
+          {label}
+        </Text>
+      )}
+    </Pressable>
+  );
+}
 
 // ─── AppHeader ────────────────────────────────────────────────────────
 
@@ -145,17 +266,18 @@ export function Button({
   loading = false,
   className = '',
 }: ButtonProps) {
+  // Иерархия (Linear-style): accent = primary CTA, navy = surfaces only inline
   const variants = {
-    primary: 'bg-navy',
-    secondary: 'bg-accent',
-    danger: 'bg-red-500',
-    ghost: 'bg-transparent border border-border',
+    primary:   'bg-accent',
+    secondary: 'bg-white border border-border',
+    danger:    'bg-danger',
+    ghost:     'bg-transparent',
   };
   const textColors = {
-    primary: 'text-white',
-    secondary: 'text-white',
-    danger: 'text-white',
-    ghost: 'text-muted',
+    primary:   'text-white',
+    secondary: 'text-ink',
+    danger:    'text-white',
+    ghost:     'text-accent',
   };
   const sizes = {
     sm: 'px-3 py-2',
@@ -169,24 +291,22 @@ export function Button({
   };
 
   return (
-    <Pressable
+    <Touchable
       onPress={onPress}
       disabled={disabled || loading}
+      haptic={variant === 'danger' ? 'warning' : 'medium'}
       className={`${variants[variant]} ${sizes[size]} rounded-xl items-center justify-center ${
         disabled ? 'opacity-50' : ''
       } ${className}`}
-
     >
       {loading ? (
-        <ActivityIndicator color="white" size="small" />
+        <ActivityIndicator color={variant === 'secondary' || variant === 'ghost' ? '#5E5CE6' : 'white'} size="small" />
       ) : (
-        <Text
-          className={`${textColors[variant]} ${textSizes[size]} font-bold`}
-        >
+        <Text className={`${textColors[variant]} ${textSizes[size]} font-bold`}>
           {label}
         </Text>
       )}
-    </Pressable>
+    </Touchable>
   );
 }
 

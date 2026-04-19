@@ -297,7 +297,7 @@ function PresetEditView({ preset, onSave, onCancel }: { preset: Preset; onSave: 
           />
 
           {/* ITEMS */}
-          <Text className="text-[9px] font-bold text-accent tracking-widest mb-1">НОМЕНКЛАТУРЫ</Text>
+          <Text className="text-xs font-bold text-accent tracking-widest mb-1">НОМЕНКЛАТУРЫ</Text>
           <TextInput
             value={searchItems}
             onChangeText={setSearchItems}
@@ -327,7 +327,7 @@ function PresetEditView({ preset, onSave, onCancel }: { preset: Preset; onSave: 
           <View className="h-3" />
 
           {/* OPTIONS */}
-          <Text className="text-[9px] font-bold text-green-600 tracking-widest mb-1">ОПЦИИ</Text>
+          <Text className="text-xs font-bold text-green-600 tracking-widest mb-1">ОПЦИИ</Text>
           <TextInput
             value={searchOpts}
             onChangeText={setSearchOpts}
@@ -432,7 +432,7 @@ export default function CalcBlockView({
               {block.title}
             </Text>
             {activePreset && blockTotal > 0 && (
-              <Text className="text-[9px] font-semibold text-accent" numberOfLines={1}>
+              <Text className="text-xs font-semibold text-accent" numberOfLines={1}>
                 ({activePreset.name})
               </Text>
             )}
@@ -540,7 +540,7 @@ export default function CalcBlockView({
           <View className="flex-row items-center px-3 py-1 bg-bg/50 gap-1">
             <Text className="text-muted text-[10px]">{bindLabel}</Text>
             <QtyCell value={effectiveMainQty} onChange={onChangeMainQty} />
-            <Text className="text-muted text-[9px]">{bindUnit}</Text>
+            <Text className="text-muted text-xs">{bindUnit}</Text>
 
             {(onToggleSyncToProject || onToggleSubtractFromMain) && (
               <>
@@ -567,7 +567,7 @@ export default function CalcBlockView({
           <View className="flex-row px-3 pb-2 pt-1">
             {/* LEFT — Items */}
             <View className="flex-1 pr-1">
-              <Text className="text-[7px] font-bold text-accent tracking-widest mb-0.5">ПОЗИЦИИ</Text>
+              <Text className="text-[11px] font-bold text-accent tracking-widest mb-0.5">ПОЗИЦИИ</Text>
               {activePreset.items.map(ref => {
                 const nom = getNom(ref.nomId);
                 if (!nom) return null;
@@ -582,10 +582,10 @@ export default function CalcBlockView({
                       style={{ transform: [{ scaleX: 0.5 }, { scaleY: 0.5 }], marginRight: -4 }}
                     />
                     <View className="flex-1 mr-1">
-                      <Text className="text-navy text-[9px]" numberOfLines={1}>{nom.name}</Text>
-                      <Text className="text-muted text-[8px]">{fmt(price)}×{fmt(effectiveMainQty)}</Text>
+                      <Text className="text-navy text-xs" numberOfLines={1}>{nom.name}</Text>
+                      <Text className="text-muted text-[11px]">{fmt(price)}×{fmt(effectiveMainQty)}</Text>
                     </View>
-                    <Text className="text-accent text-[9px] font-bold">{fmt(total)}</Text>
+                    <Text className="text-accent text-xs font-bold">{fmt(total)}</Text>
                   </View>
                 );
               })}
@@ -594,7 +594,7 @@ export default function CalcBlockView({
             {/* RIGHT — Options */}
             {activePreset.options.length > 0 && (
               <View className="flex-1 pl-1 border-l border-border">
-                <Text className="text-[7px] font-bold text-green-600 tracking-widest mb-0.5">ОПЦИИ</Text>
+                <Text className="text-[11px] font-bold text-green-600 tracking-widest mb-0.5">ОПЦИИ</Text>
                 {activePreset.options.map(ref => {
                   const nom = getNom(ref.nomId);
                   if (!nom) return null;
@@ -609,9 +609,9 @@ export default function CalcBlockView({
                         trackColor={{ false: '#e8e8e4', true: '#22c55e' }}
                         style={{ transform: [{ scaleX: 0.5 }, { scaleY: 0.5 }], marginRight: -4 }}
                       />
-                      <Text className="text-navy text-[9px] flex-1" numberOfLines={1}>{nom.name}</Text>
+                      <Text className="text-navy text-xs flex-1" numberOfLines={1}>{nom.name}</Text>
                       <QtyCell value={qty} onChange={v => onChangeOptQty(ref.nomId, v)} small />
-                      <Text className="text-green-600 text-[9px] font-bold ml-1 w-12 text-right">{fmt(total)}</Text>
+                      <Text className="text-green-600 text-xs font-bold ml-1 w-12 text-right">{fmt(total)}</Text>
                     </View>
                   );
                 })}

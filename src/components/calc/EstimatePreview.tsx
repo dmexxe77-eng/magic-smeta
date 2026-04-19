@@ -151,7 +151,7 @@ export default function EstimatePreview({
         <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: insets.bottom + 130 }}>
           {grandTotal === 0 ? (
             <View className="flex-1 items-center justify-center px-8 py-16 gap-3">
-              <Text className="text-4xl">📭</Text>
+              <Text className="text-4xl">—</Text>
               <Text className="text-muted text-center text-sm">
                 В этом разделе нет позиций.{'\n'}Выберите пресеты в калькуляторе.
               </Text>

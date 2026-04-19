@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -10,8 +10,11 @@ import {
   Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import {
+  Calculator, ShoppingCart, Wrench, FileText, MapPin, Phone,
+} from 'lucide-react-native';
 import { useApp, useOrder } from '../../store/AppContext';
-import { AppHeader, Badge, Button, Card, SectionHeader, Divider } from '../ui';
+import { AppHeader, Badge, Button, Card, SectionHeader, Divider, Touchable } from '../ui';
 import { fmt } from '../../utils/geometry';
 import type { Order, OrderStatus } from '../../types';
 
@@ -31,17 +34,20 @@ const STATUSES: Array<{
 
 // ─── Compact action tile ─────────────────────────────────────────────
 
-function ActionTile({ icon, label, onPress }: { icon: string; label: string; onPress: () => void }) {
+type LucideIcon = React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
+
+function ActionTile({ Icon, label, onPress }: { Icon: LucideIcon; label: string; onPress: () => void }) {
   return (
-    <Pressable
+    <Touchable
       onPress={onPress}
-      className="flex-1 bg-bg border border-border rounded-xl py-2.5 px-2 items-center gap-1"
+      haptic="light"
+      className="flex-1 bg-bg border border-border rounded-xl py-3 px-2 items-center gap-1.5"
     >
-      <Text className="text-base">{icon}</Text>
-      <Text className="text-[10px] font-semibold text-navy text-center" numberOfLines={1}>
+      <Icon size={20} color="#5C5C6B" strokeWidth={1.8} />
+      <Text className="text-xs font-semibold text-ink text-center" numberOfLines={1}>
         {label}
       </Text>
-    </Pressable>
+    </Touchable>
   );
 }
 
@@ -288,25 +294,27 @@ export default function OrderScreen({ orderId }: OrderScreenProps) {
             {/* Actions */}
             <Card className="p-3">
               <SectionHeader title="Действия" />
-              <Pressable
+              <Touchable
                 onPress={() => router.push(`/calc/${order.id}` as any)}
-                className="bg-navy rounded-xl py-3 px-4 flex-row items-center justify-center gap-2 mb-2"
+                haptic="medium"
+                className="bg-accent rounded-xl py-3 px-4 flex-row items-center justify-center gap-2 mb-2"
               >
-                <Text className="text-white text-sm font-bold">📐  Калькулятор сметы</Text>
-              </Pressable>
+                <Calculator size={18} color="#fff" strokeWidth={2.2} />
+                <Text className="text-white text-sm font-bold">Калькулятор сметы</Text>
+              </Touchable>
               <View className="flex-row gap-2">
                 <ActionTile
-                  icon="🛒"
+                  Icon={ShoppingCart}
                   label="КП товаров"
                   onPress={() => Alert.alert('Скоро', 'Коммерческое предложение')}
                 />
                 <ActionTile
-                  icon="🔧"
+                  Icon={Wrench}
                   label="ТЗ монтажа"
                   onPress={() => Alert.alert('Скоро', 'Техзадание на монтаж')}
                 />
                 <ActionTile
-                  icon="📝"
+                  Icon={FileText}
                   label="Договор"
                   onPress={() => Alert.alert('Скоро', 'Договор по шаблону')}
                 />
@@ -320,14 +328,14 @@ export default function OrderScreen({ orderId }: OrderScreenProps) {
               <ProjectField label="Телефон" value={order.phone} order={order} field="phone" placeholder="+7 (900) 000-00-00" isPhone keyboardType="phone-pad" />
               <ProjectField label="Адрес" value={order.address} order={order} field="address" placeholder="Город, улица, дом" multiline />
               {order.address && (
-                <View className="mt-2">
-                  <Button
-                    label="🗺️  Проложить маршрут"
-                    onPress={() => openRouteForAddress(order.address!)}
-                    size="sm"
-                    variant="ghost"
-                  />
-                </View>
+                <Touchable
+                  onPress={() => openRouteForAddress(order.address!)}
+                  haptic="light"
+                  className="mt-2 flex-row items-center justify-center gap-2 py-2 rounded-lg bg-accent-soft"
+                >
+                  <MapPin size={14} color="#5E5CE6" strokeWidth={2.2} />
+                  <Text className="text-accent text-xs font-semibold">Проложить маршрут</Text>
+                </Touchable>
               )}
               <ProjectField label="Дизайнер" value={order.designer} order={order} field="designer" placeholder="Имя дизайнера" />
               <ProjectField label="Заметки" value={order.notes} order={order} field="notes" placeholder="Заметки по проекту" multiline />

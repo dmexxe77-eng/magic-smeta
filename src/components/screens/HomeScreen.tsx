@@ -10,6 +10,8 @@ import {
   FlatList,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Search, Plus, X as XIcon } from 'lucide-react-native';
 import { useApp } from '../../store/AppContext';
 import {
   AppHeader,
@@ -19,10 +21,16 @@ import {
   FormField,
   EmptyState,
   Divider,
+  Touchable,
 } from '../ui';
 import { AppMenu } from '../ui/AppMenu';
 import { fmt } from '../../utils/geometry';
 import type { Order, OrderStatus } from '../../types';
+
+const STATUS_COLOR: Record<OrderStatus, string> = {
+  new: '#9999A3', measuring: '#E5811A', calc: '#5E5CE6',
+  approval: '#E5811A', contract: '#0F9D58', done: '#0F9D58', cancelled: '#D93025',
+};
 
 // ─── Status config ────────────────────────────────────────────────────
 
@@ -60,25 +68,29 @@ function OrderCard({
       onPress={onPress}
       className="mx-4 mb-3 overflow-hidden"
     >
-      {/* Left accent bar */}
-      <View className="absolute left-0 top-0 bottom-0 w-1 bg-accent rounded-l-2xl" />
+      {/* Цветная левая полоса по статусу — мгновенный visual scan списка */}
+      <View
+        className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl"
+        style={{ backgroundColor: STATUS_COLOR[order.status] }}
+      />
 
       <View className="pl-4 pr-3 py-3">
         <View className="flex-row items-start justify-between mb-1">
           <View className="flex-1 mr-2">
-            <Text className="text-base font-bold text-navy">{order.name}</Text>
+            <Text className="text-base font-bold text-ink">{order.name}</Text>
             {order.client ? (
               <Text className="text-xs text-muted mt-0.5">{order.client}</Text>
             ) : null}
           </View>
           <View className="flex-row items-center gap-2">
             <Badge label={st.label} color={st.color} />
-            <Pressable
+            <Touchable
               onPress={onDelete}
+              haptic="warning"
               className="w-7 h-7 rounded-full bg-red-50 items-center justify-center"
             >
-              <Text className="text-red-400 text-xs">✕</Text>
-            </Pressable>
+              <XIcon size={14} color="#D93025" strokeWidth={2.5} />
+            </Touchable>
           </View>
         </View>
 
@@ -193,6 +205,7 @@ function NewOrderModal({
 export default function HomeScreen() {
   const { state, dispatch } = useApp();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [showNew, setShowNew] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [search, setSearch] = useState('');
@@ -288,13 +301,16 @@ export default function HomeScreen() {
 
             {/* Search */}
             <View className="mx-4 mb-3">
-              <TextInput
-                value={search}
-                onChangeText={setSearch}
-                placeholder="🔍  Поиск проектов..."
-                placeholderTextColor="#b0b0ba"
-                className="bg-card border border-border rounded-xl px-4 py-3 text-navy text-sm"
-              />
+              <View className="bg-card border border-border rounded-xl px-3 py-2.5 flex-row items-center gap-2">
+                <Search size={16} color="#9999A3" />
+                <TextInput
+                  value={search}
+                  onChangeText={setSearch}
+                  placeholder="Поиск проектов..."
+                  placeholderTextColor="#9999A3"
+                  className="flex-1 text-ink text-sm"
+                />
+              </View>
             </View>
 
             {/* Status filter */}
@@ -344,14 +360,16 @@ export default function HomeScreen() {
         removeClippedSubviews
       />
 
-      {/* FAB */}
-      <Pressable
+      {/* FAB — учитывает SafeArea (на iPhone без home button нижняя зона жеста) */}
+      <Touchable
         onPress={() => setShowNew(true)}
-        className="absolute bottom-8 self-center bg-accent px-8 py-4 rounded-full shadow-lg"
-        style={{ elevation: 6 }}
+        haptic="medium"
+        className="absolute self-center bg-accent rounded-full shadow-lg flex-row items-center gap-2 px-7 py-3.5"
+        style={{ bottom: insets.bottom + 16, elevation: 6 }}
       >
-        <Text className="text-white font-bold text-base">+ Новый проект</Text>
-      </Pressable>
+        <Plus size={18} color="#fff" strokeWidth={2.5} />
+        <Text className="text-white font-bold text-base">Новый проект</Text>
+      </Touchable>
 
       <NewOrderModal
         visible={showNew}
