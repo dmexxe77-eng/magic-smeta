@@ -304,9 +304,18 @@ export default function CalcBlockView({
     <View className="bg-card rounded-2xl border border-border overflow-hidden mb-3">
       {/* Header */}
       <Pressable onPress={onToggleExpanded} className="flex-row items-center justify-between px-3 py-2.5">
-        <View className="flex-row items-center gap-2">
+        <View className="flex-row items-center gap-2 flex-1 mr-2">
           <Text className="text-sm">{block.icon}</Text>
-          <Text className="text-[10px] font-bold text-navy tracking-wider">{block.title}</Text>
+          <View className="flex-1">
+            <Text className="text-[10px] font-bold text-navy tracking-wider" numberOfLines={1}>
+              {block.title}
+            </Text>
+            {activePreset && (
+              <Text className="text-[9px] font-semibold text-accent" numberOfLines={1}>
+                ({activePreset.name})
+              </Text>
+            )}
+          </View>
         </View>
         <View className="flex-row items-center gap-2">
           <Text className="text-xs font-bold text-accent">{fmt(blockTotal)} ₽</Text>
