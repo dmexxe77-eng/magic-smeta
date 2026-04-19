@@ -392,10 +392,29 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
     ]);
   };
 
+  // Обновить цены: сохранить структуру блоков/пресетов, но сбросить priceOverride
+  // на каждой ссылке — getNomPrice вернёт актуальную цену из mergedNoms.
   const handleRefreshPrices = () => {
-    setMainQtysAll({});
-    setOptQtysAll({});
-    setBlocks(createDefaultBlocks());
+    Alert.alert(
+      'Обновить цены',
+      'Цены номенклатуры будут обновлены до актуальных. Структура пресетов и количества сохранятся.',
+      [
+        { text: 'Отмена', style: 'cancel' },
+        {
+          text: 'Обновить',
+          onPress: () => {
+            setBlocks(prev => prev.map(b => ({
+              ...b,
+              presets: b.presets.map(p => ({
+                ...p,
+                items: p.items.map(r => ({ ...r, priceOverride: undefined })),
+                options: p.options.map(r => ({ ...r, priceOverride: undefined })),
+              })),
+            })));
+          },
+        },
+      ]
+    );
   };
 
   // Trace builder
