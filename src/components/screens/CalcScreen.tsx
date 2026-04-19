@@ -123,23 +123,31 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
   const roomArea = activeRoom?.aO ?? (activeRoom ? calcPoly(activeRoom.v).a : 0);
   const roomPerim = activeRoom?.pO ?? (activeRoom ? calcPoly(activeRoom.v).p : 0);
 
-  // Options total helper
-  const calcOptsTotal = (ids: string[], enabled: Record<string, boolean>, bindings: Record<string, 'area' | 'perimeter'>) => {
-    return ids.reduce((sum, id) => {
-      if (!enabled[id]) return sum;
+  // Options total helper — parameterised by area/perim so it works for any room
+  const calcOptsTotalFor = (a: number, p: number) => {
+    return roomOptIds.reduce((sum, id) => {
+      if (!roomOptEnabled[id]) return sum;
       const nom = mergedNoms.find(n => n.id === id);
       if (!nom) return sum;
-      const binding = bindings[id] || (nom.bindTo === 'area' ? 'area' : 'perimeter');
-      const qty = binding === 'area' ? roomArea : roomPerim;
+      const binding = roomOptBindings[id] || (nom.bindTo === 'area' ? 'area' : 'perimeter');
+      const qty = binding === 'area' ? a : p;
       return sum + qty * nom.price;
     }, 0);
   };
-  const roomOptTotal = calcOptsTotal(roomOptIds, roomOptEnabled, roomOptBindings);
 
-  // Grand total from all blocks
+  // Total for current (active) room
   const grand = blocks.reduce((sum, block) =>
     sum + calcBlockTotal(block, roomArea, roomPerim, mainQtys[block.id], optQtys), 0
-  ) + roomOptTotal;
+  ) + calcOptsTotalFor(roomArea, roomPerim);
+
+  // Total across all project rooms (same blocks/qtys, different area/perim per room)
+  const projectTotal = rooms.reduce((sum, room) => {
+    const a = room.aO ?? calcPoly(room.v).a;
+    const p = room.pO ?? calcPoly(room.v).p;
+    const blocksTotal = blocks.reduce((bs, b) =>
+      bs + calcBlockTotal(b, a, p, mainQtys[b.id], optQtys), 0);
+    return sum + blocksTotal + calcOptsTotalFor(a, p);
+  }, 0);
 
   // Block handlers
   const handleToggleExpanded = useCallback((blockId: string) => {
@@ -342,7 +350,10 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
 
           {/* Total + refresh */}
           <View className="flex-1 items-end">
-            <Text className="text-base font-black text-navy">{fmt(grand)} ₽</Text>
+            <Text style={{ fontSize: 8, fontWeight: '700', letterSpacing: 1.5, color: '#9ca3af' }}>
+              ПРОЕКТ
+            </Text>
+            <Text className="text-base font-black text-navy">{fmt(projectTotal)} ₽</Text>
             <Pressable onPress={handleRefreshPrices}>
               <Text className="text-[10px] text-accent">🔄 обновить цены</Text>
             </Pressable>
@@ -541,11 +552,16 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
             );
           })}
 
-          {/* Grand total */}
-          {rooms.length > 0 && (
+          {/* Room total */}
+          {activeRoom && (
             <View className="bg-navy rounded-2xl p-4">
-              <View className="flex-row justify-between">
-                <Text className="text-white/50 text-xs font-bold tracking-wider">ИТОГО</Text>
+              <View className="flex-row justify-between items-baseline">
+                <View>
+                  <Text className="text-white/50 text-[10px] font-bold tracking-widest">ПОМЕЩЕНИЕ</Text>
+                  <Text className="text-white/70 text-xs font-semibold mt-0.5" numberOfLines={1}>
+                    {activeRoom.name}
+                  </Text>
+                </View>
                 <Text className="text-white text-xl font-black">{fmt(grand)} ₽</Text>
               </View>
             </View>
