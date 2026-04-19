@@ -123,17 +123,20 @@ export default function EstimatePreview({
             })}
           </ScrollView>
 
-          {/* Row 1 — grouping (только если несколько комнат) */}
-          {!scope && rooms.length > 1 && (
-            <View className="flex-row gap-1.5 mt-2.5">
-              <ColToggle label="Общая" on={grouping === 'aggregate'} onPress={() => setGrouping('aggregate')} />
-              <ColToggle label="По помещениям" on={grouping === 'per-room'} onPress={() => setGrouping('per-room')} />
-            </View>
-          )}
-
-          {/* Row 2 — column & drawing toggles */}
-          <View className="flex-row gap-1.5 mt-2">
+          {/* Row 1 — grouping (если несколько комнат) + Чертёж */}
+          <View className="flex-row items-center gap-1.5 mt-2.5">
+            {!scope && rooms.length > 1 && (
+              <>
+                <ColToggle label="Общая" on={grouping === 'aggregate'} onPress={() => setGrouping('aggregate')} />
+                <ColToggle label="По помещениям" on={grouping === 'per-room'} onPress={() => setGrouping('per-room')} />
+                <View style={{ width: 1, height: 20, backgroundColor: '#E6E6E1', marginHorizontal: 4 }} />
+              </>
+            )}
             <ColToggle label="Чертёж" on={withDrawings} onPress={() => setWithDrawings(v => !v)} />
+          </View>
+
+          {/* Row 2 — column filters */}
+          <View className="flex-row gap-1.5 mt-2">
             <ColToggle label="Кол-во" on={cols.qty} onPress={() => setCols(c => ({ ...c, qty: !c.qty }))} />
             <ColToggle label="Цена" on={cols.price} onPress={() => setCols(c => ({ ...c, price: !c.price }))} />
             <ColToggle label="Итого" on={cols.total} onPress={() => setCols(c => ({ ...c, total: !c.total }))} />
