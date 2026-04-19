@@ -20,6 +20,7 @@ import TraceBuilder, { type TraceSession } from '../builders/TraceBuilder';
 import PlanEditor from '../builders/PlanEditor';
 import CalcBlockView from '../calc/CalcBlockView';
 import RoomOptionsBlock from '../calc/RoomOptionsBlock';
+import EstimatePreview from '../calc/EstimatePreview';
 import { InnerCornerIcon, OuterCornerIcon } from '../ui/CornerIcons';
 import { createDefaultBlocks, calcBlockTotal, setMergedNoms, type CalcBlock, type Preset } from '../../data/calcBlocks';
 import { useNomenclature } from '../../hooks/useNomenclature';
@@ -92,6 +93,8 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
   const [blocks, setBlocks] = useState<CalcBlock[]>(createDefaultBlocks);
   const [mainQtys, setMainQtys] = useState<Record<string, number>>({});  // block main qty overrides
   const [optQtys, setOptQtys] = useState<Record<string, number>>({});    // option quantities
+
+  const [showEstimate, setShowEstimate] = useState(false);
 
   // Room options (protection, etc) — mini-block ABOVE canvas
   const [roomOptIds, setRoomOptIds] = useState<string[]>(['w_prot', 'w_floor']);
@@ -568,10 +571,35 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
               </View>
             </View>
           )}
+
+          {/* Estimate preview button */}
+          {rooms.length > 0 && (
+            <Pressable
+              onPress={() => setShowEstimate(true)}
+              className="bg-accent rounded-2xl p-4 flex-row items-center justify-center gap-2"
+              style={{ elevation: 3 }}
+            >
+              <Text className="text-white text-base font-bold">📄 Предпросмотр сметы</Text>
+            </Pressable>
+          )}
         </View>
 
         <View className="h-16" />
       </ScrollView>
+
+      <EstimatePreview
+        visible={showEstimate}
+        onClose={() => setShowEstimate(false)}
+        orderName={order.name}
+        rooms={rooms}
+        blocks={blocks}
+        mainQtys={mainQtys}
+        optQtys={optQtys}
+        roomOptIds={roomOptIds}
+        roomOptEnabled={roomOptEnabled}
+        roomOptBindings={roomOptBindings}
+        mergedNoms={mergedNoms}
+      />
     </View>
   );
 }
