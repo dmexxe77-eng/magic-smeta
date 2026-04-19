@@ -7,13 +7,13 @@ export type EstimateMode = 'client' | 'cost' | 'installer' | 'purchase';
 
 export interface EstimateLine {
   nomId: string;
-  name: string;
+  name: string;        // already includes "(Помещение)" suffix for canvas
   qty: number;
   unit: string;
   price: number;
   total: number;
-  roomName: string;
   isWork: boolean;
+  perRoom: boolean;    // true = canvas (one line per room), false = aggregated
 }
 
 export interface EstimateData {
@@ -57,6 +57,64 @@ function shouldInclude(nom: DataNomItem, mode: EstimateMode): boolean {
   }
 }
 
+// Canvas (полотно) — type 'canvas' goes per-room. Everything else aggregates.
+function isPerRoom(nom: DataNomItem): boolean {
+  return nom.type === 'canvas';
+}
+
+interface RawLine {
+  nomId: string;
+  nom: DataNomItem;
+  qty: number;
+  price: number;
+  roomName: string;
+}
+
+function aggregate(raw: RawLine[]): EstimateLine[] {
+  const perRoomLines: EstimateLine[] = [];
+  const aggMap: Record<string, EstimateLine> = {};
+
+  for (const r of raw) {
+    if (r.qty <= 0) continue;
+    const total = r.qty * r.price;
+    if (total <= 0) continue;
+
+    if (isPerRoom(r.nom)) {
+      perRoomLines.push({
+        nomId: r.nomId,
+        name: `${r.nom.name} (${r.roomName})`,
+        qty: r.qty,
+        unit: r.nom.unit,
+        price: r.price,
+        total,
+        isWork: isWork(r.nom),
+        perRoom: true,
+      });
+    } else {
+      // Aggregate by nomId+price (different price overrides → separate lines)
+      const key = `${r.nomId}@${r.price}`;
+      if (aggMap[key]) {
+        aggMap[key].qty += r.qty;
+        aggMap[key].total += total;
+      } else {
+        aggMap[key] = {
+          nomId: r.nomId,
+          name: r.nom.name,
+          qty: r.qty,
+          unit: r.nom.unit,
+          price: r.price,
+          total,
+          isWork: isWork(r.nom),
+          perRoom: false,
+        };
+      }
+    }
+  }
+
+  // Per-room lines first (more specific), then aggregated
+  return [...perRoomLines, ...Object.values(aggMap)];
+}
+
 export function buildEstimate(
   rooms: Room[],
   blocks: CalcBlock[],
@@ -68,8 +126,7 @@ export function buildEstimate(
   mergedNoms: TypeNomItem[],
   mode: EstimateMode,
 ): EstimateData {
-  const materials: EstimateLine[] = [];
-  const works: EstimateLine[] = [];
+  const raw: RawLine[] = [];
 
   for (const room of rooms) {
     const a = room.aO ?? calcPoly(room.v).a;
@@ -79,48 +136,21 @@ export function buildEstimate(
     for (const block of blocks) {
       const preset = block.presets.find(pr => pr.id === block.activePresetId);
       if (!preset) continue;
-
       const mainQty = mainQtys[block.id] ?? getDefaultMainQty(block, a, p);
 
-      // Items — auto-quantity from area/perimeter
       for (const ref of preset.items) {
         if (!ref.enabled) continue;
         const r = refPrice(ref, mode);
         if (!r || !shouldInclude(r.nom, mode)) continue;
-        const total = mainQty * r.price;
-        if (total <= 0) continue;
-        const line: EstimateLine = {
-          nomId: ref.nomId,
-          name: r.nom.name,
-          qty: mainQty,
-          unit: r.nom.unit,
-          price: r.price,
-          total,
-          roomName,
-          isWork: isWork(r.nom),
-        };
-        (isWork(r.nom) ? works : materials).push(line);
+        raw.push({ nomId: ref.nomId, nom: r.nom, qty: mainQty, price: r.price, roomName });
       }
 
-      // Options — manual qty per option
       for (const ref of preset.options) {
         if (!ref.enabled) continue;
         const qty = optQtys[ref.nomId] ?? 0;
-        if (qty <= 0) continue;
         const r = refPrice(ref, mode);
         if (!r || !shouldInclude(r.nom, mode)) continue;
-        const total = qty * r.price;
-        const line: EstimateLine = {
-          nomId: ref.nomId,
-          name: r.nom.name,
-          qty,
-          unit: r.nom.unit,
-          price: r.price,
-          total,
-          roomName,
-          isWork: isWork(r.nom),
-        };
-        (isWork(r.nom) ? works : materials).push(line);
+        raw.push({ nomId: ref.nomId, nom: r.nom, qty, price: r.price, roomName });
       }
     }
 
@@ -131,22 +161,14 @@ export function buildEstimate(
       if (!nom || !shouldInclude(nom, mode)) continue;
       const binding = roomOptBindings[id] || (nom.bindTo === 'area' ? 'area' : 'perimeter');
       const qty = binding === 'area' ? a : p;
-      if (qty <= 0) continue;
       const price = priceFor(nom, mode);
-      const total = qty * price;
-      const line: EstimateLine = {
-        nomId: id,
-        name: nom.name,
-        qty,
-        unit: nom.unit,
-        price,
-        total,
-        roomName,
-        isWork: isWork(nom),
-      };
-      (isWork(nom) ? works : materials).push(line);
+      raw.push({ nomId: id, nom, qty, price, roomName });
     }
   }
+
+  const allLines = aggregate(raw);
+  const materials = allLines.filter(l => !l.isWork);
+  const works = allLines.filter(l => l.isWork);
 
   const materialsTotal = materials.reduce((s, l) => s + l.total, 0);
   const worksTotal = works.reduce((s, l) => s + l.total, 0);

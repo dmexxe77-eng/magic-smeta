@@ -110,35 +110,22 @@ export default function EstimatePreview({
 }
 
 function Section({ title, lines, total }: { title: string; lines: EstimateLine[]; total: number }) {
-  // Group lines by room — matches PDF format
-  const byRoom: Record<string, EstimateLine[]> = {};
-  for (const l of lines) {
-    if (!byRoom[l.roomName]) byRoom[l.roomName] = [];
-    byRoom[l.roomName].push(l);
-  }
-
   return (
     <View className="mt-4 mx-3 bg-card rounded-2xl border border-border overflow-hidden">
       <View className="bg-navy px-4 py-2.5 flex-row justify-between items-center">
         <Text className="text-white text-xs font-black tracking-widest">{title}</Text>
         <Text className="text-accent-mid text-xs font-bold">{fmt(total)} ₽</Text>
       </View>
-      {Object.entries(byRoom).map(([room, roomLines], ri) => (
-        <View key={room} className={ri > 0 ? 'border-t border-border' : ''}>
-          <View className="bg-bg/60 px-4 py-1.5">
-            <Text className="text-[10px] font-bold text-muted tracking-wider">{room}</Text>
+      {lines.map((l, i) => (
+        <View key={`${l.nomId}-${i}`} className="px-4 py-2.5 flex-row items-start border-b border-border/50">
+          <Text className="text-muted text-[10px] font-bold w-6">{i + 1}</Text>
+          <View className="flex-1 mr-2">
+            <Text className="text-navy text-xs font-semibold" numberOfLines={2}>{l.name}</Text>
+            <Text className="text-muted text-[10px] mt-0.5">
+              {fmt(l.qty)} {l.unit}  ×  {fmt(l.price)} ₽
+            </Text>
           </View>
-          {roomLines.map((l, i) => (
-            <View key={`${l.nomId}-${i}`} className="px-4 py-2 flex-row items-start border-b border-border/50">
-              <View className="flex-1 mr-2">
-                <Text className="text-navy text-xs font-semibold" numberOfLines={2}>{l.name}</Text>
-                <Text className="text-muted text-[10px] mt-0.5">
-                  {fmt(l.qty)} {l.unit}  ×  {fmt(l.price)} ₽
-                </Text>
-              </View>
-              <Text className="text-navy text-xs font-bold">{fmt(l.total)} ₽</Text>
-            </View>
-          ))}
+          <Text className="text-navy text-xs font-bold">{fmt(l.total)} ₽</Text>
         </View>
       ))}
     </View>
