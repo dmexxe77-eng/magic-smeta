@@ -34,6 +34,8 @@ interface TouchableProps extends Omit<PressableProps, 'style' | 'children'> {
   className?: string;
 }
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
 export function Touchable({
   children,
   haptic = 'light',
@@ -59,19 +61,16 @@ export function Touchable({
   };
 
   return (
-    <Pressable
+    <AnimatedPressable
       {...rest}
       onPress={handlePress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
+      className={className}
+      style={[style as any, { transform: [{ scale: anim }] }]}
     >
-      <Animated.View
-        className={className}
-        style={[style as any, { transform: [{ scale: anim }] }]}
-      >
-        {children}
-      </Animated.View>
-    </Pressable>
+      {children}
+    </AnimatedPressable>
   );
 }
 
