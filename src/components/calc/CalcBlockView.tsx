@@ -310,7 +310,7 @@ export default function CalcBlockView({
             <Text className="text-[10px] font-bold text-navy tracking-wider" numberOfLines={1}>
               {block.title}
             </Text>
-            {activePreset && (
+            {activePreset && blockTotal > 0 && (
               <Text className="text-[9px] font-semibold text-accent" numberOfLines={1}>
                 ({activePreset.name})
               </Text>
