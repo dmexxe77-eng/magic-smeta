@@ -118,8 +118,8 @@ function aggregate(raw: RawLine[]): EstimateLine[] {
 export function buildEstimate(
   rooms: Room[],
   blocks: CalcBlock[],
-  mainQtys: Record<string, number>,
-  optQtys: Record<string, number>,
+  mainQtysAll: Record<string, Record<string, number>>,
+  optQtysAll: Record<string, Record<string, number>>,
   roomOptIds: string[],
   roomOptEnabled: Record<string, boolean>,
   roomOptBindings: Record<string, 'area' | 'perimeter'>,
@@ -130,16 +130,18 @@ export function buildEstimate(
 ): EstimateData {
   const raw: RawLine[] = [];
 
-  // Сумма qty блоков, которые вычитаются из основного профиля
-  const subtractTotal = blocks.reduce((sum, b) => {
-    if (!b.canSubtractFromMain || !subtractFromMain[b.id]) return sum;
-    return sum + (mainQtys[b.id] ?? 0);
-  }, 0);
-
   for (const room of rooms) {
     const a = room.aO ?? calcPoly(room.v).a;
     const p = room.pO ?? calcPoly(room.v).p;
     const roomName = room.name;
+    const mainQtys = mainQtysAll[room.id] ?? {};
+    const optQtys = optQtysAll[room.id] ?? {};
+
+    // Per-room subtract total
+    const subtractTotal = blocks.reduce((sum, b) => {
+      if (!b.canSubtractFromMain || !subtractFromMain[b.id]) return sum;
+      return sum + (mainQtys[b.id] ?? 0);
+    }, 0);
 
     for (const block of blocks) {
       const presetId = block.perRoomPreset

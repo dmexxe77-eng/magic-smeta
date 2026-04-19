@@ -91,8 +91,11 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
   const [editingPlanRoomId, setEditingPlanRoomId] = useState<string | null>(null);
   const [traceSession, setTraceSession] = useState<TraceSession | null>(null);
   const [blocks, setBlocks] = useState<CalcBlock[]>(createDefaultBlocks);
-  const [mainQtys, setMainQtys] = useState<Record<string, number>>({});  // block main qty overrides
-  const [optQtys, setOptQtys] = useState<Record<string, number>>({});    // option quantities
+  // Per-room qtys — каждое помещение хранит свои значения
+  // mainQtysAll[roomId][blockId] = qty
+  // optQtysAll[roomId][nomId] = qty
+  const [mainQtysAll, setMainQtysAll] = useState<Record<string, Record<string, number>>>({});
+  const [optQtysAll, setOptQtysAll] = useState<Record<string, Record<string, number>>>({});
   // Per-room preset overrides for blocks marked perRoomPreset (Полотно, Основной профиль)
   // perRoomPresets[roomId][blockId] = presetId
   const [perRoomPresets, setPerRoomPresets] = useState<Record<string, Record<string, string>>>({});
@@ -144,28 +147,38 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
     }, 0);
   };
 
-  // Сколько вычесть из периметра основного профиля (сумма qty доп блоков с галочкой)
-  const subtractTotal = blocks.reduce((sum, b) => {
-    if (!b.canSubtractFromMain || !subtractFromMain[b.id]) return sum;
-    return sum + (mainQtys[b.id] ?? 0);
-  }, 0);
+  // qtys для активной комнаты
+  const mainQtys = activeRoomId ? (mainQtysAll[activeRoomId] ?? {}) : {};
+  const optQtys = activeRoomId ? (optQtysAll[activeRoomId] ?? {}) : {};
 
-  // Effective qty для основного профиля (применяется только когда нет ручного override)
-  const mainProfileQtyFor = (perimeter: number) => {
-    if (mainQtys['main_profile'] != null) return mainQtys['main_profile'];
-    return Math.max(0, perimeter - subtractTotal);
+  // Helper: qty доп. блоков для конкретной комнаты + сумма для вычитания
+  const subtractTotalFor = (roomId: string | null) => {
+    const m = roomId ? (mainQtysAll[roomId] ?? {}) : {};
+    return blocks.reduce((sum, b) => {
+      if (!b.canSubtractFromMain || !subtractFromMain[b.id]) return sum;
+      return sum + (m[b.id] ?? 0);
+    }, 0);
   };
 
-  // Block total honoring per-room preset override + subtract from main
+  // Effective qty основного профиля для конкретной комнаты
+  const mainProfileQtyFor = (roomId: string | null, perimeter: number) => {
+    const m = roomId ? (mainQtysAll[roomId] ?? {}) : {};
+    if (m['main_profile'] != null) return m['main_profile'];
+    return Math.max(0, perimeter - subtractTotalFor(roomId));
+  };
+
+  // Block total honoring per-room preset override + subtract from main + per-room qtys
   const blockTotalForRoom = (b: CalcBlock, roomId: string | null, a: number, p: number) => {
     const presetId = b.perRoomPreset && roomId
       ? (perRoomPresets[roomId]?.[b.id] ?? b.activePresetId)
       : b.activePresetId;
     const blockWithPreset = presetId !== b.activePresetId ? { ...b, activePresetId: presetId } : b;
+    const roomMain = roomId ? (mainQtysAll[roomId] ?? {}) : {};
+    const roomOpt = roomId ? (optQtysAll[roomId] ?? {}) : {};
     const overrideQty = b.id === 'main_profile'
-      ? mainProfileQtyFor(p)
-      : mainQtys[b.id];
-    return calcBlockTotal(blockWithPreset, a, p, overrideQty, optQtys);
+      ? mainProfileQtyFor(roomId, p)
+      : roomMain[b.id];
+    return calcBlockTotal(blockWithPreset, a, p, overrideQty, roomOpt);
   };
 
   // Total for current (active) room
@@ -620,7 +633,7 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
               : block;
             // For main_profile — show effective qty (perimeter minus subtractTotal) when no manual override
             const mainQtyShown = block.id === 'main_profile'
-              ? mainProfileQtyFor(roomPerim)
+              ? mainProfileQtyFor(activeRoomId, roomPerim)
               : mainQtys[block.id];
             return (
               <CalcBlockView
@@ -634,8 +647,14 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
                 onSelectPreset={presetId => handleSelectPreset(block.id, presetId)}
                 onUpdatePresets={presets => handleUpdatePresets(block.id, presets)}
                 onToggleNom={(side, nomId) => handleToggleNom(block.id, side, nomId)}
-                onChangeMainQty={qty => setMainQtys(prev => ({ ...prev, [block.id]: qty }))}
-                onChangeOptQty={(nomId, qty) => setOptQtys(prev => ({ ...prev, [nomId]: qty }))}
+                onChangeMainQty={qty => activeRoomId && setMainQtysAll(prev => ({
+                  ...prev,
+                  [activeRoomId]: { ...(prev[activeRoomId] ?? {}), [block.id]: qty },
+                }))}
+                onChangeOptQty={(nomId, qty) => activeRoomId && setOptQtysAll(prev => ({
+                  ...prev,
+                  [activeRoomId]: { ...(prev[activeRoomId] ?? {}), [nomId]: qty },
+                }))}
                 isSyncedToProject={block.perRoomPreset ? !hasOverride : undefined}
                 onToggleSyncToProject={block.perRoomPreset ? (next) => handleToggleSync(block.id, next) : undefined}
                 isSubtractFromMain={block.canSubtractFromMain ? !!subtractFromMain[block.id] : undefined}
@@ -695,8 +714,8 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
           ? rooms.find(r => r.id === estimateRoomId)?.name ?? null
           : null}
         blocks={blocks}
-        mainQtys={mainQtys}
-        optQtys={optQtys}
+        mainQtysAll={mainQtysAll}
+        optQtysAll={optQtysAll}
         roomOptIds={roomOptIds}
         roomOptEnabled={roomOptEnabled}
         roomOptBindings={roomOptBindings}
