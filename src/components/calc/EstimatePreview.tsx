@@ -123,25 +123,21 @@ export default function EstimatePreview({
             })}
           </ScrollView>
 
-          {/* Subtoolbar — compact chips: grouping + column toggles */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ gap: 6, paddingRight: 8 }}
-            className="mt-2.5"
-          >
-            {!scope && rooms.length > 1 && (
-              <>
-                <ColToggle label="Общая" on={grouping === 'aggregate'} onPress={() => setGrouping('aggregate')} />
-                <ColToggle label="По помещениям" on={grouping === 'per-room'} onPress={() => setGrouping('per-room')} />
-                <View style={{ width: 1, backgroundColor: '#E6E6E1', marginHorizontal: 2, marginVertical: 4 }} />
-              </>
-            )}
+          {/* Row 1 — grouping (только если несколько комнат) */}
+          {!scope && rooms.length > 1 && (
+            <View className="flex-row gap-1.5 mt-2.5">
+              <ColToggle label="Общая" on={grouping === 'aggregate'} onPress={() => setGrouping('aggregate')} />
+              <ColToggle label="По помещениям" on={grouping === 'per-room'} onPress={() => setGrouping('per-room')} />
+            </View>
+          )}
+
+          {/* Row 2 — column & drawing toggles */}
+          <View className="flex-row gap-1.5 mt-2">
             <ColToggle label="Чертёж" on={withDrawings} onPress={() => setWithDrawings(v => !v)} />
             <ColToggle label="Кол-во" on={cols.qty} onPress={() => setCols(c => ({ ...c, qty: !c.qty }))} />
             <ColToggle label="Цена" on={cols.price} onPress={() => setCols(c => ({ ...c, price: !c.price }))} />
             <ColToggle label="Итого" on={cols.total} onPress={() => setCols(c => ({ ...c, total: !c.total }))} />
-          </ScrollView>
+          </View>
         </View>
 
         <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: insets.bottom + 130 }}>
