@@ -313,7 +313,12 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
   }, [perRoomPresets]);
 
   const handleUpdatePresets = useCallback((blockId: string, presets: Preset[]) => {
-    setBlocks(prev => prev.map(b => b.id === blockId ? { ...b, presets } : b));
+    setBlocks(prev => prev.map(b => {
+      if (b.id !== blockId) return b;
+      const stillValid = presets.some(p => p.id === b.activePresetId);
+      const activePresetId = stillValid ? b.activePresetId : (presets[0]?.id ?? '');
+      return { ...b, presets, activePresetId };
+    }));
   }, []);
 
   // Clone a block (create duplicate with different id)
