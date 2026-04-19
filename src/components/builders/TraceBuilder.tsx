@@ -715,6 +715,28 @@ export default function TraceBuilder({ existingNames, onFinishAll, onBack, sessi
                 marginLeft: -(loupe.imgX * magZoom - sz / 2),
                 marginTop: -(loupe.imgY * magZoom - sz / 2),
               }} resizeMode="stretch" />
+              {showGrid && (
+                <Svg
+                  width={imgW * magZoom}
+                  height={imgH * magZoom}
+                  viewBox={`0 0 ${imgW} ${imgH}`}
+                  style={{
+                    position: 'absolute',
+                    width: imgW * magZoom,
+                    height: imgH * magZoom,
+                    marginLeft: -(loupe.imgX * magZoom - sz / 2),
+                    marginTop: -(loupe.imgY * magZoom - sz / 2),
+                  }}
+                >
+                  <Defs>
+                    <Pattern id="grid-loupe" x="0" y="0" width={GRID_STEP} height={GRID_STEP} patternUnits="userSpaceOnUse">
+                      <SvgPath d={`M ${GRID_STEP} 0 L 0 0 0 ${GRID_STEP}`}
+                        stroke="#4F46E5" strokeWidth={0.15} opacity={0.5} fill="none" />
+                    </Pattern>
+                  </Defs>
+                  <Rect x={0} y={0} width={imgW} height={imgH} fill="url(#grid-loupe)" />
+                </Svg>
+              )}
               <View style={{ ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center' }}>
                 <View style={{ width: sz, height: 1.5, backgroundColor: 'rgba(79,70,229,0.3)', position: 'absolute' }} />
                 <View style={{ width: 1.5, height: sz, backgroundColor: 'rgba(79,70,229,0.3)', position: 'absolute' }} />
