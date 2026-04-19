@@ -16,6 +16,10 @@ import Svg, {
   Circle as SvgCircle,
   Text as SvgText,
   G,
+  Defs,
+  Pattern,
+  Path as SvgPath,
+  Rect,
 } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -188,7 +192,7 @@ export default function TraceBuilder({ existingNames, onFinishAll, onBack, sessi
   const gridRef = useRef(true);
   magnetRef.current = magnetEnabled;
   gridRef.current = showGrid;
-  const GRID_STEP = 40; // image pixels — также шаг snap к сетке
+  const GRID_STEP = 4; // image pixels — также шаг snap к сетке
   const [points, setPoints] = useState<Array<{ x: number; y: number }>>([]);
   const [step, setStep] = useState<'pick' | 'pickPdf' | 'trace' | 'calibrate' | 'name'>(initialSession?.imageUri ? 'trace' : 'pick');
 
@@ -289,7 +293,7 @@ export default function TraceBuilder({ existingNames, onFinishAll, onBack, sessi
       const gx = Math.round(x / GRID_STEP) * GRID_STEP;
       const gy = Math.round(y / GRID_STEP) * GRID_STEP;
       // Snap zone scales with zoom — feels consistent on screen
-      const snapDist = 14 / zoomRef.current;
+      const snapDist = 6 / zoomRef.current;
       if (Math.abs(x - gx) < snapDist) x = gx;
       if (Math.abs(y - gy) < snapDist) y = gy;
     }
@@ -596,24 +600,18 @@ export default function TraceBuilder({ existingNames, onFinishAll, onBack, sessi
           {/* SVG in image-pixel coords, scaled by transform */}
           <Svg width={imgW} height={imgH} viewBox={`0 0 ${imgW} ${imgH}`}
             style={StyleSheet.absoluteFill}>
-            {/* Grid overlay — uniform step, also used as snap target */}
-            {showGrid && (() => {
-              const step = GRID_STEP;
-              const lines: any[] = [];
-              for (let x = 0; x <= imgW; x += step) {
-                lines.push(
-                  <Line key={`gx-${x}`} x1={x} y1={0} x2={x} y2={imgH}
-                    stroke="#4F46E5" strokeWidth={0.4} opacity={0.22} />
-                );
-              }
-              for (let y = 0; y <= imgH; y += step) {
-                lines.push(
-                  <Line key={`gy-${y}`} x1={0} y1={y} x2={imgW} y2={y}
-                    stroke="#4F46E5" strokeWidth={0.4} opacity={0.22} />
-                );
-              }
-              return <G>{lines}</G>;
-            })()}
+            {/* Grid overlay — SVG Pattern (tiled, fast even with thousands of cells) */}
+            {showGrid && (
+              <>
+                <Defs>
+                  <Pattern id="grid" x="0" y="0" width={GRID_STEP} height={GRID_STEP} patternUnits="userSpaceOnUse">
+                    <SvgPath d={`M ${GRID_STEP} 0 L 0 0 0 ${GRID_STEP}`}
+                      stroke="#4F46E5" strokeWidth={0.15} opacity={0.5} fill="none" />
+                  </Pattern>
+                </Defs>
+                <Rect x={0} y={0} width={imgW} height={imgH} fill="url(#grid)" />
+              </>
+            )}
             {/* Traced rooms */}
             {tracedRooms.map((tr, ri) => {
               const color = ROOM_COLORS[ri % ROOM_COLORS.length];
