@@ -29,83 +29,97 @@ const STATUSES: Array<{
   { id: 'cancelled', label: 'Отменён', color: 'red' },
 ];
 
-// ─── Address card with route button ───────────────────────────────────
+// ─── Open route in Yandex/2GIS/Apple/Web ─────────────────────────────
 
-function AddressCard({ order }: { order: Order }) {
+async function openRouteForAddress(address: string) {
+  const enc = encodeURIComponent(address.trim());
+  const ya = `yandexmaps://maps.yandex.ru/?text=${enc}`;
+  const dgis = `dgis://2gis.ru/search/${enc}`;
+  const apple = `http://maps.apple.com/?q=${enc}`;
+  const web = `https://yandex.ru/maps/?text=${enc}`;
+  try {
+    if (await Linking.canOpenURL(ya)) return Linking.openURL(ya);
+    if (await Linking.canOpenURL(dgis)) return Linking.openURL(dgis);
+    if (Platform.OS === 'ios' && (await Linking.canOpenURL(apple))) return Linking.openURL(apple);
+    Linking.openURL(web);
+  } catch {
+    Linking.openURL(web);
+  }
+}
+
+// ─── Inline-editable project field ────────────────────────────────────
+
+function ProjectField({
+  label, value, order, field, placeholder, isPhone, multiline, keyboardType,
+}: {
+  label: string; value?: string; order: Order; field: keyof Order;
+  placeholder?: string; isPhone?: boolean; multiline?: boolean; keyboardType?: any;
+}) {
   const { dispatch } = useApp();
   const [editing, setEditing] = useState(false);
-  const [tmp, setTmp] = useState(order.address ?? '');
+  const [tmp, setTmp] = useState(value ?? '');
 
   const save = () => {
-    dispatch({ type: 'UPDATE_ORDER', id: order.id, patch: { address: tmp.trim() || undefined } });
+    dispatch({ type: 'UPDATE_ORDER', id: order.id, patch: { [field]: tmp.trim() || undefined } as any });
     setEditing(false);
   };
 
-  const openRoute = async () => {
-    const addr = order.address?.trim();
-    if (!addr) return;
-    const enc = encodeURIComponent(addr);
-    const ya = `yandexmaps://maps.yandex.ru/?text=${enc}`;
-    const dgis = `dgis://2gis.ru/search/${enc}`;
-    const apple = `http://maps.apple.com/?q=${enc}`;
-    const web = `https://yandex.ru/maps/?text=${enc}`;
-    try {
-      if (await Linking.canOpenURL(ya)) return Linking.openURL(ya);
-      if (await Linking.canOpenURL(dgis)) return Linking.openURL(dgis);
-      if (Platform.OS === 'ios' && (await Linking.canOpenURL(apple))) return Linking.openURL(apple);
-      Linking.openURL(web);
-    } catch {
-      Linking.openURL(web);
-    }
-  };
+  if (editing) {
+    return (
+      <View className="py-2 border-b border-border gap-2">
+        <Text className="text-muted text-xs">{label}</Text>
+        <TextInput
+          value={tmp}
+          onChangeText={setTmp}
+          placeholder={placeholder}
+          placeholderTextColor="#b0b0ba"
+          autoFocus
+          multiline={multiline}
+          keyboardType={keyboardType}
+          onBlur={save}
+          onSubmitEditing={!multiline ? save : undefined}
+          className="bg-bg border border-border rounded-lg px-3 py-2 text-navy text-sm"
+        />
+      </View>
+    );
+  }
 
   return (
-    <Card className="p-3">
-      <SectionHeader title="Адрес" />
-      {editing ? (
-        <View>
-          <TextInput
-            value={tmp}
-            onChangeText={setTmp}
-            placeholder="Город, улица, дом"
-            placeholderTextColor="#b0b0ba"
-            autoFocus
-            multiline
-            className="bg-bg border border-border rounded-xl px-3 py-2 text-navy text-sm mb-2"
-          />
-          <View className="flex-row gap-2">
-            <Button label="Сохранить" onPress={save} size="sm" />
-            <Button label="Отмена" onPress={() => { setTmp(order.address ?? ''); setEditing(false); }} variant="ghost" size="sm" />
-          </View>
-        </View>
-      ) : order.address ? (
-        <View>
-          <Pressable onPress={() => setEditing(true)} className="py-2">
-            <Text className="text-navy text-sm">{order.address}</Text>
-          </Pressable>
-          <Button label="🗺️  Проложить маршрут" onPress={openRoute} size="sm" className="mt-2" />
-        </View>
-      ) : (
-        <Pressable onPress={() => setEditing(true)} className="py-3">
-          <Text className="text-muted text-sm">+ Добавить адрес</Text>
-        </Pressable>
-      )}
-    </Card>
+    <Pressable
+      onPress={() => { setTmp(value ?? ''); setEditing(true); }}
+      onLongPress={isPhone && value ? () => Linking.openURL(`tel:${value}`) : undefined}
+      className="flex-row justify-between items-center py-2 border-b border-border"
+    >
+      <Text className="text-muted text-sm">{label}</Text>
+      <Text
+        className={`text-sm font-medium flex-1 text-right ml-3 ${value ? (isPhone ? 'text-accent' : 'text-navy') : 'text-accent/70'}`}
+        numberOfLines={multiline ? 2 : 1}
+      >
+        {value || `+ ${placeholder ?? 'Указать'}`}
+      </Text>
+    </Pressable>
   );
 }
 
-// ─── Dates card (measure + install) ───────────────────────────────────
+// ─── Calendar (расчёт / замер / монтаж) ──────────────────────────────
 
-function DatesCard({ order }: { order: Order }) {
+function CalendarCard({ order }: { order: Order }) {
   const { dispatch } = useApp();
-
   const setDate = (key: 'measureDate' | 'installDate', value: string) => {
     dispatch({ type: 'UPDATE_ORDER', id: order.id, patch: { [key]: value.trim() || undefined } });
   };
-
   return (
     <Card className="p-3">
-      <SectionHeader title="Даты" />
+      <SectionHeader title="Календарь" />
+      <View className="flex-row justify-between items-center py-2 border-b border-border">
+        <View>
+          <Text className="text-muted text-sm">Расчёт</Text>
+          <Text className="text-[10px] text-muted/60">обновляется автоматически</Text>
+        </View>
+        <Text className={`text-sm font-medium ${order.calcSnapshot ? 'text-navy' : 'text-muted/50'}`}>
+          {order.calcSnapshot?.updatedAt ?? '—'}
+        </Text>
+      </View>
       <DateRow label="Замер" value={order.measureDate} onSave={v => setDate('measureDate', v)} />
       <DateRow label="Монтаж" value={order.installDate} onSave={v => setDate('installDate', v)} />
     </Card>
@@ -115,9 +129,7 @@ function DatesCard({ order }: { order: Order }) {
 function DateRow({ label, value, onSave }: { label: string; value?: string; onSave: (v: string) => void }) {
   const [editing, setEditing] = useState(false);
   const [tmp, setTmp] = useState(value ?? '');
-
   const commit = () => { onSave(tmp); setEditing(false); };
-
   return (
     <View className="flex-row justify-between items-center py-2 border-b border-border">
       <Text className="text-muted text-sm">{label}</Text>
@@ -227,81 +239,92 @@ export default function OrderScreen({ orderId }: OrderScreenProps) {
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {tab === 'info' && (
           <View className="p-4 gap-4">
-            {/* Sum card */}
-            {totalArea > 0 && (
-              <View className="bg-navy rounded-2xl p-4">
-                <Text className="text-white/50 text-[10px] font-bold tracking-widest mb-1">
-                  ПЛОЩАДЬ
-                </Text>
-                <Text className="text-white text-3xl font-black">
-                  {fmt(totalArea)} м²
-                </Text>
-                <Text className="text-white/40 text-xs mt-1">
-                  {order.rooms.length} помещений
-                </Text>
+            {/* Hero — название проекта, площадь / итого, кол-во помещений */}
+            <View className="bg-navy rounded-2xl p-4">
+              <Text style={{ color: '#a5b4fc', fontSize: 10, fontWeight: '700', letterSpacing: 1.5 }}>
+                ПРОЕКТ
+              </Text>
+              <Text className="text-white text-lg font-bold mb-3" numberOfLines={2}>
+                {order.name}
+              </Text>
+              <View className="flex-row justify-between items-end">
+                <View>
+                  <Text style={{ color: '#a5b4fc', fontSize: 9, fontWeight: '700', letterSpacing: 1 }}>
+                    ПЛОЩАДЬ
+                  </Text>
+                  <Text className="text-white text-2xl font-black">{fmt(totalArea)} м²</Text>
+                </View>
+                <View className="items-end">
+                  <Text style={{ color: '#a5b4fc', fontSize: 9, fontWeight: '700', letterSpacing: 1 }}>
+                    ИТОГО
+                  </Text>
+                  <Text className="text-white text-2xl font-black">
+                    {order.calcSnapshot ? `${fmt(order.calcSnapshot.total)} ₽` : '—'}
+                  </Text>
+                </View>
               </View>
-            )}
+              <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 6 }}>
+                {order.rooms.length} помещений
+                {order.calcSnapshot && `  ·  расчёт ${order.calcSnapshot.updatedAt}`}
+              </Text>
+            </View>
 
             {/* Actions */}
             <Card className="p-3">
               <SectionHeader title="Действия" />
-              <Button
-                label="📐  Калькулятор смет"
-                onPress={() => router.push(`/calc/${order.id}` as any)}
-                size="md"
-                className="w-full"
-              />
+              <View className="gap-2">
+                <Button
+                  label="📐  Калькулятор сметы"
+                  onPress={() => router.push(`/calc/${order.id}` as any)}
+                  size="md"
+                  className="w-full"
+                />
+                <Button
+                  label="🛒  Создать КП товаров"
+                  onPress={() => Alert.alert('Скоро', 'Коммерческое предложение по товарам')}
+                  size="md"
+                  variant="secondary"
+                  className="w-full"
+                />
+                <Button
+                  label="🔧  Создать ТЗ для монтажника"
+                  onPress={() => Alert.alert('Скоро', 'Техзадание на монтаж с чертежами')}
+                  size="md"
+                  variant="secondary"
+                  className="w-full"
+                />
+                <Button
+                  label="📝  Создать договор для заказчика"
+                  onPress={() => Alert.alert('Скоро', 'Договор по шаблону')}
+                  size="md"
+                  variant="secondary"
+                  className="w-full"
+                />
+              </View>
             </Card>
 
-            {/* Rooms list */}
-            {order.rooms.length > 0 && (
-              <Card className="p-3">
-                <SectionHeader title="Помещения" />
-                {order.rooms.map((room, idx) => (
-                  <View key={room.id}>
-                    <View className="flex-row justify-between py-2">
-                      <Text className="text-navy text-sm font-medium">
-                        {room.name}
-                      </Text>
-                      <Text className="text-muted text-sm">
-                        {fmt(room.aO ?? 0)} м²
-                      </Text>
-                    </View>
-                    {idx < order.rooms.length - 1 && <Divider />}
-                  </View>
-                ))}
-              </Card>
-            )}
-
-            {/* Address card with route button */}
-            <AddressCard order={order} />
-
-            {/* Dates card */}
-            <DatesCard order={order} />
-
-            {/* Project info */}
+            {/* Project data — клиент, телефон, адрес */}
             <Card className="p-3">
               <SectionHeader title="Данные проекта" />
-              {[
-                { label: 'Клиент', value: order.client },
-                { label: 'Телефон', value: order.phone, isPhone: true },
-                { label: 'Дизайнер', value: order.designer },
-                { label: 'Заметки', value: order.notes },
-              ]
-                .filter(f => f.value)
-                .map(f => (
-                  <Pressable
-                    key={f.label}
-                    onPress={f.isPhone ? () => Linking.openURL(`tel:${f.value}`) : undefined}
-                    className="flex-row justify-between py-2 border-b border-border"
-                  >
-                    <Text className="text-muted text-sm">{f.label}</Text>
-                    <Text className={`text-sm font-medium ${f.isPhone ? 'text-accent' : 'text-navy'}`}>
-                      {f.value}
-                    </Text>
-                  </Pressable>
-                ))}
+              <ProjectField label="Клиент" value={order.client} order={order} field="client" placeholder="Имя клиента" />
+              <ProjectField label="Телефон" value={order.phone} order={order} field="phone" placeholder="+7 (900) 000-00-00" isPhone keyboardType="phone-pad" />
+              <ProjectField label="Адрес" value={order.address} order={order} field="address" placeholder="Город, улица, дом" multiline />
+              {order.address && (
+                <View className="mt-2">
+                  <Button
+                    label="🗺️  Проложить маршрут"
+                    onPress={() => openRouteForAddress(order.address!)}
+                    size="sm"
+                    variant="ghost"
+                  />
+                </View>
+              )}
+              <ProjectField label="Дизайнер" value={order.designer} order={order} field="designer" placeholder="Имя дизайнера" />
+              <ProjectField label="Заметки" value={order.notes} order={order} field="notes" placeholder="Заметки по проекту" multiline />
             </Card>
+
+            {/* Calendar — даты расчёта / замера / монтажа */}
+            <CalendarCard order={order} />
           </View>
         )}
 

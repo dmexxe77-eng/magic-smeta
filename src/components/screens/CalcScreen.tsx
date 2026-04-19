@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -120,6 +120,9 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
     }
   }, [order, activeRoomId]);
 
+  // Будем держать ссылку на projectTotal-snapshot, чтобы не отправлять одно и то же
+  const lastSnapshotTotalRef = useRef<number | null>(null);
+
   if (!order) {
     return (
       <View className="flex-1 bg-bg items-center justify-center">
@@ -196,6 +199,32 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
       bs + blockTotalForRoom(b, room.id, a, p), 0);
     return sum + blocksTotal + calcOptsTotalFor(a, p);
   }, 0);
+
+  // Sync calcSnapshot to order — debounced
+  useEffect(() => {
+    if (!order) return;
+    if (lastSnapshotTotalRef.current === projectTotal) return;
+    lastSnapshotTotalRef.current = projectTotal;
+    const timer = setTimeout(() => {
+      const today = new Date();
+      const dd = String(today.getDate()).padStart(2, '0');
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const yyyy = today.getFullYear();
+      dispatch({
+        type: 'UPDATE_ORDER',
+        id: order.id,
+        patch: {
+          calcSnapshot: {
+            total: projectTotal,
+            materialsTotal: 0,  // TODO: split materials/works
+            worksTotal: 0,
+            updatedAt: `${dd}.${mm}.${yyyy}`,
+          },
+        },
+      });
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [projectTotal, order?.id, dispatch]);
 
   // Block handlers
   const handleToggleExpanded = useCallback((blockId: string) => {

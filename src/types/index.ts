@@ -82,6 +82,13 @@ export interface Order {
   expenses: Expense[];
   nomSnapshot?: Record<string, number>;
   planImage?: string;   // base64
+  // Snapshot последнего расчёта в калькуляторе — обновляется из CalcScreen
+  calcSnapshot?: {
+    total: number;
+    materialsTotal: number;
+    worksTotal: number;
+    updatedAt: string;  // ДД.ММ.ГГГГ
+  };
 }
 
 // ─── Nomenclature ────────────────────────────────────────────────────
