@@ -269,8 +269,11 @@ export default function TraceBuilder({ existingNames, onFinishAll, onBack, sessi
 
     let x = ix, y = iy;
 
+    // Magnet OFF — no snap at all (raw position)
+    if (!magnetRef.current) return { x, y, closing: false };
+
     // Real-time corner snap (Sobel, like web version)
-    if (useCorners && pixelsLoaded && magnetRef.current) {
+    if (useCorners && pixelsLoaded) {
       const mode = useCorners ? 'loupe' : 'tap';
       const result = pixelSnap(ix, iy, imgNat.w, zoomRef.current, mode);
       if (result.snapped) {
@@ -289,7 +292,6 @@ export default function TraceBuilder({ existingNames, onFinishAll, onBack, sessi
     }
 
     // Grid snap — always snap to nearest node (when grid is shown).
-    // Crosshair visibly hops between nodes as finger moves — easy to position precisely.
     if (!cornerSnapped && gridRef.current) {
       x = Math.round(x / GRID_STEP) * GRID_STEP;
       y = Math.round(y / GRID_STEP) * GRID_STEP;
