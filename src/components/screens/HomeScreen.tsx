@@ -89,8 +89,8 @@ function OrderCard({
             </Text>
             {order.calcSnapshot && order.calcSnapshot.total > 0 && (
               <>
-                <Text className="text-xs text-muted">  ·  </Text>
-                <Text className="text-xs font-bold text-accent">{fmt(order.calcSnapshot.total)} ₽</Text>
+                <View style={{ flex: 1 }} />
+                <Text className="text-sm font-bold text-accent">{fmt(order.calcSnapshot.total)} ₽</Text>
               </>
             )}
           </View>
