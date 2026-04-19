@@ -23,6 +23,7 @@ import { calcPoly, fmt } from '../../utils/geometry';
 import { generateId } from '../../utils/storage';
 import { loadImagePixels, snapToCorner as pixelSnap } from '../../utils/cornerDetector';
 import { nextRoomName } from '../../utils/roomName';
+import PdfPicker from './PdfPicker';
 import type { Room, Vertex } from '../../types';
 
 const ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -57,8 +58,9 @@ interface TraceBuilderProps {
 
 // ─── Sub-screens ────────────────────────────────────────────────────
 
-function PickSourceStep({ onImage, onBack, insets }: {
+function PickSourceStep({ onImage, onPickPdf, onBack, insets }: {
   onImage: (uri: string, w: number, h: number) => void;
+  onPickPdf: () => void;
   onBack: () => void;
   insets: { top: number };
 }) {
@@ -79,12 +81,18 @@ function PickSourceStep({ onImage, onBack, insets }: {
           <Text className="text-[14px] font-bold text-navy">Обводка плана</Text>
         </View>
       </View>
-      <View className="flex-1 items-center justify-center px-8 gap-5">
+      <View className="flex-1 items-center justify-center px-8 gap-3">
         <Text className="text-6xl">📐</Text>
-        <Text className="text-xl font-black text-navy text-center">Выберите план</Text>
-        <Pressable onPress={pickImage} className="bg-accent px-8 py-4 rounded-xl w-full items-center">
-          <Text className="text-white font-bold text-base">📷 Фото из галереи</Text>
+        <Text className="text-xl font-black text-navy text-center mb-2">Выберите план</Text>
+        <Pressable onPress={onPickPdf} className="bg-accent px-8 py-4 rounded-xl w-full items-center">
+          <Text className="text-white font-bold text-base">📄 PDF проект</Text>
         </Pressable>
+        <Pressable onPress={pickImage} className="bg-white border border-border px-8 py-4 rounded-xl w-full items-center">
+          <Text className="text-navy font-bold text-base">📷 Фото из галереи</Text>
+        </Pressable>
+        <Text className="text-muted text-xs text-center mt-2">
+          PDF даёт более точную обводку благодаря векторному качеству
+        </Text>
       </View>
     </View>
   );
@@ -173,7 +181,7 @@ export default function TraceBuilder({ existingNames, onFinishAll, onBack, sessi
   const [scale, setScale] = useState<number | null>(initialSession?.scale ?? null);
   const [tracedRooms, setTracedRooms] = useState<TracedRoom[]>(initialSession?.rooms ?? []);
   const [points, setPoints] = useState<Array<{ x: number; y: number }>>([]);
-  const [step, setStep] = useState<'pick' | 'trace' | 'calibrate' | 'name'>(initialSession?.imageUri ? 'trace' : 'pick');
+  const [step, setStep] = useState<'pick' | 'pickPdf' | 'trace' | 'calibrate' | 'name'>(initialSession?.imageUri ? 'trace' : 'pick');
 
   // Zoom/pan as React state (web approach)
   const [zoom, setZoom] = useState(1);
@@ -469,7 +477,8 @@ export default function TraceBuilder({ existingNames, onFinishAll, onBack, sessi
 
   // ─── Render: sub-screens ──────────────────────────────────────────
 
-  if (step === 'pick') return <PickSourceStep onImage={handleImageSelected} onBack={onBack} insets={insets} />;
+  if (step === 'pick') return <PickSourceStep onImage={handleImageSelected} onPickPdf={() => setStep('pickPdf')} onBack={onBack} insets={insets} />;
+  if (step === 'pickPdf') return <PdfPicker onImage={handleImageSelected} onBack={() => setStep('pick')} insets={insets} />;
   if (step === 'calibrate') return <CalibrationStep points={points} onCalibrate={handleCalibrate} insets={insets} />;
   if (step === 'name') {
     const vs: Vertex[] = scale ? points.map(p => ({ x: p.x / scale / 100, y: p.y / scale / 100 })) : [];
