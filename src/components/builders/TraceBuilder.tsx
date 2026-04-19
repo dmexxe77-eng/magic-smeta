@@ -269,17 +269,17 @@ export default function TraceBuilder({ existingNames, onFinishAll, onBack, sessi
 
     let x = ix, y = iy;
 
-    // Magnet OFF — no snap at all (raw position)
-    if (!magnetRef.current) return { x, y, closing: false };
-
-    // Grid ON — pure grid snap, ignore corner & H/V (no surprises like jumping 5 cells)
+    // Grid ON — pure grid snap, ignore corner & H/V (works regardless of magnet)
     if (gridRef.current) {
       x = Math.round(x / GRID_STEP) * GRID_STEP;
       y = Math.round(y / GRID_STEP) * GRID_STEP;
       return { x, y, closing: false };
     }
 
-    // Grid OFF — corner magnet + H/V align fallback
+    // Grid OFF + magnet OFF — raw position
+    if (!magnetRef.current) return { x, y, closing: false };
+
+    // Grid OFF + magnet ON — corner snap + H/V align fallback
     if (useCorners && pixelsLoaded) {
       const mode = useCorners ? 'loupe' : 'tap';
       const result = pixelSnap(ix, iy, imgNat.w, zoomRef.current, mode);
