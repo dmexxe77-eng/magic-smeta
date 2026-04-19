@@ -29,6 +29,22 @@ const STATUSES: Array<{
   { id: 'cancelled', label: 'Отменён', color: 'red' },
 ];
 
+// ─── Compact action tile ─────────────────────────────────────────────
+
+function ActionTile({ icon, label, onPress }: { icon: string; label: string; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      className="flex-1 bg-bg border border-border rounded-xl py-2.5 px-2 items-center gap-1"
+    >
+      <Text className="text-base">{icon}</Text>
+      <Text className="text-[10px] font-semibold text-navy text-center" numberOfLines={1}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
 // ─── Open route in Yandex/2GIS/Apple/Web ─────────────────────────────
 
 async function openRouteForAddress(address: string) {
@@ -272,33 +288,27 @@ export default function OrderScreen({ orderId }: OrderScreenProps) {
             {/* Actions */}
             <Card className="p-3">
               <SectionHeader title="Действия" />
-              <View className="gap-2">
-                <Button
-                  label="📐  Калькулятор сметы"
-                  onPress={() => router.push(`/calc/${order.id}` as any)}
-                  size="md"
-                  className="w-full"
+              <Pressable
+                onPress={() => router.push(`/calc/${order.id}` as any)}
+                className="bg-navy rounded-xl py-3 px-4 flex-row items-center justify-center gap-2 mb-2"
+              >
+                <Text className="text-white text-sm font-bold">📐  Калькулятор сметы</Text>
+              </Pressable>
+              <View className="flex-row gap-2">
+                <ActionTile
+                  icon="🛒"
+                  label="КП товаров"
+                  onPress={() => Alert.alert('Скоро', 'Коммерческое предложение')}
                 />
-                <Button
-                  label="🛒  Создать КП товаров"
-                  onPress={() => Alert.alert('Скоро', 'Коммерческое предложение по товарам')}
-                  size="md"
-                  variant="secondary"
-                  className="w-full"
+                <ActionTile
+                  icon="🔧"
+                  label="ТЗ монтажа"
+                  onPress={() => Alert.alert('Скоро', 'Техзадание на монтаж')}
                 />
-                <Button
-                  label="🔧  Создать ТЗ для монтажника"
-                  onPress={() => Alert.alert('Скоро', 'Техзадание на монтаж с чертежами')}
-                  size="md"
-                  variant="secondary"
-                  className="w-full"
-                />
-                <Button
-                  label="📝  Создать договор для заказчика"
+                <ActionTile
+                  icon="📝"
+                  label="Договор"
                   onPress={() => Alert.alert('Скоро', 'Договор по шаблону')}
-                  size="md"
-                  variant="secondary"
-                  className="w-full"
                 />
               </View>
             </Card>
