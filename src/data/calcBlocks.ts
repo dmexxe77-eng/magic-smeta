@@ -33,6 +33,7 @@ export interface CalcBlock {
   activePresetId: string;
   expanded: boolean;
   perRoomPreset?: boolean;  // true = пресет выбирается отдельно для каждой комнаты
+  canSubtractFromMain?: boolean;  // true = блок может вычитать свой qty из основного профиля
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────
@@ -189,6 +190,7 @@ export function createDefaultBlocks(): CalcBlock[] {
       icon: '📐',
       bindTo: 'qty',
       expanded: false,
+      canSubtractFromMain: true,
       activePresetId: 'pr_ap_10',
       presets: [
         {

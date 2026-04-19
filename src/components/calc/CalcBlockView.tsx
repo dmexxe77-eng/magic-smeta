@@ -15,6 +15,31 @@ import { getNom, getNomPrice, calcPresetTotal, getDefaultMainQty, getAllNoms } f
 import type { NomItem } from '../../data/nomenclature';
 import { fmt } from '../../utils/geometry';
 
+// ─── Checkbox row (label + box) ─────────────────────────────────────
+function CheckboxRow({ label, checked, onToggle }: { label: string; checked: boolean; onToggle: () => void }) {
+  return (
+    <Pressable onPress={onToggle} className="flex-row items-center gap-1.5 ml-2" hitSlop={6}>
+      <Text style={{
+        fontSize: 10, fontWeight: '600',
+        color: checked ? '#4F46E5' : '#6b6b7a',
+      }}>
+        {label}
+      </Text>
+      <View style={{
+        width: 16, height: 16, borderRadius: 4,
+        borderWidth: 1.5,
+        borderColor: checked ? '#4F46E5' : '#b0b0ba',
+        backgroundColor: checked ? '#4F46E5' : 'transparent',
+        alignItems: 'center', justifyContent: 'center',
+      }}>
+        {checked && (
+          <Text style={{ color: '#fff', fontSize: 11, fontWeight: '900', lineHeight: 12 }}>✓</Text>
+        )}
+      </View>
+    </Pressable>
+  );
+}
+
 // ─── Pencil Icon (edit) ─────────────────────────────────────────────
 const PencilIcon = ({ size = 18, color = '#4F46E5' }: { size?: number; color?: string }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -285,13 +310,17 @@ interface CalcBlockViewProps {
   onDelete?: () => void;     // delete this block (only for cloned blocks)
   isSyncedToProject?: boolean;             // perRoomPreset: галочка ВКЛ — пресет синхронизирован с global
   onToggleSyncToProject?: (next: boolean) => void;
+  isSubtractFromMain?: boolean;            // canSubtractFromMain: галочка «Вычесть от основного профиля»
+  onToggleSubtractFromMain?: (next: boolean) => void;
 }
 
 export default function CalcBlockView({
   block, area, perimeter, mainQty, optQtys,
   onToggleExpanded, onSelectPreset, onUpdatePresets,
   onToggleNom, onChangeMainQty, onChangeOptQty,
-  onDuplicate, onDelete, isSyncedToProject, onToggleSyncToProject,
+  onDuplicate, onDelete,
+  isSyncedToProject, onToggleSyncToProject,
+  isSubtractFromMain, onToggleSubtractFromMain,
 }: CalcBlockViewProps) {
   const [showEditor, setShowEditor] = useState(false);
   const activePreset = block.presets.find(p => p.id === block.activePresetId);
@@ -378,32 +407,23 @@ export default function CalcBlockView({
             <QtyCell value={effectiveMainQty} onChange={onChangeMainQty} />
             <Text className="text-muted text-[9px]">{bindUnit}</Text>
 
-            {onToggleSyncToProject && (
+            {(onToggleSyncToProject || onToggleSubtractFromMain) && (
               <>
                 <View style={{ flex: 1 }} />
-                <Pressable
-                  onPress={() => onToggleSyncToProject(!isSyncedToProject)}
-                  className="flex-row items-center gap-1.5"
-                  hitSlop={6}
-                >
-                <Text style={{
-                  fontSize: 10, fontWeight: '600',
-                  color: isSyncedToProject ? '#4F46E5' : '#6b6b7a',
-                }}>
-                  Применять ко всем
-                </Text>
-                  <View style={{
-                    width: 16, height: 16, borderRadius: 4,
-                    borderWidth: 1.5,
-                    borderColor: isSyncedToProject ? '#4F46E5' : '#b0b0ba',
-                    backgroundColor: isSyncedToProject ? '#4F46E5' : 'transparent',
-                    alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    {isSyncedToProject && (
-                      <Text style={{ color: '#fff', fontSize: 11, fontWeight: '900', lineHeight: 12 }}>✓</Text>
-                    )}
-                  </View>
-                </Pressable>
+                {onToggleSyncToProject && (
+                  <CheckboxRow
+                    label="Применять ко всем"
+                    checked={!!isSyncedToProject}
+                    onToggle={() => onToggleSyncToProject(!isSyncedToProject)}
+                  />
+                )}
+                {onToggleSubtractFromMain && (
+                  <CheckboxRow
+                    label="Вычесть от осн. профиля"
+                    checked={!!isSubtractFromMain}
+                    onToggle={() => onToggleSubtractFromMain(!isSubtractFromMain)}
+                  />
+                )}
               </>
             )}
           </View>

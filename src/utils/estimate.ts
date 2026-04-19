@@ -126,8 +126,15 @@ export function buildEstimate(
   mergedNoms: TypeNomItem[],
   mode: EstimateMode,
   perRoomPresets: Record<string, Record<string, string>> = {},
+  subtractFromMain: Record<string, boolean> = {},
 ): EstimateData {
   const raw: RawLine[] = [];
+
+  // Сумма qty блоков, которые вычитаются из основного профиля
+  const subtractTotal = blocks.reduce((sum, b) => {
+    if (!b.canSubtractFromMain || !subtractFromMain[b.id]) return sum;
+    return sum + (mainQtys[b.id] ?? 0);
+  }, 0);
 
   for (const room of rooms) {
     const a = room.aO ?? calcPoly(room.v).a;
@@ -140,7 +147,11 @@ export function buildEstimate(
         : block.activePresetId;
       const preset = block.presets.find(pr => pr.id === presetId);
       if (!preset) continue;
-      const mainQty = mainQtys[block.id] ?? getDefaultMainQty(block, a, p);
+      let mainQty = mainQtys[block.id] ?? getDefaultMainQty(block, a, p);
+      // Уменьшаем периметр основного профиля на сумму вычитаемых доп. блоков
+      if (block.id === 'main_profile' && mainQtys[block.id] == null) {
+        mainQty = Math.max(0, mainQty - subtractTotal);
+      }
 
       for (const ref of preset.items) {
         if (!ref.enabled) continue;

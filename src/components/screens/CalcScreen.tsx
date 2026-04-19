@@ -96,6 +96,8 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
   // Per-room preset overrides for blocks marked perRoomPreset (Полотно, Основной профиль)
   // perRoomPresets[roomId][blockId] = presetId
   const [perRoomPresets, setPerRoomPresets] = useState<Record<string, Record<string, string>>>({});
+  // «Вычесть от основного профиля» — для доп. блоков с canSubtractFromMain
+  const [subtractFromMain, setSubtractFromMain] = useState<Record<string, boolean>>({});
 
   const [showEstimate, setShowEstimate] = useState(false);
   const [estimateRoomId, setEstimateRoomId] = useState<string | null>(null);
@@ -142,13 +144,28 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
     }, 0);
   };
 
-  // Block total honoring per-room preset override
+  // Сколько вычесть из периметра основного профиля (сумма qty доп блоков с галочкой)
+  const subtractTotal = blocks.reduce((sum, b) => {
+    if (!b.canSubtractFromMain || !subtractFromMain[b.id]) return sum;
+    return sum + (mainQtys[b.id] ?? 0);
+  }, 0);
+
+  // Effective qty для основного профиля (применяется только когда нет ручного override)
+  const mainProfileQtyFor = (perimeter: number) => {
+    if (mainQtys['main_profile'] != null) return mainQtys['main_profile'];
+    return Math.max(0, perimeter - subtractTotal);
+  };
+
+  // Block total honoring per-room preset override + subtract from main
   const blockTotalForRoom = (b: CalcBlock, roomId: string | null, a: number, p: number) => {
     const presetId = b.perRoomPreset && roomId
       ? (perRoomPresets[roomId]?.[b.id] ?? b.activePresetId)
       : b.activePresetId;
     const blockWithPreset = presetId !== b.activePresetId ? { ...b, activePresetId: presetId } : b;
-    return calcBlockTotal(blockWithPreset, a, p, mainQtys[b.id], optQtys);
+    const overrideQty = b.id === 'main_profile'
+      ? mainProfileQtyFor(p)
+      : mainQtys[b.id];
+    return calcBlockTotal(blockWithPreset, a, p, overrideQty, optQtys);
   };
 
   // Total for current (active) room
@@ -601,13 +618,17 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
             const effectiveBlock = effectivePresetId !== block.activePresetId
               ? { ...block, activePresetId: effectivePresetId }
               : block;
+            // For main_profile — show effective qty (perimeter minus subtractTotal) when no manual override
+            const mainQtyShown = block.id === 'main_profile'
+              ? mainProfileQtyFor(roomPerim)
+              : mainQtys[block.id];
             return (
               <CalcBlockView
                 key={block.id}
                 block={effectiveBlock}
                 area={roomArea}
                 perimeter={roomPerim}
-                mainQty={mainQtys[block.id]}
+                mainQty={mainQtyShown}
                 optQtys={optQtys}
                 onToggleExpanded={() => handleToggleExpanded(block.id)}
                 onSelectPreset={presetId => handleSelectPreset(block.id, presetId)}
@@ -617,6 +638,10 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
                 onChangeOptQty={(nomId, qty) => setOptQtys(prev => ({ ...prev, [nomId]: qty }))}
                 isSyncedToProject={block.perRoomPreset ? !hasOverride : undefined}
                 onToggleSyncToProject={block.perRoomPreset ? (next) => handleToggleSync(block.id, next) : undefined}
+                isSubtractFromMain={block.canSubtractFromMain ? !!subtractFromMain[block.id] : undefined}
+                onToggleSubtractFromMain={block.canSubtractFromMain
+                  ? (next) => setSubtractFromMain(prev => ({ ...prev, [block.id]: next }))
+                  : undefined}
                 onDuplicate={() => handleDuplicateBlock(block.id)}
                 onDelete={isClone ? () => handleDeleteBlock(block.id) : undefined}
               />
@@ -677,6 +702,7 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
         roomOptBindings={roomOptBindings}
         mergedNoms={mergedNoms}
         perRoomPresets={perRoomPresets}
+        subtractFromMain={subtractFromMain}
       />
     </View>
   );
