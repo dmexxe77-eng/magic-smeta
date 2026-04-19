@@ -31,50 +31,59 @@ const TYPE_LABELS: Record<string, { label: string; color: 'accent' | 'green' | '
 // ─── Nom Row ──────────────────────────────────────────────────────────
 
 function NomRow({ item, onPress, isTablet }: { item: NomItem; onPress: () => void; isTablet: boolean }) {
-  const tl = TYPE_LABELS[item.type] || TYPE_LABELS.option;
+  const installer = (item as any).installerPrice;
   return (
     <Pressable
       onPress={onPress}
       style={{
         flexDirection: 'row', alignItems: 'center',
-        backgroundColor: '#ffffff',
+        backgroundColor: '#fff',
         borderWidth: 1, borderColor: '#e8e8e4',
-        borderRadius: 16,
-        marginHorizontal: isTablet ? 8 : 16,
-        marginBottom: 8,
-        paddingHorizontal: 12, paddingVertical: 12,
+        borderRadius: 10,
+        marginHorizontal: isTablet ? 6 : 12,
+        marginBottom: 4,
+        paddingHorizontal: 10, paddingVertical: 8,
         flex: isTablet ? 1 : undefined,
       }}
     >
-      {/* Image */}
-      <View style={{
-        width: 50, height: 50, borderRadius: 12,
-        backgroundColor: '#f7f7f5', borderWidth: 1, borderColor: '#e8e8e4',
-        alignItems: 'center', justifyContent: 'center', marginRight: 12, overflow: 'hidden',
-      }}>
-        {item.image ? (
-          <Image source={{ uri: item.image }} style={{ width: 50, height: 50 }} resizeMode="cover" />
-        ) : (
-          <Text style={{ color: '#6b6b7a', fontSize: 18 }}>📦</Text>
-        )}
-      </View>
-
-      {/* Name + type */}
-      <View style={{ flex: 1, marginRight: 8 }}>
-        <Text style={{ color: '#1e2030', fontWeight: '600', fontSize: 14 }} numberOfLines={1}>{item.name}</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
-          <Badge label={tl.label} color={tl.color} />
-          <Text style={{ color: '#6b6b7a', fontSize: 12 }}>{item.unit}</Text>
+      {/* Thumb */}
+      {item.image ? (
+        <Image source={{ uri: item.image }}
+          style={{ width: 28, height: 28, borderRadius: 6, marginRight: 8 }} resizeMode="cover" />
+      ) : (
+        <View style={{
+          width: 28, height: 28, borderRadius: 6, backgroundColor: '#f7f7f5',
+          marginRight: 8, alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Text style={{ fontSize: 12, color: '#9ca3af' }}>·</Text>
         </View>
+      )}
+
+      {/* Name */}
+      <View style={{ flex: 1, marginRight: 6 }}>
+        <Text style={{ color: '#1e2030', fontWeight: '600', fontSize: 12 }} numberOfLines={2}>
+          {item.name}
+        </Text>
+        <Text style={{ color: '#9ca3af', fontSize: 10, marginTop: 1 }}>{item.unit}</Text>
       </View>
 
-      {/* Prices */}
-      <View style={{ alignItems: 'flex-end' }}>
-        <Text style={{ color: '#1e2030', fontWeight: '700', fontSize: 14 }}>{item.price} ₽</Text>
-        {item.purchasePrice != null && item.purchasePrice > 0 && (
-          <Text style={{ color: '#6b6b7a', fontSize: 11, marginTop: 2 }}>закуп {item.purchasePrice} ₽</Text>
-        )}
+      {/* Prices columns */}
+      <View style={{ alignItems: 'flex-end', minWidth: 56 }}>
+        <Text style={{ color: '#1e2030', fontWeight: '800', fontSize: 12 }}>{item.price || '—'}</Text>
+        <Text style={{ color: '#9ca3af', fontSize: 9 }}>клиент</Text>
       </View>
+      {item.purchasePrice != null && item.purchasePrice > 0 && (
+        <View style={{ alignItems: 'flex-end', minWidth: 50, marginLeft: 6 }}>
+          <Text style={{ color: '#6b6b7a', fontWeight: '600', fontSize: 11 }}>{item.purchasePrice}</Text>
+          <Text style={{ color: '#9ca3af', fontSize: 9 }}>закуп</Text>
+        </View>
+      )}
+      {installer != null && installer > 0 && (
+        <View style={{ alignItems: 'flex-end', minWidth: 50, marginLeft: 6 }}>
+          <Text style={{ color: '#16a34a', fontWeight: '600', fontSize: 11 }}>{installer}</Text>
+          <Text style={{ color: '#16a34a', fontSize: 9, opacity: 0.7 }}>монт.</Text>
+        </View>
+      )}
     </Pressable>
   );
 }

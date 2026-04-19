@@ -201,10 +201,11 @@ function reducer(state: AppState, action: Action): AppState {
     }
 
     // ── Preset templates ──
-    case 'SEED_PRESET_TEMPLATES':
-      // Только если ещё не заполнены (миграция при первой загрузке)
-      if (state.presetTemplates && state.presetTemplates.length > 0) return state;
-      return { ...state, presetTemplates: action.templates };
+    case 'SEED_PRESET_TEMPLATES': {
+      // Удаляем старые isDefault и пересоздаём из новых дефолтов; пользовательские (isDefault: false) сохраняются
+      const userTpls = (state.presetTemplates ?? []).filter(t => !t.isDefault);
+      return { ...state, presetTemplates: [...action.templates, ...userTpls] };
+    }
 
     case 'ADD_PRESET_TEMPLATE':
       return {
