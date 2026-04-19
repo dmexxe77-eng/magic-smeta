@@ -107,9 +107,10 @@ export default function EstimatePreview({
             ))}
           </ScrollView>
 
-          {/* Группировка + чертёж — disabled when scope (single room preview) */}
-          {!scope && (
-            <View className="flex-row items-center mt-2 gap-2">
+
+          {/* Группировка (только если несколько комнат) + чертёж */}
+          <View className="flex-row items-center mt-2 gap-2">
+            {!scope && rooms.length > 1 && (
               <View className="flex-row" style={{ borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: '#e8e8e4' }}>
                 <Pressable
                   onPress={() => setGrouping('aggregate')}
@@ -134,9 +135,9 @@ export default function EstimatePreview({
                   </Text>
                 </Pressable>
               </View>
-              <ColToggle label="С чертежом" on={withDrawings} onPress={() => setWithDrawings(v => !v)} />
-            </View>
-          )}
+            )}
+            <ColToggle label="С чертежом" on={withDrawings} onPress={() => setWithDrawings(v => !v)} />
+          </View>
 
           {/* Column toggles */}
           <View className="flex-row items-center mt-2 gap-2">
@@ -163,6 +164,25 @@ export default function EstimatePreview({
               {aggregateData.works.length > 0 && (
                 <Section title="РАБОТЫ" lines={aggregateData.works} total={aggregateData.worksTotal} cols={cols} />
               )}
+              {/* Чертежи всех помещений после общей сметы */}
+              {withDrawings && rooms.some(r => r.v.length >= 3) && (
+                <View className="mt-4 mx-3 bg-card rounded-2xl border border-border overflow-hidden">
+                  <View className="bg-navy px-3 py-2">
+                    <Text className="text-white text-[10px] font-black tracking-widest">ЧЕРТЕЖИ ПОМЕЩЕНИЙ</Text>
+                  </View>
+                  <View className="p-3 gap-3">
+                    {rooms.map(room => room.v.length >= 3 && (
+                      <View key={room.id} className="items-center pb-2 border-b border-border/50">
+                        <Text className="text-navy text-xs font-bold mb-2">{room.name}</Text>
+                        <RoomDrawing verts={room.v} />
+                        <Text className="text-muted text-[10px] mt-1">
+                          S = {fmt(room.aO ?? calcPoly(room.v).a)} м² · P = {fmt(room.pO ?? calcPoly(room.v).p)} м.п.
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
             </>
           ) : (
             perRoomData.map(({ room, data }) => {
@@ -175,19 +195,20 @@ export default function EstimatePreview({
                     </Text>
                     <Text className="text-accent text-sm font-black">{fmt(data.total)} ₽</Text>
                   </View>
-                  {withDrawings && room.v.length >= 3 && (
-                    <View className="bg-white border-x border-border px-4 py-3 items-center">
-                      <RoomDrawing verts={room.v} />
-                      <Text className="text-muted text-[10px] mt-1">
-                        S = {fmt(room.aO ?? calcPoly(room.v).a)} м² · P = {fmt(room.pO ?? calcPoly(room.v).p)} м.п.
-                      </Text>
-                    </View>
-                  )}
                   {data.materials.length > 0 && (
                     <Section title="МАТЕРИАЛЫ" lines={data.materials} total={data.materialsTotal} cols={cols} embedded />
                   )}
                   {data.works.length > 0 && (
                     <Section title="РАБОТЫ" lines={data.works} total={data.worksTotal} cols={cols} embedded />
+                  )}
+                  {/* Чертёж после сметы помещения */}
+                  {withDrawings && room.v.length >= 3 && (
+                    <View className="bg-white border border-border rounded-b-2xl px-4 py-3 items-center">
+                      <RoomDrawing verts={room.v} />
+                      <Text className="text-muted text-[10px] mt-1">
+                        S = {fmt(room.aO ?? calcPoly(room.v).a)} м² · P = {fmt(room.pO ?? calcPoly(room.v).p)} м.п.
+                      </Text>
+                    </View>
                   )}
                 </View>
               );
