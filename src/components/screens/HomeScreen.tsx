@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -198,14 +198,17 @@ export default function HomeScreen() {
   const [search, setSearch] = useState('');
   const [activeStatus, setActiveStatus] = useState<OrderStatus | 'all'>('all');
 
-  const filtered = state.orders.filter(o => {
-    const matchSearch =
-      !search ||
-      o.name.toLowerCase().includes(search.toLowerCase()) ||
-      (o.client ?? '').toLowerCase().includes(search.toLowerCase());
-    const matchStatus = activeStatus === 'all' || o.status === activeStatus;
-    return matchSearch && matchStatus;
-  });
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    return state.orders.filter(o => {
+      const matchSearch =
+        !q ||
+        o.name.toLowerCase().includes(q) ||
+        (o.client ?? '').toLowerCase().includes(q);
+      const matchStatus = activeStatus === 'all' || o.status === activeStatus;
+      return matchSearch && matchStatus;
+    });
+  }, [state.orders, search, activeStatus]);
 
   const handleDelete = useCallback((order: Order) => {
     Alert.alert(
@@ -254,108 +257,92 @@ export default function HomeScreen() {
         }
       />
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        {/* Stats card */}
-        <View className="bg-navy mx-4 mt-4 rounded-2xl p-4 mb-4">
-          <Text className="text-white/50 text-[10px] font-bold tracking-widest mb-2">
-            АКТИВНЫЕ ОБЪЕКТЫ
-          </Text>
-          <Text className="text-white text-4xl font-black mb-3">
-            {state.orders.length}
-          </Text>
-          <View className="flex-row gap-5">
-            <View>
-              <Text className="text-white/40 text-[10px] mb-1">В работе</Text>
-              <Text className="text-accent-mid text-xl font-black">{inWork}</Text>
-            </View>
-            <View>
-              <Text className="text-white/40 text-[10px] mb-1">Сдано</Text>
-              <Text className="text-green-400 text-xl font-black">
-                {state.orders.filter(o => o.status === 'done').length}
+      {/* FlatList виртуализирует карточки; шапка/поиск/фильтр идут в ListHeaderComponent */}
+      <FlatList
+        data={filtered}
+        renderItem={renderOrder}
+        keyExtractor={keyExtractor}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 130 }}
+        ListHeaderComponent={
+          <>
+            {/* Stats card */}
+            <View className="bg-navy mx-4 mt-4 rounded-2xl p-4 mb-4">
+              <Text className="text-white/50 text-[10px] font-bold tracking-widest mb-2">
+                АКТИВНЫЕ ОБЪЕКТЫ
               </Text>
+              <Text className="text-white text-4xl font-black mb-3">{state.orders.length}</Text>
+              <View className="flex-row gap-5">
+                <View>
+                  <Text className="text-white/40 text-[10px] mb-1">В работе</Text>
+                  <Text className="text-accent-mid text-xl font-black">{inWork}</Text>
+                </View>
+                <View>
+                  <Text className="text-white/40 text-[10px] mb-1">Сдано</Text>
+                  <Text className="text-green-400 text-xl font-black">
+                    {state.orders.filter(o => o.status === 'done').length}
+                  </Text>
+                </View>
+              </View>
             </View>
-          </View>
-        </View>
 
-        {/* Search */}
-        <View className="mx-4 mb-3">
-          <TextInput
-            value={search}
-            onChangeText={setSearch}
-            placeholder="🔍  Поиск проектов..."
-            placeholderTextColor="#b0b0ba"
-            className="bg-card border border-border rounded-xl px-4 py-3 text-navy text-sm"
-          />
-        </View>
+            {/* Search */}
+            <View className="mx-4 mb-3">
+              <TextInput
+                value={search}
+                onChangeText={setSearch}
+                placeholder="🔍  Поиск проектов..."
+                placeholderTextColor="#b0b0ba"
+                className="bg-card border border-border rounded-xl px-4 py-3 text-navy text-sm"
+              />
+            </View>
 
-        {/* Status filter */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          className="mb-4"
-          contentContainerClassName="px-4 gap-2"
-        >
-          <Pressable
-            onPress={() => setActiveStatus('all')}
-            className={`px-3 py-1.5 rounded-full border ${
-              activeStatus === 'all'
-                ? 'bg-navy border-navy'
-                : 'bg-card border-border'
-            }`}
-          >
-            <Text
-              className={`text-xs font-semibold ${
-                activeStatus === 'all' ? 'text-white' : 'text-muted'
-              }`}
+            {/* Status filter */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              className="mb-4"
+              contentContainerClassName="px-4 gap-2"
             >
-              Все
-            </Text>
-          </Pressable>
-          {STATUSES.slice(0, 5).map(s => (
-            <Pressable
-              key={s.id}
-              onPress={() => setActiveStatus(s.id)}
-              className={`px-3 py-1.5 rounded-full border ${
-                activeStatus === s.id
-                  ? 'bg-accent border-accent'
-                  : 'bg-card border-border'
-              }`}
-            >
-              <Text
-                className={`text-xs font-semibold ${
-                  activeStatus === s.id ? 'text-white' : 'text-muted'
+              <Pressable
+                onPress={() => setActiveStatus('all')}
+                className={`px-3 py-1.5 rounded-full border ${
+                  activeStatus === 'all' ? 'bg-navy border-navy' : 'bg-card border-border'
                 }`}
               >
-                {s.label}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-
-        {/* Orders list */}
-        {filtered.length === 0 ? (
+                <Text className={`text-xs font-semibold ${activeStatus === 'all' ? 'text-white' : 'text-muted'}`}>
+                  Все
+                </Text>
+              </Pressable>
+              {STATUSES.slice(0, 5).map(s => (
+                <Pressable
+                  key={s.id}
+                  onPress={() => setActiveStatus(s.id)}
+                  className={`px-3 py-1.5 rounded-full border ${
+                    activeStatus === s.id ? 'bg-accent border-accent' : 'bg-card border-border'
+                  }`}
+                >
+                  <Text className={`text-xs font-semibold ${activeStatus === s.id ? 'text-white' : 'text-muted'}`}>
+                    {s.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </>
+        }
+        ListEmptyComponent={
           <EmptyState
             icon="📋"
             title="Проектов нет"
             desc="Создайте первый проект чтобы начать работу"
-            action={
-              <Button
-                label="+ Новый проект"
-                onPress={() => setShowNew(true)}
-                size="md"
-              />
-            }
+            action={<Button label="+ Новый проект" onPress={() => setShowNew(true)} size="md" />}
           />
-        ) : (
-          <FlatList
-            data={filtered}
-            renderItem={renderOrder}
-            keyExtractor={keyExtractor}
-            scrollEnabled={false}
-            ListFooterComponent={<View className="h-32" />}
-          />
-        )}
-      </ScrollView>
+        }
+        initialNumToRender={8}
+        maxToRenderPerBatch={6}
+        windowSize={7}
+        removeClippedSubviews
+      />
 
       {/* FAB */}
       <Pressable

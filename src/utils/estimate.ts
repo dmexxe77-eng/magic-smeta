@@ -130,6 +130,10 @@ export function buildEstimate(
 ): EstimateData {
   const raw: RawLine[] = [];
 
+  // O(1) поиск номенклатуры — строим один раз вместо linear find в каждом цикле
+  const nomMap = new Map<string, DataNomItem>();
+  for (const n of mergedNoms) nomMap.set(n.id, n as unknown as DataNomItem);
+
   for (const room of rooms) {
     const a = room.aO ?? calcPoly(room.v).a;
     const p = room.pO ?? calcPoly(room.v).p;
@@ -174,7 +178,7 @@ export function buildEstimate(
     // Room options (защита стен/пола etc)
     for (const id of roomOptIds) {
       if (!roomOptEnabled[id]) continue;
-      const nom = mergedNoms.find(n => n.id === id) as DataNomItem | undefined;
+      const nom = nomMap.get(id);
       if (!nom || !shouldInclude(nom, mode)) continue;
       const binding = roomOptBindings[id] || (nom.bindTo === 'area' ? 'area' : 'perimeter');
       const qty = binding === 'area' ? a : p;

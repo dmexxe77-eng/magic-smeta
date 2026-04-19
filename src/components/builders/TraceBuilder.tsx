@@ -25,7 +25,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { calcPoly, fmt } from '../../utils/geometry';
 import { generateId } from '../../utils/storage';
-import { loadImagePixels, snapToCorner as pixelSnap } from '../../utils/cornerDetector';
+import { loadImagePixels, snapToCorner as pixelSnap, clearPixelCache } from '../../utils/cornerDetector';
 import { nextRoomName } from '../../utils/roomName';
 import PdfPicker from './PdfPicker';
 import type { Room, Vertex } from '../../types';
@@ -190,8 +190,9 @@ export default function TraceBuilder({ existingNames, onFinishAll, onBack, sessi
   const [showGrid, setShowGrid] = useState(true);
   const magnetRef = useRef(true);
   const gridRef = useRef(true);
-  magnetRef.current = magnetEnabled;
-  gridRef.current = showGrid;
+  // Sync refs в useEffect (не в теле рендера — избегаем StrictMode double-write side-effects)
+  useEffect(() => { magnetRef.current = magnetEnabled; }, [magnetEnabled]);
+  useEffect(() => { gridRef.current = showGrid; }, [showGrid]);
   const GRID_STEP = 3; // image pixels — также шаг snap к сетке
   const [points, setPoints] = useState<Array<{ x: number; y: number }>>([]);
   const [step, setStep] = useState<'pick' | 'pickPdf' | 'trace' | 'calibrate' | 'name'>(initialSession?.imageUri ? 'trace' : 'pick');
@@ -240,6 +241,9 @@ export default function TraceBuilder({ existingNames, onFinishAll, onBack, sessi
       loadImagePixels(imageUri).then(ok => setPixelsLoaded(ok));
     }
   }, [imageUri, pixelsLoaded]);
+
+  // Освобождаем кэш Skia пикселей при выходе из обводки (избегаем 100МБ leak)
+  useEffect(() => () => { clearPixelCache(); }, []);
 
   // ─── Session sync ─────────────────────────────────────────────────
 

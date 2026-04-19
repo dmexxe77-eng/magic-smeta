@@ -17,11 +17,25 @@ let cachedH = 0;
 /**
  * Load and cache grayscale pixel data for an image
  */
+/** Освободить кэш — вызывать при unmount TraceBuilder. */
+export function clearPixelCache(): void {
+  cachedGray = null;
+  cachedUri = null;
+  cachedW = 0;
+  cachedH = 0;
+}
+
 export async function loadImagePixels(imageUri: string): Promise<boolean> {
   if (cachedUri === imageUri && cachedGray) return true;
 
+  // Освобождаем старый кэш перед загрузкой нового (большие Uint8Array)
+  if (cachedGray) clearPixelCache();
+
+  let skImage: any = null;
+  let surface: any = null;
+  let snap: any = null;
+
   try {
-    let skImage;
     try {
       const skData = await Skia.Data.fromURI(imageUri);
       skImage = Skia.Image.MakeImageFromEncoded(skData);
@@ -38,15 +52,14 @@ export async function loadImagePixels(imageUri: string): Promise<boolean> {
     const w = skImage.width();
     const h = skImage.height();
 
-    // Full resolution — no downscaling, pixel-perfect corner detection
     const sc = Math.min(1, 5000 / Math.max(w, h));
     const sw = Math.round(w * sc);
     const sh = Math.round(h * sc);
 
-    const surface = Skia.Surface.Make(sw, sh);
+    surface = Skia.Surface.Make(sw, sh);
     if (!surface) return false;
     surface.getCanvas().drawImageRect(skImage, Skia.XYWHRect(0,0,w,h), Skia.XYWHRect(0,0,sw,sh), Skia.Paint());
-    const snap = surface.makeImageSnapshot();
+    snap = surface.makeImageSnapshot();
     const pd = snap.readPixels(0, 0, { width: sw, height: sh, colorType: 4, alphaType: 1 });
     if (!pd) return false;
 
@@ -64,6 +77,11 @@ export async function loadImagePixels(imageUri: string): Promise<boolean> {
   } catch (e) {
     console.warn('loadImagePixels failed:', e);
     return false;
+  } finally {
+    // Освобождаем нативные ресурсы Skia (GPU surface, image snapshot, decoded image)
+    try { (snap as any)?.dispose?.(); } catch {}
+    try { (surface as any)?.dispose?.(); } catch {}
+    try { (skImage as any)?.dispose?.(); } catch {}
   }
 }
 

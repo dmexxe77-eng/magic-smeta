@@ -136,6 +136,11 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
   // Будем держать ссылку на projectTotal-snapshot, чтобы не отправлять одно и то же
   const lastSnapshotTotalRef = useRef<number | null>(null);
 
+  // ВАЖНО: все хуки должны вызываться до любых early-return,
+  // иначе React уронит компонент с "Rendered fewer hooks than expected".
+  const insets = useSafeAreaInsets();
+  const { isLandscape } = useResponsive();
+
   if (!order) {
     return (
       <View className="flex-1 bg-bg items-center justify-center">
@@ -144,8 +149,6 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
     );
   }
 
-  const insets = useSafeAreaInsets();
-  const { isLandscape } = useResponsive();
   const rooms = order.rooms;
   const activeRoom = rooms.find(r => r.id === activeRoomId) ?? rooms[0];
 
