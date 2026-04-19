@@ -361,15 +361,35 @@ export default function HomeScreen() {
       />
 
       {/* FAB — учитывает SafeArea (на iPhone без home button нижняя зона жеста) */}
-      <Touchable
-        onPress={() => setShowNew(true)}
-        haptic="medium"
-        className="absolute self-center bg-accent rounded-full shadow-lg flex-row items-center gap-2 px-7 py-3.5"
-        style={{ bottom: insets.bottom + 16, elevation: 6 }}
+      <View
+        pointerEvents="box-none"
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: insets.bottom + 16,
+          alignItems: 'center',
+        }}
       >
-        <Plus size={18} color="#fff" strokeWidth={2.5} />
-        <Text className="text-white font-bold text-base">Новый проект</Text>
-      </Touchable>
+        <Touchable
+          onPress={() => setShowNew(true)}
+          haptic="medium"
+          scale={0.95}
+          className="bg-accent rounded-full flex-row items-center gap-2"
+          style={{
+            paddingHorizontal: 22,
+            paddingVertical: 13,
+            shadowColor: '#1E2030',
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.22,
+            shadowRadius: 12,
+            elevation: 8,
+          }}
+        >
+          <Plus size={18} color="#fff" strokeWidth={2.75} />
+          <Text className="text-white font-bold text-base">Новый проект</Text>
+        </Touchable>
+      </View>
 
       <NewOrderModal
         visible={showNew}
