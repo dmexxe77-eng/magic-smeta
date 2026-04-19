@@ -323,7 +323,17 @@ export default function CalcBlockView({
   isSubtractFromMain, onToggleSubtractFromMain,
 }: CalcBlockViewProps) {
   const [showEditor, setShowEditor] = useState(false);
+  const [reorderId, setReorderId] = useState<string | null>(null);
   const activePreset = block.presets.find(p => p.id === block.activePresetId);
+
+  const movePreset = (presetId: string, dir: -1 | 1) => {
+    const idx = block.presets.findIndex(p => p.id === presetId);
+    const swap = idx + dir;
+    if (idx < 0 || swap < 0 || swap >= block.presets.length) return;
+    const next = [...block.presets];
+    [next[idx], next[swap]] = [next[swap], next[idx]];
+    onUpdatePresets(next);
+  };
 
   const effectiveMainQty = mainQty ?? getDefaultMainQty(block, area, perimeter);
   const blockTotal = activePreset ? calcPresetTotal(activePreset, effectiveMainQty, optQtys) : 0;
@@ -391,14 +401,59 @@ export default function CalcBlockView({
 
       {block.expanded && activePreset && (
         <View className="border-t border-border">
-          {/* Preset buttons */}
+          {/* Preset buttons (long-press → reorder mode) */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} className="py-1.5" contentContainerStyle={{ paddingHorizontal: 12, gap: 6 }}>
-            {block.presets.map(p => (
-              <Pressable key={p.id} onPress={() => onSelectPreset(p.id)}
-                className={`px-3 py-1 rounded-lg border ${p.id === block.activePresetId ? 'bg-navy border-navy' : 'bg-white border-border'}`}>
-                <Text className={`text-[10px] font-semibold ${p.id === block.activePresetId ? 'text-white' : 'text-muted'}`}>{p.name}</Text>
-              </Pressable>
-            ))}
+            {block.presets.map((p, i) => {
+              const isActive = p.id === block.activePresetId;
+              const isReorder = reorderId === p.id;
+              return (
+                <View key={p.id} className="flex-row items-center">
+                  {isReorder && (
+                    <Pressable
+                      onPress={() => movePreset(p.id, -1)}
+                      disabled={i === 0}
+                      style={{
+                        paddingHorizontal: 6, paddingVertical: 4, borderRadius: 6,
+                        backgroundColor: i === 0 ? '#f0f0ee' : '#eeeeff',
+                        marginRight: 4,
+                      }}
+                    >
+                      <Text style={{ color: i === 0 ? '#b0b0ba' : '#4F46E5', fontSize: 12, fontWeight: '900' }}>‹</Text>
+                    </Pressable>
+                  )}
+                  <Pressable
+                    onPress={() => isReorder ? setReorderId(null) : onSelectPreset(p.id)}
+                    onLongPress={() => setReorderId(isReorder ? null : p.id)}
+                    delayLongPress={350}
+                    className={`px-3 py-1 rounded-lg border ${
+                      isReorder ? 'bg-amber-100 border-amber-400'
+                        : isActive ? 'bg-navy border-navy' : 'bg-white border-border'
+                    }`}
+                  >
+                    <Text className={`text-[10px] font-semibold ${
+                      isReorder ? 'text-amber-700'
+                        : isActive ? 'text-white' : 'text-muted'
+                    }`}>{p.name}</Text>
+                  </Pressable>
+                  {isReorder && (
+                    <Pressable
+                      onPress={() => movePreset(p.id, 1)}
+                      disabled={i === block.presets.length - 1}
+                      style={{
+                        paddingHorizontal: 6, paddingVertical: 4, borderRadius: 6,
+                        backgroundColor: i === block.presets.length - 1 ? '#f0f0ee' : '#eeeeff',
+                        marginLeft: 4,
+                      }}
+                    >
+                      <Text style={{
+                        color: i === block.presets.length - 1 ? '#b0b0ba' : '#4F46E5',
+                        fontSize: 12, fontWeight: '900',
+                      }}>›</Text>
+                    </Pressable>
+                  )}
+                </View>
+              );
+            })}
           </ScrollView>
 
           {/* Main qty + (опционально) чекбокс «Применять ко всем» справа */}
