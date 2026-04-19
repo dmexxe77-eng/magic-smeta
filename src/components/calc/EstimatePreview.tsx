@@ -73,58 +73,77 @@ export default function EstimatePreview({
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <View className="flex-1 bg-bg">
         {/* Header */}
-        <View className="bg-white border-b border-border px-4 pb-3" style={{ paddingTop: insets.top + 4 }}>
+        <View className="bg-white border-b border-border px-4 pb-3" style={{ paddingTop: insets.top + 6 }}>
           <View className="flex-row items-center justify-between mb-3">
-            <View className="flex-1">
-              <Text style={{ fontSize: 8, fontWeight: '700', letterSpacing: 1.5, color: '#9ca3af' }}>
-                {scope ? 'СМЕТА ПОМЕЩЕНИЯ' : 'СМЕТА ПРОЕКТА'}
+            <View className="flex-1 mr-3">
+              <Text className="text-[10px] font-bold uppercase text-muted" style={{ letterSpacing: 1.8 }}>
+                {scope ? 'Смета помещения' : 'Смета проекта'}
               </Text>
-              <Text className="text-base font-bold text-navy" numberOfLines={1}>
+              <Text className="text-lg font-black text-ink mt-0.5" numberOfLines={1}>
                 {scope ? scope : orderName}
               </Text>
-              {scope && <Text className="text-muted text-xs">{orderName}</Text>}
+              {scope && <Text className="text-muted text-xs mt-0.5" numberOfLines={1}>{orderName}</Text>}
             </View>
-            <Touchable haptic="light" onPress={onClose} className="px-3 py-2">
+            <Touchable haptic="light" onPress={onClose} className="px-2 py-2">
               <Text className="text-accent text-sm font-semibold">Закрыть</Text>
             </Touchable>
           </View>
 
-          {/* Mode segmented control */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
-            {MODES.map(m => (
-              <Touchable
-                key={m}
-                haptic="selection"
-                scale={0.96}
-                onPress={() => setMode(m)}
-                style={{
-                  paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999,
-                  backgroundColor: mode === m ? '#1E2030' : '#FAFAF9',
-                  borderWidth: 1, borderColor: mode === m ? '#1E2030' : '#E6E6E1',
-                }}
-              >
-                <Text style={{
-                  fontSize: 12, fontWeight: '700',
-                  color: mode === m ? '#fff' : '#5C5C6B',
-                }}>{MODE_LABELS[m]}</Text>
-              </Touchable>
-            ))}
+          {/* Mode — iOS segmented control */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View
+              className="flex-row bg-surface2 rounded-xl"
+              style={{ padding: 3, gap: 2 }}
+            >
+              {MODES.map(m => {
+                const isActive = mode === m;
+                return (
+                  <Touchable
+                    key={m}
+                    haptic="selection"
+                    scale={0.97}
+                    onPress={() => setMode(m)}
+                    style={{
+                      paddingHorizontal: 14,
+                      paddingVertical: 7,
+                      borderRadius: 8,
+                      backgroundColor: isActive ? '#FFFFFF' : 'transparent',
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: isActive ? 0.08 : 0,
+                      shadowRadius: 2,
+                      elevation: isActive ? 1 : 0,
+                    }}
+                  >
+                    <Text style={{
+                      fontSize: 13,
+                      fontWeight: isActive ? '700' : '500',
+                      color: isActive ? '#1E2030' : '#5C5C6B',
+                    }}>{MODE_LABELS[m]}</Text>
+                  </Touchable>
+                );
+              })}
+            </View>
           </ScrollView>
 
-
-          {/* Группировка (только если несколько комнат) + чертёж */}
-          <View className="flex-row items-center mt-2 gap-2">
+          {/* Subtoolbar — one compact row of chips: grouping + column toggles */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 6, paddingRight: 8 }}
+            className="mt-2.5"
+          >
             {!scope && rooms.length > 1 && (
-              <View className="flex-row" style={{ borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: '#E6E6E1' }}>
+              <View className="flex-row bg-surface2 rounded-lg" style={{ padding: 2 }}>
                 <Touchable
                   haptic="selection"
                   onPress={() => setGrouping('aggregate')}
                   style={{
-                    paddingHorizontal: 10, paddingVertical: 6,
-                    backgroundColor: grouping === 'aggregate' ? '#5E5CE6' : '#fff',
+                    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6,
+                    backgroundColor: grouping === 'aggregate' ? '#FFFFFF' : 'transparent',
                   }}
                 >
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: grouping === 'aggregate' ? '#fff' : '#5C5C6B' }}>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: grouping === 'aggregate' ? '#1E2030' : '#5C5C6B' }}>
                     Общая
                   </Text>
                 </Touchable>
@@ -132,26 +151,21 @@ export default function EstimatePreview({
                   haptic="selection"
                   onPress={() => setGrouping('per-room')}
                   style={{
-                    paddingHorizontal: 10, paddingVertical: 6,
-                    backgroundColor: grouping === 'per-room' ? '#5E5CE6' : '#fff',
+                    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6,
+                    backgroundColor: grouping === 'per-room' ? '#FFFFFF' : 'transparent',
                   }}
                 >
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: grouping === 'per-room' ? '#fff' : '#5C5C6B' }}>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: grouping === 'per-room' ? '#1E2030' : '#5C5C6B' }}>
                     По помещениям
                   </Text>
                 </Touchable>
               </View>
             )}
-            <ColToggle label="С чертежом" on={withDrawings} onPress={() => setWithDrawings(v => !v)} />
-          </View>
-
-          {/* Column toggles */}
-          <View className="flex-row items-center mt-2 gap-2">
-            <Text style={{ fontSize: 10, color: '#9ca3af', fontWeight: '600' }}>Колонки:</Text>
+            <ColToggle label="Чертёж" on={withDrawings} onPress={() => setWithDrawings(v => !v)} />
             <ColToggle label="Кол-во" on={cols.qty} onPress={() => setCols(c => ({ ...c, qty: !c.qty }))} />
             <ColToggle label="Цена" on={cols.price} onPress={() => setCols(c => ({ ...c, price: !c.price }))} />
             <ColToggle label="Итого" on={cols.total} onPress={() => setCols(c => ({ ...c, total: !c.total }))} />
-          </View>
+          </ScrollView>
         </View>
 
         <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: insets.bottom + 130 }}>
@@ -255,12 +269,12 @@ function ColToggle({ label, on, onPress }: { label: string; on: boolean; onPress
       scale={0.94}
       onPress={onPress}
       style={{
-        paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999,
-        backgroundColor: on ? '#5E5CE6' : '#FAFAF9',
+        paddingHorizontal: 11, paddingVertical: 6, borderRadius: 999,
+        backgroundColor: on ? '#5E5CE6' : '#FFFFFF',
         borderWidth: 1, borderColor: on ? '#5E5CE6' : '#E6E6E1',
       }}
     >
-      <Text style={{ fontSize: 11, fontWeight: '700', color: on ? '#fff' : '#5C5C6B' }}>
+      <Text style={{ fontSize: 11, fontWeight: '700', color: on ? '#fff' : '#5C5C6B', letterSpacing: 0.2 }}>
         {label}
       </Text>
     </Touchable>

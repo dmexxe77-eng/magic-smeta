@@ -64,10 +64,11 @@ export function Touchable({
       onPress={handlePress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
-      style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }, style as any]}
-      className={className}
     >
-      <Animated.View style={{ transform: [{ scale: anim }] }}>
+      <Animated.View
+        className={className}
+        style={[style as any, { transform: [{ scale: anim }] }]}
+      >
         {children}
       </Animated.View>
     </Pressable>
