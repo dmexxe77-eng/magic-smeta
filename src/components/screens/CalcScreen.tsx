@@ -91,27 +91,40 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
   const [showPlanEditor, setShowPlanEditor] = useState(false);
   const [editingPlanRoomId, setEditingPlanRoomId] = useState<string | null>(null);
   const [traceSession, setTraceSession] = useState<TraceSession | null>(null);
-  const [blocks, setBlocks] = useState<CalcBlock[]>(createDefaultBlocks);
-  // Per-room qtys — каждое помещение хранит свои значения
-  // mainQtysAll[roomId][blockId] = qty
-  // optQtysAll[roomId][nomId] = qty
-  const [mainQtysAll, setMainQtysAll] = useState<Record<string, Record<string, number>>>({});
-  const [optQtysAll, setOptQtysAll] = useState<Record<string, Record<string, number>>>({});
+  // Initialise from order.calcState (если есть сохранённое состояние)
+  const savedCalcState = order?.calcState;
+  const [blocks, setBlocks] = useState<CalcBlock[]>(
+    () => (savedCalcState?.blocks as CalcBlock[]) ?? createDefaultBlocks()
+  );
+  const [mainQtysAll, setMainQtysAll] = useState<Record<string, Record<string, number>>>(
+    () => savedCalcState?.mainQtysAll ?? {}
+  );
+  const [optQtysAll, setOptQtysAll] = useState<Record<string, Record<string, number>>>(
+    () => savedCalcState?.optQtysAll ?? {}
+  );
   // Per-room preset overrides for blocks marked perRoomPreset (Полотно, Основной профиль)
   // perRoomPresets[roomId][blockId] = presetId
-  const [perRoomPresets, setPerRoomPresets] = useState<Record<string, Record<string, string>>>({});
+  const [perRoomPresets, setPerRoomPresets] = useState<Record<string, Record<string, string>>>(
+    () => savedCalcState?.perRoomPresets ?? {}
+  );
   // «Вычесть от основного профиля» — для доп. блоков с canSubtractFromMain
-  const [subtractFromMain, setSubtractFromMain] = useState<Record<string, boolean>>({});
+  const [subtractFromMain, setSubtractFromMain] = useState<Record<string, boolean>>(
+    () => savedCalcState?.subtractFromMain ?? {}
+  );
 
   const [showEstimate, setShowEstimate] = useState(false);
   const [estimateRoomId, setEstimateRoomId] = useState<string | null>(null);
 
   // Room options (protection, etc) — mini-block ABOVE canvas
-  const [roomOptIds, setRoomOptIds] = useState<string[]>(['w_prot', 'w_floor']);
-  const [roomOptEnabled, setRoomOptEnabled] = useState<Record<string, boolean>>({});
-  const [roomOptBindings, setRoomOptBindings] = useState<Record<string, 'area' | 'perimeter'>>({
-    w_prot: 'perimeter', w_floor: 'area',
-  });
+  const [roomOptIds, setRoomOptIds] = useState<string[]>(
+    () => savedCalcState?.roomOptIds ?? ['w_prot', 'w_floor']
+  );
+  const [roomOptEnabled, setRoomOptEnabled] = useState<Record<string, boolean>>(
+    () => savedCalcState?.roomOptEnabled ?? {}
+  );
+  const [roomOptBindings, setRoomOptBindings] = useState<Record<string, 'area' | 'perimeter'>>(
+    () => savedCalcState?.roomOptBindings ?? { w_prot: 'perimeter', w_floor: 'area' }
+  );
 
   // Sync activeRoomId when order loads from AsyncStorage
   useEffect(() => {
@@ -200,11 +213,9 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
     return sum + blocksTotal + calcOptsTotalFor(a, p);
   }, 0);
 
-  // Sync calcSnapshot to order — debounced
+  // Sync calcSnapshot + полный calcState в order — debounced
   useEffect(() => {
     if (!order) return;
-    if (lastSnapshotTotalRef.current === projectTotal) return;
-    lastSnapshotTotalRef.current = projectTotal;
     const timer = setTimeout(() => {
       const today = new Date();
       const dd = String(today.getDate()).padStart(2, '0');
@@ -216,15 +227,30 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
         patch: {
           calcSnapshot: {
             total: projectTotal,
-            materialsTotal: 0,  // TODO: split materials/works
+            materialsTotal: 0,
             worksTotal: 0,
             updatedAt: `${dd}.${mm}.${yyyy}`,
           },
+          calcState: {
+            blocks,
+            mainQtysAll,
+            optQtysAll,
+            perRoomPresets,
+            subtractFromMain,
+            roomOptIds,
+            roomOptEnabled,
+            roomOptBindings,
+          },
         },
       });
-    }, 1000);
+    }, 600);
     return () => clearTimeout(timer);
-  }, [projectTotal, order?.id, dispatch]);
+  }, [
+    projectTotal,
+    blocks, mainQtysAll, optQtysAll, perRoomPresets, subtractFromMain,
+    roomOptIds, roomOptEnabled, roomOptBindings,
+    order?.id, dispatch,
+  ]);
 
   // Block handlers
   const handleToggleExpanded = useCallback((blockId: string) => {

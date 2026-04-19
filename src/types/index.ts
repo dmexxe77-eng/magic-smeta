@@ -89,6 +89,17 @@ export interface Order {
     worksTotal: number;
     updatedAt: string;  // ДД.ММ.ГГГГ
   };
+  // Полное состояние калькулятора — сохраняется при выходе, восстанавливается при входе
+  calcState?: {
+    blocks: any[];                                              // CalcBlock[]
+    mainQtysAll: Record<string, Record<string, number>>;        // [roomId][blockId]
+    optQtysAll: Record<string, Record<string, number>>;         // [roomId][nomId]
+    perRoomPresets: Record<string, Record<string, string>>;     // [roomId][blockId]
+    subtractFromMain: Record<string, boolean>;                  // [blockId]
+    roomOptIds: string[];
+    roomOptEnabled: Record<string, boolean>;
+    roomOptBindings: Record<string, 'area' | 'perimeter'>;
+  };
 }
 
 // ─── Nomenclature ────────────────────────────────────────────────────
