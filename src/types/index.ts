@@ -75,6 +75,8 @@ export interface Order {
   status: OrderStatus;
   method?: RoomMethod;
   createdAt: string;
+  measureDate?: string;   // ДД.ММ.ГГГГ
+  installDate?: string;   // ДД.ММ.ГГГГ
   rooms: Room[];
   payments: Payment[];
   expenses: Expense[];

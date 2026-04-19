@@ -13,6 +13,7 @@ import { AppHeader, Button } from '../ui';
 import { buildVerticesFromSides, calcPoly, snapAngle, fmt } from '../../utils/geometry';
 import type { Room } from '../../types';
 import { generateId } from '../../utils/storage';
+import { nextRoomName } from '../../utils/roomName';
 
 const ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
@@ -22,7 +23,7 @@ interface Side {
 }
 
 interface CompassBuilderProps {
-  existingCount: number;
+  existingNames: string[];
   onFinish: (room: Room) => void;
   onBack: () => void;
 }
@@ -180,14 +181,15 @@ function FloorPlanPreview({ sides }: { sides: Side[] }) {
 // ─── Main Component ───────────────────────────────────────────────────
 
 export default function CompassBuilder({
-  existingCount,
+  existingNames,
   onFinish,
   onBack,
 }: CompassBuilderProps) {
   const { heading, snappedHeading, permState, requestPermission } = useCompass();
   const [sides, setSides] = useState<Side[]>([]);
   const [inputCm, setInputCm] = useState('');
-  const [roomName, setRoomName] = useState(`Помещение ${existingCount + 1}`);
+  const defaultName = nextRoomName(existingNames);
+  const [roomName, setRoomName] = useState(defaultName);
   const [closed, setClosed] = useState(false);
   const [manualAngle, setManualAngle] = useState(0);
   const [useManual, setUseManual] = useState(false);
@@ -216,7 +218,7 @@ export default function CompassBuilder({
     const poly = calcPoly(pts);
     const room: Room = {
       id: generateId(),
-      name: roomName.trim() || `Помещение ${existingCount + 1}`,
+      name: roomName.trim() || defaultName,
       v: pts,
       aO: Math.round(poly.a * 100) / 100,
       pO: Math.round(poly.p * 100) / 100,

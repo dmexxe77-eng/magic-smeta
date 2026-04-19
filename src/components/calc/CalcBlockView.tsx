@@ -15,15 +15,12 @@ import { getNom, getNomPrice, calcPresetTotal, getDefaultMainQty, getAllNoms } f
 import type { NomItem } from '../../data/nomenclature';
 import { fmt } from '../../utils/geometry';
 
-// ─── Star Icon (outlined) ───────────────────────────────────────────
-const StarIcon = ({ size = 18, color = '#9ca3af' }: { size?: number; color?: string }) => (
+// ─── Pencil Icon (edit) ─────────────────────────────────────────────
+const PencilIcon = ({ size = 18, color = '#4F46E5' }: { size?: number; color?: string }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path
-      d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-      stroke={color}
-      strokeWidth="1.8"
-      strokeLinejoin="round"
-      strokeLinecap="round"
+      d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
+      fill={color}
     />
   </Svg>
 );
@@ -346,7 +343,7 @@ export default function CalcBlockView({
               alignItems: 'center', justifyContent: 'center',
             }}
           >
-            <StarIcon size={14} />
+            <PencilIcon size={14} />
           </Pressable>
           <Text className="text-muted" style={{ fontSize: 8, opacity: 0.5 }}>{block.expanded ? '▲' : '▼'}</Text>
         </View>

@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 interface AppHeaderProps {
   title?: string;
   subtitle?: string;
+  titleLabel?: string;
   onBack?: () => void;
   onMenu?: () => void;
   rightContent?: React.ReactNode;
@@ -21,6 +22,7 @@ interface AppHeaderProps {
 export function AppHeader({
   title,
   subtitle,
+  titleLabel,
   onBack,
   onMenu,
   rightContent,
@@ -54,11 +56,19 @@ export function AppHeader({
               <View style={{ width: 7, height: 2, borderRadius: 1, backgroundColor: '#4F46E5', opacity: 0.3 }} />
             </View>
           </View>
-          <View style={{ marginLeft: 10 }}>
-            <Text style={{ fontSize: 14, fontWeight: '700', letterSpacing: 2, color: '#1e2030' }}>
+          <View style={{ marginLeft: 10, flexShrink: 1 }}>
+            {titleLabel && (
+              <Text style={{ fontSize: 8, fontWeight: '700', letterSpacing: 2, color: '#9ca3af', marginBottom: 1 }}>
+                {titleLabel}
+              </Text>
+            )}
+            <Text
+              numberOfLines={1}
+              style={{ fontSize: 14, fontWeight: '700', letterSpacing: titleLabel ? 0.3 : 2, color: '#1e2030' }}
+            >
               {title ?? 'MAGIC'}
             </Text>
-            <Text style={{ fontSize: 9, fontWeight: '600', letterSpacing: 3, color: '#4F46E5', marginTop: -2 }}>
+            <Text style={{ fontSize: 9, fontWeight: '600', letterSpacing: titleLabel ? 0.5 : 3, color: '#4F46E5', marginTop: -2 }}>
               {subtitle ?? 'STUDIO'}
             </Text>
           </View>

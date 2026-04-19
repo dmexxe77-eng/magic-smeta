@@ -5,6 +5,9 @@ import {
   ScrollView,
   Pressable,
   Alert,
+  TextInput,
+  Linking,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useApp, useOrder } from '../../store/AppContext';
@@ -25,6 +28,121 @@ const STATUSES: Array<{
   { id: 'done', label: 'Выполнен', color: 'green' },
   { id: 'cancelled', label: 'Отменён', color: 'red' },
 ];
+
+// ─── Address card with route button ───────────────────────────────────
+
+function AddressCard({ order }: { order: Order }) {
+  const { dispatch } = useApp();
+  const [editing, setEditing] = useState(false);
+  const [tmp, setTmp] = useState(order.address ?? '');
+
+  const save = () => {
+    dispatch({ type: 'UPDATE_ORDER', id: order.id, patch: { address: tmp.trim() || undefined } });
+    setEditing(false);
+  };
+
+  const openRoute = async () => {
+    const addr = order.address?.trim();
+    if (!addr) return;
+    const enc = encodeURIComponent(addr);
+    const ya = `yandexmaps://maps.yandex.ru/?text=${enc}`;
+    const dgis = `dgis://2gis.ru/search/${enc}`;
+    const apple = `http://maps.apple.com/?q=${enc}`;
+    const web = `https://yandex.ru/maps/?text=${enc}`;
+    try {
+      if (await Linking.canOpenURL(ya)) return Linking.openURL(ya);
+      if (await Linking.canOpenURL(dgis)) return Linking.openURL(dgis);
+      if (Platform.OS === 'ios' && (await Linking.canOpenURL(apple))) return Linking.openURL(apple);
+      Linking.openURL(web);
+    } catch {
+      Linking.openURL(web);
+    }
+  };
+
+  return (
+    <Card className="p-3">
+      <SectionHeader title="Адрес" />
+      {editing ? (
+        <View>
+          <TextInput
+            value={tmp}
+            onChangeText={setTmp}
+            placeholder="Город, улица, дом"
+            placeholderTextColor="#b0b0ba"
+            autoFocus
+            multiline
+            className="bg-bg border border-border rounded-xl px-3 py-2 text-navy text-sm mb-2"
+          />
+          <View className="flex-row gap-2">
+            <Button label="Сохранить" onPress={save} size="sm" />
+            <Button label="Отмена" onPress={() => { setTmp(order.address ?? ''); setEditing(false); }} variant="ghost" size="sm" />
+          </View>
+        </View>
+      ) : order.address ? (
+        <View>
+          <Pressable onPress={() => setEditing(true)} className="py-2">
+            <Text className="text-navy text-sm">{order.address}</Text>
+          </Pressable>
+          <Button label="🗺️  Проложить маршрут" onPress={openRoute} size="sm" className="mt-2" />
+        </View>
+      ) : (
+        <Pressable onPress={() => setEditing(true)} className="py-3">
+          <Text className="text-muted text-sm">+ Добавить адрес</Text>
+        </Pressable>
+      )}
+    </Card>
+  );
+}
+
+// ─── Dates card (measure + install) ───────────────────────────────────
+
+function DatesCard({ order }: { order: Order }) {
+  const { dispatch } = useApp();
+
+  const setDate = (key: 'measureDate' | 'installDate', value: string) => {
+    dispatch({ type: 'UPDATE_ORDER', id: order.id, patch: { [key]: value.trim() || undefined } });
+  };
+
+  return (
+    <Card className="p-3">
+      <SectionHeader title="Даты" />
+      <DateRow label="Замер" value={order.measureDate} onSave={v => setDate('measureDate', v)} />
+      <DateRow label="Монтаж" value={order.installDate} onSave={v => setDate('installDate', v)} />
+    </Card>
+  );
+}
+
+function DateRow({ label, value, onSave }: { label: string; value?: string; onSave: (v: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [tmp, setTmp] = useState(value ?? '');
+
+  const commit = () => { onSave(tmp); setEditing(false); };
+
+  return (
+    <View className="flex-row justify-between items-center py-2 border-b border-border">
+      <Text className="text-muted text-sm">{label}</Text>
+      {editing ? (
+        <TextInput
+          value={tmp}
+          onChangeText={setTmp}
+          placeholder="ДД.ММ.ГГГГ"
+          placeholderTextColor="#b0b0ba"
+          autoFocus
+          onBlur={commit}
+          onSubmitEditing={commit}
+          keyboardType="numbers-and-punctuation"
+          className="bg-bg border border-border rounded-lg px-3 py-1 text-navy text-sm w-32 text-right"
+        />
+      ) : (
+        <Pressable onPress={() => { setTmp(value ?? ''); setEditing(true); }}>
+          <Text className={`text-sm font-medium ${value ? 'text-navy' : 'text-accent'}`}>
+            {value || '+ Указать'}
+          </Text>
+        </Pressable>
+      )}
+    </View>
+  );
+}
 
 interface OrderScreenProps {
   orderId: string;
@@ -51,6 +169,7 @@ export default function OrderScreen({ orderId }: OrderScreenProps) {
   return (
     <View className="flex-1 bg-bg">
       <AppHeader
+        titleLabel="ОБЪЕКТ"
         title={order.name}
         subtitle={order.client || undefined}
         onBack={() => router.back()}
@@ -154,27 +273,33 @@ export default function OrderScreen({ orderId }: OrderScreenProps) {
               </Card>
             )}
 
+            {/* Address card with route button */}
+            <AddressCard order={order} />
+
+            {/* Dates card */}
+            <DatesCard order={order} />
+
             {/* Project info */}
             <Card className="p-3">
               <SectionHeader title="Данные проекта" />
               {[
                 { label: 'Клиент', value: order.client },
-                { label: 'Телефон', value: order.phone },
-                { label: 'Адрес', value: order.address },
+                { label: 'Телефон', value: order.phone, isPhone: true },
                 { label: 'Дизайнер', value: order.designer },
                 { label: 'Заметки', value: order.notes },
               ]
                 .filter(f => f.value)
                 .map(f => (
-                  <View
+                  <Pressable
                     key={f.label}
+                    onPress={f.isPhone ? () => Linking.openURL(`tel:${f.value}`) : undefined}
                     className="flex-row justify-between py-2 border-b border-border"
                   >
                     <Text className="text-muted text-sm">{f.label}</Text>
-                    <Text className="text-navy text-sm font-medium">
+                    <Text className={`text-sm font-medium ${f.isPhone ? 'text-accent' : 'text-navy'}`}>
                       {f.value}
                     </Text>
-                  </View>
+                  </Pressable>
                 ))}
             </Card>
           </View>

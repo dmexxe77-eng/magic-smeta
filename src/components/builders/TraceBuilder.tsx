@@ -22,6 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { calcPoly, fmt } from '../../utils/geometry';
 import { generateId } from '../../utils/storage';
 import { loadImagePixels, snapToCorner as pixelSnap } from '../../utils/cornerDetector';
+import { nextRoomName } from '../../utils/roomName';
 import type { Room, Vertex } from '../../types';
 
 const ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -47,7 +48,7 @@ export interface TraceSession {
 }
 
 interface TraceBuilderProps {
-  existingCount: number;
+  existingNames: string[];
   onFinishAll: (rooms: Room[]) => void;
   onBack: () => void;
   session?: TraceSession | null;
@@ -164,7 +165,7 @@ function NameRoomStep({ area, perim, pointCount, defaultName, onConfirm, onBack,
 // Coordinate conversion: imgX = (screenX - panX) / zoom
 //                        screenX = imgX * zoom + panX
 
-export default function TraceBuilder({ existingCount, onFinishAll, onBack, session: initialSession, onSessionChange }: TraceBuilderProps) {
+export default function TraceBuilder({ existingNames, onFinishAll, onBack, session: initialSession, onSessionChange }: TraceBuilderProps) {
   const insets = useSafeAreaInsets();
 
   const [imageUri, setImageUri] = useState<string | null>(initialSession?.imageUri ?? null);
@@ -474,7 +475,7 @@ export default function TraceBuilder({ existingCount, onFinishAll, onBack, sessi
     const vs: Vertex[] = scale ? points.map(p => ({ x: p.x / scale / 100, y: p.y / scale / 100 })) : [];
     const poly = vs.length >= 3 ? calcPoly(vs) : { a: 0, p: 0 };
     return <NameRoomStep area={poly.a} perim={poly.p} pointCount={points.length}
-      defaultName={`Помещение ${existingCount + tracedRooms.length + 1}`}
+      defaultName={nextRoomName([...existingNames, ...tracedRooms.map(r => r.name)])}
       onConfirm={handleConfirmRoom} onBack={() => setStep('trace')} insets={insets} />;
   }
 

@@ -20,8 +20,10 @@ import TraceBuilder, { type TraceSession } from '../builders/TraceBuilder';
 import PlanEditor from '../builders/PlanEditor';
 import CalcBlockView from '../calc/CalcBlockView';
 import RoomOptionsBlock from '../calc/RoomOptionsBlock';
+import { InnerCornerIcon, OuterCornerIcon } from '../ui/CornerIcons';
 import { createDefaultBlocks, calcBlockTotal, setMergedNoms, type CalcBlock, type Preset } from '../../data/calcBlocks';
 import { useNomenclature } from '../../hooks/useNomenclature';
+import { nextRoomName } from '../../utils/roomName';
 
 // ─── Constants ────────────────────────────────────────────────────────
 
@@ -241,7 +243,7 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
   if (showTracer) {
     return (
       <TraceBuilder
-        existingCount={rooms.length}
+        existingNames={rooms.map(r => r.name)}
         onFinishAll={(newRooms) => {
           // Dedupe: replace rooms with same id, append truly new ones
           const newIds = new Set(newRooms.map(r => r.id));
@@ -262,7 +264,7 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
   if (showBuilder) {
     return (
       <CompassBuilder
-        existingCount={rooms.length}
+        existingNames={rooms.map(r => r.name)}
         onFinish={handleAddRoom}
         onBack={() => setShowBuilder(false)}
       />
@@ -275,7 +277,7 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
     return (
       <PlanEditor
         initialVerts={existing?.v}
-        initialName={existing?.name || `Помещение ${rooms.length + 1}`}
+        initialName={existing?.name || nextRoomName(rooms.map(r => r.name))}
         onFinish={(verts, name) => {
           const poly = calcPoly(verts);
           if (editingPlanRoomId && existing) {
@@ -468,12 +470,12 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
                           </View>
                           <View className="flex-row gap-3 mt-0.5">
                             <View className="flex-row gap-1 items-center">
-                              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#16a34a' }} />
-                              <Text style={{ fontSize: 11, color: '#16a34a', fontWeight: '700' }}>{angles.inner}вн</Text>
+                              <InnerCornerIcon size={14} />
+                              <Text style={{ fontSize: 11, color: '#16a34a', fontWeight: '700' }}>{angles.inner}</Text>
                             </View>
                             <View className="flex-row gap-1 items-center">
-                              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#dc2626' }} />
-                              <Text style={{ fontSize: 11, color: '#dc2626', fontWeight: '700' }}>{angles.outer}вш</Text>
+                              <OuterCornerIcon size={14} />
+                              <Text style={{ fontSize: 11, color: '#dc2626', fontWeight: '700' }}>{angles.outer}</Text>
                             </View>
                           </View>
                         </>

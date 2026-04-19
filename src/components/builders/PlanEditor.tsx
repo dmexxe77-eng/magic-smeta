@@ -18,6 +18,7 @@ import Svg, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Vertex } from '../../types';
 import { calcPoly, countAngles, getAngles, fmt } from '../../utils/geometry';
+import { InnerCornerIcon, OuterCornerIcon } from '../ui/CornerIcons';
 
 const SCREEN = Dimensions.get('window');
 const ACC = '#4F46E5';
@@ -409,10 +410,10 @@ export default function PlanEditor({
           <Text style={{ fontSize: 11, color: '#6b6b7a' }}>м</Text>
           {angles.total > 0 && (
             <>
-              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: GREEN, marginLeft: 8 }} />
-              <Text style={{ fontSize: 11, color: GREEN, fontWeight: '700' }}>{angles.inner}вн</Text>
-              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: RED }} />
-              <Text style={{ fontSize: 11, color: RED, fontWeight: '700' }}>{angles.outer}вш</Text>
+              <View style={{ marginLeft: 8 }}><InnerCornerIcon size={14} /></View>
+              <Text style={{ fontSize: 11, color: GREEN, fontWeight: '700' }}>{angles.inner}</Text>
+              <OuterCornerIcon size={14} />
+              <Text style={{ fontSize: 11, color: RED, fontWeight: '700' }}>{angles.outer}</Text>
               <Text style={{ fontSize: 11, color: '#6b6b7a' }}>{verts.length} углов</Text>
             </>
           )}
