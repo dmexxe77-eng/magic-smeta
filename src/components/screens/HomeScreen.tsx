@@ -83,9 +83,17 @@ function OrderCard({
         </View>
 
         {totalArea > 0 && (
-          <Text className="text-xs text-muted mb-1">
-            {fmt(totalArea)} м²  ·  {order.rooms.length} помещ.
-          </Text>
+          <View className="flex-row items-center mb-1">
+            <Text className="text-xs text-muted">
+              {fmt(totalArea)} м²  ·  {order.rooms.length} помещ.
+            </Text>
+            {order.calcSnapshot && order.calcSnapshot.total > 0 && (
+              <>
+                <Text className="text-xs text-muted">  ·  </Text>
+                <Text className="text-xs font-bold text-accent">{fmt(order.calcSnapshot.total)} ₽</Text>
+              </>
+            )}
+          </View>
         )}
 
         {totalPaid > 0 && (
