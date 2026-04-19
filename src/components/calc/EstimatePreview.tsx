@@ -11,6 +11,7 @@ interface Props {
   onClose: () => void;
   orderName: string;
   rooms: Room[];
+  scope?: string | null;  // room name when previewing a single room, null = full project
   blocks: CalcBlock[];
   mainQtys: Record<string, number>;
   optQtys: Record<string, number>;
@@ -23,7 +24,7 @@ interface Props {
 const MODES: EstimateMode[] = ['client', 'cost', 'installer', 'purchase'];
 
 export default function EstimatePreview({
-  visible, onClose, orderName, rooms, blocks,
+  visible, onClose, orderName, rooms, scope, blocks,
   mainQtys, optQtys, roomOptIds, roomOptEnabled, roomOptBindings, mergedNoms,
 }: Props) {
   const insets = useSafeAreaInsets();
@@ -41,8 +42,13 @@ export default function EstimatePreview({
         <View className="bg-white border-b border-border px-4 pb-3" style={{ paddingTop: insets.top + 4 }}>
           <View className="flex-row items-center justify-between mb-3">
             <View className="flex-1">
-              <Text style={{ fontSize: 8, fontWeight: '700', letterSpacing: 1.5, color: '#9ca3af' }}>СМЕТА ПРОЕКТА</Text>
-              <Text className="text-base font-bold text-navy" numberOfLines={1}>{orderName}</Text>
+              <Text style={{ fontSize: 8, fontWeight: '700', letterSpacing: 1.5, color: '#9ca3af' }}>
+                {scope ? 'СМЕТА ПОМЕЩЕНИЯ' : 'СМЕТА ПРОЕКТА'}
+              </Text>
+              <Text className="text-base font-bold text-navy" numberOfLines={1}>
+                {scope ? scope : orderName}
+              </Text>
+              {scope && <Text className="text-muted text-[10px]">{orderName}</Text>}
             </View>
             <Pressable onPress={onClose} className="px-3 py-2">
               <Text className="text-accent text-sm font-semibold">Закрыть</Text>

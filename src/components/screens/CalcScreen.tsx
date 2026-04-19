@@ -95,6 +95,7 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
   const [optQtys, setOptQtys] = useState<Record<string, number>>({});    // option quantities
 
   const [showEstimate, setShowEstimate] = useState(false);
+  const [estimateRoomId, setEstimateRoomId] = useState<string | null>(null);
 
   // Room options (protection, etc) — mini-block ABOVE canvas
   const [roomOptIds, setRoomOptIds] = useState<string[]>(['w_prot', 'w_floor']);
@@ -555,31 +556,37 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
             );
           })}
 
-          {/* Room total */}
+          {/* Room total — tap → estimate for this room only */}
           {activeRoom && (
-            <View className="bg-navy rounded-2xl p-4">
+            <Pressable
+              onPress={() => { setEstimateRoomId(activeRoom.id); setShowEstimate(true); }}
+              className="bg-navy rounded-2xl p-4"
+            >
               <View className="flex-row justify-between items-baseline">
-                <View>
+                <View className="flex-1 mr-2">
                   <Text style={{ color: '#a5b4fc', fontSize: 10, fontWeight: '700', letterSpacing: 2 }}>
-                    ПОМЕЩЕНИЕ
+                    ПОМЕЩЕНИЕ  ›
                   </Text>
                   <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700', marginTop: 2 }} numberOfLines={1}>
                     {activeRoom.name}
                   </Text>
+                  <Text style={{ color: '#a5b4fc', fontSize: 10, marginTop: 2 }}>
+                    Тап — смета помещения
+                  </Text>
                 </View>
                 <Text className="text-white text-xl font-black">{fmt(grand)} ₽</Text>
               </View>
-            </View>
+            </Pressable>
           )}
 
-          {/* Estimate preview button */}
+          {/* Estimate preview button — full project */}
           {rooms.length > 0 && (
             <Pressable
-              onPress={() => setShowEstimate(true)}
+              onPress={() => { setEstimateRoomId(null); setShowEstimate(true); }}
               className="bg-accent rounded-2xl p-4 flex-row items-center justify-center gap-2"
               style={{ elevation: 3 }}
             >
-              <Text className="text-white text-base font-bold">📄 Предпросмотр сметы</Text>
+              <Text className="text-white text-base font-bold">📄 Смета по всему проекту</Text>
             </Pressable>
           )}
         </View>
@@ -591,7 +598,10 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
         visible={showEstimate}
         onClose={() => setShowEstimate(false)}
         orderName={order.name}
-        rooms={rooms}
+        rooms={estimateRoomId ? rooms.filter(r => r.id === estimateRoomId) : rooms}
+        scope={estimateRoomId
+          ? rooms.find(r => r.id === estimateRoomId)?.name ?? null
+          : null}
         blocks={blocks}
         mainQtys={mainQtys}
         optQtys={optQtys}
