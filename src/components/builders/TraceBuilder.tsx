@@ -272,7 +272,14 @@ export default function TraceBuilder({ existingNames, onFinishAll, onBack, sessi
     // Magnet OFF — no snap at all (raw position)
     if (!magnetRef.current) return { x, y, closing: false };
 
-    // Real-time corner snap (Sobel, like web version)
+    // Grid ON — pure grid snap, ignore corner & H/V (no surprises like jumping 5 cells)
+    if (gridRef.current) {
+      x = Math.round(x / GRID_STEP) * GRID_STEP;
+      y = Math.round(y / GRID_STEP) * GRID_STEP;
+      return { x, y, closing: false };
+    }
+
+    // Grid OFF — corner magnet + H/V align fallback
     if (useCorners && pixelsLoaded) {
       const mode = useCorners ? 'loupe' : 'tap';
       const result = pixelSnap(ix, iy, imgNat.w, zoomRef.current, mode);
@@ -281,20 +288,11 @@ export default function TraceBuilder({ existingNames, onFinishAll, onBack, sessi
         y = result.y;
       }
     }
-
     const cornerSnapped = x !== ix || y !== iy;
-
-    // H/V align to current polygon (only if corner snap didn't fire)
     if (!cornerSnapped && points.length > 0) {
       const last = points[points.length - 1];
       if (Math.abs(ix - last.x) < thr) x = last.x;
       if (Math.abs(iy - last.y) < thr) y = last.y;
-    }
-
-    // Grid snap — always snap to nearest node (when grid is shown).
-    if (!cornerSnapped && gridRef.current) {
-      x = Math.round(x / GRID_STEP) * GRID_STEP;
-      y = Math.round(y / GRID_STEP) * GRID_STEP;
     }
 
     return { x, y, closing: false };
