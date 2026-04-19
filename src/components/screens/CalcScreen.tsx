@@ -362,10 +362,13 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
   const handleToggleNom = useCallback((blockId: string, side: 'items' | 'options', nomId: string) => {
     setBlocks(prev => prev.map(b => {
       if (b.id !== blockId) return b;
+      const activeId = b.perRoomPreset && activeRoomId
+        ? (perRoomPresets[activeRoomId]?.[b.id] ?? b.activePresetId)
+        : b.activePresetId;
       return {
         ...b,
         presets: b.presets.map(p => {
-          if (p.id !== b.activePresetId) return p;
+          if (p.id !== activeId) return p;
           return {
             ...p,
             [side]: p[side].map((r: any) => r.nomId === nomId ? { ...r, enabled: !r.enabled } : r),
@@ -373,7 +376,7 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
         }),
       };
     }));
-  }, []);
+  }, [activeRoomId, perRoomPresets]);
 
   const handleAddRoom = (room: Room) => {
     const updated = [...rooms, room];

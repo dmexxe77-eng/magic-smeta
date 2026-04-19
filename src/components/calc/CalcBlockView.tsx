@@ -6,15 +6,17 @@ import {
   TextInput,
   Modal,
   ScrollView,
-  Switch,
   Alert,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import { Search, Plus } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import type { CalcBlock, Preset, NomRef } from '../../data/calcBlocks';
 import { getNom, getNomPrice, calcPresetTotal, getDefaultMainQty, getAllNoms } from '../../data/calcBlocks';
 import type { NomItem } from '../../data/nomenclature';
 import { fmt } from '../../utils/geometry';
 import { useApp } from '../../store/AppContext';
+import { Toggle, Touchable } from '../ui';
 
 // ─── Checkbox row (label + box) ─────────────────────────────────────
 function CheckboxRow({ label, checked, onToggle }: { label: string; checked: boolean; onToggle: () => void }) {
@@ -132,21 +134,22 @@ function PresetEditorModal({
                   <View className="flex-row items-center justify-between">
                     <View className="flex-1 mr-2">
                       <Text className="text-navy font-bold text-sm">{preset.name}</Text>
-                      <Text className="text-muted text-[10px] mt-0.5" numberOfLines={1}>{itemNames}</Text>
+                      <Text className="text-muted text-xs mt-0.5" numberOfLines={1}>{itemNames}</Text>
                     </View>
                     <View className="flex-row items-center gap-3">
                       <Pressable onPress={() => setEditingPreset({ ...preset })} className="px-2 py-1">
                         <Text className="text-accent text-xs font-semibold">Ред.</Text>
                       </Pressable>
-                      <Pressable
+                      <Touchable
+                        haptic="warning"
                         onPress={() => Alert.alert('Убрать из проекта?', 'Пресет останется в библиотеке.', [
                           { text: 'Отмена', style: 'cancel' },
                           { text: 'Убрать', style: 'destructive', onPress: () => setPresets(p => p.filter(x => x.id !== preset.id)) },
                         ])}
-                        className="w-9 h-9 rounded-full bg-red-50 items-center justify-center"
+                        className="w-9 h-9 rounded-full bg-danger/10 items-center justify-center"
                       >
-                        <Text className="text-red-400 text-base">−</Text>
-                      </Pressable>
+                        <Text className="text-danger text-base font-semibold">−</Text>
+                      </Touchable>
                     </View>
                   </View>
                 </View>
@@ -165,7 +168,7 @@ function PresetEditorModal({
                       <View className="flex-1 mr-2">
                         <Text className="text-navy font-semibold text-sm">{t.name}</Text>
                         {itemNames ? (
-                          <Text className="text-muted text-[10px] mt-0.5" numberOfLines={1}>{itemNames}</Text>
+                          <Text className="text-muted text-xs mt-0.5" numberOfLines={1}>{itemNames}</Text>
                         ) : null}
                       </View>
                       <Pressable
@@ -301,7 +304,7 @@ function PresetEditView({ preset, onSave, onCancel }: { preset: Preset; onSave: 
           <TextInput
             value={searchItems}
             onChangeText={setSearchItems}
-            placeholder="🔍 Поиск..."
+            placeholder="Поиск..."
             placeholderTextColor="#b0b0ba"
             className="bg-bg border border-border rounded-lg px-2 py-1.5 text-navy text-[11px] mb-1"
           />
@@ -311,14 +314,12 @@ function PresetEditView({ preset, onSave, onCancel }: { preset: Preset; onSave: 
               onPress={() => toggleItem(nom.id)}
               className="flex-row items-center justify-between py-1.5 border-b border-border"
             >
-              <View className="flex-row items-center gap-1.5 flex-1 mr-1">
-                <Switch
+              <View className="flex-row items-center gap-2 flex-1 mr-1">
+                <Toggle
                   value={itemIds.has(nom.id)}
                   onValueChange={() => toggleItem(nom.id)}
-                  trackColor={{ false: '#e8e8e4', true: '#4F46E5' }}
-                  style={{ transform: [{ scaleX: 0.6 }, { scaleY: 0.6 }] }}
                 />
-                <Text className="text-navy text-[11px] flex-1" numberOfLines={1}>{nom.name}</Text>
+                <Text className="text-navy text-xs flex-1" numberOfLines={1}>{nom.name}</Text>
               </View>
               <Text className="text-orange-500 text-[11px] font-bold">{fmt(nom.price)}</Text>
             </Pressable>
@@ -331,7 +332,7 @@ function PresetEditView({ preset, onSave, onCancel }: { preset: Preset; onSave: 
           <TextInput
             value={searchOpts}
             onChangeText={setSearchOpts}
-            placeholder="🔍 Поиск..."
+            placeholder="Поиск..."
             placeholderTextColor="#b0b0ba"
             className="bg-bg border border-border rounded-lg px-2 py-1.5 text-navy text-[11px] mb-1"
           />
@@ -341,14 +342,13 @@ function PresetEditView({ preset, onSave, onCancel }: { preset: Preset; onSave: 
               onPress={() => toggleOpt(nom.id)}
               className="flex-row items-center justify-between py-1.5 border-b border-border"
             >
-              <View className="flex-row items-center gap-1.5 flex-1 mr-1">
-                <Switch
+              <View className="flex-row items-center gap-2 flex-1 mr-1">
+                <Toggle
                   value={optIds.has(nom.id)}
                   onValueChange={() => toggleOpt(nom.id)}
-                  trackColor={{ false: '#e8e8e4', true: '#22c55e' }}
-                  style={{ transform: [{ scaleX: 0.6 }, { scaleY: 0.6 }] }}
+                  color="#0F9D58"
                 />
-                <Text className="text-navy text-[11px] flex-1" numberOfLines={1}>{nom.name}</Text>
+                <Text className="text-navy text-xs flex-1" numberOfLines={1}>{nom.name}</Text>
               </View>
               <Text className="text-orange-500 text-[11px] font-bold">{fmt(nom.price)}</Text>
             </Pressable>
@@ -501,20 +501,25 @@ export default function CalcBlockView({
                       <Text style={{ color: i === 0 ? '#b0b0ba' : '#4F46E5', fontSize: 12, fontWeight: '900' }}>‹</Text>
                     </Pressable>
                   )}
-                  <Pressable
+                  <Touchable
+                    haptic={isReorder ? 'medium' : 'selection'}
+                    scale={0.96}
                     onPress={() => isReorder ? setReorderId(null) : onSelectPreset(p.id)}
-                    onLongPress={() => setReorderId(isReorder ? null : p.id)}
+                    onLongPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+                      setReorderId(isReorder ? null : p.id);
+                    }}
                     delayLongPress={350}
-                    className={`px-3 py-1 rounded-lg border ${
+                    className={`px-3.5 py-1.5 rounded-lg border ${
                       isReorder ? 'bg-amber-100 border-amber-400'
                         : isActive ? 'bg-navy border-navy' : 'bg-white border-border'
                     }`}
                   >
-                    <Text className={`text-[10px] font-semibold ${
+                    <Text className={`text-xs font-semibold ${
                       isReorder ? 'text-amber-700'
                         : isActive ? 'text-white' : 'text-muted'
                     }`}>{p.name}</Text>
-                  </Pressable>
+                  </Touchable>
                   {isReorder && (
                     <Pressable
                       onPress={() => movePreset(p.id, 1)}
@@ -574,14 +579,12 @@ export default function CalcBlockView({
                 const price = getNomPrice(ref);
                 const total = ref.enabled ? effectiveMainQty * price : 0;
                 return (
-                  <View key={ref.nomId} className={`flex-row items-center py-1 border-b border-border ${!ref.enabled ? 'opacity-30' : ''}`}>
-                    <Switch
+                  <View key={ref.nomId} className={`flex-row items-center py-1.5 gap-2 border-b border-border ${!ref.enabled ? 'opacity-40' : ''}`}>
+                    <Toggle
                       value={ref.enabled}
                       onValueChange={() => onToggleNom('items', ref.nomId)}
-                      trackColor={{ false: '#e8e8e4', true: '#4F46E5' }}
-                      style={{ transform: [{ scaleX: 0.5 }, { scaleY: 0.5 }], marginRight: -4 }}
                     />
-                    <View className="flex-1 mr-1">
+                    <View className="flex-1">
                       <Text className="text-navy text-xs" numberOfLines={1}>{nom.name}</Text>
                       <Text className="text-muted text-[11px]">{fmt(price)}×{fmt(effectiveMainQty)}</Text>
                     </View>
@@ -602,16 +605,15 @@ export default function CalcBlockView({
                   const qty = optQtys[ref.nomId] ?? 0;
                   const total = ref.enabled ? qty * price : 0;
                   return (
-                    <View key={ref.nomId} className={`flex-row items-center py-1 border-b border-border ${!ref.enabled ? 'opacity-30' : ''}`}>
-                      <Switch
+                    <View key={ref.nomId} className={`flex-row items-center py-1.5 gap-2 border-b border-border ${!ref.enabled ? 'opacity-40' : ''}`}>
+                      <Toggle
                         value={ref.enabled}
                         onValueChange={() => onToggleNom('options', ref.nomId)}
-                        trackColor={{ false: '#e8e8e4', true: '#22c55e' }}
-                        style={{ transform: [{ scaleX: 0.5 }, { scaleY: 0.5 }], marginRight: -4 }}
+                        color="#0F9D58"
                       />
                       <Text className="text-navy text-xs flex-1" numberOfLines={1}>{nom.name}</Text>
                       <QtyCell value={qty} onChange={v => onChangeOptQty(ref.nomId, v)} small />
-                      <Text className="text-green-600 text-xs font-bold ml-1 w-12 text-right">{fmt(total)}</Text>
+                      <Text className="text-success text-xs font-bold ml-1 w-12 text-right">{fmt(total)}</Text>
                     </View>
                   );
                 })}
