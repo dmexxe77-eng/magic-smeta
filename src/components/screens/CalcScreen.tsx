@@ -351,9 +351,14 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
 
         {/* Order name + builder buttons */}
         <View className="flex-row items-center px-4 pb-2.5 gap-2">
-          <Text className="text-xs text-muted flex-1" numberOfLines={1}>
-            {order.name}
-          </Text>
+          <View className="flex-1">
+            <Text style={{ fontSize: 8, fontWeight: '700', letterSpacing: 1.5, color: '#9ca3af' }}>
+              ОБЪЕКТ
+            </Text>
+            <Text className="text-sm font-semibold text-navy" numberOfLines={1}>
+              {order.name}
+            </Text>
+          </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-shrink-0">
             <View className="flex-row gap-1.5">
               {[
