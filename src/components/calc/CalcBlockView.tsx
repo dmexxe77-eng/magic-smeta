@@ -372,38 +372,37 @@ export default function CalcBlockView({
             ))}
           </ScrollView>
 
-          {/* «Применять ко всем помещениям» чекбокс — для perRoomPreset блоков */}
-          {onToggleSyncToProject && (
-            <Pressable
-              onPress={() => onToggleSyncToProject(!isSyncedToProject)}
-              className="flex-row items-center px-3 pb-1.5 gap-2"
-              hitSlop={6}
-            >
-              <View style={{
-                width: 16, height: 16, borderRadius: 4,
-                borderWidth: 1.5,
-                borderColor: isSyncedToProject ? '#4F46E5' : '#b0b0ba',
-                backgroundColor: isSyncedToProject ? '#4F46E5' : 'transparent',
-                alignItems: 'center', justifyContent: 'center',
-              }}>
-                {isSyncedToProject && (
-                  <Text style={{ color: '#fff', fontSize: 11, fontWeight: '900', lineHeight: 12 }}>✓</Text>
-                )}
-              </View>
-              <Text style={{
-                fontSize: 11, fontWeight: '600',
-                color: isSyncedToProject ? '#4F46E5' : '#6b6b7a',
-              }}>
-                Применять ко всем помещениям
-              </Text>
-            </Pressable>
-          )}
-
-          {/* Main qty */}
+          {/* Main qty + (опционально) чекбокс «Применять ко всем» справа */}
           <View className="flex-row items-center px-3 py-1 bg-bg/50 gap-1">
             <Text className="text-muted text-[10px]">{bindLabel}</Text>
             <QtyCell value={effectiveMainQty} onChange={onChangeMainQty} />
             <Text className="text-muted text-[9px]">{bindUnit}</Text>
+
+            {onToggleSyncToProject && (
+              <Pressable
+                onPress={() => onToggleSyncToProject(!isSyncedToProject)}
+                className="flex-row items-center gap-1.5 ml-auto"
+                hitSlop={6}
+              >
+                <Text style={{
+                  fontSize: 10, fontWeight: '600',
+                  color: isSyncedToProject ? '#4F46E5' : '#6b6b7a',
+                }}>
+                  Применять ко всем
+                </Text>
+                <View style={{
+                  width: 16, height: 16, borderRadius: 4,
+                  borderWidth: 1.5,
+                  borderColor: isSyncedToProject ? '#4F46E5' : '#b0b0ba',
+                  backgroundColor: isSyncedToProject ? '#4F46E5' : 'transparent',
+                  alignItems: 'center', justifyContent: 'center',
+                }}>
+                  {isSyncedToProject && (
+                    <Text style={{ color: '#fff', fontSize: 11, fontWeight: '900', lineHeight: 12 }}>✓</Text>
+                  )}
+                </View>
+              </Pressable>
+            )}
           </View>
 
           {/* Two columns */}
