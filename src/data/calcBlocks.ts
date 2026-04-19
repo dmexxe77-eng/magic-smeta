@@ -32,6 +32,7 @@ export interface CalcBlock {
   presets: Preset[];
   activePresetId: string;
   expanded: boolean;
+  perRoomPreset?: boolean;  // true = пресет выбирается отдельно для каждой комнаты
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────
@@ -108,6 +109,7 @@ export function createDefaultBlocks(): CalcBlock[] {
       icon: '🎨',
       bindTo: 'area',
       expanded: true,
+      perRoomPreset: true,
       activePresetId: 'pr_msd',
       presets: [
         {
@@ -151,6 +153,7 @@ export function createDefaultBlocks(): CalcBlock[] {
       icon: '📏',
       bindTo: 'perimeter',
       expanded: true,
+      perRoomPreset: true,
       activePresetId: 'pr_mp_2',
       presets: [
         {

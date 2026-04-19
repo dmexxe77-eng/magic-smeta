@@ -93,6 +93,9 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
   const [blocks, setBlocks] = useState<CalcBlock[]>(createDefaultBlocks);
   const [mainQtys, setMainQtys] = useState<Record<string, number>>({});  // block main qty overrides
   const [optQtys, setOptQtys] = useState<Record<string, number>>({});    // option quantities
+  // Per-room preset overrides for blocks marked perRoomPreset (Полотно, Основной профиль)
+  // perRoomPresets[roomId][blockId] = presetId
+  const [perRoomPresets, setPerRoomPresets] = useState<Record<string, Record<string, string>>>({});
 
   const [showEstimate, setShowEstimate] = useState(false);
   const [estimateRoomId, setEstimateRoomId] = useState<string | null>(null);
@@ -139,17 +142,26 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
     }, 0);
   };
 
+  // Block total honoring per-room preset override
+  const blockTotalForRoom = (b: CalcBlock, roomId: string | null, a: number, p: number) => {
+    const presetId = b.perRoomPreset && roomId
+      ? (perRoomPresets[roomId]?.[b.id] ?? b.activePresetId)
+      : b.activePresetId;
+    const blockWithPreset = presetId !== b.activePresetId ? { ...b, activePresetId: presetId } : b;
+    return calcBlockTotal(blockWithPreset, a, p, mainQtys[b.id], optQtys);
+  };
+
   // Total for current (active) room
   const grand = blocks.reduce((sum, block) =>
-    sum + calcBlockTotal(block, roomArea, roomPerim, mainQtys[block.id], optQtys), 0
+    sum + blockTotalForRoom(block, activeRoomId, roomArea, roomPerim), 0
   ) + calcOptsTotalFor(roomArea, roomPerim);
 
-  // Total across all project rooms (same blocks/qtys, different area/perim per room)
+  // Total across all project rooms
   const projectTotal = rooms.reduce((sum, room) => {
     const a = room.aO ?? calcPoly(room.v).a;
     const p = room.pO ?? calcPoly(room.v).p;
     const blocksTotal = blocks.reduce((bs, b) =>
-      bs + calcBlockTotal(b, a, p, mainQtys[b.id], optQtys), 0);
+      bs + blockTotalForRoom(b, room.id, a, p), 0);
     return sum + blocksTotal + calcOptsTotalFor(a, p);
   }, 0);
 
@@ -159,8 +171,39 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
   }, []);
 
   const handleSelectPreset = useCallback((blockId: string, presetId: string) => {
+    const block = blocks.find(b => b.id === blockId);
+    if (block?.perRoomPreset && activeRoomId) {
+      // Per-room override
+      setPerRoomPresets(prev => ({
+        ...prev,
+        [activeRoomId]: { ...(prev[activeRoomId] ?? {}), [blockId]: presetId },
+      }));
+    } else {
+      setBlocks(prev => prev.map(b => b.id === blockId ? { ...b, activePresetId: presetId } : b));
+    }
+  }, [blocks, activeRoomId]);
+
+  // Apply current room's preset to ALL rooms (for perRoomPreset blocks)
+  const handleApplyToAllRooms = useCallback((blockId: string, presetId: string) => {
     setBlocks(prev => prev.map(b => b.id === blockId ? { ...b, activePresetId: presetId } : b));
+    // Clear all overrides for this block
+    setPerRoomPresets(prev => {
+      const next: Record<string, Record<string, string>> = {};
+      for (const [rid, ovs] of Object.entries(prev)) {
+        const { [blockId]: _, ...rest } = ovs;
+        if (Object.keys(rest).length > 0) next[rid] = rest;
+      }
+      return next;
+    });
   }, []);
+
+  // Get effective preset id for a block in given room (override or block default)
+  const getEffectivePresetId = useCallback((block: CalcBlock, roomId: string | null): string => {
+    if (block.perRoomPreset && roomId) {
+      return perRoomPresets[roomId]?.[block.id] ?? block.activePresetId;
+    }
+    return block.activePresetId;
+  }, [perRoomPresets]);
 
   const handleUpdatePresets = useCallback((blockId: string, presets: Preset[]) => {
     setBlocks(prev => prev.map(b => b.id === blockId ? { ...b, presets } : b));
@@ -536,10 +579,14 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
           {/* Calculator blocks */}
           {rooms.length > 0 && blocks.map(block => {
             const isClone = block.id.includes('_copy');
+            const effectivePresetId = getEffectivePresetId(block, activeRoomId);
+            const effectiveBlock = effectivePresetId !== block.activePresetId
+              ? { ...block, activePresetId: effectivePresetId }
+              : block;
             return (
               <CalcBlockView
                 key={block.id}
-                block={block}
+                block={effectiveBlock}
                 area={roomArea}
                 perimeter={roomPerim}
                 mainQty={mainQtys[block.id]}
@@ -550,6 +597,7 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
                 onToggleNom={(side, nomId) => handleToggleNom(block.id, side, nomId)}
                 onChangeMainQty={qty => setMainQtys(prev => ({ ...prev, [block.id]: qty }))}
                 onChangeOptQty={(nomId, qty) => setOptQtys(prev => ({ ...prev, [nomId]: qty }))}
+                onApplyToAllRooms={block.perRoomPreset ? () => handleApplyToAllRooms(block.id, effectivePresetId) : undefined}
                 onDuplicate={() => handleDuplicateBlock(block.id)}
                 onDelete={isClone ? () => handleDeleteBlock(block.id) : undefined}
               />
@@ -609,6 +657,7 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
         roomOptEnabled={roomOptEnabled}
         roomOptBindings={roomOptBindings}
         mergedNoms={mergedNoms}
+        perRoomPresets={perRoomPresets}
       />
     </View>
   );

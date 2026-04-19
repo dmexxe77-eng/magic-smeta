@@ -125,6 +125,7 @@ export function buildEstimate(
   roomOptBindings: Record<string, 'area' | 'perimeter'>,
   mergedNoms: TypeNomItem[],
   mode: EstimateMode,
+  perRoomPresets: Record<string, Record<string, string>> = {},
 ): EstimateData {
   const raw: RawLine[] = [];
 
@@ -134,7 +135,10 @@ export function buildEstimate(
     const roomName = room.name;
 
     for (const block of blocks) {
-      const preset = block.presets.find(pr => pr.id === block.activePresetId);
+      const presetId = block.perRoomPreset
+        ? (perRoomPresets[room.id]?.[block.id] ?? block.activePresetId)
+        : block.activePresetId;
+      const preset = block.presets.find(pr => pr.id === presetId);
       if (!preset) continue;
       const mainQty = mainQtys[block.id] ?? getDefaultMainQty(block, a, p);
 

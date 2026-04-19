@@ -283,13 +283,14 @@ interface CalcBlockViewProps {
   onChangeOptQty: (nomId: string, qty: number) => void;
   onDuplicate?: () => void;  // clone this block (e.g. for multiple different additional profiles)
   onDelete?: () => void;     // delete this block (only for cloned blocks)
+  onApplyToAllRooms?: () => void;  // for perRoomPreset blocks: apply current preset to all rooms
 }
 
 export default function CalcBlockView({
   block, area, perimeter, mainQty, optQtys,
   onToggleExpanded, onSelectPreset, onUpdatePresets,
   onToggleNom, onChangeMainQty, onChangeOptQty,
-  onDuplicate, onDelete,
+  onDuplicate, onDelete, onApplyToAllRooms,
 }: CalcBlockViewProps) {
   const [showEditor, setShowEditor] = useState(false);
   const activePreset = block.presets.find(p => p.id === block.activePresetId);
@@ -369,6 +370,24 @@ export default function CalcBlockView({
               </Pressable>
             ))}
           </ScrollView>
+
+          {/* «Применить ко всем помещениям» — для perRoomPreset блоков */}
+          {onApplyToAllRooms && (
+            <Pressable
+              onPress={onApplyToAllRooms}
+              className="flex-row items-center px-3 pb-1.5 gap-1.5"
+            >
+              <View style={{
+                width: 14, height: 14, borderRadius: 3, borderWidth: 1.5, borderColor: '#4F46E5',
+                alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Text style={{ color: '#4F46E5', fontSize: 10, fontWeight: '900', lineHeight: 11 }}>↺</Text>
+              </View>
+              <Text className="text-accent text-[10px] font-semibold">
+                Применить «{activePreset.name}» ко всем помещениям
+              </Text>
+            </Pressable>
+          )}
 
           {/* Main qty */}
           <View className="flex-row items-center px-3 py-1 bg-bg/50 gap-1">

@@ -19,6 +19,7 @@ interface Props {
   roomOptEnabled: Record<string, boolean>;
   roomOptBindings: Record<string, 'area' | 'perimeter'>;
   mergedNoms: NomItem[];
+  perRoomPresets?: Record<string, Record<string, string>>;
 }
 
 const MODES: EstimateMode[] = ['client', 'cost', 'installer', 'purchase'];
@@ -26,13 +27,14 @@ const MODES: EstimateMode[] = ['client', 'cost', 'installer', 'purchase'];
 export default function EstimatePreview({
   visible, onClose, orderName, rooms, scope, blocks,
   mainQtys, optQtys, roomOptIds, roomOptEnabled, roomOptBindings, mergedNoms,
+  perRoomPresets,
 }: Props) {
   const insets = useSafeAreaInsets();
   const [mode, setMode] = useState<EstimateMode>('client');
 
   const data = useMemo(
-    () => buildEstimate(rooms, blocks, mainQtys, optQtys, roomOptIds, roomOptEnabled, roomOptBindings, mergedNoms, mode),
-    [rooms, blocks, mainQtys, optQtys, roomOptIds, roomOptEnabled, roomOptBindings, mergedNoms, mode]
+    () => buildEstimate(rooms, blocks, mainQtys, optQtys, roomOptIds, roomOptEnabled, roomOptBindings, mergedNoms, mode, perRoomPresets),
+    [rooms, blocks, mainQtys, optQtys, roomOptIds, roomOptEnabled, roomOptBindings, mergedNoms, mode, perRoomPresets]
   );
 
   return (
