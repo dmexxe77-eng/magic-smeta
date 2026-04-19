@@ -192,7 +192,7 @@ export default function TraceBuilder({ existingNames, onFinishAll, onBack, sessi
   const gridRef = useRef(true);
   magnetRef.current = magnetEnabled;
   gridRef.current = showGrid;
-  const GRID_STEP = 4; // image pixels — также шаг snap к сетке
+  const GRID_STEP = 3; // image pixels — также шаг snap к сетке
   const [points, setPoints] = useState<Array<{ x: number; y: number }>>([]);
   const [step, setStep] = useState<'pick' | 'pickPdf' | 'trace' | 'calibrate' | 'name'>(initialSession?.imageUri ? 'trace' : 'pick');
 
@@ -288,14 +288,11 @@ export default function TraceBuilder({ existingNames, onFinishAll, onBack, sessi
       if (Math.abs(iy - last.y) < thr) y = last.y;
     }
 
-    // Grid snap — fallback when nothing else matched
+    // Grid snap — always snap to nearest node (when grid is shown).
+    // Crosshair visibly hops between nodes as finger moves — easy to position precisely.
     if (!cornerSnapped && gridRef.current) {
-      const gx = Math.round(x / GRID_STEP) * GRID_STEP;
-      const gy = Math.round(y / GRID_STEP) * GRID_STEP;
-      // Snap zone scales with zoom — feels consistent on screen
-      const snapDist = 6 / zoomRef.current;
-      if (Math.abs(x - gx) < snapDist) x = gx;
-      if (Math.abs(y - gy) < snapDist) y = gy;
+      x = Math.round(x / GRID_STEP) * GRID_STEP;
+      y = Math.round(y / GRID_STEP) * GRID_STEP;
     }
 
     return { x, y, closing: false };
