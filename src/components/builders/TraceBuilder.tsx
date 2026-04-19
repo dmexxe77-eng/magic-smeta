@@ -182,6 +182,10 @@ export default function TraceBuilder({ existingNames, onFinishAll, onBack, sessi
   const [scale, setScale] = useState<number | null>(initialSession?.scale ?? null);
   const [tracedRooms, setTracedRooms] = useState<TracedRoom[]>(initialSession?.rooms ?? []);
   const [pdfUri, setPdfUri] = useState<string | null>(initialSession?.pdfUri ?? null);
+  const [magnetEnabled, setMagnetEnabled] = useState(true);
+  const [showGrid, setShowGrid] = useState(true);
+  const magnetRef = useRef(true);
+  magnetRef.current = magnetEnabled;
   const [points, setPoints] = useState<Array<{ x: number; y: number }>>([]);
   const [step, setStep] = useState<'pick' | 'pickPdf' | 'trace' | 'calibrate' | 'name'>(initialSession?.imageUri ? 'trace' : 'pick');
 
@@ -259,7 +263,7 @@ export default function TraceBuilder({ existingNames, onFinishAll, onBack, sessi
     let x = ix, y = iy;
 
     // Real-time corner snap (Sobel, like web version)
-    if (useCorners && pixelsLoaded) {
+    if (useCorners && pixelsLoaded && magnetRef.current) {
       const mode = useCorners ? 'loupe' : 'tap';
       const result = pixelSnap(ix, iy, imgNat.w, zoomRef.current, mode);
       if (result.snapped) {
@@ -522,9 +526,37 @@ export default function TraceBuilder({ existingNames, onFinishAll, onBack, sessi
               </Pressable>
             )}
           </View>
-          <Text className="text-muted text-xs">
-            {pixelsLoaded ? '🧲' : '🔍'} · {tracedRooms.length} пом.
-          </Text>
+          <View className="flex-row items-center gap-1.5">
+            <Pressable
+              onPress={() => setMagnetEnabled(v => !v)}
+              style={{
+                paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
+                backgroundColor: magnetEnabled ? '#16a34a' : '#e8e8e4',
+              }}
+            >
+              <Text style={{
+                fontSize: 11, fontWeight: '700',
+                color: magnetEnabled ? '#fff' : '#6b6b7a',
+              }}>
+                🧲 {magnetEnabled ? 'ВКЛ' : 'ВЫКЛ'}
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setShowGrid(v => !v)}
+              style={{
+                paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
+                backgroundColor: showGrid ? '#4F46E5' : '#e8e8e4',
+              }}
+            >
+              <Text style={{
+                fontSize: 11, fontWeight: '700',
+                color: showGrid ? '#fff' : '#6b6b7a',
+              }}>
+                ▦
+              </Text>
+            </Pressable>
+            <Text className="text-muted text-xs ml-1">{tracedRooms.length}п.</Text>
+          </View>
         </View>
       </View>
 
@@ -549,6 +581,31 @@ export default function TraceBuilder({ existingNames, onFinishAll, onBack, sessi
           {/* SVG in image-pixel coords, scaled by transform */}
           <Svg width={imgW} height={imgH} viewBox={`0 0 ${imgW} ${imgH}`}
             style={StyleSheet.absoluteFill}>
+            {/* Grid overlay — minor every 25px, major every 100px */}
+            {showGrid && (() => {
+              const minor = 25;
+              const major = 100;
+              const lines: any[] = [];
+              for (let x = 0; x <= imgW; x += minor) {
+                const isMajor = x % major === 0;
+                lines.push(
+                  <Line key={`gx-${x}`} x1={x} y1={0} x2={x} y2={imgH}
+                    stroke={isMajor ? '#4F46E5' : '#94a3b8'}
+                    strokeWidth={isMajor ? 0.6 : 0.3}
+                    opacity={isMajor ? 0.35 : 0.18} />
+                );
+              }
+              for (let y = 0; y <= imgH; y += minor) {
+                const isMajor = y % major === 0;
+                lines.push(
+                  <Line key={`gy-${y}`} x1={0} y1={y} x2={imgW} y2={y}
+                    stroke={isMajor ? '#4F46E5' : '#94a3b8'}
+                    strokeWidth={isMajor ? 0.6 : 0.3}
+                    opacity={isMajor ? 0.35 : 0.18} />
+                );
+              }
+              return <G>{lines}</G>;
+            })()}
             {/* Traced rooms */}
             {tracedRooms.map((tr, ri) => {
               const color = ROOM_COLORS[ri % ROOM_COLORS.length];
