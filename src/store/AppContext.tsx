@@ -8,7 +8,7 @@ import {
   useRef,
   type ReactNode,
 } from 'react';
-import type { AppState, Order, Room, NomItem, NomFolder, OrderStatus } from '../types';
+import type { AppState, Order, Room, NomItem, NomFolder, OrderStatus, PresetTemplate } from '../types';
 import { saveAppState, loadAppState, generateId } from '../utils/storage';
 import { calcPoly } from '../utils/geometry';
 
@@ -76,7 +76,12 @@ type Action =
   | { type: 'UPDATE_NOM_FOLDER'; folderId: string; patch: Partial<NomFolder> }
   | { type: 'ADD_CUSTOM_NOM'; nom: NomItem }
   | { type: 'UPDATE_NOM'; id: string; patch: Partial<NomItem> }
-  | { type: 'DELETE_NOM'; id: string };
+  | { type: 'DELETE_NOM'; id: string }
+  // Preset templates (глобальная библиотека)
+  | { type: 'SEED_PRESET_TEMPLATES'; templates: PresetTemplate[] }
+  | { type: 'ADD_PRESET_TEMPLATE'; template: PresetTemplate }
+  | { type: 'UPDATE_PRESET_TEMPLATE'; id: string; patch: Partial<PresetTemplate> }
+  | { type: 'DELETE_PRESET_TEMPLATE'; id: string };
 
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
@@ -195,6 +200,32 @@ function reducer(state: AppState, action: Action): AppState {
       };
     }
 
+    // ── Preset templates ──
+    case 'SEED_PRESET_TEMPLATES':
+      // Только если ещё не заполнены (миграция при первой загрузке)
+      if (state.presetTemplates && state.presetTemplates.length > 0) return state;
+      return { ...state, presetTemplates: action.templates };
+
+    case 'ADD_PRESET_TEMPLATE':
+      return {
+        ...state,
+        presetTemplates: [...(state.presetTemplates ?? []), action.template],
+      };
+
+    case 'UPDATE_PRESET_TEMPLATE':
+      return {
+        ...state,
+        presetTemplates: (state.presetTemplates ?? []).map(t =>
+          t.id === action.id ? { ...t, ...action.patch } : t
+        ),
+      };
+
+    case 'DELETE_PRESET_TEMPLATE':
+      return {
+        ...state,
+        presetTemplates: (state.presetTemplates ?? []).filter(t => t.id !== action.id),
+      };
+
     default:
       return state;
   }
@@ -227,12 +258,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const stateRef = useRef(state);
   stateRef.current = state;
 
-  // Load persisted state on mount
+  // Load persisted state on mount + seed preset templates from defaults if empty
   useEffect(() => {
     loadAppState().then(saved => {
       if (saved) {
         dispatch({ type: 'LOAD', payload: saved });
       }
+      // Lazy import to avoid circular dep
+      import('../data/calcBlocks').then(({ createDefaultBlocks }) => {
+        const defaults = createDefaultBlocks();
+        const templates: PresetTemplate[] = [];
+        for (const block of defaults) {
+          for (const preset of block.presets) {
+            templates.push({
+              id: preset.id,
+              blockId: block.id,
+              name: preset.name,
+              items: preset.items.map(r => ({ nomId: r.nomId, enabled: r.enabled })),
+              options: preset.options.map(r => ({ nomId: r.nomId, enabled: r.enabled })),
+              isDefault: true,
+              createdAt: new Date().toISOString(),
+            });
+          }
+        }
+        dispatch({ type: 'SEED_PRESET_TEMPLATES', templates });
+      });
     });
   }, []);
 

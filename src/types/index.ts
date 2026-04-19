@@ -143,6 +143,18 @@ export interface Estimate {
   works: EstimateLine[];
 }
 
+// ─── Preset templates (глобальная библиотека пресетов) ──────────────
+
+export interface PresetTemplate {
+  id: string;
+  blockId: string;          // 'canvas' | 'main_profile' | 'extra_profile' | etc — к какому типу блока относится
+  name: string;
+  items: { nomId: string; enabled: boolean }[];
+  options: { nomId: string; enabled: boolean }[];
+  isDefault?: boolean;      // дефолтный (приходит из createDefaultBlocks) — нельзя удалить, только скрыть
+  createdAt: string;
+}
+
 // ─── App State ───────────────────────────────────────────────────────
 
 export interface AppState {
@@ -156,6 +168,7 @@ export interface AppState {
   globalOpts: RoomOption[];
   theme: 'light' | 'dark';
   isPro: boolean;
+  presetTemplates?: PresetTemplate[];   // глобальная библиотека пресетов
 }
 
 export interface SaveStatus {

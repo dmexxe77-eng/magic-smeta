@@ -14,6 +14,7 @@ import type { CalcBlock, Preset, NomRef } from '../../data/calcBlocks';
 import { getNom, getNomPrice, calcPresetTotal, getDefaultMainQty, getAllNoms } from '../../data/calcBlocks';
 import type { NomItem } from '../../data/nomenclature';
 import { fmt } from '../../utils/geometry';
+import { useApp } from '../../store/AppContext';
 
 // ─── Checkbox row (label + box) ─────────────────────────────────────
 function CheckboxRow({ label, checked, onToggle }: { label: string; checked: boolean; onToggle: () => void }) {
@@ -92,20 +93,38 @@ function PresetEditorModal({
   onClose: () => void;
   onSave: (presets: Preset[]) => void;
 }) {
+  const { state, dispatch } = useApp();
   const [presets, setPresets] = useState<Preset[]>(block.presets);
   const [editingPreset, setEditingPreset] = useState<Preset | null>(null);
+
+  // Из глобальной библиотеки — пресеты для этого типа блока
+  const baseBlockId = block.id.replace(/_copy\d+$/, '');
+  const libraryForBlock = (state.presetTemplates ?? []).filter(t => t.blockId === baseBlockId);
+  // Какие из них ещё не добавлены в этот проект
+  const projectPresetIds = new Set(presets.map(p => p.id));
+  const availableFromLibrary = libraryForBlock.filter(t => !projectPresetIds.has(t.id));
+
+  const addFromLibrary = (template: typeof libraryForBlock[0]) => {
+    setPresets(prev => [...prev, {
+      id: template.id,
+      name: template.name,
+      items: template.items.map(r => ({ ...r })),
+      options: template.options.map(r => ({ ...r })),
+    }]);
+  };
 
   if (!editingPreset) {
     return (
       <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
         <View className="flex-1 bg-white">
           <View className="flex-row items-center justify-between px-4 pt-14 pb-3 border-b border-border">
-            <Text className="text-lg font-bold text-navy flex-1">Избранные кнопки</Text>
+            <Text className="text-lg font-bold text-navy flex-1">Пресеты блока</Text>
             <Pressable onPress={() => { onSave(presets); onClose(); }} className="px-3 py-2">
               <Text className="text-accent text-base font-semibold">Готово</Text>
             </Pressable>
           </View>
           <ScrollView className="flex-1 p-4">
+            <Text className="text-[10px] font-bold text-muted tracking-widest mb-2">АКТИВНЫЕ В ПРОЕКТЕ</Text>
             {presets.map((preset) => {
               const itemNames = preset.items.map(r => getNom(r.nomId)?.name ?? '').filter(Boolean).join(' + ');
               return (
@@ -120,25 +139,56 @@ function PresetEditorModal({
                         <Text className="text-accent text-xs font-semibold">Ред.</Text>
                       </Pressable>
                       <Pressable
-                        onPress={() => Alert.alert('Удалить?', '', [
+                        onPress={() => Alert.alert('Убрать из проекта?', 'Пресет останется в библиотеке.', [
                           { text: 'Отмена', style: 'cancel' },
-                          { text: 'Удалить', style: 'destructive', onPress: () => setPresets(p => p.filter(x => x.id !== preset.id)) },
+                          { text: 'Убрать', style: 'destructive', onPress: () => setPresets(p => p.filter(x => x.id !== preset.id)) },
                         ])}
                         className="w-9 h-9 rounded-full bg-red-50 items-center justify-center"
                       >
-                        <Text className="text-red-400 text-base">🗑</Text>
+                        <Text className="text-red-400 text-base">−</Text>
                       </Pressable>
                     </View>
                   </View>
                 </View>
               );
             })}
+
+            {availableFromLibrary.length > 0 && (
+              <>
+                <Text className="text-[10px] font-bold text-muted tracking-widest mb-2 mt-4">
+                  ДОСТУПНО ИЗ БИБЛИОТЕКИ
+                </Text>
+                {availableFromLibrary.map(t => {
+                  const itemNames = t.items.map(r => getNom(r.nomId)?.name ?? '').filter(Boolean).join(' + ');
+                  return (
+                    <View key={t.id} className="bg-bg/50 rounded-xl border border-dashed border-border p-3 mb-3 flex-row items-center justify-between">
+                      <View className="flex-1 mr-2">
+                        <Text className="text-navy font-semibold text-sm">{t.name}</Text>
+                        {itemNames ? (
+                          <Text className="text-muted text-[10px] mt-0.5" numberOfLines={1}>{itemNames}</Text>
+                        ) : null}
+                      </View>
+                      <Pressable
+                        onPress={() => addFromLibrary(t)}
+                        className="bg-accent px-3 py-1.5 rounded-lg"
+                      >
+                        <Text className="text-white text-xs font-bold">+ Добавить</Text>
+                      </Pressable>
+                    </View>
+                  );
+                })}
+              </>
+            )}
+
             <Pressable
               onPress={() => setEditingPreset({ id: `pr_new_${Date.now()}`, name: '', items: [], options: [] })}
-              className="border-2 border-dashed border-border rounded-xl py-4 items-center"
+              className="border-2 border-dashed border-border rounded-xl py-4 items-center mt-2"
             >
-              <Text className="text-muted font-semibold">+ Создать новую кнопку</Text>
+              <Text className="text-muted font-semibold">+ Создать новый пресет</Text>
             </Pressable>
+            <Text className="text-muted text-[10px] text-center mt-1.5 mb-4">
+              Новый пресет добавится и в глобальную библиотеку — будет доступен в других проектах.
+            </Text>
           </ScrollView>
         </View>
       </Modal>
@@ -149,10 +199,36 @@ function PresetEditorModal({
     <PresetEditView
       preset={editingPreset}
       onSave={(updated) => {
+        const isNew = !presets.some(p => p.id === updated.id);
         setPresets(prev => {
           const exists = prev.find(p => p.id === updated.id);
           return exists ? prev.map(p => p.id === updated.id ? updated : p) : [...prev, updated];
         });
+        // Sync to global library
+        if (isNew) {
+          dispatch({
+            type: 'ADD_PRESET_TEMPLATE',
+            template: {
+              id: updated.id,
+              blockId: baseBlockId,
+              name: updated.name,
+              items: updated.items.map(r => ({ nomId: r.nomId, enabled: r.enabled })),
+              options: updated.options.map(r => ({ nomId: r.nomId, enabled: r.enabled })),
+              isDefault: false,
+              createdAt: new Date().toISOString(),
+            },
+          });
+        } else {
+          dispatch({
+            type: 'UPDATE_PRESET_TEMPLATE',
+            id: updated.id,
+            patch: {
+              name: updated.name,
+              items: updated.items.map(r => ({ nomId: r.nomId, enabled: r.enabled })),
+              options: updated.options.map(r => ({ nomId: r.nomId, enabled: r.enabled })),
+            },
+          });
+        }
         setEditingPreset(null);
       }}
       onCancel={() => setEditingPreset(null)}
