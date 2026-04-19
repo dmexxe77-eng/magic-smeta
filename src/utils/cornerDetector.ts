@@ -126,9 +126,10 @@ export function snapToCorner(
     return (sxx * syy - sxy * sxy) - 0.05 * (sxx + syy) * (sxx + syy);
   };
 
-  // Very tight search radius — snap only when nearly on top of corner
-  const natRadius = mode === 'loupe' ? 6 : 3;
-  const R = Math.min(6, Math.max(2, Math.round(natRadius * sc)));
+  // Search radius (in image pixels). Wider window catches finger imprecision,
+  // distance penalty below still discounts far candidates so user can escape.
+  const natRadius = mode === 'loupe' ? 18 : 10;
+  const R = Math.max(3, Math.round(natRadius * sc));
 
   let bx = cx, by = cy, bs = -1;
 

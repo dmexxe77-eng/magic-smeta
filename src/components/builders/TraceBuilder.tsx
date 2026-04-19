@@ -46,6 +46,7 @@ export interface TraceSession {
   imageH: number;
   rooms: TracedRoom[];
   scale: number | null;
+  pdfUri?: string | null;
 }
 
 interface TraceBuilderProps {
@@ -180,6 +181,7 @@ export default function TraceBuilder({ existingNames, onFinishAll, onBack, sessi
   const [imgNat, setImgNat] = useState({ w: initialSession?.imageW ?? 1, h: initialSession?.imageH ?? 1 });
   const [scale, setScale] = useState<number | null>(initialSession?.scale ?? null);
   const [tracedRooms, setTracedRooms] = useState<TracedRoom[]>(initialSession?.rooms ?? []);
+  const [pdfUri, setPdfUri] = useState<string | null>(initialSession?.pdfUri ?? null);
   const [points, setPoints] = useState<Array<{ x: number; y: number }>>([]);
   const [step, setStep] = useState<'pick' | 'pickPdf' | 'trace' | 'calibrate' | 'name'>(initialSession?.imageUri ? 'trace' : 'pick');
 
@@ -231,8 +233,8 @@ export default function TraceBuilder({ existingNames, onFinishAll, onBack, sessi
   // ─── Session sync ─────────────────────────────────────────────────
 
   useEffect(() => {
-    if (imageUri) onSessionChange?.({ imageUri, imageW: imgNat.w, imageH: imgNat.h, rooms: tracedRooms, scale });
-  }, [tracedRooms, scale]);
+    if (imageUri) onSessionChange?.({ imageUri, imageW: imgNat.w, imageH: imgNat.h, rooms: tracedRooms, scale, pdfUri });
+  }, [tracedRooms, scale, pdfUri, imageUri]);
 
   // ─── Coordinate conversion (web-style) ────────────────────────────
 
@@ -432,8 +434,11 @@ export default function TraceBuilder({ existingNames, onFinishAll, onBack, sessi
 
   // ─── Handlers ─────────────────────────────────────────────────────
 
-  const handleImageSelected = useCallback((uri: string, w: number, h: number) => {
+  const handleImageSelected = useCallback((uri: string, w: number, h: number, sourcePdf?: string) => {
     setImageUri(uri); setImgNat({ w, h }); setStep('trace');
+    if (sourcePdf !== undefined) setPdfUri(sourcePdf);
+    // Reset points/scale when switching pages
+    setPoints([]); setScale(null);
   }, []);
 
   const handleCalibrate = useCallback((sideIdx: number, cm: number) => {
@@ -478,7 +483,7 @@ export default function TraceBuilder({ existingNames, onFinishAll, onBack, sessi
   // ─── Render: sub-screens ──────────────────────────────────────────
 
   if (step === 'pick') return <PickSourceStep onImage={handleImageSelected} onPickPdf={() => setStep('pickPdf')} onBack={onBack} insets={insets} />;
-  if (step === 'pickPdf') return <PdfPicker onImage={handleImageSelected} onBack={() => setStep('pick')} insets={insets} />;
+  if (step === 'pickPdf') return <PdfPicker onImage={handleImageSelected} onBack={() => setStep(imageUri ? 'trace' : 'pick')} insets={insets} initialPdfUri={pdfUri} />;
   if (step === 'calibrate') return <CalibrationStep points={points} onCalibrate={handleCalibrate} insets={insets} />;
   if (step === 'name') {
     const vs: Vertex[] = scale ? points.map(p => ({ x: p.x / scale / 100, y: p.y / scale / 100 })) : [];
@@ -503,6 +508,11 @@ export default function TraceBuilder({ existingNames, onFinishAll, onBack, sessi
             <Pressable onPress={onBack} className="w-8 h-8 rounded-lg bg-bg items-center justify-center">
               <Text className="text-navy text-lg font-bold">‹</Text>
             </Pressable>
+            {pdfUri && (
+              <Pressable onPress={() => setStep('pickPdf')} className="bg-bg px-2 py-1 rounded-lg">
+                <Text className="text-accent text-xs font-semibold">📄 К листам</Text>
+              </Pressable>
+            )}
             <Text className="text-sm font-bold text-navy">
               {points.length > 0 ? `Точка ${ALPHA[points.length] ?? '?'}` : 'Обводка'}
             </Text>

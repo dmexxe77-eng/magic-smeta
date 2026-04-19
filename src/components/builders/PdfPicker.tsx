@@ -7,9 +7,10 @@ import PdfThumbnail from 'react-native-pdf-thumbnail';
 import PdfRendererView from 'react-native-pdf-renderer';
 
 interface PdfPickerProps {
-  onImage: (uri: string, w: number, h: number) => void;
+  onImage: (uri: string, w: number, h: number, sourcePdfUri: string) => void;
   onBack: () => void;
   insets: { top: number };
+  initialPdfUri?: string | null;
 }
 
 const SCREEN = Dimensions.get('window');
@@ -76,10 +77,10 @@ function PagePreview({ pdfUri, pageIdx, onPress }: {
 
 // ─── Main picker ─────────────────────────────────────────────────────
 
-export default function PdfPicker({ onImage, onBack, insets }: PdfPickerProps) {
-  const [pdfUri, setPdfUri] = useState<string | null>(null);
+export default function PdfPicker({ onImage, onBack, insets, initialPdfUri }: PdfPickerProps) {
+  const [pdfUri, setPdfUri] = useState<string | null>(initialPdfUri ?? null);
   const [totalPages, setTotalPages] = useState<number | null>(null);
-  const [picking, setPicking] = useState(true);
+  const [picking, setPicking] = useState(!initialPdfUri);
   const [renderingHi, setRenderingHi] = useState(false);
 
   const pickPdf = useCallback(async () => {
@@ -105,14 +106,16 @@ export default function PdfPicker({ onImage, onBack, insets }: PdfPickerProps) {
     }
   }, [onBack]);
 
-  useEffect(() => { pickPdf(); }, [pickPdf]);
+  useEffect(() => {
+    if (!initialPdfUri) pickPdf();
+  }, [initialPdfUri, pickPdf]);
 
   const selectPage = async (idx: number) => {
     if (!pdfUri) return;
     try {
       setRenderingHi(true);
       const hi = await PdfThumbnail.generate(pdfUri, idx, 100);
-      onImage(hi.uri, hi.width, hi.height);
+      onImage(hi.uri, hi.width, hi.height, pdfUri);
     } catch (e: any) {
       Alert.alert('Ошибка', e?.message ?? 'Не удалось отрендерить страницу');
       setRenderingHi(false);
