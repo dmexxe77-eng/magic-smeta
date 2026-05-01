@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#f7f7f5">
+<title>Авто из Японии — Владивосток</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Golos+Text:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f7f7f5;
+  --card:#ffffff;
+  --border:#e8e8e4;
+  --border2:#d4d4ce;
+  --acc:#4F46E5;
+  --acc-light:#eeeeff;
+  --acc-mid:#c7c4f8;
+  --text:#111118;
+  --sub:#6b6b7a;
+  --dim:#b0b0ba;
+  --green:#16a34a;
+  --green-light:#dcfce7;
+  --orange:#d97706;
+  --orange-light:#fef3c7;
+  --navy:#1e2030;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{font-family:'Golos Text',sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.5;-webkit-tap-highlight-color:transparent;}
+input,select,button{font-family:inherit;font-size:inherit;color:inherit;}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
+input[type=number]{-moz-appearance:textfield;}
+
+.app{max-width:520px;margin:0 auto;padding:20px 18px 60px;}
+
+header{margin-bottom:22px;}
+.title{font-family:'Unbounded',sans-serif;font-size:20px;font-weight:700;letter-spacing:0.5px;line-height:1.2;}
+.subtitle{font-size:13px;color:var(--sub);margin-top:6px;}
+
+.card{
+  background:var(--card);border:1px solid var(--border);border-radius:18px;
+  padding:18px;margin-bottom:14px;
+}
+.card-title{font-size:11px;font-weight:600;color:var(--sub);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px;}
+
+.field{margin-bottom:14px;}
+.field:last-child{margin-bottom:0;}
+.label{display:block;font-size:12px;color:var(--sub);margin-bottom:6px;font-weight:500;}
+.input,.select{
+  width:100%;background:#fafaf8;border:1px solid var(--border);border-radius:11px;
+  padding:12px 14px;font-size:15px;font-weight:500;color:var(--text);
+  transition:border-color .15s,background .15s;
+}
+.input:focus,.select:focus{outline:none;border-color:var(--acc);background:#fff;}
+.select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'><path fill='%236b6b7a' d='M6 8L0 0h12z'/></svg>");background-repeat:no-repeat;background-position:right 14px center;background-size:10px;padding-right:36px;}
+
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+.input-suffix{position:relative;}
+.input-suffix .input{padding-right:48px;}
+.input-suffix .suffix{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--dim);font-weight:600;pointer-events:none;}
+
+.line{display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;font-size:14px;}
+.line .k{color:var(--sub);}
+.line .v{font-weight:600;color:var(--text);font-variant-numeric:tabular-nums;}
+.line.muted .v{color:var(--sub);font-weight:500;}
+.divider{height:1px;background:var(--border);margin:10px -2px;}
+
+.total-card{
+  background:var(--navy);color:#fff;border:none;
+  padding:22px;border-radius:18px;margin-bottom:14px;
+}
+.total-card .lbl{font-size:11px;font-weight:600;color:#a0a0b8;letter-spacing:1.5px;text-transform:uppercase;}
+.total-card .val{font-family:'Unbounded',sans-serif;font-size:30px;font-weight:700;margin-top:8px;line-height:1.1;letter-spacing:-0.5px;font-variant-numeric:tabular-nums;}
+.total-card .sub{font-size:13px;color:#a0a0b8;margin-top:6px;}
+
+.includes{font-size:12px;color:var(--sub);line-height:1.7;}
+.includes li{padding-left:18px;position:relative;}
+.includes li::before{content:"";position:absolute;left:4px;top:11px;width:4px;height:4px;border-radius:50%;background:var(--acc);}
+
+.note{font-size:11px;color:var(--dim);margin-top:8px;line-height:1.5;}
+
+.toggle{
+  display:flex;background:#f0f0ed;border-radius:10px;padding:3px;margin-bottom:14px;
+}
+.toggle button{
+  flex:1;background:none;border:none;border-radius:8px;padding:8px 10px;
+  font-size:12px;font-weight:600;color:var(--sub);cursor:pointer;transition:all .15s;
+}
+.toggle button.on{background:#fff;color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,0.05);}
+
+@media(max-width:380px){
+  .title{font-size:18px;}
+  .total-card .val{font-size:26px;}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<header>
+  <div class="title">Авто из Японии</div>
+  <div class="subtitle">Расчёт стоимости до Владивостока</div>
+</header>
+
+<div class="card">
+  <div class="card-title">Параметры</div>
+
+  <div class="field">
+    <label class="label" for="auction">Аукцион / площадка</label>
+    <select id="auction" class="select"></select>
+  </div>
+
+  <div class="row">
+    <div class="field">
+      <label class="label" for="fob">Цена на аукционе</label>
+      <div class="input-suffix">
+        <input id="fob" class="input" type="number" inputmode="numeric" placeholder="0" min="0" step="1000">
+        <span class="suffix">¥</span>
+      </div>
+    </div>
+    <div class="field">
+      <label class="label" for="fee">Аукционный сбор</label>
+      <div class="input-suffix">
+        <input id="fee" class="input" type="number" inputmode="numeric" value="15000" min="0" step="500">
+        <span class="suffix">¥</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="field">
+    <label class="label" for="rate">Курс ¥ → ₽</label>
+    <div class="input-suffix">
+      <input id="rate" class="input" type="number" inputmode="decimal" value="0.62" min="0" step="0.01">
+      <span class="suffix">₽/¥</span>
+    </div>
+    <div class="note">Сколько рублей даёте за 1 иену</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">Япония — до порта</div>
+  <div class="line"><span class="k">Цена авто на аукционе</span><span class="v" id="r-fob">— ¥</span></div>
+  <div class="line"><span class="k">Аукционный сбор</span><span class="v" id="r-fee">— ¥</span></div>
+  <div class="line"><span class="k">Доставка до порта, фрахт,<br><span style="font-size:11px;color:var(--dim);">страховка, документы, комиссия</span></span><span class="v" id="r-cif">— ¥</span></div>
+  <div class="divider"></div>
+  <div class="line"><span class="k" style="font-weight:600;color:var(--text);">Итого в Японии</span><span class="v" id="r-jpy">— ¥</span></div>
+  <div class="line muted"><span class="k">в рублях по курсу</span><span class="v" id="r-jpy-rub">— ₽</span></div>
+</div>
+
+<div class="card">
+  <div class="card-title">Россия — Владивосток</div>
+  <div class="line"><span class="k">Таможенное оформление</span><span class="v" id="r-clr">55 550 ₽</span></div>
+  <ul class="includes" style="margin-top:10px;list-style:none;">
+    <li>Получение документов</li>
+    <li>Оформление декларации</li>
+    <li>Выгрузка автомобиля</li>
+    <li>Хранение на СВХ</li>
+    <li>Услуги брокера</li>
+    <li>Получение СБКТС и ЭПТС</li>
+    <li>Транспортировка в лабораторию и на стоянку</li>
+  </ul>
+  <div class="note">Без таможенной пошлины и утильсбора — рассчитываются отдельно по характеристикам авто.</div>
+</div>
+
+<div class="total-card">
+  <div class="lbl">Итого во Владивостоке</div>
+  <div class="val" id="r-total">— ₽</div>
+  <div class="sub" id="r-total-jpy">— ¥</div>
+</div>
+
+</div>
+
+<script>
+const PRICING = {
+  whole_car_cif: {
+    "CAA CHUBU":124150,"CAA GIFU":124150,"CAA TOKYO":132950,"CAA TOHOKU":147950,
+    "IAA OSAKA":129650,
+    "JU MIE":134300,"JU HOKKAIDO (HAKODATE)":171300,"JU HOKKAIDO (KITAMI)":176300,
+    "JU CHIBA":126900,"JU SAITAMA":126900,"JU OITA":152272,"JU NARA":142300,
+    "JU MIYAGI":127494,"JU MIYAGI (AKITA YARD)":141300,"JU MIYAZAKI":161800,
+    "JU TOYAMA":103810,"JU YAMAGUCHI":146080,"JU YAMAGATA":145098,"JU YAMANASHI":143650,
+    "JU GIFU":121500,"JU SHIMANE":172000,"JU HOKKAIDO (OBIHIRO)":169300,
+    "JU HIROSHIMA":149600,"JU AICHI":118100,"JU NIIGATA":117579,
+    "JU HOKKAIDO (ASAHIKAWA)":169300,"JU HOKKAIDO (SAPPORO)":166300,
+    "JU TOKYO":126900,"JU TOCHIGI":134103,"JU OKINAWA":178200,"JU KUMAMOTO":164000,
+    "JU ISHIKAWA":117017,"JU KANAGAWA":128800,"JU FUKUI":115927,"JU FUKUOKA":143950,
+    "JU FUKUOKA (KAGOSHIMA)":161800,"JU FUKUSHIMA":126392,"JU AKITA":140162,
+    "JU GUNMA":129100,"JU HOKKAIDO (TOMAKOMAI)":166300,"JU IBARAKI":134103,
+    "JU HOKKAIDO (KUSHIRO)":173300,"JU NAGASAKI":191500,"JU NAGANO":130798,
+    "JU AOMORI":154000,"JU SHIZUOKA":134300,"JU SHIZUOKA (HAMAMATSU)":134300,
+    "KCAA MINAMI KYUSHU":159900,"KCAA YAMAGUCHI":146080,"KCAA KYOTO":124150,"KCAA FUKUOKA":143950,
+    "LAA SHIKOKU":150200,"LAA OKAYAMA":134200,"LAA OKAYAMA (SATELLITE TOTTORI)":155200,
+    "LUM NAGOYA":131000,"LUM TOKYO":136500,"LUM FUKUOKA":154650,"LUM HOKKAIDO":174000,"LUM KOBE NYUSATSU":136533,
+    "NAA NAGOYA":119200,"NAA OSAKA":125832,"NAA TOKYO":129900,"NAA TOKYO (TOHOKU)":142400,"NAA FUKUOKA":145050,
+    "ORIX SENDAI":138498,"ORIX ATSUGI":136500,"ORIX KOBE":133533,"ORIX FUKUOKA":151650,
+    "SAA SAPPORO":165200,"SAA HAMAMATSU":136500,
+    "TAA CHUBU":124150,"TAA CHUBU (HOKURIKU)":124150,"TAA CHUBU (SHIZUOKA SATELLITE)":140350,
+    "TAA KYUSHU":151712,"TAA HYOGO":131883,"TAA HYOGO (KITA KOBE)":137383,
+    "TAA HOKKAIDO":172350,"TAA MINAMI KYUSHU":165950,"TAA MINAMI KYUSHU (KAGOSHIMA YARD)":167850,
+    "TAA SHIKOKU":157350,"TAA SHIKOKU (EHIME)":168350,"TAA HIROSHIMA":153550,
+    "TAA TOHOKU":135747,"TAA TOHOKU (SENDAI)":136848,
+    "TAA YOKOHAMA":132950,"TAA YOKOHAMA (ATSUGI)":146850,
+    "TAA KINKI":130782,"TAA KINKI (KYOTO YARD)":137850,"TAA KINKI (SHIGA YARD)":147350,
+    "TAA KANTOU":132950,"TAA KANTO (NORTH KANTO YARD)":132950,"TAA KANTO (SAITAMA SATELLITE)":134850,
+    "TAA KANTOU (TAMA YARD)":146850,"TAA KANTO (SHINKO YARD)":132950,
+    "USS HAA KOBE":128033,"USS HAA KOBE (SHIKOKU)":153000,"USS JAA":129100,
+    "USS R NAGOYA":120300,"USS KYUSHU":145659,"USS KYUSHU (KAGOSHIMA)":164000,
+    "USS HOKURIKU":111500,"USS NAGOYA":120300,"USS SAITAMA":129100,"USS OSAKA":126932,
+    "USS OKAYAMA":144100,"USS NIIGATA":119779,"USS SAPPORO":168500,"USS TOKYO":129100,
+    "USS TOHOKU":142056,"USS YOKOHAMA":129100,"USS KOBE":127703,"USS FUKUOKA":146150,
+    "USS FUKUOKA (KAGOSHIMA YARD)":164000,"USS GUNMA":129100,"USS SHIZUOKA":136500,
+    "ZIP OSAKA":127670,"ZIP TOKYO":129100,
+    "ARAI BAYSIDE IMPORTS":130200,"ARAI BAYSIDE JDM":129100,
+    "ARAI BAYSIDE (Sendai Yard) IMPORTS":134600,"ARAI BAYSIDE (Sendai Yard) JDM":133500,
+    "ARAI BAYSIDE (Chiba Sakura Yard) IMPORTS":139600,"ARAI BAYSIDE (Chiba Sakura Yard) JDM":138500,
+    "ARAI BAYSIDE (Okinawa Yard) IMPORTS":187100,"ARAI BAYSIDE (Okinawa Yard) JDM":186000,
+    "ARAI BAYSIDE (Fukuoka Yard) IMPORTS":152600,"ARAI BAYSIDE (Fukuoka Yard) JDM":151500,
+    "ARAI BAYSIDE (Kansai Yard) IMPORTS":132600,"ARAI BAYSIDE (Kansai Yard) JDM":131500,
+    "ARAI BAYSIDE  VENUE 2 (Плавучий остров) IMPORTS":135150,"ARAI BAYSIDE VENUE 2 (Плавучий остров) JDM":134050,
+    "ARAI SENDAI":132998,"ARAI OYAMA IMPORTS":130200,"ARAI OYAMA JDM":129100,"ARAI OYAMA TSUKUBA YARD":136500,
+    "ISUZU KYUSHU":147862,"ISUZU KOBE":128033,
+    "ZERO CHUBU":117000,"ZERO SENDAI":129698,"ZERO HOKKAIDO":165200,"ZERO CHIBA":128700,
+    "ZERO HAKATA":152200,"ZERO OSAKA":123650,"ZERO SHOUNAN":129350,
+    "HERO":128000,"BAYAUC":127670,
+    "HONDA KYUSHU":147312,"HONDA SENDAI":131450,"HONDA HOKKAIDO":167950,"HONDA NAGOYA":119750,
+    "HONDA TOKYO":128550,"HONDA TOKYO OGAWA/SAITAMA":128550,"HONDA TOKYO GOTEMBA/SHIZUOKA":142250,
+    "HONDA TOKYO MITSUKE/NIIGATA":128550,"HONDA KANSAI":127483,
+    "MIRIVE SAITAMA":130750,"MIRIVE OSAKA":128582,"MIRIVE AICHI":121950,
+    "NPS SENDAI":138498,"NPS OSAKA":133500,"NPS GIFU":127000,"NPS TOKYO":136500,
+    "NPS TOCHIGI":145850,"NPS FUKUOKA":151650,"NPS TOMAKOMAI":174000,
+    "NISSAN OSAKA":132432
+  },
+  russia_clearance_rub: 55550
+};
+
+const STORAGE_KEY = "auctionCalc.v1";
+
+const $ = id => document.getElementById(id);
+const fmt = (n,frac=0) => {
+  if(!isFinite(n)) return "—";
+  return new Intl.NumberFormat("ru-RU",{minimumFractionDigits:frac,maximumFractionDigits:frac}).format(Math.round(n*Math.pow(10,frac))/Math.pow(10,frac));
+};
+
+const auctionSel = $("auction");
+const locations = Object.keys(PRICING.whole_car_cif).sort((a,b)=>a.localeCompare(b));
+locations.forEach(loc=>{
+  const opt = document.createElement("option");
+  opt.value = loc;
+  opt.textContent = `${loc} — ${fmt(PRICING.whole_car_cif[loc])} ¥`;
+  auctionSel.appendChild(opt);
+});
+
+const saved = (()=>{ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)||"{}"); }catch(e){ return {}; } })();
+if(saved.auction && PRICING.whole_car_cif[saved.auction]) auctionSel.value = saved.auction;
+else auctionSel.value = "USS TOKYO";
+if(saved.fob !== undefined) $("fob").value = saved.fob;
+if(saved.fee !== undefined) $("fee").value = saved.fee;
+if(saved.rate !== undefined) $("rate").value = saved.rate;
+
+function calc(){
+  const loc  = auctionSel.value;
+  const cif  = PRICING.whole_car_cif[loc] || 0;
+  const fob  = parseFloat($("fob").value) || 0;
+  const fee  = parseFloat($("fee").value) || 0;
+  const rate = parseFloat($("rate").value) || 0;
+  const clr  = PRICING.russia_clearance_rub;
+
+  const jpy = fob + fee + cif;
+  const jpyRub = jpy * rate;
+  const totalRub = jpyRub + clr;
+
+  $("r-fob").textContent  = fmt(fob) + " ¥";
+  $("r-fee").textContent  = fmt(fee) + " ¥";
+  $("r-cif").textContent  = fmt(cif) + " ¥";
+  $("r-jpy").textContent  = fmt(jpy) + " ¥";
+  $("r-jpy-rub").textContent = rate > 0 ? fmt(jpyRub) + " ₽" : "укажите курс";
+  $("r-total").textContent = (rate > 0 && fob > 0) ? fmt(totalRub) + " ₽" : "— ₽";
+  $("r-total-jpy").textContent = (rate > 0 && fob > 0) ? `${fmt(jpy)} ¥ × ${rate} + ${fmt(clr)} ₽` : "введите цену авто и курс";
+
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify({auction:loc,fob,fee,rate})); }catch(e){}
+}
+
+["change","input"].forEach(ev=>{
+  auctionSel.addEventListener(ev,calc);
+  $("fob").addEventListener(ev,calc);
+  $("fee").addEventListener(ev,calc);
+  $("rate").addEventListener(ev,calc);
+});
+
+calc();
+</script>
+</body>
+</html>
