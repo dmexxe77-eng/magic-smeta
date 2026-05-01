@@ -110,6 +110,32 @@ header{margin-bottom:18px;display:flex;justify-content:space-between;align-items
 .notes{font-size:11px;color:var(--dim);line-height:1.6;}
 .notes b{color:var(--sub);}
 
+/* Vision-блок */
+.vision-card{background:linear-gradient(135deg,#eef0ff 0%,#f7f7f5 100%);border:1px dashed var(--acc-mid,#c7c4f8);}
+.vision-drop{
+  border:2px dashed #c7c4f8;border-radius:12px;padding:18px 14px;text-align:center;cursor:pointer;
+  transition:all .15s;background:#fff;
+}
+.vision-drop:hover,.vision-drop.dragover{border-color:var(--acc);background:#f8f9ff;}
+.vision-drop .ico{font-size:24px;margin-bottom:6px;}
+.vision-drop .lbl{font-size:13px;font-weight:600;color:var(--text);}
+.vision-drop .hint{font-size:11px;color:var(--sub);margin-top:3px;}
+.vision-thumb{display:flex;gap:10px;align-items:center;background:#fff;border:1px solid var(--border);border-radius:10px;padding:8px;margin-top:8px;}
+.vision-thumb img{width:48px;height:48px;object-fit:cover;border-radius:6px;}
+.vision-thumb .meta{flex:1;font-size:12px;}
+.vision-thumb .meta .name{font-weight:600;color:var(--text);}
+.vision-thumb .meta .stat{color:var(--sub);font-size:11px;margin-top:2px;}
+.vision-thumb .x{background:none;border:none;color:var(--dim);font-size:18px;cursor:pointer;padding:4px 8px;}
+.vision-thumb .x:hover{color:var(--red);}
+
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--acc-light);border-top-color:var(--acc);border-radius:50%;animation:spin 0.8s linear infinite;vertical-align:-2px;margin-right:6px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+.api-key-input{display:flex;gap:6px;}
+.api-key-input .input{flex:1;font-family:'SF Mono',Menlo,monospace;font-size:12px;}
+.api-key-input button{background:none;border:1px solid var(--border);border-radius:8px;padding:0 12px;font-size:11px;color:var(--sub);cursor:pointer;}
+.api-key-input button:hover{border-color:var(--acc);color:var(--acc);}
+
 .coll-trigger{cursor:pointer;user-select:none;display:flex;justify-content:space-between;align-items:center;}
 .coll-trigger .arr{transition:transform .2s;color:var(--dim);font-size:12px;}
 .coll-trigger.open .arr{transform:rotate(90deg);}
@@ -136,6 +162,43 @@ header{margin-bottom:18px;display:flex;justify-content:space-between;align-items
     <span id="rates-status">…</span>
   </div>
 </header>
+
+<!-- ─── VISION (распознавание скриншота) ─── -->
+<div class="card vision-card">
+  <div class="card-title">
+    <span>Скриншот аукциона</span>
+    <span class="hint" id="vision-status"></span>
+  </div>
+  <div class="vision-drop" id="vision-drop" tabindex="0">
+    <div class="ico">📸</div>
+    <div class="lbl">Перетащить или вставить (Ctrl+V)</div>
+    <div class="hint">Распознает аукцион, цену, год, объём, мощность</div>
+    <input type="file" id="vision-file" accept="image/*" style="display:none">
+  </div>
+  <div id="vision-thumb-wrap"></div>
+</div>
+
+<!-- ─── НАСТРОЙКИ (API-ключ) ─── -->
+<div class="card">
+  <div class="card-title coll-trigger" id="settings-trigger">
+    <span>Настройки <span id="key-status" style="color:var(--dim);font-weight:500;text-transform:none;letter-spacing:0;font-size:10px;"></span></span>
+    <span class="arr">▶</span>
+  </div>
+  <div class="coll-body" id="settings-body">
+    <div class="field">
+      <label class="label" for="api-key">Ключ Anthropic API</label>
+      <div class="api-key-input">
+        <input id="api-key" class="input" type="password" placeholder="sk-ant-..." autocomplete="off">
+        <button id="show-key">Показать</button>
+      </div>
+      <div class="notes" style="margin-top:6px;">
+        Хранится только в этом браузере (localStorage). Получить ключ:
+        <a href="https://console.anthropic.com/" target="_blank" style="color:var(--acc);">console.anthropic.com</a>.
+        Один скан ≈ $0.02-0.04.
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ─── ЛОТ ─── -->
 <div class="card">
@@ -756,6 +819,282 @@ function setupCollapse(triggerId, bodyId){
 setupCollapse("rates-trigger", "rates-body");
 setupCollapse("history-trigger", "history-body");
 setupCollapse("info-trigger", "info-body");
+setupCollapse("settings-trigger", "settings-body");
+
+// ═══════════════════════════════════════════════════════════════
+// VISION API — распознавание аукционного листа
+// ═══════════════════════════════════════════════════════════════
+const API_KEY_STORAGE = "auctionCalc.apiKey.v1";
+
+function getApiKey(){ try{ return localStorage.getItem(API_KEY_STORAGE) || ""; }catch(e){ return ""; } }
+function setApiKey(k){ try{ localStorage.setItem(API_KEY_STORAGE, k); }catch(e){} }
+function maskKey(k){ if(!k) return ""; if(k.length < 12) return "···"; return k.slice(0,8) + "···" + k.slice(-4); }
+
+// Загрузка сохранённого ключа
+$("api-key").value = getApiKey();
+$("key-status").textContent = getApiKey() ? "ключ задан · " + maskKey(getApiKey()) : "ключ не задан";
+
+$("api-key").addEventListener("change", ()=>{
+  const k = $("api-key").value.trim();
+  setApiKey(k);
+  $("key-status").textContent = k ? "ключ задан · " + maskKey(k) : "ключ не задан";
+});
+
+$("show-key").addEventListener("click", ()=>{
+  const inp = $("api-key");
+  if(inp.type === "password"){ inp.type = "text"; $("show-key").textContent = "Скрыть"; }
+  else{ inp.type = "password"; $("show-key").textContent = "Показать"; }
+});
+
+// JSON Schema для structured output (без ограничений типа min/max)
+const AUCTION_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    auction_house: { type: "string", enum: locations },
+    final_price_jpy: { type: ["integer","null"] },
+    year: { type: ["integer","null"] },
+    month: { type: ["integer","null"] },
+    engine_volume_cc: { type: ["integer","null"] },
+    power_hp: { type: ["integer","null"] },
+    fuel: { type: "string", enum: ["gasoline","hybrid","diesel","ev"] },
+    drive: { type: "string", enum: ["2WD","4WD","AWD","unknown"] },
+    overall_grade: { type: ["string","null"] },
+    has_repair_history: { type: "boolean" },
+    inspector_notes: { type: ["string","null"] },
+    is_sold: { type: "boolean" }
+  },
+  required: ["auction_house","final_price_jpy","year","month","engine_volume_cc","power_hp","fuel","drive","overall_grade","has_repair_history","inspector_notes","is_sold"]
+};
+
+const VISION_PROMPT = `Ты — эксперт по японским аукционным листам (Aleado, USS, TAA, NAA и др.).
+Извлеки данные из листа на изображении в JSON.
+
+Правила:
+1. auction_house — выбери ТОЧНО из списка enum в схеме (например "TAA YOKOHAMA", "USS TOKYO"). Регистр верхний.
+2. Год: японский календарь Reiwa (R/令和) → +2018. R5=2023, R6=2024, R7=2025, R8=2026.
+   Heisei (H/平成) → +1988. H30=2018, H31=2019.
+   Если только западный год — используй его.
+3. final_price_jpy — финальная цена продажи (落札価格 / 終値 / "Цена кон."). Если только стартовая (Цена старт.) — используй её, поставь is_sold=false.
+4. month — месяц первой регистрации (1-12).
+5. has_repair_history=true если в поле 修復歴 что-то есть, кроме прочерка/пустоты. "B" или "C" — это категории ремонта, считай как true.
+6. drive: если в grade или строке есть "4WD" — "4WD", "AWD" — "AWD", иначе "2WD" (или "unknown" если не видно).
+7. fuel: бензин→gasoline, гибрид→hybrid, дизель→diesel, электро→ev.
+8. power_hp — мощность в л.с. Часто на листе её нет — тогда null.
+9. inspector_notes — краткая выжимка замечаний инспектора и проблем (на русском, до 200 символов).
+10. Если поле не видно или не уверен — null. Не выдумывай.`;
+
+let currentImage = null; // { dataUrl, mediaType, sizeKb }
+
+async function fileToBase64(file){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = ()=> resolve(reader.result); // dataURL
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function downscaleIfNeeded(dataUrl, maxDim = 2576){
+  return new Promise((resolve)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const longEdge = Math.max(img.width, img.height);
+      if(longEdge <= maxDim) return resolve(dataUrl);
+      const scale = maxDim / longEdge;
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL("image/jpeg", 0.92));
+    };
+    img.onerror = ()=> resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
+function setVisionStatus(text, kind){
+  const el = $("vision-status");
+  el.textContent = text || "";
+  el.style.color = kind === "err" ? "var(--red)" : kind === "ok" ? "var(--green)" : "var(--sub)";
+}
+
+async function loadImageFile(file){
+  if(!file || !file.type.startsWith("image/")){ setVisionStatus("Не изображение", "err"); return; }
+  let dataUrl = await fileToBase64(file);
+  dataUrl = await downscaleIfNeeded(dataUrl);
+  const sizeKb = Math.round(dataUrl.length * 0.75 / 1024);
+  const mediaMatch = dataUrl.match(/^data:([^;]+);base64,/);
+  const mediaType = mediaMatch ? mediaMatch[1] : "image/jpeg";
+  currentImage = { dataUrl, mediaType, sizeKb, name: file.name || "screenshot" };
+  renderThumb();
+  // Автозапуск распознавания
+  await recognize();
+}
+
+function renderThumb(){
+  const wrap = $("vision-thumb-wrap");
+  if(!currentImage){ wrap.innerHTML = ""; return; }
+  wrap.innerHTML = "";
+  const t = document.createElement("div");
+  t.className = "vision-thumb";
+  t.innerHTML = `
+    <img src="${currentImage.dataUrl}" alt="">
+    <div class="meta">
+      <div class="name">${currentImage.name}</div>
+      <div class="stat">${currentImage.sizeKb} КБ · ${currentImage.mediaType}</div>
+    </div>
+    <button class="x" id="thumb-x" title="Удалить">×</button>
+  `;
+  wrap.appendChild(t);
+  $("thumb-x").addEventListener("click", ()=>{ currentImage = null; renderThumb(); setVisionStatus(""); });
+}
+
+async function callVision(base64Data, mediaType){
+  const apiKey = getApiKey();
+  if(!apiKey) throw new Error("Сначала укажите ключ Anthropic в настройках");
+
+  const body = {
+    model: "claude-opus-4-7",
+    max_tokens: 1024,
+    output_config: {
+      format: { type: "json_schema", schema: AUCTION_SCHEMA }
+    },
+    system: [{
+      type: "text",
+      text: VISION_PROMPT,
+      cache_control: { type: "ephemeral" }
+    }],
+    messages: [{
+      role: "user",
+      content: [
+        { type: "image", source: { type: "base64", media_type: mediaType, data: base64Data } },
+        { type: "text", text: "Извлеки данные из этого аукционного листа в JSON." }
+      ]
+    }]
+  };
+
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true",
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
+
+  if(!res.ok){
+    let errMsg = `HTTP ${res.status}`;
+    try{
+      const err = await res.json();
+      errMsg = err?.error?.message || errMsg;
+    }catch(e){}
+    throw new Error(errMsg);
+  }
+
+  const data = await res.json();
+  // Ищем JSON в content blocks
+  for(const block of (data.content || [])){
+    if(block.type === "text" && block.text){
+      try{ return JSON.parse(block.text); }catch(e){}
+    }
+  }
+  throw new Error("Не удалось разобрать ответ модели");
+}
+
+async function recognize(){
+  if(!currentImage){ setVisionStatus("Загрузите скриншот", "err"); return; }
+  if(!getApiKey()){
+    setVisionStatus("Откройте настройки и укажите ключ", "err");
+    $("settings-trigger").classList.add("open");
+    $("settings-body").classList.add("open");
+    return;
+  }
+  setVisionStatus("распознаю…", null);
+  $("vision-status").innerHTML = '<span class="spinner"></span>распознаю…';
+
+  try{
+    const base64 = currentImage.dataUrl.split(",")[1];
+    const data = await callVision(base64, currentImage.mediaType);
+    applyExtracted(data);
+    setVisionStatus("✓ распознано", "ok");
+  }catch(e){
+    setVisionStatus("Ошибка: " + e.message, "err");
+    console.error(e);
+  }
+}
+
+function applyExtracted(d){
+  const filled = [];
+  if(d.auction_house && TARIFFS.whole_car_cif[d.auction_house]){
+    auctionSel.value = d.auction_house;
+    filled.push("аукцион");
+  }
+  if(d.final_price_jpy != null && d.final_price_jpy > 0){
+    $("fob").value = d.final_price_jpy;
+    filled.push("цена");
+  }
+  if(d.year != null && d.year > 1990 && d.year < 2030){
+    $("year").value = d.year;
+    filled.push("год");
+  }
+  if(d.month != null && d.month >= 1 && d.month <= 12){
+    $("month").value = d.month;
+  }
+  if(d.engine_volume_cc != null && d.engine_volume_cc > 0){
+    $("volume").value = d.engine_volume_cc;
+    filled.push("объём");
+  }
+  if(d.power_hp != null && d.power_hp > 0){
+    $("power").value = d.power_hp;
+    filled.push("мощность");
+  }
+  if(d.fuel){ setFuel(d.fuel); }
+  calc();
+
+  // Покажем то, что вытащили — особенно warnings
+  const warnings = [];
+  if(d.power_hp == null) warnings.push("⚠ мощность не указана на листе — введите вручную");
+  if(d.has_repair_history) warnings.push(`⚠ ремонт в истории${d.overall_grade ? " (грейд " + d.overall_grade + ")" : ""}`);
+  if(!d.is_sold) warnings.push("⚠ цена стартовая, не финальная");
+  if(d.inspector_notes) warnings.push("📝 " + d.inspector_notes);
+
+  let msg = filled.length ? "Заполнено: " + filled.join(", ") : "Ничего не распознано";
+  if(warnings.length) msg += "\n\n" + warnings.join("\n");
+  setTimeout(()=> alert(msg), 100);
+}
+
+// События для drop-зоны
+const dropEl = $("vision-drop");
+dropEl.addEventListener("click", ()=> $("vision-file").click());
+dropEl.addEventListener("keydown", e=>{ if(e.key === "Enter" || e.key === " "){ e.preventDefault(); $("vision-file").click(); } });
+$("vision-file").addEventListener("change", e=>{
+  const f = e.target.files?.[0];
+  if(f) loadImageFile(f);
+  e.target.value = "";
+});
+dropEl.addEventListener("dragover", e=>{ e.preventDefault(); dropEl.classList.add("dragover"); });
+dropEl.addEventListener("dragleave", ()=> dropEl.classList.remove("dragover"));
+dropEl.addEventListener("drop", e=>{
+  e.preventDefault();
+  dropEl.classList.remove("dragover");
+  const f = e.dataTransfer.files?.[0];
+  if(f) loadImageFile(f);
+});
+
+// Paste из буфера
+window.addEventListener("paste", e=>{
+  const items = e.clipboardData?.items || [];
+  for(const item of items){
+    if(item.type.startsWith("image/")){
+      const f = item.getAsFile();
+      if(f){ loadImageFile(f); break; }
+    }
+  }
+});
 
 // Сохранить расчёт
 $("save-btn").addEventListener("click", ()=>{
