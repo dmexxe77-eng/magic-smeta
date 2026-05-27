@@ -79,6 +79,21 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
   const[newPay,setNewPay]   = useState({cat:"prepay",amount:"",note:""});
   const[newExp,setNewExp]   = useState({cat:"materials",amount:"",note:""});
 
+  const copyOrder=(orig)=>{
+    const cleanRooms=(orig.rooms||[]).map(r=>({...r,id:uid()}));
+    const copy={
+      ...orig,
+      id:uid(),
+      name:(orig.name||"Проект")+" (копия)",
+      status:"new",
+      date:new Date().toLocaleDateString("ru-RU"),
+      payments:[],
+      expenses:[],
+      rooms:cleanRooms,
+    };
+    setOrders(prev=>[copy,...prev]);
+    setTimeout(()=>{try{window.dispatchEvent(new Event("magicapp:saveNow"));}catch(e){}},100);
+  };
   const ff=n=>Number(n||0).toLocaleString("ru-RU");
   const fn=n=>(n||0).toFixed(1);
   const av=nm=>nm.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase();
@@ -604,6 +619,12 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
             </div>
             <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0,marginLeft:8}}>
               <div style={{background:ABGC,color:ACC,fontSize:10,fontWeight:700,padding:"4px 10px",borderRadius:18}}>{st.label}</div>
+              <button
+                onClick={(e)=>{e.stopPropagation();copyOrder(ord);}}
+                title="Копировать проект"
+                style={{background:ABGC,border:"none",borderRadius:10,padding:"5px 9px",color:ACC,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                {"⧉"}
+              </button>
               {delOrderId===ord.id?(
                 <button
                   onClick={(e)=>{e.stopPropagation();setOrders(prev=>prev.filter(o=>o.id!==ord.id));setDelOrderId(null);}}

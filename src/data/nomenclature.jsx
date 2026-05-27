@@ -125,12 +125,9 @@ function ensureMaterialWorkPairsForAllNoms(root){
   else ALL_NOM.push(work);
 }
 
-// Initial sync for built-in + embedded user data at load time.
-// Use a snapshot so we don't iterate endlessly while pushing.
-(() => {
-  const snapshot=[...ALL_NOM];
-  snapshot.forEach(ensureMaterialWorkPairsForAllNoms);
-})();
+// Auto-pair generation отключён: создавал тройные копии каждой номенклатуры
+// (original + mw_mat_* + mw_work_*), забивая поиск в калькуляторе.
+// Type-toggle в редакторе номенклатур позволяет выбрать тип явно.
 
 export const NB=id=>ALL_NOM.find(x=>x.id===id);
 export function addNewNom(name,price,unit,type,brand){
@@ -151,8 +148,6 @@ export function addNewNom(name,price,unit,type,brand){
     }
   }catch{}
 
-  // Also guarantee the global material/work pair for any newly added nomenclature.
-  try{ensureMaterialWorkPairsForAllNoms(n);}catch{}
   return n;
 }
 /* Runtime-трекеры для экспорта (заполняются во время работы) */

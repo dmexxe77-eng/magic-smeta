@@ -438,7 +438,7 @@ function NomEditor({onClose, initialEditId}){
     } else if (tab !== "all") {
       list = list.filter(n => n.brand === tab);
     }
-    return list.slice(0, 200);
+    return list;
   })();
 
   // Вкладки: Все + Мои + бренды с пользовательским контентом
@@ -536,8 +536,8 @@ function NomEditor({onClose, initialEditId}){
               </div>
             );
           })}
-          {displayList.length===200&&(
-            <div style={{padding:12,textAlign:"center",color:T.dim,fontSize:11}}>Уточните поиск для просмотра всех</div>
+          {displayList.length>50&&(
+            <div style={{padding:12,textAlign:"center",color:T.dim,fontSize:11}}>Показано: {displayList.length}</div>
           )}
         </div>
 

@@ -97,6 +97,7 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
   const[showConfigExport,setShowConfigExport]=useState(false);
   const[expType,setExpType]=useState("total");
   const[expCols,setExpCols]=useState({num:true,name:true,qty:true,unit:true,price:true,total:true});
+  const[expPct,setExpPct]=useState(0); /* корректировка стоимости: -15 = скидка 15%, +10 = наценка 10% */
   const[exportHtml,setExportHtml]=useState(null);
   const[traceScale,setTraceScale]=useState(null);
   const[polyEdit,setPolyEdit]=useState(false);
@@ -380,7 +381,7 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
                       if(!n?.name)return false;
                       if(n.type==="option")return false; /* скрываем базовый "option" — используем материальные/рабочие варианты */
                       return !s ? true : n.name.toLowerCase().includes(s.toLowerCase());
-                    }).slice(0,80).map(n=>(<div key={n.id} onClick={()=>{setGlobalOpts(prev=>{const nn=[...prev];nn[gi]={...nn[gi],nomId:n.id};return nn;});setGoNomSearch("");}} style={{padding:"4px 8px",fontSize:10,color:T.text,cursor:"pointer",borderBottom:"0.5px solid "+T.border,display:"flex",justifyContent:"space-between"}}><span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>{n.name}</span><span style={{color:T.accent,flexShrink:0,marginLeft:4}}>{fmt(n.price)}</span></div>))}
+                    }).map(n=>(<div key={n.id} onClick={()=>{setGlobalOpts(prev=>{const nn=[...prev];nn[gi]={...nn[gi],nomId:n.id};return nn;});setGoNomSearch("");}} style={{padding:"4px 8px",fontSize:10,color:T.text,cursor:"pointer",borderBottom:"0.5px solid "+T.border,display:"flex",justifyContent:"space-between"}}><span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>{n.name}</span><span style={{color:T.accent,flexShrink:0,marginLeft:4}}>{fmt(n.price)}</span></div>))}
                   </div>
                 </div>)}
               </div>
@@ -526,6 +527,14 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
           <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
             {[["num","#"],["name","Название"],["qty","Кол-во"],["unit","Ед."],["price","Цена"],["total","Итого"]].map(([k,l])=>{const on=expCols[k];return(<span key={k} onClick={()=>setExpCols(p=>({...p,[k]:!p[k]}))} style={{background:on?T.actBg:T.pillBg,border:"1px solid "+(on?T.accent+"40":T.border),borderRadius:6,padding:"5px 10px",fontSize:10,color:on?T.accent:T.dim,cursor:"pointer"}}>{(on?"✓ ":"")+l}</span>);})}
           </div>
+          <div style={{fontSize:10,color:T.dim,textTransform:"uppercase",margin:"10px 0 6px"}}>{"Корректировка стоимости"}</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:6}}>
+            {[-15,-10,-5,0,5,10,15].map(p=>{const a=expPct===p;const col=p<0?"#16a34a":p>0?"#ff9500":T.dim;return(<span key={p} onClick={()=>setExpPct(p)} style={{background:a?T.actBg:T.pillBg,border:"1px solid "+(a?T.accent+"60":T.border),borderRadius:6,padding:"5px 10px",fontSize:10,fontWeight:a?700:400,color:a?col:T.dim,cursor:"pointer"}}>{(p>0?"+":"")+p+"%"}</span>);})}
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:6}}>
+            <input type="number" step="0.5" value={expPct} onChange={e=>setExpPct(parseFloat(e.target.value)||0)} placeholder="Свой %" style={{width:80,background:T.inputBg,border:"1px solid "+T.border,borderRadius:8,padding:"5px 8px",color:T.text,fontSize:11,fontFamily:"inherit",outline:"none"}}/>
+            <span style={{fontSize:11,color:expPct<0?"#16a34a":expPct>0?"#ff9500":T.dim,fontWeight:expPct!==0?600:400}}>{expPct===0?"Без корректировки":((expPct<0?"Скидка ":"Наценка ")+Math.abs(expPct)+"%")}</span>
+          </div>
           <button onClick={async ()=>{
             const C=expCols;
             const cH=(c,t)=>c?"<th>"+t+"</th>":"";
@@ -623,6 +632,20 @@ td.total-val{font-weight:700;color:#1e2530}
             };
 
             const fmtRub=n=>Number(n||0).toLocaleString("ru-RU",{maximumFractionDigits:2})+'&nbsp;₽';
+            /* helper: рендер блока с итоговой стоимостью + опциональной корректировкой % */
+            const renderGrand=(rawTotal)=>{
+              if(!expPct||expPct===0){
+                return '<div class="grand-total"><div class="grand-title">ИТОГОВАЯ СТОИМОСТЬ</div><div class="grand-value">'+fmtRub(rawTotal)+'</div></div>';
+              }
+              const k=1+(expPct/100);
+              const adjTotal=rawTotal*k;
+              const delta=adjTotal-rawTotal;
+              const adjLabel=(expPct<0?"Скидка ":"Наценка ")+Math.abs(expPct)+"%";
+              const deltaCol=expPct<0?"#16a34a":"#ff9500";
+              const deltaSign=delta>0?"+":"−";
+              return '<div style="background:#fafbff;border:1px solid #eeeef8;border-radius:10px;padding:10px 14px;margin:14px 0 6px"><div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#666;padding:4px 0"><span>Промежуточный итог</span><span style="font-weight:600;color:#1e2530">'+fmtRub(rawTotal)+'</span></div><div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:'+deltaCol+';padding:4px 0;font-weight:600;border-top:0.5px dashed #eeeef8;margin-top:4px;padding-top:8px"><span>'+adjLabel+'</span><span>'+deltaSign+fmtRub(Math.abs(delta))+'</span></div></div>'+
+                '<div class="grand-total"><div class="grand-title">ИТОГО К ОПЛАТЕ</div><div class="grand-value">'+fmtRub(adjTotal)+'</div></div>';
+            };
             const nowDate=new Date().toLocaleDateString("ru-RU");
             const activeRooms=rooms.filter(x=>x.on!==false);
             const totalArea=activeRooms.reduce((s,x)=>s+gA(x),0);
@@ -664,7 +687,7 @@ td.total-val{font-weight:700;color:#1e2530}
                 }
                 html+='<div style="text-align:right;font-weight:700;color:#4F46E5;margin:6px 0 20px;font-size:13px">Итого '+String(rm2.name)+': '+fmtRub(mt2+wt2)+'</div>';
               }
-              html+='<div class="grand-total"><div class="grand-title">ИТОГОВАЯ СТОИМОСТЬ</div><div class="grand-value">'+fmtRub(grandTotal)+'</div></div>';
+              html+=renderGrand(grandTotal);
 
             }else if(expType==="totalDraw"){
               /* ═══ ОБЩАЯ + ЧЕРТЕЖИ ═══ */
@@ -682,7 +705,7 @@ td.total-val{font-weight:700;color:#1e2530}
                 html+=rowHtml(l,i,ph);
               }
               html+='</tbody><tfoot><tr class="subtotal"><td colspan="5" class="r">Итого работы:</td><td class="r">'+fmtRub(workTot)+'</td></tr></tfoot></table>';
-              html+='<div class="grand-total"><div class="grand-title">ИТОГОВАЯ СТОИМОСТЬ</div><div class="grand-value">'+fmtRub(grand)+'</div></div>';
+              html+=renderGrand(grand);
               
               // then drawings for all rooms
               rooms.filter(x=>x.on!==false).forEach(rm2=>{
@@ -706,7 +729,7 @@ td.total-val{font-weight:700;color:#1e2530}
                 html+=rowHtml(l,i,ph);
               }
               html+='</tbody><tfoot><tr class="subtotal"><td colspan="5" class="r">Итого работы:</td><td class="r">'+fmtRub(workTot)+'</td></tr></tfoot></table>';
-              html+='<div class="grand-total"><div class="grand-title">ИТОГОВАЯ СТОИМОСТЬ</div><div class="grand-value">'+fmtRub(grand)+'</div></div>';
+              html+=renderGrand(grand);
             }
             html+='</div><div class="footer"><span>MAGIC</span><span>'+nowDate+'</span></div></div></body></html>';
             setExportHtml(html);
