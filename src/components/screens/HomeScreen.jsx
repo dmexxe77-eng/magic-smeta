@@ -24,6 +24,7 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
   const[showNomEd,setShowNomEd] = useState(false);
   const[showFullExp,setShowFullExp] = useState(null);
   const[delOrderId,setDelOrderId] = useState(null);
+  const[statusFilter,setStatusFilter] = useState(null);
   const[devUnlock,setDevUnlock] = useState(IS_PRO_OVERRIDE);
   const isPro = devUnlock;
   const toggleDev=()=>{
@@ -78,6 +79,8 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
   const[addExp,setAddExp]   = useState(false);
   const[newPay,setNewPay]   = useState({cat:"prepay",amount:"",note:""});
   const[newExp,setNewExp]   = useState({cat:"materials",amount:"",note:""});
+  const[editPayId,setEditPayId] = useState(null);
+  const[editExpId,setEditExpId] = useState(null);
 
   const copyOrder=(orig)=>{
     const cleanRooms=(orig.rooms||[]).map(r=>({...r,id:uid()}));
@@ -174,18 +177,32 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
 
     const doAddPay=()=>{
       if(!newPay.amount)return;
-      const pay={id:"py"+Date.now(),ordId:ord.id,type:"income",cat:newPay.cat,amount:parseFloat(newPay.amount),date:new Date().toISOString().slice(0,10),note:newPay.note};
-      setOrders(prev=>prev.map(o=>o.id===ord.id?{...o,payments:[...(o.payments||[]),pay]}:o));
+      if(editPayId){
+        setOrders(prev=>prev.map(o=>o.id===ord.id?{...o,payments:(o.payments||[]).map(p=>p.id===editPayId?{...p,cat:newPay.cat,amount:parseFloat(newPay.amount),note:newPay.note}:p)}:o));
+        setEditPayId(null);
+      }else{
+        const pay={id:"py"+Date.now(),ordId:ord.id,type:"income",cat:newPay.cat,amount:parseFloat(newPay.amount),date:new Date().toISOString().slice(0,10),note:newPay.note};
+        setOrders(prev=>prev.map(o=>o.id===ord.id?{...o,payments:[...(o.payments||[]),pay]}:o));
+      }
       setNewPay({cat:"prepay",amount:"",note:""});
       setAddPay(false);
     };
+    const startEditPay=(p)=>{setNewPay({cat:p.cat,amount:String(p.amount),note:p.note||""});setEditPayId(p.id);setAddPay(true);};
+    const doDelPay=(id)=>setOrders(prev=>prev.map(o=>o.id===ord.id?{...o,payments:(o.payments||[]).filter(p=>p.id!==id)}:o));
     const doAddExp=()=>{
       if(!newExp.amount)return;
-      const exp={id:"ex"+Date.now(),ordId:ord.id,cat:newExp.cat,amount:parseFloat(newExp.amount),date:new Date().toISOString().slice(0,10),note:newExp.note};
-      setOrders(prev=>prev.map(o=>o.id===ord.id?{...o,expenses:[...(o.expenses||[]),exp]}:o));
+      if(editExpId){
+        setOrders(prev=>prev.map(o=>o.id===ord.id?{...o,expenses:(o.expenses||[]).map(x=>x.id===editExpId?{...x,cat:newExp.cat,amount:parseFloat(newExp.amount),note:newExp.note}:x)}:o));
+        setEditExpId(null);
+      }else{
+        const exp={id:"ex"+Date.now(),ordId:ord.id,cat:newExp.cat,amount:parseFloat(newExp.amount),date:new Date().toISOString().slice(0,10),note:newExp.note};
+        setOrders(prev=>prev.map(o=>o.id===ord.id?{...o,expenses:[...(o.expenses||[]),exp]}:o));
+      }
       setNewExp({cat:"materials",amount:"",note:""});
       setAddExp(false);
     };
+    const startEditExp=(x)=>{setNewExp({cat:x.cat,amount:String(x.amount),note:x.note||""});setEditExpId(x.id);setAddExp(true);};
+    const doDelExp=(id)=>setOrders(prev=>prev.map(o=>o.id===ord.id?{...o,expenses:(o.expenses||[]).filter(x=>x.id!==id)}:o));
     const doAutoBonus=()=>{
       if(!bCalc)return;
       const exp={id:"ex"+Date.now(),ordId:ord.id,cat:"designer_bonus",amount:bCalc,date:new Date().toISOString().slice(0,10),note:"Бонус "+des.name};
@@ -360,7 +377,7 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
               <div style={{background:T.card,borderRadius:15,padding:13,marginBottom:9}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:9}}>
                   <div style={{fontSize:13,fontWeight:600,color:T.text}}>{"Приходы"}</div>
-                  <button onClick={()=>setAddPay(!addPay)} style={{background:ABGC,border:"none",borderRadius:8,padding:"5px 12px",color:ACC,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{"+ Добавить"}</button>
+                  <button onClick={()=>{const open=!addPay;setAddPay(open);if(open){setEditPayId(null);setNewPay({cat:"prepay",amount:"",note:""});}}} style={{background:ABGC,border:"none",borderRadius:8,padding:"5px 12px",color:ACC,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{"+ Добавить"}</button>
                 </div>
                 {addPay&&(<div style={{background:T.faint,borderRadius:11,padding:11,marginBottom:9,display:"flex",flexDirection:"column",gap:7}}>
                   <select style={IS} value={newPay.cat} onChange={e=>setNewPay(p=>({...p,cat:e.target.value}))}>
@@ -368,16 +385,16 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
                   </select>
                   <input style={IS} type="number" placeholder="Сумма ₽" value={newPay.amount} onChange={e=>setNewPay(p=>({...p,amount:e.target.value}))}/>
                   <input style={IS} placeholder="Комментарий" value={newPay.note} onChange={e=>setNewPay(p=>({...p,note:e.target.value}))}/>
-                  <div style={{display:"flex",gap:7}}><button onClick={doAddPay} style={{flex:1,background:ACC,border:"none",borderRadius:9,padding:10,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{"Добавить"}</button><button onClick={()=>setAddPay(false)} style={{flex:1,background:T.bg,border:"none",borderRadius:9,padding:10,color:T.sub,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>{"Отмена"}</button></div>
+                  <div style={{display:"flex",gap:7}}><button onClick={doAddPay} style={{flex:1,background:ACC,border:"none",borderRadius:9,padding:10,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{editPayId?"Сохранить":"Добавить"}</button><button onClick={()=>{setAddPay(false);setEditPayId(null);setNewPay({cat:"prepay",amount:"",note:""});}} style={{flex:1,background:T.bg,border:"none",borderRadius:9,padding:10,color:T.sub,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>{"Отмена"}</button></div>
                 </div>)}
-                {oPays.filter(x=>x.type==="income").map(p=>(<div key={p.id} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:"0.5px solid "+T.border}}><div><div style={{fontSize:13}}>{CAT_L[p.cat]||p.cat}{p.note?" · "+p.note:""}</div><div style={{fontSize:10,color:T.dim}}>{p.date}</div></div><span style={{color:T.green,fontWeight:700,fontSize:13}}>{"+"+ff(p.amount)+" ₽"}</span></div>))}
+                {oPays.filter(x=>x.type==="income").map(p=>(<div key={p.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,padding:"8px 0",borderBottom:"0.5px solid "+T.border}}><div style={{flex:1,minWidth:0}}><div style={{fontSize:13}}>{CAT_L[p.cat]||p.cat}{p.note?" · "+p.note:""}</div><div style={{fontSize:10,color:T.dim}}>{p.date}</div></div><span style={{color:T.green,fontWeight:700,fontSize:13,flexShrink:0}}>{"+"+ff(p.amount)+" ₽"}</span><button onClick={()=>startEditPay(p)} style={{background:ABGC,border:"none",borderRadius:7,padding:"4px 8px",color:ACC,fontSize:11,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>{"✎"}</button><button onClick={()=>doDelPay(p.id)} style={{background:"rgba(255,59,48,0.08)",border:"none",borderRadius:7,padding:"4px 8px",color:T.red,fontSize:12,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>{"×"}</button></div>))}
                 {oPays.filter(x=>x.type==="income").length===0&&<div style={{color:T.dim,fontSize:12,textAlign:"center",padding:"8px 0"}}>{"Нет приходов"}</div>}
               </div>
               {/* Расходы */}
               <div style={{background:T.card,borderRadius:15,padding:13}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:9}}>
                   <div style={{fontSize:13,fontWeight:600,color:T.text}}>{"Расходы"}</div>
-                  <button onClick={()=>setAddExp(!addExp)} style={{background:ABGC,border:"none",borderRadius:8,padding:"5px 12px",color:ACC,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{"+ Добавить"}</button>
+                  <button onClick={()=>{const open=!addExp;setAddExp(open);if(open){setEditExpId(null);setNewExp({cat:"materials",amount:"",note:""});}}} style={{background:ABGC,border:"none",borderRadius:8,padding:"5px 12px",color:ACC,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{"+ Добавить"}</button>
                 </div>
                 {des.name&&fin.total>0&&(<div style={{display:"flex",alignItems:"center",gap:10,background:"rgba(124,92,191,0.06)",borderRadius:11,padding:"9px 11px",marginBottom:9}}>
                   <div style={{flex:1}}><div style={{color:"#7c5cbf",fontSize:12,fontWeight:600}}>{"✦ "+des.name}</div><div style={{color:T.sub,fontSize:11,marginTop:1}}>{(designers.find(d=>d.id===ord.designerId)?.bonusType==="pct"?"Бонус "+(designers.find(d=>d.id===ord.designerId)?.bonusRate)+"%":"Фикс.")+" = "+ff(bCalc)+" ₽"}</div></div>
@@ -389,9 +406,9 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
                   </select>
                   <input style={IS} type="number" placeholder="Сумма ₽" value={newExp.amount} onChange={e=>setNewExp(x=>({...x,amount:e.target.value}))}/>
                   <input style={IS} placeholder="Комментарий" value={newExp.note} onChange={e=>setNewExp(x=>({...x,note:e.target.value}))}/>
-                  <div style={{display:"flex",gap:7}}><button onClick={doAddExp} style={{flex:1,background:ACC,border:"none",borderRadius:9,padding:10,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{"Добавить"}</button><button onClick={()=>setAddExp(false)} style={{flex:1,background:T.bg,border:"none",borderRadius:9,padding:10,color:T.sub,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>{"Отмена"}</button></div>
+                  <div style={{display:"flex",gap:7}}><button onClick={doAddExp} style={{flex:1,background:ACC,border:"none",borderRadius:9,padding:10,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{editExpId?"Сохранить":"Добавить"}</button><button onClick={()=>{setAddExp(false);setEditExpId(null);setNewExp({cat:"materials",amount:"",note:""});}} style={{flex:1,background:T.bg,border:"none",borderRadius:9,padding:10,color:T.sub,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>{"Отмена"}</button></div>
                 </div>)}
-                {oExps.map(e=>(<div key={e.id} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:"0.5px solid "+T.border}}><div><div style={{fontSize:13,color:e.cat==="designer_bonus"?"#7c5cbf":"#111"}}>{CAT_L[e.cat]||e.cat}{e.note?" · "+e.note:""}</div><div style={{fontSize:10,color:T.dim}}>{e.date}</div></div><span style={{color:e.cat==="designer_bonus"?"#7c5cbf":"#ff3b30",fontWeight:700,fontSize:13}}>{"-"+ff(e.amount)+" ₽"}</span></div>))}
+                {oExps.map(e=>(<div key={e.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,padding:"8px 0",borderBottom:"0.5px solid "+T.border}}><div style={{flex:1,minWidth:0}}><div style={{fontSize:13,color:e.cat==="designer_bonus"?"#7c5cbf":"#111"}}>{CAT_L[e.cat]||e.cat}{e.note?" · "+e.note:""}</div><div style={{fontSize:10,color:T.dim}}>{e.date}</div></div><span style={{color:e.cat==="designer_bonus"?"#7c5cbf":"#ff3b30",fontWeight:700,fontSize:13,flexShrink:0}}>{"-"+ff(e.amount)+" ₽"}</span><button onClick={()=>startEditExp(e)} style={{background:ABGC,border:"none",borderRadius:7,padding:"4px 8px",color:ACC,fontSize:11,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>{"✎"}</button><button onClick={()=>doDelExp(e.id)} style={{background:"rgba(255,59,48,0.08)",border:"none",borderRadius:7,padding:"4px 8px",color:T.red,fontSize:12,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>{"×"}</button></div>))}
                 {oExps.length===0&&<div style={{color:T.dim,fontSize:12,textAlign:"center",padding:"8px 0"}}>{"Нет расходов"}</div>}
               </div>
             </div>
@@ -588,12 +605,16 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
         </div>
       </div>
 
-      {/* Статус-чипы */}
+      {/* Статус-чипы (фильтр) */}
       <div style={{display:"flex",gap:6,marginBottom:10,overflowX:"auto",paddingBottom:2}}>
-        {STATUSES.map(s=>{const n=orders.filter(o=>o.status===s.id).length;if(!n)return null;return(
-          <div key={s.id} style={{flex:"0 0 auto",background:ABGC,border:`0.5px solid ${ACC}44`,borderRadius:18,padding:"4px 11px",display:"flex",alignItems:"center",gap:4}}>
-            <span style={{color:ACC,fontSize:11,fontWeight:600}}>{s.label}</span>
-            <span style={{background:ACC,color:"#fff",borderRadius:10,fontSize:9,fontWeight:700,padding:"1px 5px"}}>{n}</span>
+        <div onClick={()=>setStatusFilter(null)} style={{flex:"0 0 auto",background:statusFilter===null?ACC:ABGC,border:`0.5px solid ${ACC}44`,borderRadius:18,padding:"4px 11px",display:"flex",alignItems:"center",gap:4,cursor:"pointer"}}>
+          <span style={{color:statusFilter===null?"#fff":ACC,fontSize:11,fontWeight:600}}>{"Все"}</span>
+          <span style={{background:statusFilter===null?"#fff":ACC,color:statusFilter===null?ACC:"#fff",borderRadius:10,fontSize:9,fontWeight:700,padding:"1px 5px"}}>{orders.length}</span>
+        </div>
+        {STATUSES.map(s=>{const n=orders.filter(o=>o.status===s.id).length;if(!n)return null;const active=statusFilter===s.id;return(
+          <div key={s.id} onClick={()=>setStatusFilter(active?null:s.id)} style={{flex:"0 0 auto",background:active?ACC:ABGC,border:`0.5px solid ${ACC}44`,borderRadius:18,padding:"4px 11px",display:"flex",alignItems:"center",gap:4,cursor:"pointer"}}>
+            <span style={{color:active?"#fff":ACC,fontSize:11,fontWeight:600}}>{s.label}</span>
+            <span style={{background:active?"#fff":ACC,color:active?ACC:"#fff",borderRadius:10,fontSize:9,fontWeight:700,padding:"1px 5px"}}>{n}</span>
           </div>
         );})}
       </div>
@@ -605,7 +626,7 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
         <div style={{fontSize:12,color:T.dim}}>{"Нажмите + чтобы создать"}</div>
       </div>)}
       <div className="proj-grid">
-      {orders.map(ord=>{
+      {(statusFilter?orders.filter(o=>o.status===statusFilter):orders).map(ord=>{
         const st=stObj(ord.status);
         const fin=calcFin(ord);
         const pct=fin.total>0?Math.round(fin.inc/fin.total*100):0;
@@ -645,7 +666,7 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
             </div>
           </div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:fin.total>0?8:0}}>
-            <div style={{fontSize:12,color:T.dim}}>{fin.area>0?fn(fin.area)+" м²":""}</div>
+            <div style={{fontSize:12,color:T.dim}}>{[fin.area>0?fn(fin.area)+" м²":"",ord.date?"🗓 "+ord.date:""].filter(Boolean).join(" · ")}</div>
             {fin.total>0&&<div style={{fontSize:16,fontWeight:700,color:T.text}}>{ff(fin.total)+" ₽"}</div>}
           </div>
           {fin.total>0&&(<div>
