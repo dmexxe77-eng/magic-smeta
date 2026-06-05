@@ -225,7 +225,7 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
           })}
         </div>
 
-        <div style={{padding:14,paddingBottom:80}}>
+        <div className="mw" style={{padding:14,paddingBottom:80}}>
           {/* ── Инфо ── */}
           {projTab==="info"&&(<div>
             {fin.total>0&&(
@@ -288,6 +288,7 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
               </div>
             </div>
 
+            <div className="info-grid">
             <div style={{background:T.card,borderRadius:15,padding:14,marginBottom:10}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:13}}>
                 <div style={{fontSize:13,fontWeight:600,color:T.text}}>{"Данные проекта"}</div>
@@ -339,6 +340,7 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
                   </div>
                 ))
               }
+            </div>
             </div>
           </div>)}
 
@@ -566,7 +568,7 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
     </div>)}
 
     {/* ══ ПРОЕКТЫ ══ */}
-    {tab==="home"&&(<div style={{padding:"13px 14px",paddingBottom:90}}>
+    {tab==="home"&&(<div className="mw" style={{padding:"13px 14px",paddingBottom:90}}>
       {/* Сводная карточка */}
       <div style={{background:DARK,borderRadius:16,padding:"16px 18px",marginBottom:12}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
@@ -602,6 +604,7 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
         <div style={{fontSize:15,fontWeight:600,color:T.sub,marginBottom:4}}>{"Нет проектов"}</div>
         <div style={{fontSize:12,color:T.dim}}>{"Нажмите + чтобы создать"}</div>
       </div>)}
+      <div className="proj-grid">
       {orders.map(ord=>{
         const st=stObj(ord.status);
         const fin=calcFin(ord);
@@ -656,10 +659,11 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
           </div>)}
         </div>);
       })}
+      </div>
     </div>)}
 
     {/* ══ КЛИЕНТЫ ══ */}
-    {tab==="clients"&&(<div style={{padding:"13px 14px",paddingBottom:90}}>
+    {tab==="clients"&&(<div className="mw" style={{padding:"13px 14px",paddingBottom:90}}>
       {clients.map(cl=>{const n=orders.filter(o=>o.clientId===cl.id||o.client===cl.name).length;return(
         <div key={cl.id} style={{background:T.card,borderRadius:15,padding:"13px",marginBottom:8,cursor:"pointer",display:"flex",alignItems:"center",gap:12}} onClick={()=>setSelClient(cl.id)}>
           <div style={{width:44,height:44,borderRadius:22,background:ABGC,display:"flex",alignItems:"center",justifyContent:"center",color:ACC,fontSize:15,fontWeight:700,flexShrink:0}}>{av(cl.name)}</div>
@@ -674,7 +678,7 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
     </div>)}
 
     {/* ══ ДИЗАЙНЕРЫ ══ */}
-    {tab==="designers"&&(<div style={{padding:"13px 14px",paddingBottom:90}}>
+    {tab==="designers"&&(<div className="mw" style={{padding:"13px 14px",paddingBottom:90}}>
       {designers.map(d=>{const ps=orders.filter(o=>o.designerId===d.id||o.designer===d.name);const paid=ps.reduce((s,o)=>s+calcFin(o).dExp,0);return(
         <div key={d.id} style={{background:T.card,borderRadius:15,padding:"13px",marginBottom:8,cursor:"pointer"}} onClick={()=>setSelDesigner(d.id)}>
           <div style={{display:"flex",alignItems:"center",gap:12}}>
@@ -692,7 +696,7 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
 
     {/* ══ ФИНАНСЫ ══ */}
     {tab==="finance"&&(isPro?(
-      <div style={{padding:"13px 14px",paddingBottom:90}}>
+      <div className="mw" style={{padding:"13px 14px",paddingBottom:90}}>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9,marginBottom:12}}>
           {[{l:"Поступило",v:ff(totRev),c:"#16a34a"},{l:"Прибыль",v:ff(totProf),c:totProf>=0?"#16a34a":"#ff3b30"},{l:"Расходы",v:ff(totExp),c:"#ff9500"},{l:"Долги",v:ff(totDebt),c:totDebt>0?"#ff3b30":"#aaa"}].map(x=>(<div key={x.l} style={{background:T.card,borderRadius:13,padding:13}}><div style={{fontSize:10,color:T.sub,marginBottom:4}}>{x.l}</div><div style={{fontSize:20,fontWeight:700,color:x.c}}>{x.v}</div><div style={{fontSize:10,color:T.dim}}>{"₽"}</div></div>))}
         </div>
@@ -716,7 +720,7 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
 
     {/* ══ АНАЛИТИКА ══ */}
     {tab==="stats"&&(isPro?(
-      <div style={{padding:"13px 14px",paddingBottom:90}}>
+      <div className="mw" style={{padding:"13px 14px",paddingBottom:90}}>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9,marginBottom:12}}>
           {[{l:"Проектов",v:totalOrders,c:ACC},{l:"В работе",v:inWork,c:"#ff9500"},{l:"Сдано",v:done,c:"#16a34a"},{l:"Дизайнеров",v:designers.length,c:"#7c5cbf"}].map(x=>(<div key={x.l} style={{background:T.card,borderRadius:13,padding:13,textAlign:"center"}}><div style={{fontSize:28,fontWeight:800,color:x.c}}>{x.v}</div><div style={{fontSize:11,color:T.sub,marginTop:3}}>{x.l}</div></div>))}
         </div>

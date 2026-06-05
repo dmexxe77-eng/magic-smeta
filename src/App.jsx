@@ -346,7 +346,7 @@ export default function App(){
   else content=(<HomeScreen orders={orders} setOrders={setOrders} onOpen={openOrder} onNew={()=>setScreen("new")} onStatusChange={changeStatus} theme={theme} setTheme={setTheme} onFullExport={buildFullExport} onSaveNow={manualSave} onImport={handleImport} saveStatus={saveStatus} returnOrderId={curId}/>);
 
   return(<div style={{fontFamily:"'Inter',-apple-system,BlinkMacSystemFont,'SF Pro Display',system-ui,sans-serif",background:T.bg,color:T.text,minHeight:"100vh"}}>
-    <style>{"@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');*{box-sizing:border-box;margin:0;padding:0;font-family:inherit}::-webkit-scrollbar{width:3px}select{outline:none;font-family:inherit}input[type=number]::-webkit-inner-spin-button{opacity:.3}"}</style>
+    <style>{"@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');*{box-sizing:border-box;margin:0;padding:0;font-family:inherit}::-webkit-scrollbar{width:3px}select{outline:none;font-family:inherit}input[type=number]::-webkit-inner-spin-button{opacity:.3}@media(min-width:980px){.mw{max-width:1180px!important;margin-left:auto!important;margin-right:auto!important}.mw-wide{max-width:1340px!important;margin-left:auto!important;margin-right:auto!important}.proj-grid{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:10px;align-items:start}.proj-grid>div{margin-bottom:0!important}.info-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:12px;align-items:start}.info-grid>div{margin-bottom:0!important}.calc-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}}"}</style>
     {content}
   </div>);
 }
