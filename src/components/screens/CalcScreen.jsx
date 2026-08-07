@@ -186,11 +186,18 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
         .map(el=>Math.max(0,Math.floor(el.offsetTop*scaleY)))
         .filter(v=>v>0&&v<canvas.height)
         .sort((a,b)=>a-b);
-      const avoidRanges=Array.from(pageEl.querySelectorAll(".no-split")).map(el=>{
-        const top=Math.max(0,Math.floor(el.offsetTop*scaleY));
-        const bottom=Math.min(canvas.height,Math.ceil((el.offsetTop+el.offsetHeight)*scaleY));
-        return{top,bottom};
-      });
+      // Диапазоны, которые нельзя разрезать между листами: заголовки комнат (.no-split)
+      // И КАЖДАЯ СТРОКА ТАБЛИЦЫ (tr) — иначе строка рвётся пополам на границе листа.
+      const pageRect0=pageEl.getBoundingClientRect();
+      const toRange=el=>{
+        const rc=el.getBoundingClientRect();
+        return{
+          top:Math.max(0,Math.floor((rc.top-pageRect0.top)*scaleY)),
+          bottom:Math.min(canvas.height,Math.ceil((rc.bottom-pageRect0.top)*scaleY))
+        };
+      };
+      const avoidEls=[...pageEl.querySelectorAll(".no-split"),...pageEl.querySelectorAll("table tr")];
+      const avoidRanges=avoidEls.map(toRange).filter(z=>z.bottom>z.top);
       avoidRanges.sort((a,b)=>a.top-b.top);
       let y=0,first=true;
       while(y<canvas.height){

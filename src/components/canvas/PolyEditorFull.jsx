@@ -49,8 +49,13 @@ function PolyEditorFull({verts,onChange,areaOverride,perimOverride,onAreaChange,
   return(<div style={{position:"fixed",top:0,left:0,right:0,bottom:0,zIndex:30,background:T.bg,display:"flex",flexDirection:"column",color:T.text,fontFamily:"'Inter',-apple-system,system-ui,sans-serif"}}>
     {/* Header */}
     <div style={{padding:"8px 10px",borderBottom:"0.5px solid "+T.border,display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
-      <span style={{fontSize:12,fontWeight:700,color:T.accent}}>{"Редактор чертежа"}</span>
-      <div style={{display:"flex",gap:3}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,minWidth:0}}>
+        <button onClick={onClose} title="В калькулятор" style={{background:"rgba(79,70,229,0.1)",border:"none",borderRadius:8,width:32,height:32,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0,fontFamily:"inherit"}}>
+          <svg width="15" height="15" fill="none" stroke={T.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 3.5L5 8l4.5 4.5"/></svg>
+        </button>
+        <span style={{fontSize:12,fontWeight:700,color:T.accent,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{"Редактор чертежа"}</span>
+      </div>
+      <div style={{display:"flex",gap:3,flexShrink:0}}>
         {selVtx!=null&&pts.length>3&&<button onClick={deleteVtx} style={btnS(T.red)}>{"Удалить "+L[selVtx]}</button>}
         <button onClick={()=>{const nv=[...pts];const last=pts[pts.length-1];const mx=(last[0]+pts[0][0])/2+0.3;const my=(last[1]+pts[0][1])/2+0.3;nv.push([Math.round(mx*100)/100,Math.round(my*100)/100]);onChange(nv);setSelVtx(nv.length-1);}} style={btnS(T.green)}>{"+ Угол"}</button>
         <button onClick={doSnap} style={btnS(T.blue)}>{"90° Выровнять"}</button>

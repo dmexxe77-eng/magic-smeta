@@ -513,7 +513,7 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
 
   /* ══ ГЛАВНЫЙ ЭКРАН ══ */
   const totalOrders=orders.length;
-  const inWork=orders.filter(o=>["estimate","discuss","contract"].includes(o.status)).length;
+  const inWork=orders.filter(o=>["estimate","discuss","contract","install"].includes(o.status)).length;
   const done=orders.filter(o=>o.status==="done").length;
   const allFin=orders.map(o=>({...o,...calcFin(o)}));
   const totRev=allFin.reduce((s,o)=>s+o.inc,0);
@@ -611,10 +611,10 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
           <span style={{color:statusFilter===null?"#fff":ACC,fontSize:11,fontWeight:600}}>{"Все"}</span>
           <span style={{background:statusFilter===null?"#fff":ACC,color:statusFilter===null?ACC:"#fff",borderRadius:10,fontSize:9,fontWeight:700,padding:"1px 5px"}}>{orders.length}</span>
         </div>
-        {STATUSES.map(s=>{const n=orders.filter(o=>o.status===s.id).length;if(!n)return null;const active=statusFilter===s.id;return(
-          <div key={s.id} onClick={()=>setStatusFilter(active?null:s.id)} style={{flex:"0 0 auto",background:active?ACC:ABGC,border:`0.5px solid ${ACC}44`,borderRadius:18,padding:"4px 11px",display:"flex",alignItems:"center",gap:4,cursor:"pointer"}}>
-            <span style={{color:active?"#fff":ACC,fontSize:11,fontWeight:600}}>{s.label}</span>
-            <span style={{background:active?"#fff":ACC,color:active?ACC:"#fff",borderRadius:10,fontSize:9,fontWeight:700,padding:"1px 5px"}}>{n}</span>
+        {STATUSES.map(s=>{const n=orders.filter(o=>o.status===s.id).length;const active=statusFilter===s.id;const empty=n===0;return(
+          <div key={s.id} onClick={()=>setStatusFilter(active?null:s.id)} style={{flex:"0 0 auto",background:active?ACC:(empty?T.faint:ABGC),border:`0.5px solid ${active?ACC:(empty?T.border:ACC+"44")}`,borderRadius:18,padding:"4px 11px",display:"flex",alignItems:"center",gap:4,cursor:"pointer",opacity:empty?0.55:1}}>
+            <span style={{color:active?"#fff":(empty?T.dim:ACC),fontSize:11,fontWeight:600}}>{s.label}</span>
+            <span style={{background:active?"#fff":(empty?T.dim:ACC),color:active?ACC:"#fff",borderRadius:10,fontSize:9,fontWeight:700,padding:"1px 5px"}}>{n}</span>
           </div>
         );})}
       </div>
