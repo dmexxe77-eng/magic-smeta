@@ -319,6 +319,10 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
         <div onClick={()=>{const curR=rooms.find(x=>x.id===tab);const tplC=curR?.canvas?.applyAll?curR.canvas:null;const tplM=curR?.mainProf?.applyAll?curR.mainProf:null;setMode("select");}} style={{flex:"1 1 calc("+(100/perRow)+"% - 4px)",minWidth:0,border:"1px dashed "+T.border,borderRadius:10,padding:"5px 8px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:T.dim,fontSize:10}}>{"+"}</span></div>
       </div>);})()}
 
+      {/* Полноэкранные оверлеи чертежа — вне sticky-панели, иначе их перекрывают блоки */}
+      {polyEdit&&<PolyEditorFull verts={r.v} onChange={nv=>{if(!nv||nv.length<3||!nv.every(p=>Array.isArray(p)&&p.length===2&&isFinite(p[0])&&isFinite(p[1])))return;u(r.id,rm=>{rm.v=nv;rm.aO=null;rm.pO=null;const p2=calcPoly(nv);rm.canvas.qty=Math.round(p2.a*100)/100;rm.mainProf.qty=Math.round(p2.p*100)/100;return rm;});}} areaOverride={r.aO} perimOverride={r.pO} onAreaChange={v=>u(r.id,rm=>{rm.aO=v;rm.canvas.qty=v;return rm;})} onPerimChange={v=>u(r.id,rm=>{rm.pO=v;rm.mainProf.qty=v;return rm;})} onClose={()=>setPolyEdit(false)}/>}
+      {roomDraw&&<RoomDrawer initialVerts={r.v} onDone={nv=>{u(r.id,rm=>{rm.v=nv;rm.aO=null;rm.pO=null;const p2=calcPoly(nv);rm.canvas.qty=Math.round(p2.a*100)/100;rm.mainProf.qty=Math.round(p2.p*100)/100;return rm;});setRoomDraw(false);}} onCancel={()=>setRoomDraw(false)}/>}
+
       <div className="calc-2pane">
       <div className="calc-chart">
       {/* Totals */}
@@ -328,8 +332,6 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
         <span style={{fontSize:10,color:T.dim}}>{rooms.filter(x=>x.on).length+" пом."}</span>
       </div>
       {/* PolyMini + кнопка нового редактора */}
-      {polyEdit&&<PolyEditorFull verts={r.v} onChange={nv=>{if(!nv||nv.length<3||!nv.every(p=>Array.isArray(p)&&p.length===2&&isFinite(p[0])&&isFinite(p[1])))return;u(r.id,rm=>{rm.v=nv;rm.aO=null;rm.pO=null;const p2=calcPoly(nv);rm.canvas.qty=Math.round(p2.a*100)/100;rm.mainProf.qty=Math.round(p2.p*100)/100;return rm;});}} areaOverride={r.aO} perimOverride={r.pO} onAreaChange={v=>u(r.id,rm=>{rm.aO=v;rm.canvas.qty=v;return rm;})} onPerimChange={v=>u(r.id,rm=>{rm.pO=v;rm.mainProf.qty=v;return rm;})} onClose={()=>setPolyEdit(false)}/>}
-      {roomDraw&&<RoomDrawer initialVerts={r.v} onDone={nv=>{u(r.id,rm=>{rm.v=nv;rm.aO=null;rm.pO=null;const p2=calcPoly(nv);rm.canvas.qty=Math.round(p2.a*100)/100;rm.mainProf.qty=Math.round(p2.p*100)/100;return rm;});setRoomDraw(false);}} onCancel={()=>setRoomDraw(false)}/>}
       <div style={{display:"flex",gap:6,marginBottom:6}}>
         <div style={{flex:1}} onClick={()=>setPolyEdit(true)}>
           <PolyMini verts={r.v} areaOverride={r.aO} perimOverride={r.pO} showBBox={r.canvas?.overcut}/>

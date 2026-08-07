@@ -290,6 +290,7 @@ export const STATUSES=[
   {id:"discuss",  label:"На согласовании",  color:"#ff9f0a"},
   {id:"contract", label:"Договор подписан", color:"#0a84ff"},
   {id:"done",     label:"Выполнен",         color:"#16a34a"},
+  {id:"declined", label:"Отказались",       color:"#ff3b30"},
 ];
 
 /* ─────────────────────────────────────────────
