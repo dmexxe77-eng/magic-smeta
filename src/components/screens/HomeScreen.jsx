@@ -25,8 +25,15 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
   const[showFullExp,setShowFullExp] = useState(null);
   const[delOrderId,setDelOrderId] = useState(null);
   const[statusFilter,setStatusFilter] = useState(null);
-  const[finPeriod,setFinPeriod] = useState("month");   /* month|quarter|year|all */
+  const ymNow=(()=>{const n=new Date();return n.getFullYear()+"-"+String(n.getMonth()+1).padStart(2,"0");})();
+  const[finPeriod,setFinPeriod] = useState("month");   /* month|quarter|year|all|custom */
+  const[finYm,setFinYm] = useState(ymNow);
+  const[finFrom,setFinFrom] = useState("");
+  const[finTo,setFinTo] = useState("");
   const[statsPeriod,setStatsPeriod] = useState("all");
+  const[statsYm,setStatsYm] = useState(ymNow);
+  const[statsFrom,setStatsFrom] = useState("");
+  const[statsTo,setStatsTo] = useState("");
   const[devUnlock,setDevUnlock] = useState(IS_PRO_OVERRIDE);
   const isPro = devUnlock;
   const toggleDev=()=>{
@@ -225,7 +232,7 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
         <div style={{padding:"12px 14px 4px",display:"flex",gap:6,alignItems:"center",overflowX:"auto",background:T.card,borderBottom:"0.5px solid "+T.border}}>
           {STATUSES.map(s=>{const a=s.id===ord.status;return(
             <button key={s.id}
-              onClick={isPro?()=>{onStatusChange(ord.id,s.id);setOrders(prev=>prev.map(o=>o.id===ord.id?{...o,status:s.id}:o));}:undefined}
+              onClick={isPro?()=>{onStatusChange(ord.id,s.id);setOrders(prev=>prev.map(o=>o.id===ord.id?{...o,status:s.id,statusDates:{...(o.statusDates||{}),[s.id]:new Date().toISOString().slice(0,10)}}:o));}:undefined}
               style={{flex:"0 0 auto",padding:"6px 14px",borderRadius:20,border:a?`1.5px solid ${ACC}`:"1.5px solid #eee",cursor:isPro?"pointer":"default",fontFamily:"inherit",fontSize:10,fontWeight:a?700:400,background:a?ABGC:"#fff",color:a?ACC:"#bbb"}}>
               {s.label}
             </button>
@@ -516,13 +523,46 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
   /* ══ ГЛАВНЫЙ ЭКРАН ══ */
   const totalOrders=orders.length;
   const inWork=orders.filter(o=>["estimate","discuss","contract","install"].includes(o.status)).length;
-  /* ── Период: парсинг дат и фильтр ── */
+  /* ── Период: парсинг дат и диапазоны ── */
   const parseRuDate=s=>{if(!s)return null;const m=String(s).match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);if(m)return new Date(+m[3],+m[2]-1,+m[1]);const d=new Date(s);return isNaN(d)?null:d;};
-  const periodStart=p=>{const now=new Date();if(p==="month")return new Date(now.getFullYear(),now.getMonth(),1);if(p==="quarter")return new Date(now.getFullYear(),Math.floor(now.getMonth()/3)*3,1);if(p==="year")return new Date(now.getFullYear(),0,1);return null;};
-  const inPeriod=(d,p)=>{if(!p||p==="all")return true;if(!d)return false;const st=periodStart(p);return d>=st;};
-  const PERIODS=[{id:"month",l:"Месяц"},{id:"quarter",l:"Квартал"},{id:"year",l:"Год"},{id:"all",l:"Всё время"}];
-  const PeriodChips=({val,set})=>(<div style={{display:"flex",gap:6,marginBottom:12,overflowX:"auto"}}>
-    {PERIODS.map(p=>{const a=val===p.id;return(<button key={p.id} onClick={()=>set(p.id)} style={{flex:"0 0 auto",background:a?DARK:T.card,border:"0.5px solid "+(a?DARK:T.border),borderRadius:16,padding:"5px 14px",color:a?"#fff":T.sub,fontSize:11,fontWeight:a?700:400,cursor:"pointer",fontFamily:"inherit"}}>{p.l}</button>);})}
+  const MONTHS_FULL=["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
+  const MONTH_S=["янв","фев","мар","апр","май","июн","июл","авг","сен","окт","ноя","дек"];
+  const shiftYm=(ym,delta)=>{const[y,m]=ym.split("-").map(Number);const d=new Date(y,m-1+delta,1);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");};
+  const ymLabel=ym=>{const[y,m]=(ym||"").split("-").map(Number);return(MONTHS_FULL[(m||1)-1]||"")+" "+(y||"");};
+  const periodRange=(mode,ym,from,to)=>{
+    const now=new Date();
+    if(mode==="month"){const[y,m]=(ym||"").split("-").map(Number);const Y=y||now.getFullYear(),M=(m||now.getMonth()+1)-1;return{start:new Date(Y,M,1),end:new Date(Y,M+1,1)};}
+    if(mode==="quarter"){const q=Math.floor(now.getMonth()/3)*3;return{start:new Date(now.getFullYear(),q,1),end:new Date(now.getFullYear(),q+3,1)};}
+    if(mode==="year")return{start:new Date(now.getFullYear(),0,1),end:new Date(now.getFullYear()+1,0,1)};
+    if(mode==="custom"){const s=from?new Date(from):null;const e=to?new Date(new Date(to).getTime()+86400000):null;return{start:s&&!isNaN(s)?s:null,end:e&&!isNaN(e)?e:null};}
+    return{start:null,end:null};
+  };
+  const inRange=(d,r)=>{if(!r.start&&!r.end)return true;if(!d||isNaN(d))return false;if(r.start&&d<r.start)return false;if(r.end&&d>=r.end)return false;return true;};
+  /* «Договор заключён» = договор подписан ИЛИ монтаж идёт ИЛИ выполнен */
+  const WON_STATUSES=["contract","install","done"];
+  /* Даты смены статуса пишутся в order.statusDates при переключении; для старых проектов — фолбэк на дату создания */
+  const contractDate=o=>{const sd=o.statusDates||{};const iso=sd.contract||sd.install||sd.done;if(iso){const d=new Date(iso);if(!isNaN(d))return d;}return WON_STATUSES.includes(o.status)?parseRuDate(o.date):null;};
+  const doneDate=o=>{const sd=o.statusDates||{};if(sd.done){const d=new Date(sd.done);if(!isNaN(d))return d;}return o.status==="done"?parseRuDate(o.date):null;};
+  const dateInputS={background:T.card,border:"0.5px solid "+T.border,borderRadius:8,padding:"5px 10px",fontSize:12,color:T.text,fontFamily:"inherit",outline:"none"};
+  const arrowBtnS={background:T.card,border:"0.5px solid "+T.border,borderRadius:8,width:30,height:30,cursor:"pointer",color:T.text,fontSize:14,fontFamily:"inherit",flexShrink:0};
+  const PeriodBar=({mode,setMode,ym,setYm,from,setFrom,to,setTo})=>(<div style={{marginBottom:12}}>
+    <div style={{display:"flex",gap:6,overflowX:"auto",alignItems:"center",paddingBottom:2}}>
+      {[{id:"month",l:mode==="month"?ymLabel(ym):"Месяц"},{id:"quarter",l:"Квартал"},{id:"year",l:"Год"},{id:"all",l:"Всё время"},{id:"custom",l:"Свой период"}].map(p=>{const a=mode===p.id;return(
+        <button key={p.id} onClick={()=>setMode(p.id)} style={{flex:"0 0 auto",background:a?DARK:T.card,border:"0.5px solid "+(a?DARK:T.border),borderRadius:16,padding:"5px 14px",color:a?"#fff":T.sub,fontSize:11,fontWeight:a?700:400,cursor:"pointer",fontFamily:"inherit"}}>{p.l}</button>);})}
+    </div>
+    {mode==="month"&&(<div style={{display:"flex",gap:6,alignItems:"center",marginTop:8}}>
+      <button onClick={()=>setYm(shiftYm(ym,-1))} title="Предыдущий месяц" style={arrowBtnS}>{"‹"}</button>
+      <input type="month" value={ym} onChange={e=>{if(e.target.value)setYm(e.target.value);}} style={dateInputS}/>
+      <button onClick={()=>setYm(shiftYm(ym,1))} title="Следующий месяц" style={arrowBtnS}>{"›"}</button>
+      <span style={{fontSize:12,color:T.text,fontWeight:700}}>{ymLabel(ym)}</span>
+    </div>)}
+    {mode==="custom"&&(<div style={{display:"flex",gap:6,alignItems:"center",marginTop:8,flexWrap:"wrap"}}>
+      <span style={{fontSize:11,color:T.sub}}>{"с"}</span>
+      <input type="date" value={from} onChange={e=>setFrom(e.target.value)} style={dateInputS}/>
+      <span style={{fontSize:11,color:T.sub}}>{"по"}</span>
+      <input type="date" value={to} onChange={e=>setTo(e.target.value)} style={dateInputS}/>
+      {(from||to)&&<button onClick={()=>{setFrom("");setTo("");}} style={{background:"none",border:"none",color:T.red,fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>{"сброс"}</button>}
+    </div>)}
   </div>);
   const done=orders.filter(o=>o.status==="done").length;
   const allFin=orders.map(o=>({...o,...calcFin(o)}));
@@ -727,20 +767,21 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
 
     {/* ══ ФИНАНСЫ ══ */}
     {tab==="finance"&&(isPro?(()=>{
+      const R=periodRange(finPeriod,finYm,finFrom,finTo);
       /* Проекты периода — по дате создания */
-      const pOrders=allFin.filter(o=>inPeriod(parseRuDate(o.date),finPeriod));
+      const pOrders=allFin.filter(o=>inRange(parseRuDate(o.date),R));
       const stage=ids=>{const g=pOrders.filter(o=>ids.includes(o.status));return{n:g.length,sum:g.reduce((s,o)=>s+o.total,0)};};
       const gEst=stage(["estimate","discuss"]);
       const gCon=stage(["contract","install"]);
       const gDone=stage(["done"]);
       const gDecl=stage(["declined"]);
       /* Деньги периода — по датам платежей/расходов */
-      const payIn=orders.flatMap(o=>(o.payments||[]).filter(x=>x.type==="income")).filter(p=>inPeriod(new Date(p.date),finPeriod)).reduce((s,x)=>s+x.amount,0);
-      const expOut=orders.flatMap(o=>(o.expenses||[])).filter(e=>inPeriod(new Date(e.date),finPeriod)).reduce((s,x)=>s+x.amount,0);
+      const payIn=orders.flatMap(o=>(o.payments||[]).filter(x=>x.type==="income")).filter(p=>inRange(new Date(p.date),R)).reduce((s,x)=>s+x.amount,0);
+      const expOut=orders.flatMap(o=>(o.expenses||[])).filter(e=>inRange(new Date(e.date),R)).reduce((s,x)=>s+x.amount,0);
       const debtors=allFin.filter(o=>o.debt>0).sort((a,b)=>b.debt-a.debt);
       const openOrd=id=>{setSelOrder(id);setProjTab("finance");setEditOrd(null);};
       return(<div className="mw" style={{padding:"13px 14px",paddingBottom:90}}>
-        <PeriodChips val={finPeriod} set={setFinPeriod}/>
+        <PeriodBar mode={finPeriod} setMode={setFinPeriod} ym={finYm} setYm={setFinYm} from={finFrom} setFrom={setFinFrom} to={finTo} setTo={setFinTo}/>
         {/* Денежная сводка периода */}
         <div style={{background:DARK,borderRadius:16,padding:"16px 18px",marginBottom:12,display:"flex",flexWrap:"wrap",gap:20,alignItems:"flex-end"}}>
           <div style={{flex:"1 1 auto"}}>
@@ -796,38 +837,56 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
 
     {/* ══ АНАЛИТИКА (мини-CRM) ══ */}
     {tab==="stats"&&(isPro?(()=>{
-      const pOrders=allFin.filter(o=>inPeriod(parseRuDate(o.date),statsPeriod));
+      const R=periodRange(statsPeriod,statsYm,statsFrom,statsTo);
+      const pOrders=allFin.filter(o=>inRange(parseRuDate(o.date),R));
       const withTotal=pOrders.filter(o=>o.total>0);
       const sumTotal=withTotal.reduce((s,o)=>s+o.total,0);
       const sumArea=pOrders.reduce((s,o)=>s+o.area,0);
       const avgCheck=withTotal.length?sumTotal/withTotal.length:0;
       const perM2=sumArea>0?sumTotal/sumArea:0;
-      const nClosedWon=pOrders.filter(o=>["contract","install","done"].includes(o.status)).length;
-      const nDecided=pOrders.filter(o=>["contract","install","done","declined"].includes(o.status)).length;
-      const conv=nDecided?Math.round(nClosedWon/nDecided*100):0;
-      const declPct=pOrders.length?Math.round(pOrders.filter(o=>o.status==="declined").length/pOrders.length*100):0;
-      /* Динамика: последние 6 месяцев по дате создания */
+      /* Заключённые договоры: подписан + монтаж идёт + выполнен */
+      const won=pOrders.filter(o=>WON_STATUSES.includes(o.status));
+      const wonSum=won.reduce((s,o)=>s+o.total,0);
+      const doneG=pOrders.filter(o=>o.status==="done");
+      const doneSum=doneG.reduce((s,o)=>s+o.total,0);
+      const doneArea=doneG.reduce((s,o)=>s+o.area,0);
+      const decl=pOrders.filter(o=>o.status==="declined");
+      const declSum=decl.reduce((s,o)=>s+o.total,0);
+      const nDecided=won.length+decl.length;
+      const conv=nDecided?Math.round(won.length/nDecided*100):0;
+      const declPct=pOrders.length?Math.round(decl.length/pOrders.length*100):0;
+      /* Динамика: последние 6 месяцев. Договоры/выполнено — по дате смены статуса (statusDates), для старых проектов — по дате создания */
       const now=new Date();
-      const months=Array.from({length:6},(_,i)=>{const d=new Date(now.getFullYear(),now.getMonth()-5+i,1);return d;});
-      const mData=months.map(m=>{const g=allFin.filter(o=>{const d=parseRuDate(o.date);return d&&d.getFullYear()===m.getFullYear()&&d.getMonth()===m.getMonth();});return{m,n:g.length,sum:g.reduce((s,o)=>s+o.total,0)};});
+      const months=Array.from({length:6},(_,i)=>new Date(now.getFullYear(),now.getMonth()-5+i,1));
+      const mData=months.map(m=>{
+        const mr={start:m,end:new Date(m.getFullYear(),m.getMonth()+1,1)};
+        const created=allFin.filter(o=>inRange(parseRuDate(o.date),mr));
+        const contracts=allFin.filter(o=>inRange(contractDate(o),mr));
+        const doneM=allFin.filter(o=>inRange(doneDate(o),mr));
+        return{m,n:created.length,sum:created.reduce((s,o)=>s+o.total,0),
+          nContracts:contracts.length,sumContracts:contracts.reduce((s,o)=>s+o.total,0),
+          doneArea:doneM.reduce((s,o)=>s+o.area,0),doneSum:doneM.reduce((s,o)=>s+o.total,0)};
+      });
       const mMax=Math.max(1,...mData.map(x=>x.sum));
-      const MONTH_L=["янв","фев","мар","апр","май","июн","июл","авг","сен","окт","ноя","дек"];
+      const MONTH_L=MONTH_S;
       /* Дизайнеры и клиенты по объёму */
       const desRows=designers.map(d=>{const g=pOrders.filter(o=>o.designerId===d.id||o.designer===d.name);return{d,n:g.length,sum:g.reduce((s,o)=>s+o.total,0)};}).filter(x=>x.n>0).sort((a,b)=>b.sum-a.sum);
       const clMap={};
       pOrders.forEach(o=>{const k=o.client||"Без клиента";if(!clMap[k])clMap[k]={n:0,sum:0};clMap[k].n++;clMap[k].sum+=o.total;});
       const clRows=Object.entries(clMap).map(([name,v])=>({name,...v})).sort((a,b)=>b.sum-a.sum).slice(0,6);
       return(<div className="mw" style={{padding:"13px 14px",paddingBottom:90}}>
-        <PeriodChips val={statsPeriod} set={setStatsPeriod}/>
+        <PeriodBar mode={statsPeriod} setMode={setStatsPeriod} ym={statsYm} setYm={setStatsYm} from={statsFrom} setFrom={setStatsFrom} to={statsTo} setTo={setStatsTo}/>
         {/* KPI */}
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:9,marginBottom:12}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:9,marginBottom:12}}>
           {[
-            {l:"Проектов",v:String(pOrders.length),s:fn(sumArea)+" м²",c:ACC},
+            {l:"Проектов",v:String(pOrders.length),s:fn(sumArea)+" м² всего",c:ACC},
             {l:"Объём",v:ff(Math.round(sumTotal)),s:"₽ по сметам",c:"#1e2530"},
             {l:"Средний чек",v:ff(Math.round(avgCheck)),s:"₽ / проект",c:"#0a84ff"},
             {l:"Цена м²",v:ff(Math.round(perM2)),s:"₽ / м²",c:"#7c5cbf"},
-            {l:"Конверсия",v:conv+"%",s:"в договор",c:"#16a34a"},
-            {l:"Отказы",v:declPct+"%",s:"от всех",c:declPct>30?"#ff3b30":"#8e8e93"},
+            {l:"Договоров заключено",v:String(won.length),s:ff(Math.round(wonSum))+" ₽ (подписан+монтаж+выполнен)",c:"#0a84ff"},
+            {l:"Выполнено",v:fn(doneArea)+" м²",s:ff(Math.round(doneSum))+" ₽",c:"#16a34a"},
+            {l:"Конверсия",v:conv+"%",s:ff(Math.round(wonSum))+" ₽ в договорах",c:"#16a34a"},
+            {l:"Отказы",v:declPct+"%",s:decl.length+" шт · "+ff(Math.round(declSum))+" ₽",c:declPct>30?"#ff3b30":"#8e8e93"},
           ].map(x=>(<div key={x.l} style={{background:T.card,borderRadius:13,padding:"11px 13px"}}>
             <div style={{fontSize:10,color:T.sub,marginBottom:3}}>{x.l}</div>
             <div style={{fontSize:19,fontWeight:800,color:x.c,letterSpacing:-0.5}}>{x.v}</div>
@@ -851,7 +910,7 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
         {/* Динамика 6 мес */}
         <div style={{background:T.card,borderRadius:15,padding:13}}>
           <div style={{fontSize:13,fontWeight:600,color:T.text,marginBottom:10}}>{"Динамика · 6 месяцев"}</div>
-          <div style={{display:"flex",alignItems:"flex-end",gap:8,height:110,marginBottom:4}}>
+          <div style={{display:"flex",alignItems:"flex-end",gap:8,height:110,marginBottom:10}}>
             {mData.map((x,i)=>(<div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3,height:"100%",justifyContent:"flex-end"}}>
               <span style={{fontSize:8,color:T.sub,fontWeight:600}}>{x.sum>0?ff(Math.round(x.sum/1000))+"к":""}</span>
               <div style={{width:"100%",maxWidth:34,height:`${Math.max(3,x.sum/mMax*75)}%`,background:i===5?ACC:ACC+"55",borderRadius:"5px 5px 0 0"}}/>
@@ -859,6 +918,28 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
               <span style={{fontSize:8,color:T.sub}}>{x.n>0?x.n+" пр.":""}</span>
             </div>))}
           </div>
+          {/* Помесячная детализация */}
+          <div style={{overflowX:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+              <thead><tr>
+                {["Месяц","Проектов","Договоров","₽ договоры","м² сделано","₽ объём"].map(h=>(
+                  <th key={h} style={{textAlign:h==="Месяц"?"left":"right",padding:"4px 6px",color:T.dim,fontWeight:600,borderBottom:"1px solid "+T.border,fontSize:9,textTransform:"uppercase",whiteSpace:"nowrap"}}>{h}</th>
+                ))}
+              </tr></thead>
+              <tbody>
+                {mData.map((x,i)=>{const cur=i===5;const tdS={padding:"5px 6px",textAlign:"right",borderBottom:"0.5px solid "+T.border,whiteSpace:"nowrap"};return(
+                  <tr key={i} style={{background:cur?T.faint:"transparent"}}>
+                    <td style={{...tdS,textAlign:"left",fontWeight:cur?700:500}}>{MONTH_L[x.m.getMonth()]+" "+String(x.m.getFullYear()).slice(2)}</td>
+                    <td style={tdS}>{x.n||"—"}</td>
+                    <td style={{...tdS,color:x.nContracts?"#0a84ff":T.dim,fontWeight:x.nContracts?700:400}}>{x.nContracts||"—"}</td>
+                    <td style={tdS}>{x.sumContracts>0?ff(Math.round(x.sumContracts)):"—"}</td>
+                    <td style={{...tdS,color:x.doneArea>0?"#16a34a":T.dim,fontWeight:x.doneArea>0?700:400}}>{x.doneArea>0?fn(x.doneArea):"—"}</td>
+                    <td style={tdS}>{x.sum>0?ff(Math.round(x.sum)):"—"}</td>
+                  </tr>);})}
+              </tbody>
+            </table>
+          </div>
+          <div style={{fontSize:9,color:T.dim,marginTop:6,lineHeight:1.5}}>{"Договоров/м² сделано — по дате смены статуса; для проектов, у которых статус меняли до этого обновления, — по дате создания."}</div>
         </div>
         </div>
         <div>
