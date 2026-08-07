@@ -25,6 +25,8 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
   const[showFullExp,setShowFullExp] = useState(null);
   const[delOrderId,setDelOrderId] = useState(null);
   const[statusFilter,setStatusFilter] = useState(null);
+  const[finPeriod,setFinPeriod] = useState("month");   /* month|quarter|year|all */
+  const[statsPeriod,setStatsPeriod] = useState("all");
   const[devUnlock,setDevUnlock] = useState(IS_PRO_OVERRIDE);
   const isPro = devUnlock;
   const toggleDev=()=>{
@@ -514,6 +516,14 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
   /* ══ ГЛАВНЫЙ ЭКРАН ══ */
   const totalOrders=orders.length;
   const inWork=orders.filter(o=>["estimate","discuss","contract","install"].includes(o.status)).length;
+  /* ── Период: парсинг дат и фильтр ── */
+  const parseRuDate=s=>{if(!s)return null;const m=String(s).match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);if(m)return new Date(+m[3],+m[2]-1,+m[1]);const d=new Date(s);return isNaN(d)?null:d;};
+  const periodStart=p=>{const now=new Date();if(p==="month")return new Date(now.getFullYear(),now.getMonth(),1);if(p==="quarter")return new Date(now.getFullYear(),Math.floor(now.getMonth()/3)*3,1);if(p==="year")return new Date(now.getFullYear(),0,1);return null;};
+  const inPeriod=(d,p)=>{if(!p||p==="all")return true;if(!d)return false;const st=periodStart(p);return d>=st;};
+  const PERIODS=[{id:"month",l:"Месяц"},{id:"quarter",l:"Квартал"},{id:"year",l:"Год"},{id:"all",l:"Всё время"}];
+  const PeriodChips=({val,set})=>(<div style={{display:"flex",gap:6,marginBottom:12,overflowX:"auto"}}>
+    {PERIODS.map(p=>{const a=val===p.id;return(<button key={p.id} onClick={()=>set(p.id)} style={{flex:"0 0 auto",background:a?DARK:T.card,border:"0.5px solid "+(a?DARK:T.border),borderRadius:16,padding:"5px 14px",color:a?"#fff":T.sub,fontSize:11,fontWeight:a?700:400,cursor:"pointer",fontFamily:"inherit"}}>{p.l}</button>);})}
+  </div>);
   const done=orders.filter(o=>o.status==="done").length;
   const allFin=orders.map(o=>({...o,...calcFin(o)}));
   const totRev=allFin.reduce((s,o)=>s+o.inc,0);
@@ -716,41 +726,167 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
     </div>)}
 
     {/* ══ ФИНАНСЫ ══ */}
-    {tab==="finance"&&(isPro?(
-      <div className="mw" style={{padding:"13px 14px",paddingBottom:90}}>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9,marginBottom:12}}>
-          {[{l:"Поступило",v:ff(totRev),c:"#16a34a"},{l:"Прибыль",v:ff(totProf),c:totProf>=0?"#16a34a":"#ff3b30"},{l:"Расходы",v:ff(totExp),c:"#ff9500"},{l:"Долги",v:ff(totDebt),c:totDebt>0?"#ff3b30":"#aaa"}].map(x=>(<div key={x.l} style={{background:T.card,borderRadius:13,padding:13}}><div style={{fontSize:10,color:T.sub,marginBottom:4}}>{x.l}</div><div style={{fontSize:20,fontWeight:700,color:x.c}}>{x.v}</div><div style={{fontSize:10,color:T.dim}}>{"₽"}</div></div>))}
+    {tab==="finance"&&(isPro?(()=>{
+      /* Проекты периода — по дате создания */
+      const pOrders=allFin.filter(o=>inPeriod(parseRuDate(o.date),finPeriod));
+      const stage=ids=>{const g=pOrders.filter(o=>ids.includes(o.status));return{n:g.length,sum:g.reduce((s,o)=>s+o.total,0)};};
+      const gEst=stage(["estimate","discuss"]);
+      const gCon=stage(["contract","install"]);
+      const gDone=stage(["done"]);
+      const gDecl=stage(["declined"]);
+      /* Деньги периода — по датам платежей/расходов */
+      const payIn=orders.flatMap(o=>(o.payments||[]).filter(x=>x.type==="income")).filter(p=>inPeriod(new Date(p.date),finPeriod)).reduce((s,x)=>s+x.amount,0);
+      const expOut=orders.flatMap(o=>(o.expenses||[])).filter(e=>inPeriod(new Date(e.date),finPeriod)).reduce((s,x)=>s+x.amount,0);
+      const debtors=allFin.filter(o=>o.debt>0).sort((a,b)=>b.debt-a.debt);
+      const openOrd=id=>{setSelOrder(id);setProjTab("finance");setEditOrd(null);};
+      return(<div className="mw" style={{padding:"13px 14px",paddingBottom:90}}>
+        <PeriodChips val={finPeriod} set={setFinPeriod}/>
+        {/* Денежная сводка периода */}
+        <div style={{background:DARK,borderRadius:16,padding:"16px 18px",marginBottom:12,display:"flex",flexWrap:"wrap",gap:20,alignItems:"flex-end"}}>
+          <div style={{flex:"1 1 auto"}}>
+            <div style={{fontSize:10,color:"rgba(255,255,255,0.5)",letterSpacing:"1px",fontWeight:600,marginBottom:6}}>{"ПОСТУПИЛО"}</div>
+            <div style={{fontSize:30,fontWeight:800,color:"#4ade80",letterSpacing:-1,lineHeight:1}}>{ff(payIn)+" ₽"}</div>
+          </div>
+          <div><div style={{fontSize:10,color:"rgba(255,255,255,0.35)",marginBottom:4}}>{"Расходы"}</div><div style={{fontSize:17,fontWeight:700,color:"#ff9f0a"}}>{ff(expOut)+" ₽"}</div></div>
+          <div><div style={{fontSize:10,color:"rgba(255,255,255,0.35)",marginBottom:4}}>{"Прибыль"}</div><div style={{fontSize:17,fontWeight:700,color:payIn-expOut>=0?"#4ade80":"#ff453a"}}>{ff(payIn-expOut)+" ₽"}</div></div>
+          <div><div style={{fontSize:10,color:"rgba(255,255,255,0.35)",marginBottom:4}}>{"Долги (всего)"}</div><div style={{fontSize:17,fontWeight:700,color:totDebt>0?"#ff453a":"rgba(255,255,255,0.4)"}}>{ff(totDebt)+" ₽"}</div></div>
         </div>
+        {/* Стадии сделок за период */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:9,marginBottom:12}}>
+          {[
+            {l:"Расчёты",g:gEst,c:"#4F46E5"},
+            {l:"Договоры",g:gCon,c:"#0a84ff"},
+            {l:"Выполнено",g:gDone,c:"#16a34a"},
+            {l:"Отказы",g:gDecl,c:"#ff3b30"},
+          ].map(x=>(<div key={x.l} style={{background:T.card,borderRadius:13,padding:"12px 13px",borderTop:"3px solid "+x.c}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+              <span style={{fontSize:11,color:T.sub,fontWeight:600}}>{x.l}</span>
+              <span style={{background:x.c+"18",color:x.c,fontSize:10,fontWeight:800,borderRadius:9,padding:"1px 7px"}}>{x.g.n}</span>
+            </div>
+            <div style={{fontSize:17,fontWeight:800,color:x.g.sum>0?T.text:T.dim}}>{ff(x.g.sum)}<span style={{fontSize:11,fontWeight:400,color:T.dim}}>{" ₽"}</span></div>
+          </div>))}
+        </div>
+        {/* Дебиторка + По проектам: на десктопе рядом */}
+        <div className="info-grid">
         <div style={{background:T.card,borderRadius:15,padding:13,marginBottom:9}}>
-          <div style={{fontSize:13,fontWeight:600,color:T.text,marginBottom:9}}>{"Дебиторка"}</div>
-          {allFin.filter(o=>o.debt>0).map(o=>(<div key={o.id} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:"0.5px solid "+T.border,cursor:"pointer"}} onClick={()=>{setSelOrder(o.id);setProjTab("finance");setEditOrd(null);}}><div><div style={{fontSize:13,fontWeight:500}}>{o.name}</div><div style={{fontSize:11,color:T.sub}}>{o.client||"—"}</div></div><div style={{color:T.red,fontWeight:700,fontSize:13}}>{ff(o.debt)+" ₽"}</div></div>))}
-          {allFin.every(o=>o.debt<=0)&&<div style={{color:T.dim,fontSize:12,textAlign:"center",padding:"8px 0"}}>{"Задолженностей нет"}</div>}
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:9}}>
+            <div style={{fontSize:13,fontWeight:600,color:T.text}}>{"Дебиторка"}</div>
+            <span style={{fontSize:11,color:T.red,fontWeight:700}}>{debtors.length?ff(totDebt)+" ₽":""}</span>
+          </div>
+          {debtors.map(o=>(<div key={o.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:"0.5px solid "+T.border,cursor:"pointer"}} onClick={()=>openOrd(o.id)}>
+            <div style={{flex:1,minWidth:0,marginRight:10}}><div style={{fontSize:12,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.name}</div><div style={{fontSize:10,color:T.sub}}>{o.client||"—"}</div></div>
+            <div style={{color:T.red,fontWeight:700,fontSize:12,flexShrink:0}}>{ff(o.debt)+" ₽"}</div>
+          </div>))}
+          {!debtors.length&&<div style={{color:T.dim,fontSize:12,textAlign:"center",padding:"8px 0"}}>{"Задолженностей нет"}</div>}
         </div>
         <div style={{background:T.card,borderRadius:15,padding:13}}>
           <div style={{fontSize:13,fontWeight:600,color:T.text,marginBottom:9}}>{"По проектам"}</div>
-          {[...allFin].sort((a,b)=>b.total-a.total).filter(o=>o.total>0).map(o=>{const pct=Math.round(o.total>0?o.inc/o.total*100:0);return(<div key={o.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"0.5px solid "+T.border,cursor:"pointer"}} onClick={()=>{setSelOrder(o.id);setProjTab("finance");setEditOrd(null);}}>
+          {[...pOrders].sort((a,b)=>b.total-a.total).filter(o=>o.total>0).map(o=>{const pct=Math.round(o.total>0?o.inc/o.total*100:0);const st=stObj(o.status);return(<div key={o.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:"0.5px solid "+T.border,cursor:"pointer"}} onClick={()=>openOrd(o.id)}>
             <div style={{flex:1,minWidth:0,marginRight:12}}>
-              <div style={{fontSize:13,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.name}</div>
+              <div style={{fontSize:12,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.name}<span style={{color:st.color,fontSize:10,marginLeft:6}}>{st.label}</span></div>
               <div style={{height:3,background:T.card2,borderRadius:3,marginTop:5,overflow:"hidden"}}><div style={{height:"100%",width:`${Math.min(pct,100)}%`,background:ACC,borderRadius:3}}/></div>
             </div>
-            <div style={{textAlign:"right",flexShrink:0}}><div style={{fontSize:13,fontWeight:700}}>{ff(o.total)+" ₽"}</div><div style={{fontSize:10,color:T.sub}}>{pct+"% опл."}</div></div>
+            <div style={{textAlign:"right",flexShrink:0}}><div style={{fontSize:12,fontWeight:700}}>{ff(o.total)+" ₽"}</div><div style={{fontSize:10,color:T.sub}}>{pct+"% опл."}</div></div>
           </div>);})}
+          {!pOrders.filter(o=>o.total>0).length&&<div style={{color:T.dim,fontSize:12,textAlign:"center",padding:"8px 0"}}>{"Нет проектов за период"}</div>}
         </div>
-      </div>
-    ):(<div style={{padding:"13px 14px"}}><ProGate feature="Финансовая сводка — план PRO"><div style={{background:T.card,borderRadius:15,padding:16,display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>{["Поступило","Прибыль","Расходы","Долги"].map(l=>(<div key={l} style={{background:T.faint,borderRadius:12,padding:13}}><div style={{fontSize:10,color:T.dim,marginBottom:5}}>{l}</div><div style={{fontSize:20,fontWeight:700}}>{"—"}</div></div>))}</div></ProGate></div>))}
+        </div>
+      </div>);
+    })():(<div style={{padding:"13px 14px"}}><ProGate feature="Финансовая сводка — план PRO"><div style={{background:T.card,borderRadius:15,padding:16,display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>{["Поступило","Прибыль","Расходы","Долги"].map(l=>(<div key={l} style={{background:T.faint,borderRadius:12,padding:13}}><div style={{fontSize:10,color:T.dim,marginBottom:5}}>{l}</div><div style={{fontSize:20,fontWeight:700}}>{"—"}</div></div>))}</div></ProGate></div>))}
 
-    {/* ══ АНАЛИТИКА ══ */}
-    {tab==="stats"&&(isPro?(
-      <div className="mw" style={{padding:"13px 14px",paddingBottom:90}}>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9,marginBottom:12}}>
-          {[{l:"Проектов",v:totalOrders,c:ACC},{l:"В работе",v:inWork,c:"#ff9500"},{l:"Сдано",v:done,c:"#16a34a"},{l:"Дизайнеров",v:designers.length,c:"#7c5cbf"}].map(x=>(<div key={x.l} style={{background:T.card,borderRadius:13,padding:13,textAlign:"center"}}><div style={{fontSize:28,fontWeight:800,color:x.c}}>{x.v}</div><div style={{fontSize:11,color:T.sub,marginTop:3}}>{x.l}</div></div>))}
+    {/* ══ АНАЛИТИКА (мини-CRM) ══ */}
+    {tab==="stats"&&(isPro?(()=>{
+      const pOrders=allFin.filter(o=>inPeriod(parseRuDate(o.date),statsPeriod));
+      const withTotal=pOrders.filter(o=>o.total>0);
+      const sumTotal=withTotal.reduce((s,o)=>s+o.total,0);
+      const sumArea=pOrders.reduce((s,o)=>s+o.area,0);
+      const avgCheck=withTotal.length?sumTotal/withTotal.length:0;
+      const perM2=sumArea>0?sumTotal/sumArea:0;
+      const nClosedWon=pOrders.filter(o=>["contract","install","done"].includes(o.status)).length;
+      const nDecided=pOrders.filter(o=>["contract","install","done","declined"].includes(o.status)).length;
+      const conv=nDecided?Math.round(nClosedWon/nDecided*100):0;
+      const declPct=pOrders.length?Math.round(pOrders.filter(o=>o.status==="declined").length/pOrders.length*100):0;
+      /* Динамика: последние 6 месяцев по дате создания */
+      const now=new Date();
+      const months=Array.from({length:6},(_,i)=>{const d=new Date(now.getFullYear(),now.getMonth()-5+i,1);return d;});
+      const mData=months.map(m=>{const g=allFin.filter(o=>{const d=parseRuDate(o.date);return d&&d.getFullYear()===m.getFullYear()&&d.getMonth()===m.getMonth();});return{m,n:g.length,sum:g.reduce((s,o)=>s+o.total,0)};});
+      const mMax=Math.max(1,...mData.map(x=>x.sum));
+      const MONTH_L=["янв","фев","мар","апр","май","июн","июл","авг","сен","окт","ноя","дек"];
+      /* Дизайнеры и клиенты по объёму */
+      const desRows=designers.map(d=>{const g=pOrders.filter(o=>o.designerId===d.id||o.designer===d.name);return{d,n:g.length,sum:g.reduce((s,o)=>s+o.total,0)};}).filter(x=>x.n>0).sort((a,b)=>b.sum-a.sum);
+      const clMap={};
+      pOrders.forEach(o=>{const k=o.client||"Без клиента";if(!clMap[k])clMap[k]={n:0,sum:0};clMap[k].n++;clMap[k].sum+=o.total;});
+      const clRows=Object.entries(clMap).map(([name,v])=>({name,...v})).sort((a,b)=>b.sum-a.sum).slice(0,6);
+      return(<div className="mw" style={{padding:"13px 14px",paddingBottom:90}}>
+        <PeriodChips val={statsPeriod} set={setStatsPeriod}/>
+        {/* KPI */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:9,marginBottom:12}}>
+          {[
+            {l:"Проектов",v:String(pOrders.length),s:fn(sumArea)+" м²",c:ACC},
+            {l:"Объём",v:ff(Math.round(sumTotal)),s:"₽ по сметам",c:"#1e2530"},
+            {l:"Средний чек",v:ff(Math.round(avgCheck)),s:"₽ / проект",c:"#0a84ff"},
+            {l:"Цена м²",v:ff(Math.round(perM2)),s:"₽ / м²",c:"#7c5cbf"},
+            {l:"Конверсия",v:conv+"%",s:"в договор",c:"#16a34a"},
+            {l:"Отказы",v:declPct+"%",s:"от всех",c:declPct>30?"#ff3b30":"#8e8e93"},
+          ].map(x=>(<div key={x.l} style={{background:T.card,borderRadius:13,padding:"11px 13px"}}>
+            <div style={{fontSize:10,color:T.sub,marginBottom:3}}>{x.l}</div>
+            <div style={{fontSize:19,fontWeight:800,color:x.c,letterSpacing:-0.5}}>{x.v}</div>
+            <div style={{fontSize:9,color:T.dim,marginTop:1}}>{x.s}</div>
+          </div>))}
         </div>
-        <div style={{background:T.card,borderRadius:15,padding:13,marginBottom:9}}>
-          <div style={{fontSize:13,fontWeight:600,color:T.text,marginBottom:10}}>{"Воронка"}</div>
-          {STATUSES.map(s=>{const n=orders.filter(o=>o.status===s.id).length;const p=orders.length?n/orders.length*100:0;return(<div key={s.id} style={{marginBottom:8}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}><span style={{fontSize:12,color:"#555"}}>{s.label}</span><span style={{fontSize:12,color:T.sub}}>{n}</span></div><div style={{height:4,background:T.bg,borderRadius:4,overflow:"hidden"}}><div style={{height:"100%",width:`${p}%`,background:ACC,borderRadius:4}}/></div></div>);})}
+        <div className="info-grid">
+        <div>
+        {/* Воронка с деньгами; клик → фильтр на Проектах */}
+        <div style={{background:T.card,borderRadius:15,padding:13,marginBottom:10}}>
+          <div style={{fontSize:13,fontWeight:600,color:T.text,marginBottom:10}}>{"Воронка"}<span style={{fontSize:10,color:T.dim,fontWeight:400,marginLeft:8}}>{"клик — фильтр в Проектах"}</span></div>
+          {STATUSES.map(s=>{const g=pOrders.filter(o=>o.status===s.id);const sum=g.reduce((sm,o)=>sm+o.total,0);const p=pOrders.length?g.length/pOrders.length*100:0;return(
+            <div key={s.id} onClick={()=>{setStatusFilter(s.id);setTab("home");}} style={{marginBottom:9,cursor:"pointer"}}>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:3,alignItems:"center"}}>
+                <span style={{fontSize:12,color:T.text}}><span style={{display:"inline-block",width:8,height:8,borderRadius:2,background:s.color,marginRight:6}}/>{s.label}<b style={{marginLeft:6,color:s.color}}>{g.length}</b></span>
+                <span style={{fontSize:11,color:sum>0?T.text:T.dim,fontWeight:600}}>{ff(sum)+" ₽"}</span>
+              </div>
+              <div style={{height:5,background:T.bg,borderRadius:4,overflow:"hidden"}}><div style={{height:"100%",width:`${p}%`,background:s.color,borderRadius:4}}/></div>
+            </div>);})}
         </div>
-      </div>
-    ):(<div style={{padding:"13px 14px"}}><ProGate feature="Аналитика — план PRO"><div style={{background:T.card,borderRadius:15,padding:16,display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>{["Проектов","В работе","Сдано","Дизайнеров"].map(l=>(<div key={l} style={{background:T.faint,borderRadius:12,padding:13,textAlign:"center"}}><div style={{fontSize:28,fontWeight:800}}>{"—"}</div><div style={{fontSize:11,color:T.dim,marginTop:3}}>{l}</div></div>))}</div></ProGate></div>))}
+        {/* Динамика 6 мес */}
+        <div style={{background:T.card,borderRadius:15,padding:13}}>
+          <div style={{fontSize:13,fontWeight:600,color:T.text,marginBottom:10}}>{"Динамика · 6 месяцев"}</div>
+          <div style={{display:"flex",alignItems:"flex-end",gap:8,height:110,marginBottom:4}}>
+            {mData.map((x,i)=>(<div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3,height:"100%",justifyContent:"flex-end"}}>
+              <span style={{fontSize:8,color:T.sub,fontWeight:600}}>{x.sum>0?ff(Math.round(x.sum/1000))+"к":""}</span>
+              <div style={{width:"100%",maxWidth:34,height:`${Math.max(3,x.sum/mMax*75)}%`,background:i===5?ACC:ACC+"55",borderRadius:"5px 5px 0 0"}}/>
+              <span style={{fontSize:9,color:T.dim}}>{MONTH_L[x.m.getMonth()]}</span>
+              <span style={{fontSize:8,color:T.sub}}>{x.n>0?x.n+" пр.":""}</span>
+            </div>))}
+          </div>
+        </div>
+        </div>
+        <div>
+        {/* Дизайнеры */}
+        <div style={{background:T.card,borderRadius:15,padding:13,marginBottom:10}}>
+          <div style={{fontSize:13,fontWeight:600,color:T.text,marginBottom:9}}>{"По дизайнерам"}</div>
+          {desRows.map(x=>(<div key={x.d.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:"0.5px solid "+T.border,cursor:"pointer"}} onClick={()=>setSelDesigner(x.d.id)}>
+            <div style={{display:"flex",alignItems:"center",gap:8,flex:1,minWidth:0}}>
+              <div style={{width:28,height:28,borderRadius:14,background:"rgba(124,92,191,0.12)",display:"flex",alignItems:"center",justifyContent:"center",color:"#7c5cbf",fontSize:10,fontWeight:700,flexShrink:0}}>{av(x.d.name)}</div>
+              <div style={{minWidth:0}}><div style={{fontSize:12,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{x.d.name}</div><div style={{fontSize:10,color:T.sub}}>{x.n+" пр."}</div></div>
+            </div>
+            <div style={{fontSize:12,fontWeight:700,color:"#7c5cbf",flexShrink:0}}>{ff(x.sum)+" ₽"}</div>
+          </div>))}
+          {!desRows.length&&<div style={{color:T.dim,fontSize:12,textAlign:"center",padding:"8px 0"}}>{"Нет проектов с дизайнерами"}</div>}
+        </div>
+        {/* Клиенты */}
+        <div style={{background:T.card,borderRadius:15,padding:13}}>
+          <div style={{fontSize:13,fontWeight:600,color:T.text,marginBottom:9}}>{"Топ клиентов"}</div>
+          {clRows.map(x=>(<div key={x.name} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:"0.5px solid "+T.border}}>
+            <div style={{minWidth:0,flex:1,marginRight:10}}><div style={{fontSize:12,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{x.name}</div><div style={{fontSize:10,color:T.sub}}>{x.n+" пр."}</div></div>
+            <div style={{fontSize:12,fontWeight:700,flexShrink:0}}>{ff(x.sum)+" ₽"}</div>
+          </div>))}
+          {!clRows.length&&<div style={{color:T.dim,fontSize:12,textAlign:"center",padding:"8px 0"}}>{"Нет данных"}</div>}
+        </div>
+        </div>
+        </div>
+      </div>);
+    })():(<div style={{padding:"13px 14px"}}><ProGate feature="Аналитика — план PRO"><div style={{background:T.card,borderRadius:15,padding:16,display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>{["Проектов","В работе","Сдано","Дизайнеров"].map(l=>(<div key={l} style={{background:T.faint,borderRadius:12,padding:13,textAlign:"center"}}><div style={{fontSize:28,fontWeight:800}}>{"—"}</div><div style={{fontSize:11,color:T.dim,marginTop:3}}>{l}</div></div>))}</div></ProGate></div>))}
 
     {/* FAB */}
     {tab==="home"&&(<div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",zIndex:10}}>
