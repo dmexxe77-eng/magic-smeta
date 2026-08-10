@@ -4,6 +4,7 @@ import { uid, safeJsonParse } from "./utils/helpers.js";
 import { AUTO_SAVE_KEY, AUTO_SAVE_META_KEY, idbPut, idbGet } from "./utils/storage.js";
 import { RUNTIME_EDITED_NOMS, DELETED_NOM_IDS, USER_NOMS_CUSTOM, USER_NOMS_EDITED, ALL_NOM} from "./data/nomenclature.jsx";
 import { USER_PRESETS_OVERRIDE, USER_FAVS_OVERRIDE, INITIAL_NOM_SNAPSHOT, INITIAL_ORDERS, CALC_STATE_REF, newRoom, newR, applyNomsSnapshot, sanitizeCustomNoms, sanitizeEditedNoms, sanitizeOrdersForStorage, hydrateNomsPhotosFromIdb, loadAppStateFromIdb, saveAppStateToIdb, snapNomPrices} from "./data/presets.js";
+import "./data/buttonsStore.js"; /* модель редактора кнопок; регистрирует window.__zamerParity */
 import HomeScreen from "./components/screens/HomeScreen.jsx";
 import CalcScreen from "./components/screens/CalcScreen.jsx";
 import NewOrderFlow from "./components/screens/NewOrderFlow.jsx";
