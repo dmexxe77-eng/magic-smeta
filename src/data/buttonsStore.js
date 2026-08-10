@@ -46,6 +46,8 @@ const OPTION_SRC = {
   o_outer_angle: "corn_out",
   o_angle: "corn_all",
 };
+/* Источник количества легаси-опции (для единого списка в калькуляторе) */
+export const legacyOptionSrc = nomId => OPTION_SRC[nomId] || "manual";
 
 export function builtinBlocks() {
   return BLOCK_CFG.map((b, i) => ({ id: b.id, label: b.title, order: i }));
