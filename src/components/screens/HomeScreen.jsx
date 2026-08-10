@@ -18,6 +18,43 @@ import ManualBuilder from "../builders/ManualBuilder.jsx";
 import PdfPagePicker from "../builders/PdfPagePicker.jsx";
 
 import NomEditor from "./NomEditor.jsx";
+
+/* ── Хелперы периода. PeriodBar ВНЕ компонента: объявленный внутри рендера компонент
+   пересоздаётся с новой identity на каждый setState → React размонтирует поддерево
+   и инпуты month/date теряют фокус на каждом нажатии ── */
+const MONTHS_FULL=["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
+const MONTH_S=["янв","фев","мар","апр","май","июн","июл","авг","сен","окт","ноя","дек"];
+const shiftYm=(ym,delta)=>{const[y,m]=ym.split("-").map(Number);const d=new Date(y,m-1+delta,1);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");};
+const ymLabel=ym=>{const[y,m]=(ym||"").split("-").map(Number);return(MONTHS_FULL[(m||1)-1]||"")+" "+(y||"");};
+/* Локальная дата "YYYY-MM-DD" — new Date(iso) парсит как UTC-полночь и в RU-поясах сдвигает день */
+const parseIsoLocal=s=>{if(!s)return null;const m=String(s).match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);if(m)return new Date(+m[1],+m[2]-1,+m[3]);const d=new Date(s);return isNaN(d)?null:d;};
+/* Локальный штамп сегодняшней даты (toISOString даёт UTC — до 10:00 во Владивостоке это вчера) */
+const localToday=()=>{const n=new Date();return n.getFullYear()+"-"+String(n.getMonth()+1).padStart(2,"0")+"-"+String(n.getDate()).padStart(2,"0");};
+function PeriodBar({mode,setMode,ym,setYm,from,setFrom,to,setTo}){
+  const inputS={background:T.card,border:"0.5px solid "+T.border,borderRadius:8,padding:"5px 10px",fontSize:12,color:T.text,fontFamily:"inherit",outline:"none"};
+  const arrowS={background:T.card,border:"0.5px solid "+T.border,borderRadius:8,width:30,height:30,cursor:"pointer",color:T.text,fontSize:14,fontFamily:"inherit",flexShrink:0};
+  const DK=T.text;
+  return(<div style={{marginBottom:12}}>
+    <div style={{display:"flex",gap:6,overflowX:"auto",alignItems:"center",paddingBottom:2}}>
+      {[{id:"month",l:mode==="month"?ymLabel(ym):"Месяц"},{id:"quarter",l:"Квартал"},{id:"year",l:"Год"},{id:"all",l:"Всё время"},{id:"custom",l:"Свой период"}].map(p=>{const a=mode===p.id;return(
+        <button key={p.id} onClick={()=>setMode(p.id)} style={{flex:"0 0 auto",background:a?DK:T.card,border:"0.5px solid "+(a?DK:T.border),borderRadius:16,padding:"5px 14px",color:a?T.card:T.sub,fontSize:11,fontWeight:a?700:400,cursor:"pointer",fontFamily:"inherit"}}>{p.l}</button>);})}
+    </div>
+    {mode==="month"&&(<div style={{display:"flex",gap:6,alignItems:"center",marginTop:8}}>
+      <button onClick={()=>setYm(shiftYm(ym,-1))} title="Предыдущий месяц" style={arrowS}>{"‹"}</button>
+      <input type="month" value={ym} onChange={e=>{if(e.target.value)setYm(e.target.value);}} style={inputS}/>
+      <button onClick={()=>setYm(shiftYm(ym,1))} title="Следующий месяц" style={arrowS}>{"›"}</button>
+      <span style={{fontSize:12,color:T.text,fontWeight:700}}>{ymLabel(ym)}</span>
+    </div>)}
+    {mode==="custom"&&(<div style={{display:"flex",gap:6,alignItems:"center",marginTop:8,flexWrap:"wrap"}}>
+      <span style={{fontSize:11,color:T.sub}}>{"с"}</span>
+      <input type="date" value={from} onChange={e=>setFrom(e.target.value)} style={inputS}/>
+      <span style={{fontSize:11,color:T.sub}}>{"по"}</span>
+      <input type="date" value={to} onChange={e=>setTo(e.target.value)} style={inputS}/>
+      {(from||to)&&<button onClick={()=>{setFrom("");setTo("");}} style={{background:"none",border:"none",color:T.red,fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>{"сброс"}</button>}
+    </div>)}
+  </div>);
+}
+
 function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme,onFullExport,onSaveNow,onImport,saveStatus,returnOrderId}){
   const[tab,setTab]       = useState("home");
   const[showMenu,setShowMenu] = useState(false);
@@ -232,7 +269,7 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
         <div style={{padding:"12px 14px 4px",display:"flex",gap:6,alignItems:"center",overflowX:"auto",background:T.card,borderBottom:"0.5px solid "+T.border}}>
           {STATUSES.map(s=>{const a=s.id===ord.status;return(
             <button key={s.id}
-              onClick={isPro?()=>{onStatusChange(ord.id,s.id);setOrders(prev=>prev.map(o=>o.id===ord.id?{...o,status:s.id,statusDates:{...(o.statusDates||{}),[s.id]:new Date().toISOString().slice(0,10)}}:o));}:undefined}
+              onClick={isPro?()=>{if(ord.status===s.id)return;onStatusChange(ord.id,s.id);setOrders(prev=>prev.map(o=>o.id===ord.id?{...o,status:s.id,statusDates:{...(o.statusDates||{}),[s.id]:localToday()}}:o));}:undefined}
               style={{flex:"0 0 auto",padding:"6px 14px",borderRadius:20,border:a?`1.5px solid ${ACC}`:"1.5px solid #eee",cursor:isPro?"pointer":"default",fontFamily:"inherit",fontSize:10,fontWeight:a?700:400,background:a?ABGC:"#fff",color:a?ACC:"#bbb"}}>
               {s.label}
             </button>
@@ -523,53 +560,32 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
   /* ══ ГЛАВНЫЙ ЭКРАН ══ */
   const totalOrders=orders.length;
   const inWork=orders.filter(o=>["estimate","discuss","contract","install"].includes(o.status)).length;
-  /* ── Период: парсинг дат и диапазоны ── */
+  /* ── Период: парсинг дат и диапазоны (PeriodBar и календарные хелперы — на уровне модуля) ── */
   const parseRuDate=s=>{if(!s)return null;const m=String(s).match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);if(m)return new Date(+m[3],+m[2]-1,+m[1]);const d=new Date(s);return isNaN(d)?null:d;};
-  const MONTHS_FULL=["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
-  const MONTH_S=["янв","фев","мар","апр","май","июн","июл","авг","сен","окт","ноя","дек"];
-  const shiftYm=(ym,delta)=>{const[y,m]=ym.split("-").map(Number);const d=new Date(y,m-1+delta,1);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");};
-  const ymLabel=ym=>{const[y,m]=(ym||"").split("-").map(Number);return(MONTHS_FULL[(m||1)-1]||"")+" "+(y||"");};
   const periodRange=(mode,ym,from,to)=>{
     const now=new Date();
     if(mode==="month"){const[y,m]=(ym||"").split("-").map(Number);const Y=y||now.getFullYear(),M=(m||now.getMonth()+1)-1;return{start:new Date(Y,M,1),end:new Date(Y,M+1,1)};}
     if(mode==="quarter"){const q=Math.floor(now.getMonth()/3)*3;return{start:new Date(now.getFullYear(),q,1),end:new Date(now.getFullYear(),q+3,1)};}
     if(mode==="year")return{start:new Date(now.getFullYear(),0,1),end:new Date(now.getFullYear()+1,0,1)};
-    if(mode==="custom"){const s=from?new Date(from):null;const e=to?new Date(new Date(to).getTime()+86400000):null;return{start:s&&!isNaN(s)?s:null,end:e&&!isNaN(e)?e:null};}
+    /* границы — локальные даты; new Date("YYYY-MM-DD") дал бы UTC-полночь и терял первый день диапазона */
+    if(mode==="custom"){const s=parseIsoLocal(from);const e0=parseIsoLocal(to);const e=e0?new Date(e0.getFullYear(),e0.getMonth(),e0.getDate()+1):null;return{start:s,end:e};}
     return{start:null,end:null};
   };
   const inRange=(d,r)=>{if(!r.start&&!r.end)return true;if(!d||isNaN(d))return false;if(r.start&&d<r.start)return false;if(r.end&&d>=r.end)return false;return true;};
   /* «Договор заключён» = договор подписан ИЛИ монтаж идёт ИЛИ выполнен */
   const WON_STATUSES=["contract","install","done"];
-  /* Даты смены статуса пишутся в order.statusDates при переключении; для старых проектов — фолбэк на дату создания */
-  const contractDate=o=>{const sd=o.statusDates||{};const iso=sd.contract||sd.install||sd.done;if(iso){const d=new Date(iso);if(!isNaN(d))return d;}return WON_STATUSES.includes(o.status)?parseRuDate(o.date):null;};
-  const doneDate=o=>{const sd=o.statusDates||{};if(sd.done){const d=new Date(sd.done);if(!isNaN(d))return d;}return o.status==="done"?parseRuDate(o.date):null;};
-  const dateInputS={background:T.card,border:"0.5px solid "+T.border,borderRadius:8,padding:"5px 10px",fontSize:12,color:T.text,fontFamily:"inherit",outline:"none"};
-  const arrowBtnS={background:T.card,border:"0.5px solid "+T.border,borderRadius:8,width:30,height:30,cursor:"pointer",color:T.text,fontSize:14,fontFamily:"inherit",flexShrink:0};
-  const PeriodBar=({mode,setMode,ym,setYm,from,setFrom,to,setTo})=>(<div style={{marginBottom:12}}>
-    <div style={{display:"flex",gap:6,overflowX:"auto",alignItems:"center",paddingBottom:2}}>
-      {[{id:"month",l:mode==="month"?ymLabel(ym):"Месяц"},{id:"quarter",l:"Квартал"},{id:"year",l:"Год"},{id:"all",l:"Всё время"},{id:"custom",l:"Свой период"}].map(p=>{const a=mode===p.id;return(
-        <button key={p.id} onClick={()=>setMode(p.id)} style={{flex:"0 0 auto",background:a?DARK:T.card,border:"0.5px solid "+(a?DARK:T.border),borderRadius:16,padding:"5px 14px",color:a?"#fff":T.sub,fontSize:11,fontWeight:a?700:400,cursor:"pointer",fontFamily:"inherit"}}>{p.l}</button>);})}
-    </div>
-    {mode==="month"&&(<div style={{display:"flex",gap:6,alignItems:"center",marginTop:8}}>
-      <button onClick={()=>setYm(shiftYm(ym,-1))} title="Предыдущий месяц" style={arrowBtnS}>{"‹"}</button>
-      <input type="month" value={ym} onChange={e=>{if(e.target.value)setYm(e.target.value);}} style={dateInputS}/>
-      <button onClick={()=>setYm(shiftYm(ym,1))} title="Следующий месяц" style={arrowBtnS}>{"›"}</button>
-      <span style={{fontSize:12,color:T.text,fontWeight:700}}>{ymLabel(ym)}</span>
-    </div>)}
-    {mode==="custom"&&(<div style={{display:"flex",gap:6,alignItems:"center",marginTop:8,flexWrap:"wrap"}}>
-      <span style={{fontSize:11,color:T.sub}}>{"с"}</span>
-      <input type="date" value={from} onChange={e=>setFrom(e.target.value)} style={dateInputS}/>
-      <span style={{fontSize:11,color:T.sub}}>{"по"}</span>
-      <input type="date" value={to} onChange={e=>setTo(e.target.value)} style={dateInputS}/>
-      {(from||to)&&<button onClick={()=>{setFrom("");setTo("");}} style={{background:"none",border:"none",color:T.red,fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>{"сброс"}</button>}
-    </div>)}
-  </div>);
+  /* Даты событий — по statusDates с гейтом на ТЕКУЩИЙ статус: откат/отказ убирает проект из
+     договорной статистики (иначе KPI и таблица противоречат друг другу). Фолбэк — дата создания. */
+  const contractDate=o=>{if(!WON_STATUSES.includes(o.status))return null;const sd=o.statusDates||{};return parseIsoLocal(sd.contract||sd.install||sd.done)||parseRuDate(o.date);};
+  const doneDate=o=>{if(o.status!=="done")return null;const sd=o.statusDates||{};return parseIsoLocal(sd.done)||parseRuDate(o.date);};
+  const declinedDate=o=>{if(o.status!=="declined")return null;const sd=o.statusDates||{};return parseIsoLocal(sd.declined)||parseRuDate(o.date);};
   const done=orders.filter(o=>o.status==="done").length;
   const allFin=orders.map(o=>({...o,...calcFin(o)}));
   const totRev=allFin.reduce((s,o)=>s+o.inc,0);
   const totExp=allFin.reduce((s,o)=>s+o.exp,0);
   const totProf=allFin.reduce((s,o)=>s+o.profit,0);
-  const totDebt=allFin.reduce((s,o)=>s+Math.max(o.debt,0),0);
+  /* Долги — только остатки доплат по проектам с заключённым договором (подписан/монтаж/выполнен) */
+  const totDebt=allFin.filter(o=>WON_STATUSES.includes(o.status)).reduce((s,o)=>s+Math.max(o.debt,0),0);
 
   return(<div style={{minHeight:"100vh",background:BG,fontFamily:"'Inter',-apple-system,sans-serif",color:"#111"}}>
     <TopBar/>
@@ -776,9 +792,9 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
       const gDone=stage(["done"]);
       const gDecl=stage(["declined"]);
       /* Деньги периода — по датам платежей/расходов */
-      const payIn=orders.flatMap(o=>(o.payments||[]).filter(x=>x.type==="income")).filter(p=>inRange(new Date(p.date),R)).reduce((s,x)=>s+x.amount,0);
-      const expOut=orders.flatMap(o=>(o.expenses||[])).filter(e=>inRange(new Date(e.date),R)).reduce((s,x)=>s+x.amount,0);
-      const debtors=allFin.filter(o=>o.debt>0).sort((a,b)=>b.debt-a.debt);
+      const payIn=orders.flatMap(o=>(o.payments||[]).filter(x=>x.type==="income")).filter(p=>inRange(parseIsoLocal(p.date),R)).reduce((s,x)=>s+x.amount,0);
+      const expOut=orders.flatMap(o=>(o.expenses||[])).filter(e=>inRange(parseIsoLocal(e.date),R)).reduce((s,x)=>s+x.amount,0);
+      const debtors=allFin.filter(o=>WON_STATUSES.includes(o.status)&&o.debt>0).sort((a,b)=>b.debt-a.debt);
       const openOrd=id=>{setSelOrder(id);setProjTab("finance");setEditOrd(null);};
       return(<div className="mw" style={{padding:"13px 14px",paddingBottom:90}}>
         <PeriodBar mode={finPeriod} setMode={setFinPeriod} ym={finYm} setYm={setFinYm} from={finFrom} setFrom={setFinFrom} to={finTo} setTo={setFinTo}/>
@@ -790,7 +806,7 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
           </div>
           <div><div style={{fontSize:10,color:"rgba(255,255,255,0.35)",marginBottom:4}}>{"Расходы"}</div><div style={{fontSize:17,fontWeight:700,color:"#ff9f0a"}}>{ff(expOut)+" ₽"}</div></div>
           <div><div style={{fontSize:10,color:"rgba(255,255,255,0.35)",marginBottom:4}}>{"Прибыль"}</div><div style={{fontSize:17,fontWeight:700,color:payIn-expOut>=0?"#4ade80":"#ff453a"}}>{ff(payIn-expOut)+" ₽"}</div></div>
-          <div><div style={{fontSize:10,color:"rgba(255,255,255,0.35)",marginBottom:4}}>{"Долги (всего)"}</div><div style={{fontSize:17,fontWeight:700,color:totDebt>0?"#ff453a":"rgba(255,255,255,0.4)"}}>{ff(totDebt)+" ₽"}</div></div>
+          <div><div style={{fontSize:10,color:"rgba(255,255,255,0.35)",marginBottom:4}}>{"Долги по договорам"}</div><div style={{fontSize:17,fontWeight:700,color:totDebt>0?"#ff453a":"rgba(255,255,255,0.4)"}}>{ff(totDebt)+" ₽"}</div></div>
         </div>
         {/* Стадии сделок за период */}
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:9,marginBottom:12}}>
@@ -844,17 +860,18 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
       const sumArea=pOrders.reduce((s,o)=>s+o.area,0);
       const avgCheck=withTotal.length?sumTotal/withTotal.length:0;
       const perM2=sumArea>0?sumTotal/sumArea:0;
-      /* Заключённые договоры: подписан + монтаж идёт + выполнен */
-      const won=pOrders.filter(o=>WON_STATUSES.includes(o.status));
+      /* События периода — по дате смены статуса (та же атрибуция, что и в помесячной таблице,
+         иначе KPI и таблица на одном экране показывают разные числа) */
+      const won=allFin.filter(o=>{const d=contractDate(o);return d&&inRange(d,R);});
       const wonSum=won.reduce((s,o)=>s+o.total,0);
-      const doneG=pOrders.filter(o=>o.status==="done");
+      const doneG=allFin.filter(o=>{const d=doneDate(o);return d&&inRange(d,R);});
       const doneSum=doneG.reduce((s,o)=>s+o.total,0);
       const doneArea=doneG.reduce((s,o)=>s+o.area,0);
-      const decl=pOrders.filter(o=>o.status==="declined");
+      const decl=allFin.filter(o=>{const d=declinedDate(o);return d&&inRange(d,R);});
       const declSum=decl.reduce((s,o)=>s+o.total,0);
       const nDecided=won.length+decl.length;
       const conv=nDecided?Math.round(won.length/nDecided*100):0;
-      const declPct=pOrders.length?Math.round(decl.length/pOrders.length*100):0;
+      const declPct=nDecided?100-conv:0;
       /* Динамика: последние 6 месяцев. Договоры/выполнено — по дате смены статуса (statusDates), для старых проектов — по дате создания */
       const now=new Date();
       const months=Array.from({length:6},(_,i)=>new Date(now.getFullYear(),now.getMonth()-5+i,1));

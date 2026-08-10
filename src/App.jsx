@@ -191,7 +191,14 @@ export default function App(){
     setScreen("calc");
   };
   /* Пишем дату смены статуса — нужна для помесячной аналитики (договоров/выполнено в месяц) */
-  const changeStatus=(id,status)=>setOrders(prev=>prev.map(o=>o.id===id?{...o,status,statusDates:{...(o.statusDates||{}),[status]:new Date().toISOString().slice(0,10)}}:o));
+  /* Дата статуса — ЛОКАЛЬНАЯ (toISOString даёт UTC: до 10:00 во Владивостоке это вчера).
+     Повторный клик по активному статусу не перештамповывает дату. */
+  const changeStatus=(id,status)=>setOrders(prev=>prev.map(o=>{
+    if(o.id!==id||o.status===status)return o;
+    const n=new Date();
+    const stamp=n.getFullYear()+"-"+String(n.getMonth()+1).padStart(2,"0")+"-"+String(n.getDate()).padStart(2,"0");
+    return{...o,status,statusDates:{...(o.statusDates||{}),[status]:stamp}};
+  }));
   const addClient=(name)=>{const id="c"+uid();setAppClients(p=>[...p,{id,name,phone:"",email:"",address:""}]);return id;};
   const addDesigner=(name,studio)=>{const id="d"+uid();setAppDesigners(p=>[...p,{id,name,studio:studio||"",phone:"",bonusType:"pct",bonusRate:5,note:""}]);return id;};
   const createOrder=(info,method)=>{
