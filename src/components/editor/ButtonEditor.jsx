@@ -15,6 +15,7 @@ export default function ButtonEditor({ presets, sharedFavs, customBlocks, initia
   const [cfg, setCfg] = useState(() => migrateLegacy(presets, sharedFavs, customBlocks || []));
   const [addBlockOpen, setAddBlockOpen] = useState(false);
   const [newBlockName, setNewBlockName] = useState("");
+  const [delBlockId, setDelBlockId] = useState(null); /* двухшаговое подтверждение удаления блока (window.confirm в webview глушится) */
   const [blockId, setBlockId] = useState(initialBlockId || "canvas");
   const [presetId, setPresetId] = useState(initialPresetId || null);
   const [srcSheetIdx, setSrcSheetIdx] = useState(null);   /* index строки, для которой открыта шторка источника */
@@ -126,7 +127,7 @@ export default function ButtonEditor({ presets, sharedFavs, customBlocks, initia
           const a = b.id === blockId;
           return (<button key={b.id} onClick={() => { setBlockId(b.id); setDelConfirm(false); }} style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: 6, background: a ? IND : "#fff", color: a ? "#fff" : "#5a6070", border: "1px solid " + (a ? IND : "#f1f1f8"), borderRadius: 10, padding: "7px 13px", fontSize: 11.5, fontWeight: a ? 700 : 500, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
             {b.label}
-            {a && b.custom && <span onClick={e => { e.stopPropagation(); if (window.confirm("Удалить блок «" + b.label + "» вместе с его кнопками?")) deleteBlock(b.id); }} style={{ fontSize: 12, fontWeight: 800, opacity: 0.8 }}>{"✕"}</span>}
+            {a && b.custom && <span onClick={e => { e.stopPropagation(); if (delBlockId === b.id) { deleteBlock(b.id); setDelBlockId(null); } else { setDelBlockId(b.id); setTimeout(() => setDelBlockId(x => x === b.id ? null : x), 3000); } }} style={delBlockId === b.id ? { fontSize: 10, fontWeight: 800, background: "#ff3b30", color: "#fff", borderRadius: 6, padding: "2px 7px" } : { fontSize: 12, fontWeight: 800, opacity: 0.8 }}>{delBlockId === b.id ? "точно?" : "✕"}</span>}
           </button>);
         })}
         <button onClick={() => { setAddBlockOpen(true); setNewBlockName(""); }} style={{ flex: "0 0 auto", background: "transparent", color: IND, border: "1.5px dashed " + IND + "66", borderRadius: 10, padding: "7px 13px", fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>{"+ блок"}</button>
