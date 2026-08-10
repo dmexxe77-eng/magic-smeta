@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import NomEditor from "./NomEditor.jsx";
+import ButtonEditor from "../editor/ButtonEditor.jsx";
 import { T, setT, THEMES } from "../../theme.js";
 import { fmt, uid, deep, safeStr } from "../../utils/helpers.js";
 import { calcPoly, getAngles, countAngles, effectiveOq, getAutoOq } from "../../utils/geometry.js";
@@ -125,6 +126,27 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
   const[showNomEditor,setShowNomEditor]=useState(false);
   const[nomEditorId,setNomEditorId]=useState(null);
   const openNomEditorFromCalc=id=>{setNomEditorId(id);setShowNomEditor(true);};
+
+  /* ── Редактор кнопок ── */
+  const[btnEd,setBtnEd]=useState(null); /* {cat, pid} */
+  const openButtonEditor=useCallback((cat,pid)=>setBtnEd({cat,pid}),[]);
+  const applyButtonEditor=(newPresets,favs)=>{
+    setPresets(newPresets);
+    setSharedFavs(p=>({...p,...favs}));
+    /* ТЗ 3.5: скрыли/удалили выбранную кнопку — блок переключается на первую видимую */
+    setRooms(prev=>{
+      let changed=false;
+      const fix=(inst,cat)=>{
+        if(!inst||!inst.btnId)return inst;
+        const vis=favs[cat]||[];
+        if(!vis.length||vis.includes(inst.btnId))return inst;
+        changed=true;return{...inst,btnId:vis[0]};
+      };
+      const fixList=(arr,cat)=>(arr||[]).map(x=>fix(x,cat));
+      const next=prev.map(r=>({...r,canvas:fix(r.canvas,"canvas"),mainProf:fix(r.mainProf,"main"),extraCanvas:fixList(r.extraCanvas,"canvas"),extras:fixList(r.extras,"extra"),lights:fixList(r.lights,"light"),tracks:fixList(r.tracks,"track"),curtains:fixList(r.curtains,"curtain")}));
+      return changed?next:prev;
+    });
+  };
 
   const ensureHtml2PdfLib=async()=>{
     const load=(src,msg)=>new Promise((resolve,reject)=>{
@@ -415,17 +437,20 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
       {/* Quick Nom Editor */}
       {showNomEditor&&<NomEditor onClose={()=>setShowNomEditor(false)} initialEditId={nomEditorId}/>}
 
+      {/* Редактор кнопок */}
+      {btnEd&&<ButtonEditor presets={presets} sharedFavs={sharedFavs} initialBlockId={btnEd.cat} initialPresetId={btnEd.pid} onApply={applyButtonEditor} onClose={()=>setBtnEd(null)}/>}
+
       {/* Blocks */}
-      <CalcBlock config={BLOCK_CFG[0]} favIds={sharedFavs["canvas"]} setFavIds={ids=>setSharedFavs(p=>({...p,"canvas":ids}))} instance={{...(r.canvas||{}),verts:r.v}} onChange={v=>{const{verts,...rest}=v;const cleaned={...rest,iq:{}};u(r.id,rm=>{rm.canvas=cleaned;return rm;});if(cleaned.applyAll){rooms.forEach(rm2=>{if(rm2.id===r.id)return;const a2=gA(rm2);u(rm2.id,rm3=>{rm3.canvas={...cleaned,id:rm3.canvas?.id||uid(),qty:a2,iq:{}};return rm3;});});}}} presets={presets} onPresets={setPresets} autoAngles={autoAngles} onApplyAll={()=>{const cv={...(r.canvas||{}),iq:{}};rooms.forEach(rm2=>{if(rm2.id===r.id)return;const a2=gA(rm2);u(rm2.id,rm3=>{rm3.canvas={...JSON.parse(JSON.stringify(cv)),id:rm3.canvas?.id||uid(),qty:a2,iq:{}};return rm3;});});}} onEditNom={openNomEditorFromCalc} nomSnap={nomSnapshot}/>
+      <CalcBlock config={BLOCK_CFG[0]} favIds={sharedFavs["canvas"]} setFavIds={ids=>setSharedFavs(p=>({...p,"canvas":ids}))} instance={{...(r.canvas||{}),verts:r.v}} onChange={v=>{const{verts,...rest}=v;const cleaned={...rest,iq:{}};u(r.id,rm=>{rm.canvas=cleaned;return rm;});if(cleaned.applyAll){rooms.forEach(rm2=>{if(rm2.id===r.id)return;const a2=gA(rm2);u(rm2.id,rm3=>{rm3.canvas={...cleaned,id:rm3.canvas?.id||uid(),qty:a2,iq:{}};return rm3;});});}}} presets={presets} onPresets={setPresets} autoAngles={autoAngles} onApplyAll={()=>{const cv={...(r.canvas||{}),iq:{}};rooms.forEach(rm2=>{if(rm2.id===r.id)return;const a2=gA(rm2);u(rm2.id,rm3=>{rm3.canvas={...JSON.parse(JSON.stringify(cv)),id:rm3.canvas?.id||uid(),qty:a2,iq:{}};return rm3;});});}} onEditNom={openNomEditorFromCalc} onOpenEditor={openButtonEditor} nomSnap={nomSnapshot}/>
       {/* Доп. полотна */}
-      {(r.extraCanvas||[]).map((ec,i)=>(<div key={ec.id} style={{position:"relative"}}><span onClick={()=>u(r.id,rm=>{rm.extraCanvas.splice(i,1);return rm;})} style={{position:"absolute",top:4,right:36,color:T.red,cursor:"pointer",fontSize:13,zIndex:2,padding:4,background:T.card,borderRadius:6}}>{"×"}</span><CalcBlock config={{...BLOCK_CFG[0],title:"Доп. полотно #"+(i+1)}} favIds={sharedFavs["canvas"]} setFavIds={ids=>setSharedFavs(p=>({...p,"canvas":ids}))} instance={ec} onChange={v=>u(r.id,rm=>{rm.extraCanvas[i]=v;return rm;})} presets={presets} onPresets={setPresets} onEditNom={openNomEditorFromCalc} nomSnap={nomSnapshot}/></div>))}
+      {(r.extraCanvas||[]).map((ec,i)=>(<div key={ec.id} style={{position:"relative"}}><span onClick={()=>u(r.id,rm=>{rm.extraCanvas.splice(i,1);return rm;})} style={{position:"absolute",top:4,right:36,color:T.red,cursor:"pointer",fontSize:13,zIndex:2,padding:4,background:T.card,borderRadius:6}}>{"×"}</span><CalcBlock config={{...BLOCK_CFG[0],title:"Доп. полотно #"+(i+1)}} favIds={sharedFavs["canvas"]} setFavIds={ids=>setSharedFavs(p=>({...p,"canvas":ids}))} instance={ec} onChange={v=>u(r.id,rm=>{rm.extraCanvas[i]=v;return rm;})} presets={presets} onPresets={setPresets} onEditNom={openNomEditorFromCalc} onOpenEditor={openButtonEditor} nomSnap={nomSnapshot}/></div>))}
       <div onClick={()=>u(r.id,rm=>{if(!rm.extraCanvas)rm.extraCanvas=[];rm.extraCanvas.push({id:uid(),btnId:"btn_c_msd",qty:0,off:{},oq:{}});return rm;})} style={{textAlign:"center",padding:6,color:"#9aa0b2",fontSize:10.5,fontWeight:700,cursor:"pointer",background:"transparent",marginBottom:8}}>{"+ Доп. полотно"}</div>
-      <CalcBlock config={BLOCK_CFG[1]} favIds={sharedFavs["main"]} setFavIds={ids=>setSharedFavs(p=>({...p,"main":ids}))} instance={{...(r.mainProf||{}),_subTotal:(r.extras||[]).filter(x=>x.subP).reduce((s,x)=>s+(x.qty||0),0)+(r.curtains||[]).filter(x=>x.subP).reduce((s,x)=>s+(x.qty||0),0)}} onChange={v=>{u(r.id,rm=>{rm.mainProf=v;return rm;});if(v.applyAll){rooms.forEach(rm2=>{if(rm2.id===r.id)return;const p2=gP(rm2);const angs2=getAngles((rm2.v||[]).map(pp=>[pp[0]*1000,pp[1]*1000]));const inn2=angs2.filter(d=>d===90).length,out2=angs2.filter(d=>d===270).length;u(rm2.id,rm3=>{rm3.mainProf={...JSON.parse(JSON.stringify(v)),id:rm3.mainProf?.id||uid(),qty:p2,oq:{...v.oq,"o_inner_angle":inn2,"o_outer_angle":out2,"o_angle":inn2+out2}};return rm3;});});}}} presets={presets} onPresets={setPresets} autoAngles={autoAngles} onApplyAll={()=>{const mp=r.mainProf||{};rooms.forEach(rm2=>{if(rm2.id===r.id)return;const p2=gP(rm2);const angs2=getAngles((rm2.v||[]).map(pp=>[pp[0]*1000,pp[1]*1000]));const inn2=angs2.filter(d=>d===90).length,out2=angs2.filter(d=>d===270).length;u(rm2.id,rm3=>{rm3.mainProf={...JSON.parse(JSON.stringify(mp)),id:rm3.mainProf?.id||uid(),qty:p2,oq:{...mp.oq,"o_inner_angle":inn2,"o_outer_angle":out2,"o_angle":inn2+out2}};return rm3;});});}} onEditNom={openNomEditorFromCalc} nomSnap={nomSnapshot}/>
-      <MultiBlock config={BLOCK_CFG[2]} favIds={sharedFavs["extra"]} setFavIds={ids=>setSharedFavs(p=>({...p,"extra":ids}))} list={r.extras||[]} setList={v=>{const fn=typeof v==="function"?v:()=>v;u(r.id,rm=>{rm.extras=fn(rm.extras||[]);return rm;});}} presets={presets} onPresets={setPresets} onEditNom={openNomEditorFromCalc} nomSnap={nomSnapshot}/>
-      <MultiBlock config={BLOCK_CFG[3]} favIds={sharedFavs["light"]} setFavIds={ids=>setSharedFavs(p=>({...p,"light":ids}))} list={r.lights||[]} setList={v=>{const fn=typeof v==="function"?v:()=>v;u(r.id,rm=>{rm.lights=fn(rm.lights||[]);return rm;});}} presets={presets} onPresets={setPresets} onEditNom={openNomEditorFromCalc} nomSnap={nomSnapshot}/>
-      <MultiBlock config={BLOCK_CFG[4]} favIds={sharedFavs["track"]} setFavIds={ids=>setSharedFavs(p=>({...p,"track":ids}))} list={r.tracks||[]} setList={v=>{const fn=typeof v==="function"?v:()=>v;u(r.id,rm=>{rm.tracks=fn(rm.tracks||[]);return rm;});}} presets={presets} onPresets={setPresets} onEditNom={openNomEditorFromCalc} nomSnap={nomSnapshot}/>
-      <MultiBlock config={BLOCK_CFG[5]} favIds={sharedFavs["curtain"]} setFavIds={ids=>setSharedFavs(p=>({...p,"curtain":ids}))} list={r.curtains||[]} setList={v=>{const fn=typeof v==="function"?v:()=>v;u(r.id,rm=>{rm.curtains=fn(rm.curtains||[]);return rm;});}} presets={presets} onPresets={setPresets} onEditNom={openNomEditorFromCalc} nomSnap={nomSnapshot}/>
-      <ExtraBlock list={r.extraItems||[]} setList={v=>{const fn=typeof v==="function"?v:()=>v;u(r.id,rm=>{rm.extraItems=fn(rm.extraItems||[]);return rm;});}} onEditNom={openNomEditorFromCalc} nomSnap={nomSnapshot}/>
+      <CalcBlock config={BLOCK_CFG[1]} favIds={sharedFavs["main"]} setFavIds={ids=>setSharedFavs(p=>({...p,"main":ids}))} instance={{...(r.mainProf||{}),_subTotal:(r.extras||[]).filter(x=>x.subP).reduce((s,x)=>s+(x.qty||0),0)+(r.curtains||[]).filter(x=>x.subP).reduce((s,x)=>s+(x.qty||0),0)}} onChange={v=>{u(r.id,rm=>{rm.mainProf=v;return rm;});if(v.applyAll){rooms.forEach(rm2=>{if(rm2.id===r.id)return;const p2=gP(rm2);const angs2=getAngles((rm2.v||[]).map(pp=>[pp[0]*1000,pp[1]*1000]));const inn2=angs2.filter(d=>d===90).length,out2=angs2.filter(d=>d===270).length;u(rm2.id,rm3=>{rm3.mainProf={...JSON.parse(JSON.stringify(v)),id:rm3.mainProf?.id||uid(),qty:p2,oq:{...v.oq,"o_inner_angle":inn2,"o_outer_angle":out2,"o_angle":inn2+out2}};return rm3;});});}}} presets={presets} onPresets={setPresets} autoAngles={autoAngles} onApplyAll={()=>{const mp=r.mainProf||{};rooms.forEach(rm2=>{if(rm2.id===r.id)return;const p2=gP(rm2);const angs2=getAngles((rm2.v||[]).map(pp=>[pp[0]*1000,pp[1]*1000]));const inn2=angs2.filter(d=>d===90).length,out2=angs2.filter(d=>d===270).length;u(rm2.id,rm3=>{rm3.mainProf={...JSON.parse(JSON.stringify(mp)),id:rm3.mainProf?.id||uid(),qty:p2,oq:{...mp.oq,"o_inner_angle":inn2,"o_outer_angle":out2,"o_angle":inn2+out2}};return rm3;});});}} onEditNom={openNomEditorFromCalc} onOpenEditor={openButtonEditor} nomSnap={nomSnapshot}/>
+      <MultiBlock config={BLOCK_CFG[2]} favIds={sharedFavs["extra"]} setFavIds={ids=>setSharedFavs(p=>({...p,"extra":ids}))} list={r.extras||[]} setList={v=>{const fn=typeof v==="function"?v:()=>v;u(r.id,rm=>{rm.extras=fn(rm.extras||[]);return rm;});}} presets={presets} onPresets={setPresets} onEditNom={openNomEditorFromCalc} onOpenEditor={openButtonEditor} nomSnap={nomSnapshot}/>
+      <MultiBlock config={BLOCK_CFG[3]} favIds={sharedFavs["light"]} setFavIds={ids=>setSharedFavs(p=>({...p,"light":ids}))} list={r.lights||[]} setList={v=>{const fn=typeof v==="function"?v:()=>v;u(r.id,rm=>{rm.lights=fn(rm.lights||[]);return rm;});}} presets={presets} onPresets={setPresets} onEditNom={openNomEditorFromCalc} onOpenEditor={openButtonEditor} nomSnap={nomSnapshot}/>
+      <MultiBlock config={BLOCK_CFG[4]} favIds={sharedFavs["track"]} setFavIds={ids=>setSharedFavs(p=>({...p,"track":ids}))} list={r.tracks||[]} setList={v=>{const fn=typeof v==="function"?v:()=>v;u(r.id,rm=>{rm.tracks=fn(rm.tracks||[]);return rm;});}} presets={presets} onPresets={setPresets} onEditNom={openNomEditorFromCalc} onOpenEditor={openButtonEditor} nomSnap={nomSnapshot}/>
+      <MultiBlock config={BLOCK_CFG[5]} favIds={sharedFavs["curtain"]} setFavIds={ids=>setSharedFavs(p=>({...p,"curtain":ids}))} list={r.curtains||[]} setList={v=>{const fn=typeof v==="function"?v:()=>v;u(r.id,rm=>{rm.curtains=fn(rm.curtains||[]);return rm;});}} presets={presets} onPresets={setPresets} onEditNom={openNomEditorFromCalc} onOpenEditor={openButtonEditor} nomSnap={nomSnapshot}/>
+      <ExtraBlock list={r.extraItems||[]} setList={v=>{const fn=typeof v==="function"?v:()=>v;u(r.id,rm=>{rm.extraItems=fn(rm.extraItems||[]);return rm;});}} onEditNom={openNomEditorFromCalc} onOpenEditor={openButtonEditor} nomSnap={nomSnapshot}/>
 
       {/* ═══ НИЖНЯЯ ПАНЕЛЬ: Смета + Экспорт ═══ */}
       <div style={{background:"#fff",borderRadius:14,marginTop:10,border:"0.5px solid #eeeef8"}}>

@@ -82,7 +82,8 @@ export function migrateLegacy(legacyPresets, sharedFavs) {
       id: p.id,
       blockId,
       name: p.name,
-      param: { ...(BLOCK_PARAM[blockId] || { src: "manual", unit: "шт" }) },
+      /* param, отредактированный в редакторе, живёт на легаси-объекте как доп. поле (buildEst его игнорирует) */
+      param: p.param && p.param.src ? { ...p.param } : { ...(BLOCK_PARAM[blockId] || { src: "manual", unit: "шт" }) },
       items,
       order: ord,
     };
@@ -107,9 +108,19 @@ export function toLegacyPresets(config) {
       items: sorted.filter(i => i.src === "param").map(i => i.nomId),
       options: sorted.filter(i => i.src !== "param").map(i => i.nomId),
     };
+    if (p.param) out.param = { ...p.param };
     if (p._legacy) Object.assign(out, p._legacy);
     return out;
   });
+}
+
+/* Карта видимых кнопок по блокам (= sharedFavs калькулятора): не-hidden в порядке следования */
+export function favsOfConfig(cfg) {
+  const favs = {};
+  (cfg?.blocks || []).forEach(b => {
+    favs[b.id] = (cfg?.presets || []).filter(p => p.blockId === b.id && !p.hidden).map(p => p.id);
+  });
+  return favs;
 }
 
 /* ── Раздел 1.5 ТЗ: количество строки.
