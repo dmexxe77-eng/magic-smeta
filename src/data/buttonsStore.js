@@ -63,7 +63,7 @@ export function smartSrcFor(nomName) {
 }
 
 /* ── Миграция легаси → v1. Без потерь: pid/sec сохраняются в _legacy ── */
-export function migrateLegacy(legacyPresets, sharedFavs) {
+export function migrateLegacy(legacyPresets, sharedFavs, customBlocks) {
   const favs = sharedFavs || {};
   const orderInBlock = {};
   const presets = (legacyPresets || []).map(p => {
@@ -94,7 +94,23 @@ export function migrateLegacy(legacyPresets, sharedFavs) {
     if (Object.keys(extra).length) preset._legacy = extra;
     return preset;
   });
-  return { version: CONFIG_VERSION, blocks: builtinBlocks(), presets };
+  const builtin = builtinBlocks();
+  const custom = (customBlocks || []).map((b, i) => ({ id: b.id, label: b.label, custom: true, order: builtin.length + i }));
+  return { version: CONFIG_VERSION, blocks: [...builtin, ...custom], presets };
+}
+
+/* ── Экспорт/импорт конфигурации кнопок (ТЗ раздел 5): {version, blocks, presets} ── */
+export function buttonsExportData() {
+  const legacy = CALC_STATE_REF.presets?.length ? CALC_STATE_REF.presets : PRESETS_GEN;
+  return migrateLegacy(legacy, CALC_STATE_REF.sharedFavs || {}, CALC_STATE_REF.customBlocks || []);
+}
+export function applyButtonsImport(data) {
+  if (!data || data.version !== CONFIG_VERSION || !Array.isArray(data.presets)) return null;
+  return {
+    presets: toLegacyPresets(data),
+    sharedFavs: favsOfConfig(data),
+    customBlocks: (data.blocks || []).filter(b => b.custom).map(b => ({ id: b.id, label: b.label, custom: true })),
+  };
 }
 
 /* ── Обратный адаптер: v1 → легаси-форма, которую понимает buildEst ── */

@@ -4,7 +4,7 @@ import { uid, safeJsonParse } from "./utils/helpers.js";
 import { AUTO_SAVE_KEY, AUTO_SAVE_META_KEY, idbPut, idbGet } from "./utils/storage.js";
 import { RUNTIME_EDITED_NOMS, DELETED_NOM_IDS, USER_NOMS_CUSTOM, USER_NOMS_EDITED, ALL_NOM} from "./data/nomenclature.jsx";
 import { USER_PRESETS_OVERRIDE, USER_FAVS_OVERRIDE, INITIAL_NOM_SNAPSHOT, INITIAL_ORDERS, CALC_STATE_REF, newRoom, newR, applyNomsSnapshot, sanitizeCustomNoms, sanitizeEditedNoms, sanitizeOrdersForStorage, hydrateNomsPhotosFromIdb, loadAppStateFromIdb, saveAppStateToIdb, snapNomPrices} from "./data/presets.js";
-import "./data/buttonsStore.js"; /* модель редактора кнопок; регистрирует window.__zamerParity */
+import { buttonsExportData, applyButtonsImport } from "./data/buttonsStore.js";
 import HomeScreen from "./components/screens/HomeScreen.jsx";
 import CalcScreen from "./components/screens/CalcScreen.jsx";
 import NewOrderFlow from "./components/screens/NewOrderFlow.jsx";
@@ -68,6 +68,7 @@ export default function App(){
           if(snap.calc.presets)CALC_STATE_REF.presets=snap.calc.presets;
           if(snap.calc.sharedFavs)CALC_STATE_REF.sharedFavs=snap.calc.sharedFavs;
           if(Array.isArray(snap.calc.globalOpts))CALC_STATE_REF.globalOpts=snap.calc.globalOpts;
+          if(Array.isArray(snap.calc.customBlocks))CALC_STATE_REF.customBlocks=snap.calc.customBlocks;
         }
         if(snap.noms)applyNomsSnapshot(snap.noms);
         hydrateNomsPhotosFromIdb();
@@ -125,7 +126,8 @@ export default function App(){
         calc:{
           presets:CALC_STATE_REF.presets,
           sharedFavs:CALC_STATE_REF.sharedFavs,
-          globalOpts:CALC_STATE_REF.globalOpts||[]
+          globalOpts:CALC_STATE_REF.globalOpts||[],
+          customBlocks:CALC_STATE_REF.customBlocks||[]
         },
         noms:{
           customNoms:sanitizeCustomNoms(ALL_NOM.filter(n=>n.id&&n.id.startsWith("u"))),
@@ -170,7 +172,7 @@ export default function App(){
         const orders=sanitizeOrdersForStorage(ordersRef.current).map(o=>({...o,planImage:undefined}));
         const snap={
           v:2,ts:Date.now(),theme:themeRef.current,isProOverride:!!IS_PRO_OVERRIDE,
-          calc:{presets:CALC_STATE_REF.presets,sharedFavs:CALC_STATE_REF.sharedFavs,globalOpts:CALC_STATE_REF.globalOpts||[]},
+          calc:{presets:CALC_STATE_REF.presets,sharedFavs:CALC_STATE_REF.sharedFavs,globalOpts:CALC_STATE_REF.globalOpts||[],customBlocks:CALC_STATE_REF.customBlocks||[]},
           noms:{customNoms:sanitizeCustomNoms(ALL_NOM.filter(n=>n.id&&n.id.startsWith("u"))),editedNoms:sanitizeEditedNoms(RUNTIME_EDITED_NOMS),deletedNomIds:DELETED_NOM_IDS},
           orders
         };
@@ -230,6 +232,8 @@ export default function App(){
     presets:CALC_STATE_REF.presets,
     sharedFavs:CALC_STATE_REF.sharedFavs,
     globalOpts:CALC_STATE_REF.globalOpts||[],
+    customBlocks:CALC_STATE_REF.customBlocks||[],
+    buttons:buttonsExportData(), /* {version, blocks, presets} — ТЗ раздел 5 */
     customNoms:ALL_NOM.filter(n=>n.id.startsWith("u")),
     editedNoms:RUNTIME_EDITED_NOMS,
     deletedNomIds:DELETED_NOM_IDS,
@@ -254,6 +258,18 @@ export default function App(){
       // 3. Apply globalOpts
       if(Array.isArray(d.globalOpts)){
         CALC_STATE_REF.globalOpts=d.globalOpts;
+      }
+      /* 3b. Конфигурация кнопок v1 (приоритетнее legacy-полей presets/sharedFavs) */
+      if(d.buttons){
+        const conv=applyButtonsImport(d.buttons);
+        if(conv){
+          CALC_STATE_REF.presets=conv.presets;
+          CALC_STATE_REF.sharedFavs=conv.sharedFavs;
+          CALC_STATE_REF.customBlocks=conv.customBlocks;
+          applied.push(`кнопок (v1): ${conv.presets.length}`);
+        }
+      }else if(Array.isArray(d.customBlocks)){
+        CALC_STATE_REF.customBlocks=d.customBlocks;
       }
       // 4. Apply nomenclature
       if(d.customNoms||d.editedNoms||d.deletedNomIds){

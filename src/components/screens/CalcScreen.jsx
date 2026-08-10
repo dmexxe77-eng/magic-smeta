@@ -115,8 +115,10 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
   });
   /* globalOpts должен быть объявлен ДО useEffect который его использует */
   const[globalOpts,setGlobalOpts]=useState([{id:uid(),name:"Укрытие стен защитной плёнкой",nomId:"w_prot",param:"perim",on:true}]);
+  /* Свои блоки из редактора кнопок */
+  const[customBlocks,setCustomBlocks]=useState(()=>Array.isArray(CALC_STATE_REF.customBlocks)?deep(CALC_STATE_REF.customBlocks):[]);
   /* Пишем текущее состояние в глобальный ref для экспорта */
-  useEffect(()=>{CALC_STATE_REF.presets=presets;CALC_STATE_REF.sharedFavs=sharedFavs;CALC_STATE_REF.globalOpts=globalOpts;},[presets,sharedFavs,globalOpts]);
+  useEffect(()=>{CALC_STATE_REF.presets=presets;CALC_STATE_REF.sharedFavs=sharedFavs;CALC_STATE_REF.globalOpts=globalOpts;CALC_STATE_REF.customBlocks=customBlocks;},[presets,sharedFavs,globalOpts,customBlocks]);
   const[pdfData,setPdfData]=useState(null);
   const[estEd,setEstEd]=useState({});
   const[showGlobalEdit,setShowGlobalEdit]=useState(false);
@@ -130,9 +132,12 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
   /* ── Редактор кнопок ── */
   const[btnEd,setBtnEd]=useState(null); /* {cat, pid} */
   const openButtonEditor=useCallback((cat,pid)=>setBtnEd({cat,pid}),[]);
-  const applyButtonEditor=(newPresets,favs)=>{
+  const applyButtonEditor=(newPresets,favs,blocks)=>{
     setPresets(newPresets);
     setSharedFavs(p=>({...p,...favs}));
+    const custom=(blocks||[]).filter(b=>b.custom).map(b=>({id:b.id,label:b.label,custom:true}));
+    setCustomBlocks(custom);
+    const customIds=new Set(custom.map(b=>b.id));
     /* ТЗ 3.5: скрыли/удалили выбранную кнопку — блок переключается на первую видимую */
     setRooms(prev=>{
       let changed=false;
@@ -143,7 +148,16 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
         changed=true;return{...inst,btnId:vis[0]};
       };
       const fixList=(arr,cat)=>(arr||[]).map(x=>fix(x,cat));
-      const next=prev.map(r=>({...r,canvas:fix(r.canvas,"canvas"),mainProf:fix(r.mainProf,"main"),extraCanvas:fixList(r.extraCanvas,"canvas"),extras:fixList(r.extras,"extra"),lights:fixList(r.lights,"light"),tracks:fixList(r.tracks,"track"),curtains:fixList(r.curtains,"curtain")}));
+      const next=prev.map(r=>{
+        /* инстансы удалённых своих блоков вычищаем вместе с блоком */
+        let cst=r.cst;
+        if(cst&&Object.keys(cst).some(k=>!customIds.has(k))){
+          changed=true;
+          cst=Object.fromEntries(Object.entries(cst).filter(([k])=>customIds.has(k)));
+        }
+        if(cst)cst=Object.fromEntries(Object.entries(cst).map(([k,list])=>[k,(list||[]).map(x=>fix(x,k))]));
+        return{...r,cst,canvas:fix(r.canvas,"canvas"),mainProf:fix(r.mainProf,"main"),extraCanvas:fixList(r.extraCanvas,"canvas"),extras:fixList(r.extras,"extra"),lights:fixList(r.lights,"light"),tracks:fixList(r.tracks,"track"),curtains:fixList(r.curtains,"curtain")};
+      });
       return changed?next:prev;
     });
   };
@@ -438,7 +452,7 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
       {showNomEditor&&<NomEditor onClose={()=>setShowNomEditor(false)} initialEditId={nomEditorId}/>}
 
       {/* Редактор кнопок */}
-      {btnEd&&<ButtonEditor presets={presets} sharedFavs={sharedFavs} initialBlockId={btnEd.cat} initialPresetId={btnEd.pid} onApply={applyButtonEditor} onClose={()=>setBtnEd(null)}/>}
+      {btnEd&&<ButtonEditor presets={presets} sharedFavs={sharedFavs} customBlocks={customBlocks} initialBlockId={btnEd.cat} initialPresetId={btnEd.pid} onApply={applyButtonEditor} onClose={()=>setBtnEd(null)}/>}
 
       {/* Blocks */}
       <CalcBlock config={BLOCK_CFG[0]} favIds={sharedFavs["canvas"]} setFavIds={ids=>setSharedFavs(p=>({...p,"canvas":ids}))} instance={{...(r.canvas||{}),verts:r.v}} onChange={v=>{const{verts,...rest}=v;const cleaned={...rest,iq:{}};u(r.id,rm=>{rm.canvas=cleaned;return rm;});if(cleaned.applyAll){rooms.forEach(rm2=>{if(rm2.id===r.id)return;const a2=gA(rm2);u(rm2.id,rm3=>{rm3.canvas={...cleaned,id:rm3.canvas?.id||uid(),qty:a2,iq:{}};return rm3;});});}}} presets={presets} onPresets={setPresets} autoAngles={autoAngles} onApplyAll={()=>{const cv={...(r.canvas||{}),iq:{}};rooms.forEach(rm2=>{if(rm2.id===r.id)return;const a2=gA(rm2);u(rm2.id,rm3=>{rm3.canvas={...JSON.parse(JSON.stringify(cv)),id:rm3.canvas?.id||uid(),qty:a2,iq:{}};return rm3;});});}} onEditNom={openNomEditorFromCalc} onOpenEditor={openButtonEditor} nomSnap={nomSnapshot}/>
@@ -450,6 +464,8 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
       <MultiBlock config={BLOCK_CFG[3]} favIds={sharedFavs["light"]} setFavIds={ids=>setSharedFavs(p=>({...p,"light":ids}))} list={r.lights||[]} setList={v=>{const fn=typeof v==="function"?v:()=>v;u(r.id,rm=>{rm.lights=fn(rm.lights||[]);return rm;});}} presets={presets} onPresets={setPresets} onEditNom={openNomEditorFromCalc} onOpenEditor={openButtonEditor} nomSnap={nomSnapshot}/>
       <MultiBlock config={BLOCK_CFG[4]} favIds={sharedFavs["track"]} setFavIds={ids=>setSharedFavs(p=>({...p,"track":ids}))} list={r.tracks||[]} setList={v=>{const fn=typeof v==="function"?v:()=>v;u(r.id,rm=>{rm.tracks=fn(rm.tracks||[]);return rm;});}} presets={presets} onPresets={setPresets} onEditNom={openNomEditorFromCalc} onOpenEditor={openButtonEditor} nomSnap={nomSnapshot}/>
       <MultiBlock config={BLOCK_CFG[5]} favIds={sharedFavs["curtain"]} setFavIds={ids=>setSharedFavs(p=>({...p,"curtain":ids}))} list={r.curtains||[]} setList={v=>{const fn=typeof v==="function"?v:()=>v;u(r.id,rm=>{rm.curtains=fn(rm.curtains||[]);return rm;});}} presets={presets} onPresets={setPresets} onEditNom={openNomEditorFromCalc} onOpenEditor={openButtonEditor} nomSnap={nomSnapshot}/>
+      {/* Свои блоки из редактора кнопок */}
+      {customBlocks.map(b=>(<MultiBlock key={b.id} config={{id:b.id,cat:b.id,title:b.label,qtyLabel:"Кол",qtyUnit:"шт",multi:true,maxFav:99}} favIds={sharedFavs[b.id]} setFavIds={ids=>setSharedFavs(p=>({...p,[b.id]:ids}))} list={(r.cst||{})[b.id]||[]} setList={v=>{const fn=typeof v==="function"?v:()=>v;u(r.id,rm=>{rm.cst={...(rm.cst||{}),[b.id]:fn((rm.cst||{})[b.id]||[])};return rm;});}} presets={presets} onPresets={setPresets} onEditNom={openNomEditorFromCalc} onOpenEditor={openButtonEditor} nomSnap={nomSnapshot}/>))}
       <ExtraBlock list={r.extraItems||[]} setList={v=>{const fn=typeof v==="function"?v:()=>v;u(r.id,rm=>{rm.extraItems=fn(rm.extraItems||[]);return rm;});}} onEditNom={openNomEditorFromCalc} onOpenEditor={openButtonEditor} nomSnap={nomSnapshot}/>
 
       {/* ═══ НИЖНЯЯ ПАНЕЛЬ: Смета + Экспорт ═══ */}

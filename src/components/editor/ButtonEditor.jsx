@@ -11,8 +11,10 @@ import { SRC_META, smartSrcFor, migrateLegacy, toLegacyPresets, favsOfConfig } f
 const IND = "#4F46E5";
 const LONG_PRESS_MS = 330;
 
-export default function ButtonEditor({ presets, sharedFavs, initialBlockId, initialPresetId, onApply, onClose }) {
-  const [cfg, setCfg] = useState(() => migrateLegacy(presets, sharedFavs));
+export default function ButtonEditor({ presets, sharedFavs, customBlocks, initialBlockId, initialPresetId, onApply, onClose }) {
+  const [cfg, setCfg] = useState(() => migrateLegacy(presets, sharedFavs, customBlocks || []));
+  const [addBlockOpen, setAddBlockOpen] = useState(false);
+  const [newBlockName, setNewBlockName] = useState("");
   const [blockId, setBlockId] = useState(initialBlockId || "canvas");
   const [presetId, setPresetId] = useState(initialPresetId || null);
   const [srcSheetIdx, setSrcSheetIdx] = useState(null);   /* index строки, для которой открыта шторка источника */
@@ -29,7 +31,21 @@ export default function ButtonEditor({ presets, sharedFavs, initialBlockId, init
   useEffect(() => { if (cur && cur.id !== presetId) setPresetId(cur.id); }, [blockId, cur?.id]);
   useEffect(() => { if (focusNameOnNext.current && nameRef.current) { nameRef.current.focus(); nameRef.current.select(); focusNameOnNext.current = false; } });
 
-  const commit = next => { setCfg(next); onApply(toLegacyPresets(next), favsOfConfig(next)); };
+  const commit = next => { setCfg(next); onApply(toLegacyPresets(next), favsOfConfig(next), next.blocks); };
+  const addBlock = () => {
+    const label = newBlockName.trim();
+    if (!label) return;
+    const b = { id: "cst_" + uid(), label, custom: true, order: cfg.blocks.length };
+    commit({ ...cfg, blocks: [...cfg.blocks, b] });
+    setBlockId(b.id); setPresetId(null);
+    setAddBlockOpen(false); setNewBlockName("");
+  };
+  const deleteBlock = id => {
+    const b = cfg.blocks.find(x => x.id === id);
+    if (!b?.custom) return;
+    commit({ ...cfg, blocks: cfg.blocks.filter(x => x.id !== id), presets: cfg.presets.filter(p => p.blockId !== id) });
+    setBlockId("canvas"); setPresetId(null);
+  };
   const patchPreset = (id, patch) => commit({ ...cfg, presets: cfg.presets.map(p => p.id === id ? { ...p, ...patch } : p) });
 
   /* ── Кнопки блока ── */
@@ -104,13 +120,22 @@ export default function ButtonEditor({ presets, sharedFavs, initialBlockId, init
     </div>
 
     <div style={{ maxWidth: 560, margin: "0 auto", padding: "12px 12px 60px" }}>
-      {/* 1. Вкладки блоков */}
-      <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 8, marginBottom: 4 }}>
+      {/* 1. Вкладки блоков (+ блок в конце; у выбранной пользовательской — ✕) */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, paddingBottom: 6, marginBottom: 4 }}>
         {cfg.blocks.map(b => {
           const a = b.id === blockId;
-          return (<button key={b.id} onClick={() => { setBlockId(b.id); setDelConfirm(false); }} style={{ flex: "0 0 auto", background: a ? IND : "#fff", color: a ? "#fff" : "#5a6070", border: "1px solid " + (a ? IND : "#f1f1f8"), borderRadius: 10, padding: "7px 13px", fontSize: 11.5, fontWeight: a ? 700 : 500, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>{b.label}</button>);
+          return (<button key={b.id} onClick={() => { setBlockId(b.id); setDelConfirm(false); }} style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: 6, background: a ? IND : "#fff", color: a ? "#fff" : "#5a6070", border: "1px solid " + (a ? IND : "#f1f1f8"), borderRadius: 10, padding: "7px 13px", fontSize: 11.5, fontWeight: a ? 700 : 500, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+            {b.label}
+            {a && b.custom && <span onClick={e => { e.stopPropagation(); if (window.confirm("Удалить блок «" + b.label + "» вместе с его кнопками?")) deleteBlock(b.id); }} style={{ fontSize: 12, fontWeight: 800, opacity: 0.8 }}>{"✕"}</span>}
+          </button>);
         })}
+        <button onClick={() => { setAddBlockOpen(true); setNewBlockName(""); }} style={{ flex: "0 0 auto", background: "transparent", color: IND, border: "1.5px dashed " + IND + "66", borderRadius: 10, padding: "7px 13px", fontSize: 11.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>{"+ блок"}</button>
       </div>
+      {addBlockOpen && (<div style={{ background: "#fff", border: "1px solid rgba(79,70,229,0.25)", borderRadius: 12, padding: 12, marginBottom: 10, display: "flex", gap: 8 }}>
+        <input autoFocus value={newBlockName} onChange={e => setNewBlockName(e.target.value)} onKeyDown={e => { if (e.key === "Enter") addBlock(); if (e.key === "Escape") setAddBlockOpen(false); }} placeholder="Название блока (напр. «Карнизы»)" style={{ flex: 1, background: "#f2f3fa", border: "1px solid #f1f1f8", borderRadius: 9, padding: "8px 11px", fontSize: 12, fontFamily: "inherit", outline: "none" }} />
+        <button onClick={addBlock} style={{ background: IND, color: "#fff", border: "none", borderRadius: 9, padding: "8px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>{"Создать"}</button>
+        <button onClick={() => setAddBlockOpen(false)} style={{ background: "#f2f3fa", color: "#5a6070", border: "none", borderRadius: 9, padding: "8px 12px", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>{"Отмена"}</button>
+      </div>)}
 
       {/* 2. Кнопки блока */}
       <div style={card}>
@@ -179,8 +204,8 @@ export default function ButtonEditor({ presets, sharedFavs, initialBlockId, init
             const meta = SRC_META[it.src] || SRC_META.manual;
             return (<div key={it.nomId + "_" + i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 0", borderBottom: "0.5px solid #f1f1f8" }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 11.5, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{nom?.name || it.nomId}</div>
-                <div style={{ fontSize: 10, color: "#a5a9b8" }}>{nom ? fmt(nom.price) + " ₽/" + nom.unit : "номенклатура не найдена"}</div>
+                <div style={{ fontSize: 11.5, fontWeight: 500, color: nom ? "#1e2530" : "#ff3b30", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{nom?.name || it.nomId}</div>
+                <div style={{ fontSize: 10, color: nom ? "#a5a9b8" : "#ff3b30" }}>{nom ? fmt(nom.price) + " ₽/" + nom.unit : "удалена из базы — в смету не попадает, удалите ✕ или замените"}</div>
               </div>
               <button onClick={() => setSrcSheetIdx(i)} style={{ background: meta.color + "14", color: meta.color, border: "none", borderRadius: 8, padding: "5px 9px", fontSize: 10.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>{meta.icon + " " + (meta.short || meta.label)}</button>
               <button onClick={() => setItems(sortedItems.filter((_, j) => j !== i))} style={{ background: "rgba(255,59,48,0.08)", border: "none", borderRadius: 8, width: 26, height: 26, color: "#ff3b30", fontSize: 12, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>{"✕"}</button>

@@ -147,7 +147,7 @@ export const USER_FAVS_OVERRIDE=USER_SNAPSHOT.sharedFavs||{};
 
 export const INITIAL_NOM_SNAPSHOT={customNoms:USER_SNAPSHOT.customNoms||[],editedNoms:USER_SNAPSHOT.editedNoms||[],deletedNomIds:USER_SNAPSHOT.deletedNomIds||[]};
 export const INITIAL_ORDERS=USER_SNAPSHOT.orders||[]; /* стартовые проекты для новых устройств */
-export const CALC_STATE_REF={presets:USER_PRESETS_OVERRIDE,sharedFavs:USER_FAVS_OVERRIDE,globalOpts:[]};
+export const CALC_STATE_REF={presets:USER_PRESETS_OVERRIDE,sharedFavs:USER_FAVS_OVERRIDE,globalOpts:[],customBlocks:[]};
 
 export const BLOCK_CFG=[
   {id:"canvas",title:"Полотно",cat:"canvas",qtyLabel:"S",qtyUnit:"м²",maxFav:99,defFav:["btn_c_msd","btn_c_tkan","btn_c_trans","btn_c_clear"]},
@@ -267,6 +267,8 @@ export function buildEst(rooms,allPresets,gOpts,priceSnap){
     (r.tracks||[]).forEach(inst=>processBlock(inst));
     /* Шторы */
     (r.curtains||[]).forEach(inst=>processBlock(inst));
+    /* Свои блоки (редактор кнопок): r.cst = {blockId:[instances]} */
+    Object.values(r.cst||{}).forEach(list=>(list||[]).forEach(inst=>processBlock(inst)));
     /* Доп. работы/материалы */
     (r.extraItems||[]).forEach(item=>{
       const nom=NB(item.nomId);if(!nom||!(item.qty>0))return;
