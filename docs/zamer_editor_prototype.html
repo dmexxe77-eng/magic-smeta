@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<title>Zamer.pro — v9 галочка «Ко всем»</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f2f3fa; --hd:#ffffff; --card:#ffffff; --el:#f2f3fa;
+  --line:#f1f1f8;
+  --tx:#1e2530; --tx2:#5a6070; --mut:#7a8095; --dim:#a5a9b8; --ghost:#c2c5d1;
+  --acc:#4F46E5; --accT:#4F46E5; --accSoft:rgba(79,70,229,.09);
+  --grn:#16a34a; --red:#ff3b30; --org:#c77700;
+  color-scheme:only light;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{background:#f2f3fa!important;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+@media (prefers-color-scheme:dark){html,body{background:#f2f3fa!important}}
+body{font-family:'DM Sans',-apple-system,'SF Pro Text','Segoe UI',Roboto,sans-serif;color:var(--tx)}
+#appbg{background:var(--bg);min-height:100vh;max-width:560px;margin:0 auto;padding-bottom:80px}
+button{font-family:inherit;border:none;background:none;cursor:pointer;color:inherit}
+input{font-family:inherit;border:none;outline:none;background:none;color:inherit}
+.note{font-size:10px;color:#b6b9c6;text-align:center;padding:7px 0 2px;font-weight:600}
+
+.top{position:sticky;top:0;z-index:20;background:var(--hd);border-bottom:2px solid var(--acc);display:flex;align-items:center;gap:8px;padding:8px 12px}
+.back{width:28px;height:28px;border-radius:9px;background:var(--el);font-size:14px;font-weight:800;color:var(--tx)}
+.hn{display:flex;flex-direction:column;line-height:1}
+.hn b{font-weight:700;letter-spacing:1.2px;font-size:14px;color:var(--tx)}
+.hn i{font-style:normal;font-size:7px;letter-spacing:2.2px;color:var(--acc);font-weight:700;margin-top:2px}
+.sp{flex:1}
+.hsum{text-align:right}
+.hsum b{font-size:13.5px;font-weight:800;display:block;color:var(--tx)}
+.upd{display:flex;align-items:center;gap:4px;justify-content:flex-end;margin-top:2px}
+.upd span{color:var(--acc);font-size:10.5px;font-weight:700}
+.ibang{width:13px;height:13px;border-radius:50%;background:rgba(79,70,229,.12);color:var(--acc);font-size:9px;font-weight:800;line-height:13px;text-align:center}
+.ettl{font-size:15px;font-weight:700;flex:1}
+.done{color:var(--acc);font-weight:800;font-size:13.5px;padding:4px 6px}
+
+.wrap{padding:8px 12px 0}
+.card{background:var(--card);border-radius:14px;padding:10px 11px;margin-top:8px}
+.lab{font-size:9px;font-weight:700;letter-spacing:1.2px;color:var(--ghost);text-transform:uppercase}
+.ck{width:15px;height:15px;border-radius:5px;background:rgba(22,163,74,.12);color:var(--grn);font-size:9.5px;font-weight:800;line-height:15px;text-align:center;flex:none}
+.ck.off{background:transparent;border:1.5px solid #d5d7e6;color:transparent}
+
+.obj{display:flex;align-items:center;gap:5px;padding:2px 0 8px;flex-wrap:wrap}
+.oname{font-size:11.5px;font-weight:700;flex:1;min-width:140px;color:var(--tx2)}
+.mode{padding:4px 9px;border-radius:8px;background:var(--card);color:var(--mut);font-size:10px;font-weight:700}
+.mode.sel{background:var(--accSoft);color:var(--acc)}
+.mode.zam{background:rgba(255,149,0,.12);color:var(--org)}
+
+.rooms{display:flex;gap:6px;overflow-x:auto;padding:2px 0 4px;scrollbar-width:none}
+.rooms::-webkit-scrollbar{display:none}
+.room{flex:none;background:var(--card);border-radius:11px;padding:6px 9px;border:1.5px solid transparent;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+.room.sel{border-color:var(--acc)}
+.room.ph{background:transparent;border:1.5px dashed #c5c8e0}
+.room.ph *{visibility:hidden}
+.rline{display:flex;align-items:center;gap:5px}
+.rname{font-size:10.5px;font-weight:700;white-space:nowrap}
+.rsub{font-size:8.5px;color:var(--dim);font-weight:600;margin-top:2px;white-space:nowrap}
+.ricons{display:flex;gap:4px;margin-top:5px}
+.ric{width:19px;height:19px;border-radius:6px;background:var(--el);font-size:9.5px;line-height:19px;text-align:center;color:var(--mut)}
+.ric.red{color:var(--red)}
+.ric.arm{background:#ff3b30;color:#fff}
+.room.plus{display:flex;align-items:center;justify-content:center;color:var(--acc);font-weight:800;font-size:14px;background:rgba(79,70,229,.06);min-width:38px}
+.rsummary{font-size:10px;color:var(--dim);font-weight:700;text-align:center;padding:5px 0 2px}
+.rsummary b{color:var(--acc)}
+.rghost{position:fixed;z-index:50;pointer-events:none;transform:scale(1.07);box-shadow:0 8px 22px rgba(30,37,48,.28);opacity:.97}
+
+.draw{display:flex;align-items:center;gap:11px;background:rgba(79,70,229,.05);border-radius:14px;padding:8px 10px;margin-top:6px}
+.dinfo{font-size:10.5px;font-weight:700;color:var(--tx2);line-height:1.7}
+.dinfo .dl{color:var(--dim);display:flex;gap:8px;align-items:center;font-size:9.5px}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:2px;vertical-align:-1px}
+
+.gopt{display:flex;align-items:center;gap:8px;margin-top:8px}
+.gname{font-size:11.5px;font-weight:600;color:var(--tx)}
+.gsub{font-size:10px;color:var(--dim);font-weight:600;margin-top:2px}
+.gsum{font-size:12px;font-weight:800;color:var(--accT);white-space:nowrap}
+.gear{width:22px;height:22px;border-radius:7px;background:var(--el);color:#b8bcca;font-size:11px;line-height:22px;text-align:center;flex:none}
+
+/* блок */
+.bhd{display:flex;align-items:center;gap:6px;cursor:pointer}
+.chev{font-size:10px;color:#b0b4c2;width:12px;flex:none;font-weight:800}
+.btl{font-size:12.5px;font-weight:800;letter-spacing:.4px;color:var(--tx);text-transform:uppercase;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bsel{font-size:10.5px;font-weight:700;color:var(--dim);text-transform:none;letter-spacing:0}
+.koall{display:flex;align-items:center;gap:4px;font-size:9.5px;font-weight:800;color:var(--dim);padding:2.5px 6px;border-radius:6px;flex:none;cursor:pointer}
+.koall .ck{width:13px;height:13px;line-height:13px;font-size:8.5px;border-radius:4px}
+.koall.on{color:var(--grn);background:rgba(22,163,74,.09)}
+.bsum{margin-left:auto;font-size:12.5px;font-weight:800;color:var(--accT);white-space:nowrap}
+.bx{color:var(--red);font-size:11px;font-weight:800;padding:0 2px;opacity:.8}
+.bstar{color:#d5d7e6;font-size:13px}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.chip{padding:5px 9px;border-radius:8px;background:var(--el);color:var(--mut);font-size:10.5px;font-weight:700}
+.chip.sel{background:var(--accSoft);color:var(--acc);border:1.5px solid rgba(79,70,229,.32);padding:3.5px 7.5px}
+.chip.echip{background:rgba(79,70,229,.06);color:var(--acc);padding:5px 9px;font-weight:800}
+.prow{display:flex;align-items:center;gap:7px;margin-top:9px;flex-wrap:wrap}
+.plabel{font-size:11.5px;font-weight:800;color:var(--tx2)}
+.pval{width:60px;background:var(--el);border-radius:8px;padding:5px 8px;font-size:12px;font-weight:800;text-align:center;color:var(--tx)}
+.punit{font-size:10.5px;color:var(--dim);font-weight:700}
+.pchk{margin-left:auto;display:flex;align-items:center;gap:5px;font-size:10px;color:var(--dim);font-weight:700}
+.slab{font-size:9px;font-weight:700;letter-spacing:1.2px;color:var(--ghost);text-transform:uppercase;margin:11px 0 2px}
+.irow{display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid var(--line)}
+.irow:last-child{border-bottom:none;padding-bottom:2px}
+.irow.offr .iname,.irow.offr .isum{opacity:.4}
+.ii{flex:1;min-width:0}
+.iname{font-size:11.5px;font-weight:600;line-height:1.3;color:var(--tx)}
+.isub{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--dim);font-weight:600;margin-top:4px}
+.srcb{font-weight:800;font-size:10px}
+.qchip{background:var(--el);border-radius:7px;padding:3px 7px;font-size:10.5px;font-weight:800;color:var(--tx);min-width:36px;text-align:center;outline:none}
+.qchip.q0{background:transparent;border:1.5px dashed #cdd0e6;color:#b0b4c2;padding:1.5px 5.5px}
+.iright{display:flex;align-items:center;gap:5px;flex:none;padding-top:1px}
+.isum{font-size:11.5px;font-weight:800;color:var(--accT);white-space:nowrap}
+.pen{color:#c9ccdc;font-size:10.5px}
+.xdel{color:var(--red);font-size:10.5px;font-weight:800;opacity:.7}
+.empty{padding:15px 12px;text-align:center;color:#b8bcca;font-size:11px;font-weight:600}
+.addblk{margin-top:1px;background:transparent;padding:7px;text-align:center;color:#9aa0b2;font-size:10.5px;font-weight:700;width:100%}
+
+.smbar{position:fixed;bottom:0;left:0;right:0;z-index:20;background:linear-gradient(180deg,rgba(242,243,250,0),#f2f3fa 30%);padding:12px 12px 10px}
+.smbar>div{max-width:536px;margin:0 auto;background:var(--card);border-radius:14px;padding:8px 10px;display:flex;align-items:center;gap:6px;box-shadow:0 5px 18px rgba(30,37,48,.1)}
+.smico{width:26px;height:26px;border-radius:8px;background:var(--accSoft);color:var(--acc);font-size:12px;line-height:26px;text-align:center;flex:none}
+.smt{font-size:12px;font-weight:800}
+.smt i{font-style:normal;color:var(--dim);font-size:9px}
+.smchip{padding:4px 8px;border-radius:7px;background:var(--accSoft);color:var(--acc);font-size:9.5px;font-weight:700;white-space:nowrap;max-width:98px;overflow:hidden;text-overflow:ellipsis}
+.smchip.gh{background:var(--el);color:var(--dim)}
+.smsum{margin-left:auto;text-align:right}
+.smsum b{font-size:13.5px;font-weight:800;display:block;white-space:nowrap;color:var(--tx)}
+.smsum span{font-size:8.5px;color:var(--dim);font-weight:600}
+
+.mov{position:fixed;inset:0;background:rgba(20,22,32,.45);display:none;align-items:center;justify-content:center;z-index:60;padding:24px}
+.mov.on{display:flex}
+.mcard{background:var(--card);border-radius:16px;padding:15px;max-width:300px;width:100%}
+.mtl{font-size:14px;font-weight:800;display:flex;align-items:center;gap:7px}
+.mtl .ibang{width:18px;height:18px;font-size:11px;line-height:18px}
+.mtx{font-size:11.5px;color:#6a7085;font-weight:600;line-height:1.55;margin:9px 0 13px}
+.mbtns{display:flex;gap:7px}
+.mb{flex:1;padding:9px;border-radius:10px;font-size:12px;font-weight:800}
+.mb.gh{background:var(--el);color:var(--tx2)}
+.mb.pr{background:var(--acc);color:#fff}
+
+/* ═══ редактор ═══ */
+.cats{display:flex;gap:4px;overflow-x:auto;padding:2px 0 8px;scrollbar-width:none}
+.cats::-webkit-scrollbar{display:none}
+.cat{flex:none;display:flex;align-items:center;gap:5px;padding:6px 11px;border-radius:9px;color:#9aa0b2;font-size:11px;font-weight:700}
+.cat.sel{background:var(--accSoft);color:var(--acc)}
+.cat.catplus{background:rgba(79,70,229,.06);color:var(--acc);font-weight:800}
+.catx{font-size:9px;color:#b7b4ea;font-weight:800;padding:1px 4px;border-radius:6px}
+.catx.arm{background:#ff3b30;color:#fff}
+.btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.pb{padding:6px 11px;border-radius:8px;background:#f0f0f8;color:var(--tx2);font-size:11px;font-weight:700;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+.pb.sel{background:var(--acc);color:#fff;box-shadow:0 3px 10px rgba(79,70,229,.25)}
+.pb.hid{opacity:.35}
+.pb.plus{background:rgba(79,70,229,.06);color:var(--acc);padding:5px 11px;font-weight:800;font-size:12px}
+.pb.ph{background:transparent;border:1.5px dashed #c5c8e0;color:transparent;box-shadow:none}
+.pb.sel.ph{background:rgba(79,70,229,.08);border-color:#b9b6f0}
+.drag-clone{position:fixed;z-index:50;pointer-events:none;transform:scale(1.07);box-shadow:0 8px 22px rgba(30,37,48,.28);opacity:.97;margin:0}
+.bhint{font-size:9.5px;color:#b8bcca;font-weight:600;margin-top:8px}
+.divider{height:1px;background:var(--line);margin:10px -2px 9px}
+.nmi{width:100%;font-size:14px;font-weight:700;margin-top:4px;color:var(--tx)}
+.nmi::placeholder{color:#ccc}
+.visrow{display:flex;align-items:center;gap:8px;margin-top:11px}
+.visrow span{flex:1;font-size:11px;color:var(--tx2);font-weight:700}
+.sw{width:36px;height:21px;border-radius:11px;background:#e2e4f0;position:relative;transition:background .15s;flex:none;cursor:pointer}
+.sw i{position:absolute;top:2.5px;left:2.5px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(30,37,48,.2);transition:all .15s}
+.sw.on{background:var(--acc)}
+.sw.on i{left:17.5px}
+.actrow{display:flex;gap:7px;margin-top:10px}
+.act{flex:1;padding:8px;border-radius:9px;background:var(--el);color:var(--tx2);font-size:11px;font-weight:800;text-align:center}
+.act.red{color:var(--red)}
+.act.hot{background:#ff3b30;color:#fff}
+.sec{font-size:9px;font-weight:700;letter-spacing:1.2px;color:var(--ghost);text-transform:uppercase;margin:14px 2px 5px;display:flex;align-items:center}
+.sec b{color:#9aa0b2;margin-left:4px;letter-spacing:0}
+.addb{margin-left:auto;color:var(--acc);font-weight:800;font-size:11px}
+.elist{background:var(--card);border-radius:14px;overflow:hidden}
+.parampanel{background:rgba(79,70,229,.05);padding:9px 11px 10px;border-bottom:1px solid #ecebfa}
+.plab{font-size:9px;font-weight:700;letter-spacing:1.2px;color:#a3a0e2;text-transform:uppercase}
+.pseg{display:flex;gap:5px;margin-top:7px}
+.ps{flex:1;padding:7px 4px;border-radius:9px;background:#fff;color:#8a90a3;font-size:10.5px;font-weight:700;text-align:center}
+.ps.sel{background:rgba(79,70,229,.13);color:var(--acc)}
+.unitrow{display:flex;align-items:center;gap:5px;margin-top:7px}
+.unitrow span{font-size:10px;color:var(--dim);font-weight:700;margin-right:2px}
+.uc{padding:4px 10px;border-radius:7px;background:#fff;font-size:10px;font-weight:700;color:#8a90a3}
+.uc.sel{background:rgba(79,70,229,.13);color:var(--acc)}
+.phint{font-size:9.5px;color:#a3a0e2;margin-top:7px;font-weight:600;line-height:1.4}
+.erow{display:flex;align-items:center;gap:7px;padding:8px 9px 8px 11px;border-bottom:1px solid var(--line)}
+.erow:last-child{border-bottom:none}
+.ern{font-size:11.5px;font-weight:600;line-height:1.25;color:var(--tx)}
+.erp{font-size:10px;color:var(--dim);font-weight:600;margin-top:2px}
+.bind{flex:none;display:flex;align-items:center;gap:3px;padding:5px 8px;border-radius:8px;background:var(--el);font-size:10px;font-weight:700;color:var(--tx2);white-space:nowrap}
+.bind b{font-size:11px;font-weight:800}
+.edel{flex:none;width:22px;height:22px;color:#ccd0dc;font-size:12px;font-weight:700;line-height:22px;text-align:center}
+.savebar{position:fixed;bottom:0;left:0;right:0;z-index:20;background:linear-gradient(180deg,rgba(242,243,250,0),#f2f3fa 35%);padding:14px 12px 12px;display:none}
+.savebar>div{max-width:536px;margin:0 auto}
+.save{width:100%;padding:12px;border-radius:12px;background:var(--acc);color:#fff;font-size:13.5px;font-weight:800;box-shadow:0 4px 14px rgba(79,70,229,.25)}
+.ov{position:fixed;inset:0;background:rgba(20,22,32,.42);opacity:0;pointer-events:none;transition:opacity .2s;z-index:55}
+.ov.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;bottom:0;left:50%;width:100%;max-width:560px;background:var(--card);border-radius:16px 16px 0 0;padding:12px 16px 16px;z-index:56;transform:translate(-50%,105%);transition:transform .25s cubic-bezier(.3,.9,.3,1)}
+.sheet.on{transform:translate(-50%,0)}
+.sh-grab{width:34px;height:4px;border-radius:2px;background:#e7e7f0;margin:0 auto 10px}
+.sh-ttl{font-size:14px;font-weight:800}
+.sh-sub{font-size:10.5px;color:#b0b4c2;font-weight:600;margin:2px 0 2px}
+.sh-grp{font-size:9px;font-weight:800;letter-spacing:1.1px;color:var(--ghost);text-transform:uppercase;margin:9px 2px 1px}
+.oprow{display:flex;align-items:center;gap:11px;padding:10px 2px;border-bottom:1px solid #f2f2f8;cursor:pointer}
+.oprow:last-of-type{border-bottom:none}
+.oprow.hero{background:rgba(79,70,229,.05);border-radius:11px;padding:10px 10px;border-bottom:none;margin-top:8px}
+.ol{width:18px;text-align:center;font-weight:800;font-size:14px;flex:none}
+.olab{flex:1;font-size:12.5px;font-weight:700;color:var(--tx)}
+.olab i{font-style:normal;color:var(--dim);font-weight:600;font-size:10.5px}
+.ock{font-weight:800;font-size:13px;flex:none}
+.nbInp{width:100%;background:var(--el);border-radius:10px;padding:10px 12px;font-size:13px;font-weight:700;margin:9px 0 2px;color:var(--tx)}
+.sh-done{width:100%;padding:10px;border-radius:10px;background:var(--acc);color:#fff;font-size:12.5px;font-weight:800;margin-top:10px}
+.srch{display:flex;align-items:center;gap:7px;background:var(--el);border-radius:10px;padding:8px 11px;margin:8px 0 9px;font-size:12px}
+.srch input{flex:1;font-size:12.5px;font-weight:600;color:var(--tx)}
+.plist{max-height:52vh;overflow-y:auto;margin:0 -4px;padding:0 4px}
+.bhead{font-size:9px;font-weight:800;letter-spacing:1.1px;color:var(--ghost);text-transform:uppercase;margin:10px 2px 4px}
+.pitem{display:flex;align-items:center;gap:9px;padding:8px 8px;border-radius:10px;cursor:pointer}
+.pitem:active{background:var(--el)}
+.pi-n{flex:1;font-size:12px;font-weight:600;color:var(--tx)}
+.pi-p{font-size:10.5px;color:var(--dim);font-weight:700;white-space:nowrap}
+.pi-add{width:22px;height:22px;border-radius:7px;background:var(--el);color:var(--acc);font-weight:800;text-align:center;line-height:22px}
+</style>
+</head>
+<body>
+<div id="appbg">
+
+<!-- ════════ ЭКРАН: КАЛЬКУЛЯТОР ════════ -->
+<div id="scrCalc">
+<div class="note">галочка «Ко всем» в Полотне и Осн. профиле · по умолчанию выключена</div>
+<div class="top">
+  <button class="back">‹</button>
+  <svg width="30" height="30" viewBox="0 0 120 120" style="display:block;flex:none">
+    <rect width="120" height="120" rx="27" fill="#1e2530"/>
+    <path d="M32 30 L90 30 L90 62 L64 62 L64 90 L32 90 Z" fill="rgba(99,102,241,.18)" stroke="#6366f1" stroke-width="5.5" stroke-linejoin="round"/>
+    <g fill="#fff"><circle cx="32" cy="30" r="5.5"/><circle cx="90" cy="30" r="5.5"/><circle cx="90" cy="62" r="5.5"/><circle cx="64" cy="62" r="5.5"/><circle cx="64" cy="90" r="5.5"/><circle cx="32" cy="90" r="5.5"/></g>
+  </svg>
+  <div class="hn"><b>ZAMER</b><i>.PRO</i></div>
+  <div class="sp"></div>
+  <div class="hsum">
+    <b>908 498,15 ₽</b>
+    <div class="upd" onclick="openM()"><span>↻ обновить цены</span><div class="ibang">!</div></div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="obj">
+    <div class="oname">ЖК Дежнев, ул. Дикопольцева 47/3</div>
+    <button class="mode sel">Обводка</button><button class="mode">AI</button>
+    <button class="mode zam">Замер</button><button class="mode">Ручн.</button>
+  </div>
+
+  <div class="rooms" id="rooms"></div>
+  <div class="rsummary">S: <b>71,26 м²</b> · P: <b>93,99 м.п.</b> · <span id="rcnt">7</span> пом.</div>
+
+  <div class="draw">
+    <svg viewBox="12 12 276 146" width="118" height="72" preserveAspectRatio="xMidYMid meet" style="display:block;flex:none">
+      <path d="M20 20 L60 20 L60 55 L95 55 L95 20 L150 20 L150 45 L190 45 L190 20 L280 20 L280 150 L245 150 L245 105 L210 105 L210 150 L145 150 L145 115 L110 115 L110 150 L20 150 L20 100 L55 100 L55 70 L20 70 Z"
+        fill="rgba(79,70,229,.1)" stroke="#4F46E5" stroke-width="3" stroke-linejoin="round"/>
+      <g fill="#16a34a" stroke="#fff" stroke-width="1.5">
+        <circle cx="20" cy="20" r="5"/><circle cx="280" cy="20" r="5"/><circle cx="280" cy="150" r="5"/><circle cx="20" cy="150" r="5"/>
+        <circle cx="60" cy="55" r="5"/><circle cx="95" cy="55" r="5"/><circle cx="150" cy="45" r="5"/><circle cx="190" cy="45" r="5"/>
+        <circle cx="245" cy="105" r="5"/><circle cx="210" cy="105" r="5"/><circle cx="145" cy="115" r="5"/><circle cx="110" cy="115" r="5"/>
+        <circle cx="55" cy="100" r="5"/><circle cx="55" cy="70" r="5"/>
+      </g>
+      <g fill="#ff3b30" stroke="#fff" stroke-width="1.5">
+        <circle cx="60" cy="20" r="5"/><circle cx="95" cy="20" r="5"/><circle cx="150" cy="20" r="5"/><circle cx="190" cy="20" r="5"/>
+        <circle cx="245" cy="150" r="5"/><circle cx="210" cy="150" r="5"/><circle cx="145" cy="150" r="5"/><circle cx="110" cy="150" r="5"/>
+        <circle cx="20" cy="100" r="5"/><circle cx="20" cy="70" r="5"/>
+      </g>
+    </svg>
+    <div class="dinfo">
+      S = 39,17 м² · P = 41,66 м
+      <div class="dl"><span><span class="dot" style="background:#16a34a"></span>14 вн</span><span><span class="dot" style="background:#ff3b30"></span>10 вш</span><span style="color:#4F46E5">открыть ↗</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="lab">Доп. опции помещения</div>
+    <div class="gopt">
+      <div class="ck" id="gck" onclick="gTgl()">✓</div>
+      <div style="flex:1;min-width:0">
+        <div class="gname">Укрытие стен защитной плёнкой</div>
+        <div class="gsub">41,66 м.п. × 365 ₽</div>
+      </div>
+      <div class="gsum" id="gsum"></div>
+      <div class="gear">⚙</div>
+    </div>
+  </div>
+
+  <div id="blocks"></div>
+
+  <div class="card">
+    <div class="lab" style="color:#8a87d8">Доп. работы и материалы</div>
+    <div id="dwrows"></div>
+    <div style="text-align:center;padding-top:8px">
+      <button style="color:#4F46E5;font-weight:800;font-size:11.5px">+ Из номенклатур</button>
+    </div>
+  </div>
+</div>
+
+<div class="smbar"><div>
+  <div class="smico">≡</div>
+  <div class="smt">Смета <i>▾</i></div>
+  <div class="smchip">Коридор/Гостиная</div>
+  <div class="smchip gh">Все</div>
+  <div class="smsum"><b id="smSum"></b><span>Коридор/Гостиная</span></div>
+</div></div>
+</div>
+
+<!-- ════════ ЭКРАН: РЕДАКТОР ════════ -->
+<div id="scrEd" style="display:none">
+<div class="note">редактор кнопок · # Ручной ввод — количество вводится в калькуляторе, старт с 0</div>
+<div class="top">
+  <button class="back" onclick="showCalc()">‹</button>
+  <div class="ettl">Редактор кнопок</div>
+  <button class="done" onclick="showCalc()">Готово</button>
+</div>
+<div class="wrap">
+  <div class="cats" id="cats"></div>
+  <div class="card">
+    <div class="lab">Кнопки блока</div>
+    <div class="btns" id="btns"></div>
+    <div class="bhint" id="bhint"></div>
+    <div id="nameArea">
+      <div class="divider"></div>
+      <div class="lab">Название кнопки</div>
+      <input class="nmi" id="nameInp" placeholder="Например: Парящий потолок" oninput="onName(this.value)">
+      <div class="visrow">
+        <span>Показывать в калькуляторе</span>
+        <div class="sw" id="visSw" onclick="tglVis()"><i></i></div>
+      </div>
+      <div class="actrow">
+        <button class="act" onclick="edDup()">⧉ Дублировать</button>
+        <button class="act red" id="delBtn" onclick="edDel()">✕ Удалить кнопку</button>
+      </div>
+    </div>
+  </div>
+  <div id="editArea">
+    <div class="sec">Позиции <b id="cntI"></b><button class="addb" onclick="openPick()">+ Добавить</button></div>
+    <div class="elist">
+      <div class="parampanel">
+        <div class="plab">Параметр кнопки</div>
+        <div class="pseg" id="pseg"></div>
+        <div id="punit"></div>
+        <div class="phint" id="phint"></div>
+      </div>
+      <div id="listI"></div>
+    </div>
+  </div>
+</div>
+<div class="savebar" id="savebar"><div><button class="save" onclick="showCalc()">Сохранить изменения</button></div></div>
+</div>
+
+<!-- окно обновления цен -->
+<div class="mov" id="mov" onclick="if(event.target===this)closeM()">
+  <div class="mcard">
+    <div class="mtl"><div class="ibang">!</div>Обновление цен</div>
+    <div class="mtx">Цены всех позиций в этом расчёте обновятся на актуальные из базы номенклатур — если там что-то менялось. Итоги сметы будут пересчитаны.</div>
+    <div class="mbtns">
+      <button class="mb gh" onclick="closeM()">Отмена</button>
+      <button class="mb pr" onclick="closeM()">Обновить</button>
+    </div>
+  </div>
+</div>
+
+<!-- шторка: новый блок -->
+<div class="ov" id="ovNB" onclick="closeNB()"></div>
+<div class="sheet" id="shNB">
+  <div class="sh-grab"></div>
+  <div class="sh-ttl">Новый блок</div>
+  <div class="sh-sub">Появится во вкладках редактора и внизу калькулятора</div>
+  <input class="nbInp" id="nbInp" placeholder="Например: Ниши, Перегородки, Подсветка…">
+  <button class="sh-done" onclick="createNB()">Создать блок</button>
+</div>
+
+<!-- шторка: источник количества -->
+<div class="ov" id="ovB" onclick="closeBind()"></div>
+<div class="sheet" id="shB">
+  <div class="sh-grab"></div>
+  <div class="sh-ttl">Количество позиции</div>
+  <div class="sh-sub" id="shBsub"></div>
+  <div id="shBopts"></div>
+</div>
+<div class="ov" id="ovP" onclick="closePick()"></div>
+<div class="sheet" id="shP">
+  <div class="sh-grab"></div>
+  <div class="sh-ttl">Добавить позицию</div>
+  <div class="srch">🔍<input id="srchInp" placeholder="Поиск по базе…" oninput="renderPick()"></div>
+  <div class="plist" id="plist"></div>
+</div>
+
+</div><!-- /appbg -->
+
+<script>
+/* ═════════ ОБЩИЕ ДАННЫЕ ═════════ */
+const ROOM={S:39.17,P:41.66};
+const CN={corn_in:14,corn_out:10,corn_all:24};
+const fmt=n=>n.toLocaleString('ru-RU',{maximumFractionDigits:2});
+const pnum=s=>parseFloat(String(s).replace(/\s/g,'').replace(',','.'))||0;
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+const NOMS=[
+ {b:'MSD',        n:'ПВХ Полотно MSD EVOLUTION 500см', p:1000, u:'м²'},
+ {b:'MSD',        n:'ПВХ Полотно MSD Classic',         p:750,  u:'м²'},
+ {b:'EUROKRAAB',  n:'Теневой профиль EUROKRAAB',       p:620,  u:'м.п.'},
+ {b:'EUROKRAAB',  n:'Внутренний угол Теневой профиль', p:1000, u:'шт'},
+ {b:'EUROKRAAB',  n:'Внешний угол Теневой профиль',    p:1600, u:'шт'},
+ {b:'ATOM/FOTON', n:'Конструкционный профиль ATOM/FOTON', p:2100, u:'м.п.'},
+ {b:'ATOM/FOTON', n:'Монтаж Угла Конструкционного профиля ATOM/FOTON', p:2100, u:'шт'},
+ {b:'ATOM/FOTON', n:'Монтаж Примыкания Конструкционного профиля ATOM/FOTON', p:3200, u:'шт'},
+ {b:'Трек-системы', n:'Магнитная трек-система (демпферная)', p:6000, u:'м.п.'},
+ {b:'Трек-системы', n:'Поворот трек-системы (без коннектора)', p:2500, u:'шт'},
+ {b:'Трек-системы', n:'Обрыв на заглушке (без заглушки)', p:2000, u:'шт'},
+ {b:'Работы',     n:'Натяжка ПВХ потолка',             p:950,  u:'м²'},
+ {b:'Работы',     n:'Монтаж EUROKRAAB/AIRKRAAB',       p:1400, u:'м.п.'},
+ {b:'Работы',     n:'Монтаж Конструкционного профиля', p:3800, u:'м.п.'},
+ {b:'Работы',     n:'Лента светодиодная. Монтаж',      p:300,  u:'м.п.'},
+ {b:'Работы',     n:'Стандартный монтаж люстры (без сборки люстры)', p:2500, u:'шт'},
+ {b:'Работы',     n:'Установка светильника',           p:700,  u:'шт'},
+ {b:'Работы',     n:'Сдвоенные светильники. Закладная делается на станке ЧПУ', p:2800, u:'шт'},
+ {b:'Работы',     n:'Укрытие стен защитной плёнкой',   p:365,  u:'м.п.'},
+ {b:'Работы',     n:'Обвод трубы',                     p:300,  u:'шт'}
+];
+const NM=n=>NOMS.find(x=>x.n===n);
+const it=(n,src='param')=>({n,p:NM(n).p,u:NM(n).u,src});
+const P0=(name,src,unit)=>({name,param:unit?{src,unit}:{src},items:[]});
+
+const DB={
+ canvas:[
+  P0('mad','area'), P0('ткань','area'),
+  {name:'MSD Evolution',param:{src:'area'},
+   items:[it('ПВХ Полотно MSD EVOLUTION 500см'),it('Натяжка ПВХ потолка')]},
+  P0('Светопрозрачка','area')
+ ],
+ main:[
+  P0('EUROKRAAB','perim'),
+  {name:'EUROKRAAB STRONG',param:{src:'perim'},
+   items:[it('Теневой профиль EUROKRAAB'),it('Монтаж EUROKRAAB/AIRKRAAB'),
+    it('Внутренний угол Теневой профиль','corn_in'),it('Внешний угол Теневой профиль','corn_out')]},
+  P0('EUROKRAAB 2.0','perim'),P0('EUROKRAAB потолочный','perim'),P0('EUROKRAAB BOX','perim'),
+  P0('AIRKRAAB 2.0','perim'),P0('Euroslott теневой','perim'),P0('Вставка','perim'),
+  P0('Теневой Clamp','perim'),P0('Йошка','perim')
+ ],
+ extra:[
+  {name:'Световые линии',param:{src:'manual',unit:'м.п.'},
+   items:[it('Лента светодиодная. Монтаж')]},
+  P0('Парящий Fenix','manual','м.п.'),P0('Теневой KRAAB','manual','м.п.'),P0('Ниша под карниз','manual','м.п.')
+ ],
+ light:[
+  P0('Безрамный Artelamp','manual','шт'),
+  {name:'Люстра стандарт',param:{src:'manual',unit:'шт'},
+   items:[it('Стандартный монтаж люстры (без сборки люстры)')]},
+  {name:'Светильник стандарт',param:{src:'manual',unit:'шт'},
+   items:[it('Установка светильника')]},
+  {name:'Двойной ЧПУ',param:{src:'manual',unit:'шт'},
+   items:[it('Сдвоенные светильники. Закладная делается на станке ЧПУ')]}
+ ],
+ track:[
+  P0('SLOTT CANYON 3.0','manual','м.п.'),P0('SLOTT LINE','manual','м.п.'),P0('Световая линия (гарпун)','manual','м.п.'),
+  {name:'Монтаж трека (без профиля)',param:{src:'manual',unit:'м.п.'},
+   items:[it('Магнитная трек-система (демпферная)'),
+    it('Поворот трек-системы (без коннектора)','manual'),it('Обрыв на заглушке (без заглушки)','manual')]},
+  P0('Каньон','manual','м.п.'),P0('Перегородка','manual','м.п.'),P0('Трейлин','manual','м.п.'),
+  P0('Монтаж световой линии','manual','м.п.'),P0('Переход уровня','manual','м.п.')
+ ],
+ curtain:[
+  P0('SK Novus','manual','м.п.'),P0('SK Magnum','manual','м.п.'),P0('UK (универс.)','manual','м.п.'),
+  P0('Road 01','manual','м.п.'),P0('PDK 80','manual','м.п.'),P0('Закладная фанера','manual','м.п.'),
+  P0('Ниша (фанера+Atom)','manual','м.п.'),
+  {name:'Отсечка FOTON 80',param:{src:'manual',unit:'м.п.'},
+   items:[it('Конструкционный профиль ATOM/FOTON'),it('Монтаж Конструкционного профиля'),it('Лента светодиодная. Монтаж'),
+    it('Монтаж Угла Конструкционного профиля ATOM/FOTON','manual'),it('Монтаж Примыкания Конструкционного профиля ATOM/FOTON','manual')]},
+  P0('Отсечка ATOM80','manual','м.п.')
+ ]
+};
+DB.canvas[1].hide=1;
+DB.main[9].hide=1;
+
+const CATS=[
+ {id:'canvas', l:'Полотно'},
+ {id:'main',   l:'Основной профиль'},
+ {id:'extra',  l:'Доп. профиль'},
+ {id:'light',  l:'Светильники/люстры'},
+ {id:'track',  l:'Линейное освещение'},
+ {id:'curtain',l:'Шторы'}
+];
+const catL=id=>{const c=CATS.find(c=>c.id===id);return c?c.l:id};
+const firstVis=id=>(DB[id]||[]).find(p=>!p.hide)||null;
+
+const SRC={
+ param:   {l:'×',c:'#4F46E5'},
+ area:    {l:'S',c:'#4F46E5', short:'м² черт.'},
+ perim:   {l:'P',c:'#0a84ff', short:'м.п. черт.'},
+ corn_all:{l:'∠',c:'#ff9500', short:'все углы'},
+ corn_in: {l:'∠',c:'#16a34a', short:'внутр'},
+ corn_out:{l:'∠',c:'#ff3b30', short:'внеш'},
+ manual:  {l:'#',c:'#8e8e93', short:'вручную'}
+};
+
+/* ═════════ ЭКРАНЫ ═════════ */
+let scr='calc';
+function showEd(){scr='ed';document.getElementById('scrCalc').style.display='none';
+  document.getElementById('scrEd').style.display='block';
+  document.querySelector('.smbar').style.display='none';
+  edRender();window.scrollTo({top:0});}
+function showCalc(){scr='calc';document.getElementById('scrEd').style.display='none';
+  document.getElementById('savebar').style.display='none';
+  document.getElementById('scrCalc').style.display='block';
+  document.querySelector('.smbar').style.display='block';
+  renderBlocks();recalc();window.scrollTo({top:0});}
+function goEditor(bi){const b=CALC[bi];edSt.cat=b.cat;
+  edSt.idx=DB[b.cat].length?Math.max(0,DB[b.cat].indexOf(b.pr)):-1;showEd();}
+
+/* ═════════ КАЛЬКУЛЯТОР ═════════ */
+const ROOMSD=[
+ {n:'Коридор', S:39.17,P:41.66, on:1, sel:1},
+ {n:'Ванная',  S:3.42, P:7.4,  on:1},
+ {n:'Санузел', S:1.87, P:5.6,  on:1},
+ {n:'Спальня', S:11.3, P:13.5, on:1},
+ {n:'Гардероб',S:0.64, P:3.2,  on:1},
+ {n:'Балкон',  S:4.39, P:8.6,  on:1},
+ {n:'Детская', S:10.47,P:13.1, on:1}
+];
+/* ko:1 — у блока есть галочка «Ко всем»; koOn — её состояние (по умолчанию выкл) */
+const CALC=[
+ {cat:'canvas', pr:DB.canvas[2],  pv:39.17, title:'Полотно', ko:1, perrash:1, addAfter:'+ Доп. полотно'},
+ {cat:'main',   pr:DB.main[1],    pv:41.66, title:'Основной профиль', ko:1, addAfter:'+ Доп. профиль'},
+ {cat:'light',  pr:DB.light[3],   pv:14,    title:'Светильники / люстры', x:1},
+ {cat:'light',  pr:DB.light[1],   pv:2,     title:'Светильники / люстры', x:1, addAfter:'+ Светильники / люстры'},
+ {cat:'track',  pr:DB.track[3],   pv:5.5,   title:'Линейное освещение', x:1, iov:{1:1,2:2}, addAfter:'+ Линейное освещение'},
+ {cat:'curtain',pr:DB.curtain[7], pv:9,     title:'Шторы', x:1, chk:'Вычесть из осн. профиля', iov:{3:3,4:6}, addAfter:'+ Шторы'}
+];
+CALC.forEach(b=>{b.iov=b.iov||{};b.ich={};b.col=false;b.koOn=false});
+const DW=[
+ {n:'Монтаж теневого профиля по радиусу (изготовление профиля на 3Д принтере)',p:18000,u:'шт',q:2},
+ {n:'Бокс алюминиевый 40×30×1.6 чёрный',p:750,u:'м.п.',q:3},
+ {n:'Потолочный теневой профиль EUROKRAAB',p:450,u:'м',q:3},
+ {n:'Обход декоративных панелей/зеркало (Ал. бокс + потолочный теневой профиль)',p:1500,u:'м',q:3}
+];
+let gOn=true;
+
+function parInfo(b){
+  const p=b.pr.param;
+  if(p.src==='area') return {l:'S:',u:'м²'};
+  if(p.src==='perim') return {l:'P:',u:'м.п.'};
+  return {l:p.unit==='шт'?'Кол:':'Дл:',u:p.unit||'м.п.'};
+}
+function qtyOf(b,i){
+  if(b.iov[i]!==undefined)return b.iov[i];
+  const r=b.pr.items[i];
+  if(r.src==='param')return b.pv;
+  if(r.src==='manual')return 0;
+  if(r.src==='area')return ROOM.S;
+  if(r.src==='perim')return ROOM.P;
+  return CN[r.src]||0;
+}
+const iOn=(b,i)=>b.ich[i]!==false;
+
+function rowHtml(bi,i,r,qty,on){
+  const z=(r.src==='manual'&&!qty)?' q0':'';
+  return `<div class="irow${on?'':' offr'}" >
+    <div class="ck${on?'':' off'}" onclick="tglRow(${bi},${i})">✓</div>
+    <div class="ii">
+      <div class="iname">${esc(r.n)}</div>
+      <div class="isub">${fmt(r.p)} ₽/${r.u}
+        <span class="srcb" style="color:${SRC[r.src].c}">${SRC[r.src].l}</span>×<span class="qchip${z}" contenteditable
+        oninput="qEdit(this,${bi},${i})">${fmt(qty)}</span></div>
+    </div>
+    <div class="iright"><div class="isum" id="s_${bi}_i_${i}"></div><div class="pen">✎</div></div>
+  </div>`;
+}
+function blockHtml(bi){
+  const b=CALC[bi], P=b.pr;
+  const selName=P?esc(P.name):'нет кнопки';
+  const ko=b.ko?`<div class="koall${b.koOn?' on':''}" onclick="event.stopPropagation();koTgl(${bi})">
+    <div class="ck${b.koOn?'':' off'}">✓</div>Ко всем</div>`:'';
+  const head=`<div class="bhd" onclick="tglBlk(${bi})">
+    <div class="chev">${b.col?'▸':'▾'}</div>
+    <div class="btl">${esc(b.title)}${b.col?` <span class="bsel">(${selName})</span>`:''}</div>
+    ${!b.col?ko:''}
+    <div class="bsum" id="bs_${bi}"></div>
+    ${b.x?`<div class="bx" onclick="event.stopPropagation();rmBlk(${bi})">✕</div>`:''}
+    <div class="bstar" onclick="event.stopPropagation()">☆</div></div>`;
+  if(b.col) return `<div class="card" id="bcard_${bi}">${head}</div>`;
+  const vis=DB[b.cat].map((p,i)=>({p,i})).filter(v=>!v.p.hide);
+  const chips=vis.map(v=>
+    `<button class="chip${v.p===b.pr?' sel':''}" onclick="pickChip(${bi},${v.i})">${esc(v.p.name)}</button>`).join('')
+    +`<button class="chip echip" onclick="goEditor(${bi})">✎</button>`;
+  let body='';
+  if(P){
+    const pi=parInfo(b);
+    body=`<div class="prow">
+      <div class="plabel">${pi.l}</div>
+      <input class="pval" value="${fmt(b.pv)}" oninput="pEdit(this,${bi})">
+      <div class="punit">${pi.u}</div>
+      ${b.chk?`<div class="pchk"><div class="ck off" onclick="this.classList.toggle('off')">✓</div>${b.chk}</div>`:''}
+      ${b.perrash?`<div class="pchk"><div class="ck off" onclick="this.classList.toggle('off')">✓</div>Перерасход материала</div>`:''}
+    </div>
+    ${P.items.length?`<div class="slab">Позиции</div>${P.items.map((r,i)=>rowHtml(bi,i,r,qtyOf(b,i),iOn(b,i))).join('')}`
+      :'<div class="empty">У этой кнопки пока нет позиций — добавь в редакторе ✎</div>'}`;
+  }else{
+    body=`<div class="empty">В этом блоке пока нет кнопок — создай их в редакторе ✎</div>`;
+  }
+  return `<div class="card" id="bcard_${bi}">${head}
+    <div class="chips">${chips}</div>${body}</div>`;
+}
+function koTgl(bi){CALC[bi].koOn=!CALC[bi].koOn;renderBlocks();recalc()}
+function tglBlk(bi){CALC[bi].col=!CALC[bi].col;renderBlocks();recalc()}
+function rmBlk(bi){CALC.splice(bi,1);renderBlocks();recalc()}
+function addCustomInstance(id){
+  CALC.push({cat:id, pr:firstVis(id), pv:1, title:catL(id), x:1, custom:1,
+    iov:{},ich:{},col:false,koOn:false});
+  renderBlocks();recalc();
+}
+function renderBlocks(){
+  CALC.forEach(b=>{
+    if(!DB[b.cat]){b.pr=null;return;}
+    if(b.pr&&(!DB[b.cat].includes(b.pr)||b.pr.hide))b.pr=firstVis(b.cat);
+    if(!b.pr)b.pr=firstVis(b.cat);
+  });
+  let html='';
+  CALC.forEach((b,bi)=>{
+    html+=blockHtml(bi);
+    if(b.addAfter)html+=`<button class="addblk">${b.addAfter}</button>`;
+  });
+  CATS.filter(c=>c.custom).forEach(c=>{
+    html+=`<button class="addblk" onclick="addCustomInstance('${c.id}')">+ ${esc(c.l)}</button>`;
+  });
+  document.getElementById('blocks').innerHTML=html;
+  document.getElementById('dwrows').innerHTML=DW.map((r,i)=>`
+    <div class="irow"><div class="ii">
+      <div class="iname">${esc(r.n)}</div>
+      <div class="isub">${fmt(r.p)} ₽/${r.u} ×<span class="qchip" contenteditable oninput="dwEdit(this,${i})">${fmt(r.q)}</span></div></div>
+      <div class="iright"><div class="isum" id="dws_${i}"></div><div class="pen">✎</div>
+      <div class="xdel" onclick="DW.splice(${i},1);renderBlocks();recalc()">✕</div></div></div>`).join('');
+}
+function recalc(){
+  let total=0;
+  CALC.forEach((b,bi)=>{
+    let bs=0;
+    if(b.pr){
+      b.pr.items.forEach((r,i)=>{const s=r.p*qtyOf(b,i);
+        const el=document.getElementById(`s_${bi}_i_${i}`); if(el)el.textContent=fmt(s);
+        if(iOn(b,i))bs+=s;});
+    }
+    const be=document.getElementById('bs_'+bi); if(be)be.textContent=fmt(bs);
+    total+=bs;
+  });
+  const g=ROOM.P*365;
+  document.getElementById('gsum').textContent=fmt(g);
+  if(gOn)total+=g;
+  DW.forEach((r,i)=>{const s=r.p*r.q;
+    const el=document.getElementById('dws_'+i); if(el)el.textContent=fmt(s);
+    total+=s;});
+  document.getElementById('smSum').textContent=fmt(total)+' ₽';
+}
+function pickChip(bi,i){const b=CALC[bi];b.pr=DB[b.cat][i];
+  b.iov={};b.ich={};
+  if(b.pr.param.src==='area')b.pv=ROOM.S;
+  else if(b.pr.param.src==='perim')b.pv=ROOM.P;
+  renderBlocks();recalc();}
+function tglRow(bi,i){const b=CALC[bi];
+  b.ich[i]=b.ich[i]===false;
+  renderBlocks();recalc();}
+function qEdit(el,bi,i){
+  const v=pnum(el.textContent);
+  const b=CALC[bi];b.iov[i]=v;
+  el.classList.toggle('q0', b.pr.items[i].src==='manual'&&!v);
+  recalc();
+}
+function pEdit(el,bi){const b=CALC[bi];b.pv=pnum(el.value);
+  recalc();
+  b.pr.items.forEach((r,idx)=>{
+    if(r.src==='param'&&b.iov[idx]===undefined){
+      const row=document.getElementById(`s_${bi}_i_${idx}`);
+      if(row){const chipEl=row.closest('.irow').querySelector('.qchip');
+        if(chipEl&&document.activeElement!==chipEl)chipEl.textContent=fmt(b.pv);}
+    }});
+}
+function dwEdit(el,i){DW[i].q=pnum(el.textContent);recalc()}
+function gTgl(){gOn=!gOn;document.getElementById('gck').classList.toggle('off',!gOn);recalc()}
+function openM(){document.getElementById('mov').classList.add('on')}
+function closeM(){document.getElementById('mov').classList.remove('on')}
+
+/* ── помещения ── */
+let rArm=-1,rArmT;
+function renderRooms(){
+  document.getElementById('rooms').innerHTML=ROOMSD.map((r,i)=>`
+    <div class="room${r.sel?' sel':''}" id="rm_${i}" oncontextmenu="return false"
+      onpointerdown="rrDown(event,${i})">
+      <div class="rline"><div class="ck${r.on?'':' off'}" onpointerdown="event.stopPropagation()" onclick="rTgl(${i})">✓</div>
+        <div class="rname">${esc(r.n)}</div></div>
+      <div class="rsub">${fmt(r.S)} м² · ${fmt(r.P)} м</div>
+      ${r.sel?`<div class="ricons">
+        <div class="ric" onpointerdown="event.stopPropagation()">✎</div>
+        <div class="ric" onpointerdown="event.stopPropagation()" onclick="rCopy(${i})">⧉</div>
+        <div class="ric red${rArm===i?' arm':''}" onpointerdown="event.stopPropagation()" onclick="rDel(${i})">✕</div>
+      </div>`:''}
+    </div>`).join('')
+   +`<div class="room plus" onclick="ROOMSD.push({n:'Помещение',S:0,P:0,on:1});renderRooms()">+</div>`;
+  document.getElementById('rcnt').textContent=ROOMSD.length;
+}
+function rTgl(i){ROOMSD[i].on=!ROOMSD[i].on;renderRooms()}
+function rSel(i){ROOMSD.forEach(r=>r.sel=0);ROOMSD[i].sel=1;rArm=-1;renderRooms()}
+function rCopy(i){ROOMSD.splice(i+1,0,{...ROOMSD[i],sel:0});renderRooms()}
+function rDel(i){
+  if(rArm===i){
+    ROOMSD.splice(i,1);rArm=-1;
+    if(ROOMSD.length&&!ROOMSD.some(r=>r.sel))ROOMSD[Math.min(i,ROOMSD.length-1)].sel=1;
+    renderRooms();
+  }else{
+    rArm=i;renderRooms();
+    clearTimeout(rArmT);
+    rArmT=setTimeout(()=>{rArm=-1;renderRooms()},2200);
+  }
+}
+
+let rdrag=null;
+function rrDown(e,i){
+  if(rdrag||drag)return;
+  rdrag={i,sx:e.clientX,sy:e.clientY,el:e.currentTarget,active:false};
+  rdrag.t=setTimeout(rrStart,330);
+  window.addEventListener('pointermove',rrMove,{passive:false});
+  window.addEventListener('pointerup',rrUp);
+  window.addEventListener('pointercancel',rrCancel);
+}
+function rrStart(){
+  if(!rdrag)return;
+  rdrag.active=true;
+  const el=rdrag.el,r=el.getBoundingClientRect();
+  rdrag.ox=rdrag.sx-r.left;rdrag.oy=rdrag.sy-r.top;
+  const c=el.cloneNode(true);c.classList.add('rghost');
+  c.style.width=r.width+'px';c.style.left=r.left+'px';c.style.top=r.top+'px';
+  document.body.appendChild(c);rdrag.clone=c;
+  el.classList.add('ph');
+  if(navigator.vibrate)navigator.vibrate(12);
+}
+function rrMove(e){
+  if(!rdrag)return;
+  if(!rdrag.active){
+    if(Math.abs(e.clientX-rdrag.sx)>10||Math.abs(e.clientY-rdrag.sy)>10){
+      clearTimeout(rdrag.t);rrListeners();rdrag=null;}
+    return;}
+  e.preventDefault();
+  rdrag.clone.style.left=(e.clientX-rdrag.ox)+'px';
+  rdrag.clone.style.top=(e.clientY-rdrag.oy)+'px';
+  const kids=[...document.querySelectorAll('#rooms .room:not(.plus)')];
+  for(const k of kids){
+    if(k===rdrag.el)continue;
+    const kr=k.getBoundingClientRect();
+    if(e.clientX>=kr.left&&e.clientX<=kr.right&&e.clientY>=kr.top-6&&e.clientY<=kr.bottom+6){
+      const before=e.clientX<kr.left+kr.width/2;
+      document.getElementById('rooms').insertBefore(rdrag.el,before?k:k.nextSibling);
+      break;}
+  }
+}
+function rrUp(){
+  if(!rdrag)return;
+  clearTimeout(rdrag.t);
+  const act=rdrag.active,i=rdrag.i,el=rdrag.el;
+  if(act){
+    const obj=ROOMSD[i];
+    const kids=[...document.querySelectorAll('#rooms .room:not(.plus)')];
+    const ni=kids.indexOf(el);
+    ROOMSD.splice(i,1);ROOMSD.splice(ni,0,obj);
+  }
+  rrFinish(act,i);
+}
+function rrCancel(){if(!rdrag)return;clearTimeout(rdrag.t);rrFinish(rdrag.active,rdrag.i,true)}
+function rrFinish(act,i,cancelled){
+  if(rdrag.clone)rdrag.clone.remove();
+  if(rdrag.el)rdrag.el.classList.remove('ph');
+  rrListeners();rdrag=null;
+  if(act)renderRooms();
+  else if(!cancelled)rSel(i);
+}
+function rrListeners(){
+  window.removeEventListener('pointermove',rrMove);
+  window.removeEventListener('pointerup',rrUp);
+  window.removeEventListener('pointercancel',rrCancel);
+}
+
+/* ═════════ РЕДАКТОР ═════════ */
+const PSRC={area:{seg:'S · с чертежа'},perim:{seg:'P · с чертежа'},manual:{seg:'Вручную'}};
+const UNITS=['м.п.','шт','м²'];
+
+const edSt={cat:'canvas',idx:2};
+const edCur=()=>edSt.idx>=0?DB[edSt.cat][edSt.idx]:null;
+const pl=()=>{const s=edCur().param.src;return s==='area'?'S':s==='perim'?'P':'N'};
+let bindIdx=null;
+let edArm=false,edArmT;
+let catArm=null,catArmT;
+const grid=()=>document.getElementById('btns');
+
+let drag=null;
+document.addEventListener('touchmove',e=>{if((drag&&drag.active)||(rdrag&&rdrag.active))e.preventDefault()},{passive:false});
+function dDown(e,i){
+  if(drag||rdrag)return;
+  drag={i,sx:e.clientX,sy:e.clientY,el:e.currentTarget,active:false};
+  drag.t=setTimeout(dStart,330);
+  window.addEventListener('pointermove',dMove,{passive:false});
+  window.addEventListener('pointerup',dUp);
+  window.addEventListener('pointercancel',dCancel);
+}
+function dStart(){
+  if(!drag)return;
+  drag.active=true;
+  const el=drag.el,r=el.getBoundingClientRect();
+  drag.ox=drag.sx-r.left;drag.oy=drag.sy-r.top;
+  const c=el.cloneNode(true);c.classList.add('drag-clone');c.classList.remove('ph');
+  c.style.width=r.width+'px';c.style.left=r.left+'px';c.style.top=r.top+'px';
+  document.body.appendChild(c);drag.clone=c;
+  el.classList.add('ph');
+  if(navigator.vibrate)navigator.vibrate(12);
+}
+function dMove(e){
+  if(!drag)return;
+  if(!drag.active){
+    if(Math.abs(e.clientX-drag.sx)>10||Math.abs(e.clientY-drag.sy)>10){
+      clearTimeout(drag.t);dListeners();drag=null;}
+    return;}
+  e.preventDefault();
+  drag.clone.style.left=(e.clientX-drag.ox)+'px';
+  drag.clone.style.top=(e.clientY-drag.oy)+'px';
+  const kids=[...grid().querySelectorAll('.pb:not(.plus)')];
+  for(const k of kids){
+    if(k===drag.el)continue;
+    const kr=k.getBoundingClientRect();
+    if(e.clientX>=kr.left&&e.clientX<=kr.right&&e.clientY>=kr.top&&e.clientY<=kr.bottom){
+      const before=e.clientX<kr.left+kr.width/2;
+      grid().insertBefore(drag.el,before?k:k.nextSibling);
+      break;}
+  }
+}
+function dUp(){
+  if(!drag)return;
+  clearTimeout(drag.t);
+  const act=drag.active,i=drag.i,el=drag.el;
+  if(act){
+    const a=DB[edSt.cat],sel=edCur(),obj=a[i];
+    const kids=[...grid().querySelectorAll('.pb:not(.plus)')];
+    const ni=kids.indexOf(el);
+    a.splice(i,1);a.splice(ni,0,obj);
+    edSt.idx=a.indexOf(sel);
+  }
+  dFinish(act,i);
+}
+function dCancel(){if(!drag)return;clearTimeout(drag.t);dFinish(drag.active,drag.i,true)}
+function dFinish(act,i,cancelled){
+  if(drag.clone)drag.clone.remove();
+  if(drag.el)drag.el.classList.remove('ph');
+  dListeners();drag=null;
+  if(act)edRender();
+  else if(!cancelled){edSt.idx=i;edRender();}
+}
+function dListeners(){
+  window.removeEventListener('pointermove',dMove);
+  window.removeEventListener('pointerup',dUp);
+  window.removeEventListener('pointercancel',dCancel);
+}
+
+function edRenderCats(){
+  document.getElementById('cats').innerHTML=CATS.map(c=>{
+    const sel=edSt.cat===c.id;
+    const x=(c.custom&&sel)
+      ?`<span class="catx${catArm===c.id?' arm':''}" onclick="event.stopPropagation();catDel('${c.id}')">✕</span>`:'';
+    return `<button class="cat${sel?' sel':''}" onclick="edSwitch('${c.id}')">${esc(c.l)}${x}</button>`;
+  }).join('')
+  +`<button class="cat catplus" onclick="openNB()">+ блок</button>`;
+}
+function edSwitch(id){edSt.cat=id;edSt.idx=DB[id].length?0:-1;catArm=null;edRender()}
+function catDel(id){
+  if(catArm===id){
+    const i=CATS.findIndex(c=>c.id===id);
+    if(i>=0)CATS.splice(i,1);
+    delete DB[id];
+    for(let k=CALC.length-1;k>=0;k--)if(CALC[k].cat===id)CALC.splice(k,1);
+    catArm=null;
+    edSwitch('canvas');
+  }else{
+    catArm=id;edRenderCats();
+    clearTimeout(catArmT);
+    catArmT=setTimeout(()=>{catArm=null;edRenderCats()},2200);
+  }
+}
+function openNB(){
+  document.getElementById('nbInp').value='';
+  document.getElementById('ovNB').classList.add('on');
+  document.getElementById('shNB').classList.add('on');
+  setTimeout(()=>document.getElementById('nbInp').focus(),260);
+}
+function closeNB(){
+  document.getElementById('ovNB').classList.remove('on');
+  document.getElementById('shNB').classList.remove('on');
+}
+function createNB(){
+  const name=document.getElementById('nbInp').value.trim()||'Мой блок';
+  const id='cst_'+Date.now();
+  CATS.push({id,l:name,custom:1});
+  DB[id]=[];
+  closeNB();
+  edSwitch(id);
+}
+
+function edRenderBtns(){
+  const a=DB[edSt.cat];
+  grid().innerHTML=a.map((p,i)=>`<button class="pb${i===edSt.idx?' sel':''}${p.hide?' hid':''}" id="pb_${i}"
+    oncontextmenu="return false" onpointerdown="dDown(event,${i})">${esc(p.name)||'Без названия'}</button>`).join('')
+   +`<button class="pb plus" onclick="edAdd()">+</button>`;
+  document.getElementById('bhint').textContent=a.length
+   ?'удерживай и тащи — порядок · полупрозрачные скрыты из калькулятора'
+   :'в этом блоке пока нет кнопок — нажми +';
+}
+function defParam(){
+  if(edSt.cat==='canvas')return{src:'area'};
+  if(edSt.cat==='main')return{src:'perim'};
+  if(edSt.cat==='light')return{src:'manual',unit:'шт'};
+  return{src:'manual',unit:'м.п.'};
+}
+function edAdd(){
+  DB[edSt.cat].push({name:'Новая кнопка',param:defParam(),items:[]});
+  edSt.idx=DB[edSt.cat].length-1;edRender();
+  const inp=document.getElementById('nameInp');inp.focus();inp.select();
+}
+function edDup(){
+  const c=JSON.parse(JSON.stringify(edCur()));
+  c.name+=' (копия)';
+  DB[edSt.cat].splice(edSt.idx+1,0,c);
+  edSt.idx++;edRender();
+}
+function tglVis(){
+  const p=edCur();
+  p.hide=!p.hide;
+  edRender();
+}
+function resetDel(){
+  edArm=false;
+  const btn=document.getElementById('delBtn');
+  if(btn){btn.classList.remove('hot');btn.textContent='✕ Удалить кнопку';}
+}
+function edDel(){
+  const btn=document.getElementById('delBtn');
+  if(edArm){
+    const a=DB[edSt.cat];
+    a.splice(edSt.idx,1);
+    edSt.idx=a.length?Math.min(edSt.idx,a.length-1):-1;
+    resetDel();edRender();
+  }else{
+    edArm=true;
+    btn.classList.add('hot');btn.textContent='Ещё раз — удалить';
+    clearTimeout(edArmT);
+    edArmT=setTimeout(resetDel,2200);
+  }
+}
+function onName(v){
+  if(!edCur())return;
+  edCur().name=v;
+  const el=document.getElementById('pb_'+edSt.idx);
+  if(el)el.textContent=v.trim()||'Без названия';
+}
+function edRenderParam(){
+  const p=edCur().param;
+  document.getElementById('pseg').innerHTML=Object.keys(PSRC).map(k=>
+    `<button class="ps${p.src===k?' sel':''}" onclick="setPSrc('${k}')">${PSRC[k].seg}</button>`).join('');
+  document.getElementById('punit').innerHTML=p.src==='manual'
+   ?`<div class="unitrow"><span>Единица:</span>${UNITS.map(u=>
+      `<button class="uc${p.unit===u?' sel':''}" onclick="setPUnit('${u}')">${u}</button>`).join('')}</div>`:'';
+  document.getElementById('phint').textContent=
+    p.src==='area'?'S с чертежа · умножает позиции с привязкой «× Параметр»'
+   :p.src==='perim'?'P с чертежа · умножает позиции с привязкой «× Параметр»'
+   :'поле ввода в калькуляторе ('+(p.unit||'м.п.')+') · умножает позиции с привязкой «× Параметр»';
+}
+function setPSrc(k){const p=edCur().param;p.src=k;
+  if(k==='manual'&&!p.unit)p.unit='м.п.';
+  edRenderParam();edRenderItems();}
+function setPUnit(u){edCur().param.unit=u;edRenderParam();edRenderItems()}
+
+function srcChip(r,i){
+  const S=SRC[r.src];
+  const txt=r.src==='param'?'· '+pl():'· '+S.short;
+  return `<button class="bind" onclick="openBind(${i})"><b style="color:${S.c}">${S.l}</b><span>${txt}</span></button>`;
+}
+function edRenderItems(){
+  const el=document.getElementById('listI');
+  const arr=edCur().items;
+  if(!arr.length){el.innerHTML='<div class="empty">Нажми «+ Добавить», чтобы выбрать номенклатуру из базы</div>';}
+  else el.innerHTML=arr.map((r,i)=>`
+    <div class="erow">
+      <div style="flex:1;min-width:0"><div class="ern">${esc(r.n)}</div><div class="erp">${fmt(r.p)} ₽/${r.u}</div></div>
+      ${srcChip(r,i)}
+      <button class="edel" onclick="edCur().items.splice(${i},1);edRender()">✕</button>
+    </div>`).join('');
+  document.getElementById('cntI').textContent=arr.length||'';
+}
+function edRender(){
+  resetDel();
+  edRenderCats();edRenderBtns();
+  const has=!!edCur();
+  document.getElementById('nameArea').style.display=has?'block':'none';
+  document.getElementById('editArea').style.display=has?'block':'none';
+  document.getElementById('savebar').style.display=(has&&scr==='ed')?'block':'none';
+  if(!has)return;
+  document.getElementById('nameInp').value=edCur().name;
+  document.getElementById('visSw').classList.toggle('on',!edCur().hide);
+  edRenderParam();edRenderItems();
+}
+
+function openBind(idx){
+  bindIdx=idx;edRenderBind();
+  document.getElementById('ovB').classList.add('on');
+  document.getElementById('shB').classList.add('on');
+}
+function closeBind(){
+  document.getElementById('ovB').classList.remove('on');
+  document.getElementById('shB').classList.remove('on');
+}
+function edRenderBind(){
+  const r=edCur().items[bindIdx];
+  document.getElementById('shBsub').textContent=r.n;
+  const p=edCur().param;
+  const pName=p.src==='area'?'S — площадь с чертежа'
+    :p.src==='perim'?'P — периметр с чертежа'
+    :'N — вводится в калькуляторе ('+(p.unit||'м.п.')+')';
+  const row=(k,label,extra)=>{
+    const S=SRC[k],sel=r.src===k;
+    return `<div class="oprow${extra||''}" onclick="setSrc('${k}')">
+      <div class="ol" style="color:${S.c}">${S.l}</div>
+      <div class="olab">${label}</div>
+      <div class="ock" style="color:${S.c};opacity:${sel?1:0}">✓</div></div>`;
+  };
+  let html='';
+  html+=row('param',`Параметр кнопки <i>· ${pName}</i>`,' hero');
+  html+=`<div class="sh-grp">Привязать к чертежу</div>`;
+  html+=row('area','Площадь чертежа · м²');
+  html+=row('perim','Периметр чертежа · м.п.');
+  html+=row('corn_all','Все углы чертежа');
+  html+=row('corn_in','Внутренние углы');
+  html+=row('corn_out','Внешние углы');
+  html+=`<div class="sh-grp">В калькуляторе</div>`;
+  html+=row('manual','Ручной ввод <i>· в смете по умолчанию 0</i>');
+  document.getElementById('shBopts').innerHTML=html;
+}
+function setSrc(k){
+  const r=edCur().items[bindIdx];
+  r.src=k;
+  edRenderBind();edRenderItems();
+  setTimeout(closeBind,130);
+}
+
+function openPick(){
+  document.getElementById('srchInp').value='';renderPick();
+  document.getElementById('ovP').classList.add('on');
+  document.getElementById('shP').classList.add('on');
+}
+function closePick(){
+  document.getElementById('ovP').classList.remove('on');
+  document.getElementById('shP').classList.remove('on');
+}
+function renderPick(){
+  const q=document.getElementById('srchInp').value.trim().toLowerCase();
+  const fl=NOMS.filter(x=>!q||x.n.toLowerCase().includes(q)||x.b.toLowerCase().includes(q));
+  let html='',lastB='';
+  fl.forEach(x=>{
+    if(x.b!==lastB){html+=`<div class="bhead">${x.b}</div>`;lastB=x.b;}
+    const gi=NOMS.indexOf(x);
+    html+=`<div class="pitem" onclick="addNom(${gi})">
+      <div class="pi-n">${esc(x.n)}</div><div class="pi-p">${fmt(x.p)} ₽/${x.u}</div><div class="pi-add">+</div></div>`;
+  });
+  document.getElementById('plist').innerHTML=html||'<div class="empty">Ничего не найдено</div>';
+}
+function addNom(gi){
+  const x=NOMS[gi];
+  let src='param';
+  if(/внутр/i.test(x.n))src='corn_in';
+  else if(/внешн/i.test(x.n))src='corn_out';
+  else if(/угл/i.test(x.n))src='corn_all';
+  edCur().items.push({n:x.n,p:x.p,u:x.u,src});
+  edRender();closePick();
+}
+
+/* ═════════ старт ═════════ */
+renderRooms();
+renderBlocks();
+recalc();
+</script>
+</body>
+</html>
