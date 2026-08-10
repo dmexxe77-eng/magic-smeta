@@ -67,6 +67,7 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
   const[finYm,setFinYm] = useState(ymNow);
   const[finFrom,setFinFrom] = useState("");
   const[finTo,setFinTo] = useState("");
+  const[finStage,setFinStage] = useState(null); /* фильтр «По проектам» по карточке этапа; null = все кроме отказов */
   const[statsPeriod,setStatsPeriod] = useState("all");
   const[statsYm,setStatsYm] = useState(ymNow);
   const[statsFrom,setStatsFrom] = useState("");
@@ -786,11 +787,13 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
       const R=periodRange(finPeriod,finYm,finFrom,finTo);
       /* Проекты периода — по дате создания */
       const pOrders=allFin.filter(o=>inRange(parseRuDate(o.date),R));
-      const stage=ids=>{const g=pOrders.filter(o=>ids.includes(o.status));return{n:g.length,sum:g.reduce((s,o)=>s+o.total,0)};};
-      const gEst=stage(["estimate","discuss"]);
-      const gCon=stage(["contract","install"]);
-      const gDone=stage(["done"]);
-      const gDecl=stage(["declined"]);
+      const STAGE_DEFS=[
+        {id:"est", l:"Расчёты",  st:["estimate","discuss"], c:"#4F46E5"},
+        {id:"con", l:"Договоры", st:["contract","install"], c:"#0a84ff"},
+        {id:"done",l:"Выполнено",st:["done"],               c:"#16a34a"},
+        {id:"decl",l:"Отказы",   st:["declined"],           c:"#ff3b30"},
+      ];
+      const stageData=STAGE_DEFS.map(d=>{const g=pOrders.filter(o=>d.st.includes(o.status));return{...d,n:g.length,sum:g.reduce((s,o)=>s+o.total,0)};});
       /* Деньги периода — по датам платежей/расходов */
       const payIn=orders.flatMap(o=>(o.payments||[]).filter(x=>x.type==="income")).filter(p=>inRange(parseIsoLocal(p.date),R)).reduce((s,x)=>s+x.amount,0);
       const expOut=orders.flatMap(o=>(o.expenses||[])).filter(e=>inRange(parseIsoLocal(e.date),R)).reduce((s,x)=>s+x.amount,0);
@@ -808,20 +811,15 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
           <div><div style={{fontSize:10,color:"rgba(255,255,255,0.35)",marginBottom:4}}>{"Прибыль"}</div><div style={{fontSize:17,fontWeight:700,color:payIn-expOut>=0?"#4ade80":"#ff453a"}}>{ff(payIn-expOut)+" ₽"}</div></div>
           <div><div style={{fontSize:10,color:"rgba(255,255,255,0.35)",marginBottom:4}}>{"Долги по договорам"}</div><div style={{fontSize:17,fontWeight:700,color:totDebt>0?"#ff453a":"rgba(255,255,255,0.4)"}}>{ff(totDebt)+" ₽"}</div></div>
         </div>
-        {/* Стадии сделок за период */}
+        {/* Стадии сделок за период — клик по карточке фильтрует «По проектам» */}
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:9,marginBottom:12}}>
-          {[
-            {l:"Расчёты",g:gEst,c:"#4F46E5"},
-            {l:"Договоры",g:gCon,c:"#0a84ff"},
-            {l:"Выполнено",g:gDone,c:"#16a34a"},
-            {l:"Отказы",g:gDecl,c:"#ff3b30"},
-          ].map(x=>(<div key={x.l} style={{background:T.card,borderRadius:13,padding:"12px 13px",borderTop:"3px solid "+x.c}}>
+          {stageData.map(x=>{const active=finStage===x.id;return(<div key={x.id} onClick={()=>setFinStage(active?null:x.id)} style={{background:active?x.c+"12":T.card,borderRadius:13,padding:"12px 13px",borderTop:"3px solid "+x.c,cursor:"pointer",boxShadow:active?"0 0 0 1.5px "+x.c:"none"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-              <span style={{fontSize:11,color:T.sub,fontWeight:600}}>{x.l}</span>
-              <span style={{background:x.c+"18",color:x.c,fontSize:10,fontWeight:800,borderRadius:9,padding:"1px 7px"}}>{x.g.n}</span>
+              <span style={{fontSize:11,color:active?x.c:T.sub,fontWeight:active?800:600}}>{x.l}</span>
+              <span style={{background:x.c+"18",color:x.c,fontSize:10,fontWeight:800,borderRadius:9,padding:"1px 7px"}}>{x.n}</span>
             </div>
-            <div style={{fontSize:17,fontWeight:800,color:x.g.sum>0?T.text:T.dim}}>{ff(x.g.sum)}<span style={{fontSize:11,fontWeight:400,color:T.dim}}>{" ₽"}</span></div>
-          </div>))}
+            <div style={{fontSize:17,fontWeight:800,color:x.sum>0?T.text:T.dim}}>{ff(x.sum)}<span style={{fontSize:11,fontWeight:400,color:T.dim}}>{" ₽"}</span></div>
+          </div>);})}
         </div>
         {/* Дебиторка + По проектам: на десктопе рядом */}
         <div className="info-grid">
@@ -837,15 +835,27 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
           {!debtors.length&&<div style={{color:T.dim,fontSize:12,textAlign:"center",padding:"8px 0"}}>{"Задолженностей нет"}</div>}
         </div>
         <div style={{background:T.card,borderRadius:15,padding:13}}>
-          <div style={{fontSize:13,fontWeight:600,color:T.text,marginBottom:9}}>{"По проектам"}</div>
-          {[...pOrders].sort((a,b)=>b.total-a.total).filter(o=>o.total>0).map(o=>{const pct=Math.round(o.total>0?o.inc/o.total*100:0);const st=stObj(o.status);return(<div key={o.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:"0.5px solid "+T.border,cursor:"pointer"}} onClick={()=>openOrd(o.id)}>
+          {(()=>{
+            const sel=STAGE_DEFS.find(d=>d.id===finStage);
+            /* по умолчанию отказы скрыты — для финансов они не интересны */
+            const rows=[...pOrders].sort((a,b)=>b.total-a.total).filter(o=>o.total>0).filter(o=>sel?sel.st.includes(o.status):o.status!=="declined");
+            return(<>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:9,gap:8}}>
+            <div style={{fontSize:13,fontWeight:600,color:T.text}}>{"По проектам"+(sel?" · "+sel.l:"")}</div>
+            {sel
+              ?<span onClick={()=>setFinStage(null)} style={{fontSize:10,color:sel.c,fontWeight:700,cursor:"pointer",background:sel.c+"14",borderRadius:8,padding:"2px 8px",flexShrink:0}}>{"фильтр ✕"}</span>
+              :<span style={{fontSize:9,color:T.dim,textAlign:"right"}}>{"без отказов · клик по этапу выше — фильтр"}</span>}
+          </div>
+          {rows.map(o=>{const pct=Math.round(o.total>0?o.inc/o.total*100:0);const st=stObj(o.status);return(<div key={o.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:"0.5px solid "+T.border,cursor:"pointer"}} onClick={()=>openOrd(o.id)}>
             <div style={{flex:1,minWidth:0,marginRight:12}}>
               <div style={{fontSize:12,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.name}<span style={{color:st.color,fontSize:10,marginLeft:6}}>{st.label}</span></div>
               <div style={{height:3,background:T.card2,borderRadius:3,marginTop:5,overflow:"hidden"}}><div style={{height:"100%",width:`${Math.min(pct,100)}%`,background:ACC,borderRadius:3}}/></div>
             </div>
             <div style={{textAlign:"right",flexShrink:0}}><div style={{fontSize:12,fontWeight:700}}>{ff(o.total)+" ₽"}</div><div style={{fontSize:10,color:T.sub}}>{pct+"% опл."}</div></div>
           </div>);})}
-          {!pOrders.filter(o=>o.total>0).length&&<div style={{color:T.dim,fontSize:12,textAlign:"center",padding:"8px 0"}}>{"Нет проектов за период"}</div>}
+          {!rows.length&&<div style={{color:T.dim,fontSize:12,textAlign:"center",padding:"8px 0"}}>{sel?"Нет проектов на этапе «"+sel.l+"»":"Нет проектов за период"}</div>}
+            </>);
+          })()}
         </div>
         </div>
       </div>);
