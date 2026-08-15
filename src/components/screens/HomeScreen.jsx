@@ -1061,7 +1061,10 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
     {showFullExp&&(()=>{
       const d=showFullExp;
       const ordClean=(d.orders||[]).map(o=>({...o,rooms:(o.rooms||[]).map(r=>{const{imgPts,...rr}=r;return rr;})}));
-      const full={presets:d.presets,sharedFavs:d.sharedFavs,customNoms:d.customNoms||[],editedNoms:d.editedNoms||[],deletedNomIds:d.deletedNomIds||[],orders:ordClean};
+      /* Выгружаем ВСЁ, что собрал buildFullExport: помимо кнопок и номенклатуры —
+         глобальные опции, свои блоки, конфигурацию кнопок v1 (нормы/кратность/источники)
+         и свои разделы. Раньше эти поля терялись, и бэкап восстанавливался неполным. */
+      const full={...d,orders:ordClean};
       const json=JSON.stringify(full,null,2);
       return(<div style={{position:"fixed",inset:0,zIndex:60,background:"rgba(0,0,0,0.3)",overflow:"auto",display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
         <div style={{background:T.card,borderRadius:"20px 20px 0 0",padding:"20px 16px 36px",width:"100%",maxWidth:480}}>

@@ -30,7 +30,7 @@ export default function ButtonEditor({ presets, sharedFavs, customBlocks, initia
   const nameRef = useRef(null);
   const focusNameOnNext = useRef(false);
 
-  const blockPresets = cfg.presets.filter(p => p.blockId === blockId);
+  const blockPresets = cfg.presets.filter(p => p.blockId === blockId && !p.archived);
   const cur = cfg.presets.find(p => p.id === presetId && p.blockId === blockId) || blockPresets[0] || null;
   useEffect(() => { if (cur && cur.id !== presetId) setPresetId(cur.id); }, [blockId, cur?.id]);
   useEffect(() => { if (focusNameOnNext.current && nameRef.current) { nameRef.current.focus(); nameRef.current.select(); focusNameOnNext.current = false; } });
@@ -69,9 +69,12 @@ export default function ButtonEditor({ presets, sharedFavs, customBlocks, initia
   };
   const deletePreset = () => {
     if (!cur) return;
-    const rest = cfg.presets.filter(p => p.id !== cur.id);
-    commit({ ...cfg, presets: rest });
-    setPresetId(rest.find(p => p.blockId === blockId)?.id || null);
+    /* Мягкое удаление. Кнопки общие для всех проектов: если убрать пресет из данных,
+       старые сметы, где он выбран, потеряют свои строки. Поэтому помечаем архивным —
+       он пропадает из редактора и калькулятора, но buildEst его по-прежнему находит. */
+    const next = { ...cfg, presets: cfg.presets.map(p => p.id === cur.id ? { ...p, hidden: true, archived: true } : p) };
+    commit(next);
+    setPresetId(next.presets.find(p => p.blockId === blockId && !p.archived)?.id || null);
     setDelConfirm(false);
   };
   const reorder = (from, to) => {

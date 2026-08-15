@@ -91,6 +91,7 @@ export function migrateLegacy(legacyPresets, sharedFavs, customBlocks) {
       order: ord,
     };
     if (Array.isArray(catFavs) && !catFavs.includes(p.id)) preset.hidden = true;
+    if (p.archived) { preset.archived = true; preset.hidden = true; }
     const extra = {};
     if (p.pid !== undefined) extra.pid = p.pid;
     if (p.sec !== undefined) extra.sec = p.sec;
@@ -137,6 +138,7 @@ export function toLegacyPresets(config) {
     if (Object.keys(srcMap).length) out.src = srcMap;
     if (Object.keys(mu).length) out.mu = mu;
     if (p.param) out.param = { ...p.param };
+    if (p.archived) out.archived = true;
     if (p._legacy) Object.assign(out, p._legacy);
     return out;
   });
