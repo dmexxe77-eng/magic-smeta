@@ -44,6 +44,9 @@ export default function NomEditorV2({ onClose, initialEditId }) {
   const [q, setQ] = useState("");
   const [searchAll, setSearchAll] = useState(false);
   const [openId, setOpenId] = useState(initialEditId || null);
+  /* открыт из калькулятора по ✎ — «Готово» должно вернуть в калькулятор, а не в список */
+  const fromCalc = useRef(!!initialEditId);
+  const closeCard = () => { if (fromCalc.current) { onClose(); return; } setOpenId(null); rerender(); };
   const [selMode, setSelMode] = useState(false);
   const [sel, setSel] = useState(() => new Set());
   const [bulkOpen, setBulkOpen] = useState(false);
@@ -100,9 +103,9 @@ export default function NomEditorV2({ onClose, initialEditId }) {
     );
     return (<div style={{ position: "fixed", inset: 0, zIndex: 60, background: BG, overflowY: "auto", fontFamily: "'Inter',-apple-system,system-ui,sans-serif", color: DARK }}>
       <div style={{ position: "sticky", top: 0, zIndex: 5, background: "#fff", borderBottom: "2px solid " + ACC, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 }}>
-        <button onClick={() => { setOpenId(null); rerender(); }} style={{ background: "rgba(79,70,229,.1)", border: "none", borderRadius: 9, width: 32, height: 32, cursor: "pointer", color: ACC, fontSize: 17, fontWeight: 800 }}>{"‹"}</button>
+        <button onClick={closeCard} style={{ background: "rgba(79,70,229,.1)", border: "none", borderRadius: 9, width: 32, height: 32, cursor: "pointer", color: ACC, fontSize: 17, fontWeight: 800 }}>{"‹"}</button>
         <div style={{ flex: 1, fontSize: 15, fontWeight: 800 }}>{"Позиция"}</div>
-        <button onClick={() => { setOpenId(null); rerender(); }} style={{ background: "none", border: "none", color: ACC, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{"Готово"}</button>
+        <button onClick={closeCard} style={{ background: "none", border: "none", color: ACC, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{fromCalc.current ? "В калькулятор" : "Готово"}</button>
       </div>
       <div style={{ maxWidth: 560, margin: "0 auto", padding: "12px 12px 40px" }}>
         <div style={{ ...card, padding: 12, marginBottom: 12, display: "flex", gap: 12 }}>
@@ -161,7 +164,7 @@ export default function NomEditorV2({ onClose, initialEditId }) {
           <button onClick={() => { const n = NB(cur.id); const c = addNewNom(n.name + " копия", n.price, n.unit, n.type, n.brand ? { id: n.brand, name: n.brandName, color: n.brandColor } : null); ["mult", "cost", "inst", "note", "img"].forEach(k => { if (n[k] !== undefined) c[k] = n[k]; }); setOpenId(c.id); rerender(); }}
             style={{ flex: 1, background: "#fff", border: "1px solid " + LINE, borderRadius: 11, padding: 12, fontSize: 12.5, fontWeight: 700, color: SUB, cursor: "pointer", fontFamily: "inherit" }}>{"Дублировать"}</button>
           {delAsk
-            ? <button onClick={() => { deleteNom(cur.id); deleteNomPhotoFromIdb(cur.id); setDelAsk(false); setOpenId(null); rerender(); }}
+            ? <button onClick={() => { deleteNom(cur.id); deleteNomPhotoFromIdb(cur.id); setDelAsk(false); closeCard(); }}
                 style={{ flex: 1, background: RED, border: "none", borderRadius: 11, padding: 12, fontSize: 12.5, fontWeight: 800, color: "#fff", cursor: "pointer", fontFamily: "inherit" }}>{"Точно удалить?"}</button>
             : <button onClick={() => { setDelAsk(true); setTimeout(() => setDelAsk(false), 4000); }}
                 style={{ flex: 1, background: "rgba(255,59,48,.08)", border: "none", borderRadius: 11, padding: 12, fontSize: 12.5, fontWeight: 700, color: RED, cursor: "pointer", fontFamily: "inherit" }}>{"Удалить"}</button>}
@@ -291,7 +294,7 @@ export default function NomEditorV2({ onClose, initialEditId }) {
         const b = brands.find(x => x.id === curBrand);
         const type = filterCat === "all" ? "profile" : filterCat;
         const n = addNewNom("", 0, type === "work" ? "м.п." : type === "canvas" ? "м²" : "шт", type, b ? { id: b.id, name: b.name, color: b.color } : null);
-        setOpenId(n.id); rerender();
+        fromCalc.current = false; setOpenId(n.id); rerender();
       }} style={{ flex: 1, background: ACC, border: "none", borderRadius: 11, padding: 12, color: "#fff", fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{"Новая позиция"}</button>
     </div>)}
 
