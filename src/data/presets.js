@@ -1,10 +1,12 @@
 import { uid, safeJsonParse, safeStr } from "../utils/helpers.js";
 import { loadNomPhotoFromIdb, revokeObjectUrl, idbGet, idbPut } from '../utils/storage.js';
 import { NOM_V2 } from "./nomenclatureV2.js";
+import { applyKo, baseOfSrc, legacyOptionSrc } from "./qty.js";
 import { ALL_NOM, NOM_GEN, NOM_EXT, NB, USER_NOMS_CUSTOM, USER_NOMS_EDITED, USER_NOMS_DELETED, addNewNom, deleteNom, DELETED_NOM_IDS, RUNTIME_EDITED_NOMS } from "./nomenclature.jsx";
 import { P, PF, LIGHT, OPT, DEFAULT_MAT, KK, PIMG } from "./profiles.js";
 import USER_SNAPSHOT from "./userSnapshot.json"; /* полные данные пользователя: пресеты, номенклатура, проекты */
 import { newRoom, newR, gA, gP } from '../utils/roomUtils.js';
+import { getAngles } from '../utils/geometry.js';
 export { newRoom, newR, gA, gP };
 
 export function normalizeNomName(s){
@@ -165,6 +167,15 @@ export const BLOCK_CFG=[
 
 /* ═══ Новая структура комнаты ═══ */
 
+/* Углы помещения с чертежа — для источников corn_* */
+function getAnglesSafe(r){
+  try{
+    const v=(r.v||[]).map(p=>[p[0]*1000,p[1]*1000]);
+    if(v.length<3)return{inner:0,outer:0};
+    const d=getAngles(v);
+    return{inner:d.filter(x=>x===90).length,outer:d.filter(x=>x===270).length};
+  }catch(e){return{inner:0,outer:0};}
+}
 export function buildEst(rooms,allPresets,gOpts,priceSnap){
   const _pr=allPresets||PRESETS_GEN;
   const _find=id=>_pr.find(x=>x.id===id);
@@ -186,11 +197,13 @@ export function buildEst(rooms,allPresets,gOpts,priceSnap){
       const preset=_find(inst.btnId);
       if(!preset)return;
       const qBase=useQty!=null?useQty:(inst.qty||0);
+      const koMap=preset.ko||{},srcMap=preset.src||{};
       (preset.items||[]).forEach(nomId=>{
         const nom=NB(nomId);if(!nom)return;
         if(inst.off?.[nomId]===true)return;
         const iq=inst.iq?.[nomId];
-        const qUse=(iq!=null?iq:qBase);
+        /* норма расхода: k на 1 единицу параметра; ручная правка (iq) главнее */
+        const qUse=(iq!=null?iq:applyKo(qBase,koMap[nomId],nom.unit));
         if(qUse<=0)return;
         if(nom.type==="profile"||nom.type==="canvas"||nom.type==="option")addM(nomId,nom.name+(nom.type==="canvas"?" ("+r.name+")":""),qUse,nom.unit,gPrice(nomId,nom.price));
         else addW(nomId,nom.name,qUse,nom.unit,gPrice(nomId,nom.price));
@@ -198,6 +211,8 @@ export function buildEst(rooms,allPresets,gOpts,priceSnap){
       (preset.options||[]).forEach(nomId=>{
         const nom=NB(nomId);if(!nom)return;
         if(inst.off?.[nomId]===true)return;
+        /* Опции: количество как и раньше — из oq (углы автозаполняются в калькуляторе).
+           Норма расхода к ним не применяется: там поле ввода — сама база. */
         const oq=inst.oq?.[nomId]||0;
         if(oq>0){
           // Options теперь тоже учитывают тип позиции:

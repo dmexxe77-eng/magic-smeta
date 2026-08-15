@@ -46,8 +46,8 @@ const OPTION_SRC = {
   o_outer_angle: "corn_out",
   o_angle: "corn_all",
 };
-/* Источник количества легаси-опции (для единого списка в калькуляторе) */
-export const legacyOptionSrc = nomId => OPTION_SRC[nomId] || "manual";
+/* Источник количества легаси-опции — реэкспорт из qty.js (единый источник правды) */
+export { legacyOptionSrc } from "./qty.js";
 
 export function builtinBlocks() {
   return BLOCK_CFG.map((b, i) => ({ id: b.id, label: b.title, order: i }));
@@ -69,13 +69,15 @@ export function migrateLegacy(legacyPresets, sharedFavs, customBlocks) {
   const presets = (legacyPresets || []).map(p => {
     const blockId = p.cat || "other";
     const ord = (orderInBlock[blockId] = (orderInBlock[blockId] ?? -1) + 1);
+    const ko = p.ko || {}, srcMap = p.src || {};
+    const mk = (nomId, defSrc, i) => {
+      const it = { nomId, src: srcMap[nomId] || defSrc, order: i };
+      if (ko[nomId] != null && ko[nomId] !== 1) it.k = ko[nomId];
+      return it;
+    };
     const items = [
-      ...(p.items || []).map((nomId, i) => ({ nomId, src: "param", order: i })),
-      ...(p.options || []).map((nomId, i) => ({
-        nomId,
-        src: OPTION_SRC[nomId] || "manual",
-        order: (p.items || []).length + i,
-      })),
+      ...(p.items || []).map((nomId, i) => mk(nomId, "param", i)),
+      ...(p.options || []).map((nomId, i) => mk(nomId, OPTION_SRC[nomId] || "manual", (p.items || []).length + i)),
     ];
     const catFavs = favs[blockId];
     const preset = {
@@ -124,6 +126,13 @@ export function toLegacyPresets(config) {
       items: sorted.filter(i => i.src === "param").map(i => i.nomId),
       options: sorted.filter(i => i.src !== "param").map(i => i.nomId),
     };
+    const ko = {}, srcMap = {};
+    sorted.forEach(i => {
+      if (i.k != null && Number(i.k) !== 1) ko[i.nomId] = Number(i.k);
+      if (i.src && i.src !== "param") srcMap[i.nomId] = i.src;
+    });
+    if (Object.keys(ko).length) out.ko = ko;
+    if (Object.keys(srcMap).length) out.src = srcMap;
     if (p.param) out.param = { ...p.param };
     if (p._legacy) Object.assign(out, p._legacy);
     return out;
@@ -200,4 +209,5 @@ export function runParity() {
 }
 
 if (typeof window !== "undefined") window.__zamerParity = runParity;
+
 

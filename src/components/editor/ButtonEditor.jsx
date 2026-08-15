@@ -7,6 +7,7 @@ import { T } from "../../theme.js";
 import { fmt, uid } from "../../utils/helpers.js";
 import { NB } from "../../data/nomenclature.jsx";
 import NomPicker from "../screens/NomPicker.jsx";
+import { koOf, hasKo, applyKo } from "../../data/qty.js";
 import { SRC_META, smartSrcFor, migrateLegacy, toLegacyPresets, favsOfConfig } from "../../data/buttonsStore.js";
 
 const IND = "#4F46E5";
@@ -19,7 +20,8 @@ export default function ButtonEditor({ presets, sharedFavs, customBlocks, initia
   const [delBlockId, setDelBlockId] = useState(null); /* двухшаговое подтверждение удаления блока (window.confirm в webview глушится) */
   const [blockId, setBlockId] = useState(initialBlockId || "canvas");
   const [presetId, setPresetId] = useState(initialPresetId || null);
-  const [srcSheetIdx, setSrcSheetIdx] = useState(null);   /* index строки, для которой открыта шторка источника */
+  const [srcSheetIdx, setSrcSheetIdx] = useState(null);
+  const [koSheetIdx, setKoSheetIdx] = useState(null);   /* index строки, для которой открыта шторка источника */
   const [nomSheet, setNomSheet] = useState(false);
   const [nomQ, setNomQ] = useState("");
   const [delConfirm, setDelConfirm] = useState(false);
@@ -111,6 +113,7 @@ export default function ButtonEditor({ presets, sharedFavs, customBlocks, initia
   const inputS = { width: "100%", background: "#f2f3fa", border: "1px solid #f1f1f8", borderRadius: 10, padding: "9px 12px", color: "#1e2530", fontSize: 13, fontFamily: "inherit", boxSizing: "border-box", outline: "none" };
   const sheetWrap = { position: "fixed", inset: 0, zIndex: 70, background: "rgba(20,22,35,0.45)", display: "flex", flexDirection: "column", justifyContent: "flex-end" };
   const sheet = { background: "#fff", borderRadius: "16px 16px 0 0", padding: "14px 16px 28px", maxHeight: "78vh", overflowY: "auto" };
+  const sheet0 = sheet;
 
   return (<div style={{ position: "fixed", inset: 0, zIndex: 60, background: "#f2f3fa", overflowY: "auto", fontFamily: "'Inter',-apple-system,system-ui,sans-serif", color: "#1e2530" }}>
     {/* Шапка */}
@@ -211,6 +214,9 @@ export default function ButtonEditor({ presets, sharedFavs, customBlocks, initia
                 <div style={{ fontSize: 10, color: nom ? "#a5a9b8" : "#ff3b30" }}>{nom ? fmt(nom.price) + " ₽/" + nom.unit : "удалена из базы — в смету не попадает, удалите ✕ или замените"}</div>
               </div>
               <button onClick={() => setSrcSheetIdx(i)} style={{ background: meta.color + "14", color: meta.color, border: "none", borderRadius: 8, padding: "5px 9px", fontSize: 10.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>{meta.icon + " " + (meta.short || meta.label)}</button>
+              {it.src === "param" && (hasKo(it.src, it.k)
+                ? <button onClick={() => setKoSheetIdx(i)} style={{ background: "#1e2530", color: "#fff", border: "none", borderRadius: 8, padding: "5px 9px", fontSize: 10.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>{"×" + koOf(it.k)}</button>
+                : <button onClick={() => setKoSheetIdx(i)} style={{ background: "transparent", color: "#a5a9b8", border: "1px solid #e3e4ee", borderRadius: 8, padding: "4px 9px", fontSize: 10.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>{"норма"}</button>)}
               <button onClick={() => setItems(sortedItems.filter((_, j) => j !== i))} style={{ background: "rgba(255,59,48,0.08)", border: "none", borderRadius: 8, width: 26, height: 26, color: "#ff3b30", fontSize: 12, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>{"✕"}</button>
             </div>);
           })}
@@ -248,6 +254,43 @@ export default function ButtonEditor({ presets, sharedFavs, customBlocks, initia
           {row("corn_out", "Внешние углы")}
           <div style={{ fontSize: 9, fontWeight: 800, color: "#c2c5d1", letterSpacing: "0.8px", margin: "10px 0 2px" }}>{"В КАЛЬКУЛЯТОРЕ"}</div>
           {row("manual", "Ручной ввод", "в смете по умолчанию 0")}
+        </div>
+      </div>);
+    })()}
+
+    {/* Шторка нормы расхода (SPEC §4.3) */}
+    {koSheetIdx != null && cur && (() => {
+      const it = sortedItems[koSheetIdx];
+      if (!it) return null;
+      const nom = NB(it.nomId);
+      const k = koOf(it.k);
+      const step = 1; /* норма правится кратно 1 */
+      const setK = v => {
+        const nv = Math.max(0, Math.round((Number(v) || 0) * 1000) / 1000);
+        setItems(sortedItems.map((x, j) => j === koSheetIdx ? (nv === 1 || nv === 0 ? (({ k, ...rest }) => rest)(x) : { ...x, k: nv }) : x));
+      };
+      const pUnit = cur.param.src === "area" ? "м²" : cur.param.src === "perim" ? "м.п." : (cur.param.unit || "м.п.");
+      const pName = cur.param.src === "area" ? "площадь чертежа" : cur.param.src === "perim" ? "периметр чертежа" : "параметр кнопки";
+      const demo = cur.param.src === "area" ? 20 : cur.param.src === "perim" ? 20 : 10;
+      const qty = applyKo(demo, k, nom?.unit);
+      const rounded = (nom?.unit === "шт" || nom?.unit === "шт.") && demo * k !== qty;
+      return (<div style={sheetWrap} onClick={e => { if (e.target === e.currentTarget) setKoSheetIdx(null); }}>
+        <div style={sheet0}>
+          <div style={{ width: 36, height: 4, background: "#e3e4ee", borderRadius: 2, margin: "0 auto 12px" }} />
+          <div style={{ fontSize: 14, fontWeight: 800 }}>{"Норма расхода"}</div>
+          <div style={{ fontSize: 11, color: "#a5a9b8", fontWeight: 700, marginTop: 3, marginBottom: 14 }}>{nom?.name || it.nomId}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+            <button onClick={() => setK(k - step)} style={{ width: 44, height: 44, borderRadius: 12, border: "1px solid #e3e4ee", background: "#fff", fontSize: 20, fontWeight: 800, color: "#5a6070", cursor: "pointer", fontFamily: "inherit" }}>{"−"}</button>
+            <input value={k} inputMode="decimal" onChange={e => setK(String(e.target.value).replace(",", "."))}
+              style={{ flex: 1, textAlign: "center", background: "#f2f3fa", border: "1px solid #f1f1f8", borderRadius: 12, padding: "11px 8px", fontSize: 22, fontWeight: 800, color: "#1e2530", fontFamily: "inherit", outline: "none" }} />
+            <button onClick={() => setK(k + step)} style={{ width: 44, height: 44, borderRadius: 12, border: "1px solid #e3e4ee", background: "#fff", fontSize: 20, fontWeight: 800, color: "#5a6070", cursor: "pointer", fontFamily: "inherit" }}>{"+"}</button>
+          </div>
+          <div style={{ fontSize: 11.5, color: "#5a6070", fontWeight: 700, textAlign: "center", marginBottom: 12 }}>{k + " " + (nom?.unit || "") + " на 1 " + pUnit}</div>
+          <div style={{ background: "#1e2530", borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,.6)", lineHeight: 1.6 }}>{pName + ": " + demo + " " + pUnit + " × " + k + " → "}<b style={{ color: "#fff" }}>{qty + " " + (nom?.unit || "")}</b>{rounded ? " (вверх до целого)" : ""}</div>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,.6)", marginTop: 5 }}>{"в смете: " + qty + " × " + fmt(nom?.price || 0) + " ₽ = "}<b style={{ color: "#fff" }}>{fmt(qty * (nom?.price || 0)) + " ₽"}</b></div>
+          </div>
+          <button onClick={() => setKoSheetIdx(null)} style={{ width: "100%", background: IND, border: "none", borderRadius: 12, padding: 13, color: "#fff", fontSize: 13.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{"Готово"}</button>
         </div>
       </div>);
     })()}
