@@ -5,7 +5,7 @@
 import { useState, useRef, useEffect } from "react";
 import { T } from "../../theme.js";
 import { fmt, uid } from "../../utils/helpers.js";
-import { ALL_NOM, NB, NOM_BRAND_GROUPS } from "../../data/nomenclature.jsx";
+import { NB, activeNoms, NOM_V2_BRAND_GROUPS } from "../../data/nomenclature.jsx";
 import { SRC_META, smartSrcFor, migrateLegacy, toLegacyPresets, favsOfConfig } from "../../data/buttonsStore.js";
 
 const IND = "#4F46E5";
@@ -254,8 +254,9 @@ export default function ButtonEditor({ presets, sharedFavs, customBlocks, initia
     {nomSheet && (() => {
       const q = nomQ.trim().toLowerCase();
       const match = n => n?.name && (!q || n.name.toLowerCase().includes(q)) && n.type !== "option";
-      const brands = NOM_BRAND_GROUPS.map(g => ({ id: g.id, name: g.name, color: g.color, noms: ALL_NOM.filter(n => n.brand === g.id && match(n)) })).filter(g => g.noms.length);
-      const other = ALL_NOM.filter(n => !n.brand && match(n));
+      const act = activeNoms();
+      const brands = NOM_V2_BRAND_GROUPS.map(g => ({ id: g.id, name: g.name, color: g.color, noms: act.filter(n => n.brand === g.id && match(n)) })).filter(g => g.noms.length);
+      const other = act.filter(n => !n.brand && match(n));
       const nomRow = n => (<div key={n.id} onClick={() => addNomItem(n.id)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, padding: "7px 8px", borderRadius: 8, cursor: "pointer", borderBottom: "0.5px solid #f6f6fb" }}>
         <span style={{ flex: 1, minWidth: 0, fontSize: 11.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{n.name}</span>
         <span style={{ fontSize: 10.5, color: "#a5a9b8", flexShrink: 0 }}>{fmt(n.price) + " ₽/" + n.unit}</span>

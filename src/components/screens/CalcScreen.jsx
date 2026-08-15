@@ -7,7 +7,7 @@ import { calcPoly, getAngles, countAngles, effectiveOq, getAutoOq } from "../../
 import { compressImg, profSvgHtml } from "../../utils/imageUtils.js";
 import { AUTO_SAVE_KEY, AUTO_SAVE_META_KEY, idbPut, idbGet, idbDel, blobToObjectUrl, blobToDataUrl, revokeObjectUrl, persistNomPhotoToIdb, loadNomPhotoFromIdb, getNomPhotoDataUrl} from "../../utils/storage.js";
 import { P, PF, Pmp, Pap, Pcu, Ptr, DEFAULT_MAT, KK, LIGHT, OPT, PIMG, DEFAULT_FAV } from "../../data/profiles.js";
-import { ALL_NOM, NB, addNewNom, deleteNom, DELETED_NOM_IDS, NOM_BRAND_GROUPS } from "../../data/nomenclature.jsx";
+import { ALL_NOM, NB, addNewNom, deleteNom, DELETED_NOM_IDS, NOM_BRAND_GROUPS, activeNoms } from "../../data/nomenclature.jsx";
 import { PRESETS_GEN, PRbyId, USER_PRESETS_OVERRIDE, USER_FAVS_OVERRIDE, BLOCK_CFG, CALC_STATE_REF, snapNomPrices, newRoom, newR, gA, gP, buildEst, sanitizeOrdersForStorage, applyNomsSnapshot, resolveNomByEstimateLine, STATUSES} from "../../data/presets.js";
 import { btnS, N, SecH, Sel, ProfSel, ProfDD, OptsInline, ProfLine, NI, ProGate } from "../ui.jsx";
 import { AppHeader } from "../AppHeader.jsx";
@@ -425,7 +425,7 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
                 {go.nomId?(<div onClick={()=>{setGlobalOpts(prev=>{const n=[...prev];n[gi]={...n[gi],nomId:""};return n;});setGoNomSearch("");}} style={{display:"flex",alignItems:"center",gap:10,background:T.card,border:"1px solid "+T.accent,borderRadius:8,padding:"6px 8px",cursor:"pointer"}}><div style={{flex:1,minWidth:0}}><div style={{fontSize:10,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{NB(go.nomId)?.name||go.nomId}</div><div style={{fontSize:8,color:T.dim}}>{fmt(NB(go.nomId)?.price||0)+" · нажмите для смены"}</div></div><div onClick={(e)=>{e.stopPropagation();openNomEditorFromCalc(go.nomId);}} style={{color:T.accent,fontSize:12,cursor:"pointer",padding:"0 4px",flexShrink:0}}>✎</div></div>):(<div>
                   <input value={goNomSearch} onChange={e=>setGoNomSearch(e.target.value)} placeholder="🔍 Поиск номенклатуры..." style={{width:"100%",background:T.card,border:"1px solid "+T.border,borderRadius:8,padding:"6px 8px",color:T.text,fontSize:10,fontFamily:"inherit",boxSizing:"border-box",outline:"none",marginBottom:4}}/>
                   <div style={{maxHeight:120,overflow:"auto",background:T.card,borderRadius:8}}>
-                    {ALL_NOM.filter(n=>{
+                    {activeNoms().filter(n=>{
                       const s=(goNomSearch||"").trim();
                       if(!n?.name)return false;
                       if(n.type==="option")return false; /* скрываем базовый "option" — используем материальные/рабочие варианты */

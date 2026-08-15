@@ -5,7 +5,7 @@ import { calcPoly, getAngles, countAngles, effectiveOq, getAutoOq } from "../../
 import { compressImg, profSvgHtml } from "../../utils/imageUtils.js";
 import { AUTO_SAVE_KEY, AUTO_SAVE_META_KEY, idbPut, idbGet, idbDel, blobToObjectUrl, blobToDataUrl, revokeObjectUrl, persistNomPhotoToIdb, loadNomPhotoFromIdb, deleteNomPhotoFromIdb} from "../../utils/storage.js";
 import { P, PF, Pmp, Pap, Pcu, Ptr, DEFAULT_MAT, KK, LIGHT, OPT, PIMG, DEFAULT_FAV } from "../../data/profiles.js";
-import { ALL_NOM, NB, addNewNom, deleteNom, DELETED_NOM_IDS, RUNTIME_EDITED_NOMS, NOM_BRAND_GROUPS, ensureOptionPairsForNom} from "../../data/nomenclature.jsx";
+import { ALL_NOM, NB, addNewNom, deleteNom, DELETED_NOM_IDS, RUNTIME_EDITED_NOMS, NOM_BRAND_GROUPS, NOM_V2_BRAND_GROUPS, activeNoms, ensureOptionPairsForNom} from "../../data/nomenclature.jsx";
 import { PRESETS_GEN, PRbyId, USER_PRESETS_OVERRIDE, USER_FAVS_OVERRIDE, BLOCK_CFG, CALC_STATE_REF, newRoom, newR, gA, gP, buildEst, sanitizeOrdersForStorage, applyNomsSnapshot, normalizeNomName, hydrateNomsPhotosFromIdb} from "../../data/presets.js";
 import { btnS, N, SecH, Sel, ProfSel, ProfDD, OptsInline, ProfLine, NI, ProGate } from "../ui.jsx";
 import PolyMini from "../canvas/PolyMini.jsx";
@@ -57,10 +57,10 @@ function NomEditor({onClose, initialEditId}){
   const TYPE_COLORS={profile:T.accent,work:T.green,option:T.accent,canvas:"#0ea5e9"};
 
   /* Пользовательские номенклатуры (id начинается с "u") */
-  const userNoms=ALL_NOM.filter(n=>n.id.startsWith("u"));
+  const userNoms=activeNoms().filter(n=>n.id.startsWith("u"));
 
   /* Найти пресеты в ALL_NOM по бренду */
-  const searchResults=search.length>1?ALL_NOM.filter(n=>n.name.toLowerCase().includes(search.toLowerCase())).slice(0,40):[];
+  const searchResults=search.length>1?activeNoms().filter(n=>n.name.toLowerCase().includes(search.toLowerCase())).slice(0,40):[];
 
   const MINE_ID="__mine__";
 
@@ -85,7 +85,7 @@ function NomEditor({onClose, initialEditId}){
 
   // Stats for sidebar counts
   const brandStats={};
-  ALL_NOM.forEach(n=>{
+  activeNoms().forEach(n=>{
     if(!n.brand)return;
     if(!brandStats[n.brand])brandStats[n.brand]={mats:0,works:0};
     if(n.type==="work")brandStats[n.brand].works++;
@@ -382,8 +382,8 @@ function NomEditor({onClose, initialEditId}){
   /* ── Мобильный аккордеон-бренд ── */
   const BrandFolder=({g})=>{
     const isOpen=openBrand===g.id;
-    const profItems=ALL_NOM.filter(n=>n.brand===g.id&&n.type!=="work");
-    const workItems=ALL_NOM.filter(n=>n.brand===g.id&&n.type==="work");
+    const profItems=activeNoms().filter(n=>n.brand===g.id&&n.type!=="work");
+    const workItems=activeNoms().filter(n=>n.brand===g.id&&n.type==="work");
     return(<div style={{borderBottom:"0.5px solid "+T.border}}>
       <div onClick={()=>setOpenBrand(isOpen?null:g.id)} style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",cursor:"pointer",background:isOpen?T.faint:T.card}}>
         <div style={{width:10,height:10,borderRadius:2,background:g.color||T.accent,flexShrink:0}}/>
@@ -424,7 +424,7 @@ function NomEditor({onClose, initialEditId}){
 
   // Список для отображения
   const displayList = (() => {
-    let list = ALL_NOM;
+    let list = activeNoms();
     if (search.length > 1) {
       list = list.filter(n => n.name.toLowerCase().includes(search.toLowerCase()));
     } else if (tab === "canvas") {
@@ -448,7 +448,7 @@ function NomEditor({onClose, initialEditId}){
     { id:"profile", label:"Материалы" },
     { id:"work",    label:"Работы" },
     { id:"mine",    label:"Мои" },
-    ...NOM_BRAND_GROUPS.map(g => ({ id:g.id, label:g.name.split(" ")[0] })),
+    ...NOM_V2_BRAND_GROUPS.map(g => ({ id:g.id, label:g.name })),
   ];
 
   const openEdit = n => {
@@ -472,7 +472,7 @@ function NomEditor({onClose, initialEditId}){
           <div style={{width:36,height:4,background:T.border,borderRadius:2,margin:"0 auto 10px"}}/>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
             <span style={{flex:1,fontSize:16,fontWeight:700,color:T.text}}>Номенклатуры</span>
-            <span style={{fontSize:11,color:T.dim}}>{ALL_NOM.length} поз.</span>
+            <span style={{fontSize:11,color:T.dim}}>{activeNoms().length} поз.</span>
             <button onClick={()=>setAddOpen(true)}
               style={{background:T.accent,border:"none",borderRadius:10,padding:"7px 14px",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
               + Добавить
@@ -663,7 +663,7 @@ function NomEditor({onClose, initialEditId}){
             </select>
             <select style={{...IS,marginBottom:16}} value={addBrandChoice} onChange={e=>setAddBrandChoice(e.target.value)}>
               <option value="__none__">Без профиля</option>
-              {NOM_BRAND_GROUPS.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}
+              {NOM_V2_BRAND_GROUPS.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}
               <option value="__new__">+ Новый профиль</option>
             </select>
             {addBrandChoice==="__new__"&&(

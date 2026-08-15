@@ -1,5 +1,6 @@
 import { uid, safeJsonParse, safeStr } from "../utils/helpers.js";
 import { loadNomPhotoFromIdb, revokeObjectUrl, idbGet, idbPut } from '../utils/storage.js';
+import { NOM_V2 } from "./nomenclatureV2.js";
 import { ALL_NOM, NOM_GEN, NOM_EXT, NB, USER_NOMS_CUSTOM, USER_NOMS_EDITED, USER_NOMS_DELETED, addNewNom, deleteNom, DELETED_NOM_IDS, RUNTIME_EDITED_NOMS } from "./nomenclature.jsx";
 import { P, PF, LIGHT, OPT, DEFAULT_MAT, KK, PIMG } from "./profiles.js";
 import USER_SNAPSHOT from "./userSnapshot.json"; /* полные данные пользователя: пресеты, номенклатура, проекты */
@@ -83,7 +84,11 @@ export function applyNomsSnapshot(snap){
   const deletedNomIds=snap.deletedNomIds||[];
   const deletedSet=new Set(deletedNomIds);
 
-  const base=[...NOM_GEN,...NOM_EXT,...customNoms];
+  /* NOM_V2 — новая база; без неё она выпадала бы из ALL_NOM при каждом
+     применении снапшота. Старые позиции остаются архивными (arch на объектах). */
+  const legacy=[...NOM_GEN,...NOM_EXT];
+  legacy.forEach(n=>{n.arch=true;});
+  const base=[...legacy,...NOM_V2,...customNoms];
   editedNoms.forEach(e=>{
     const n=base.find(x=>x.id===e.id);
     if(n)Object.assign(n,e);
