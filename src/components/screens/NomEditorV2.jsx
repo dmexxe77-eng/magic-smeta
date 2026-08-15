@@ -48,7 +48,6 @@ export default function NomEditorV2({ onClose, initialEditId }) {
   const [sel, setSel] = useState(() => new Set());
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkPct, setBulkPct] = useState("");
-  const [addOpen, setAddOpen] = useState(false);
   const [imgs, setImgs] = useState(null);
   const [, force] = useState(0);
   const rerender = () => force(x => x + 1);
@@ -119,7 +118,7 @@ export default function NomEditorV2({ onClose, initialEditId }) {
             }} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <textarea value={cur.name} rows={3} onChange={e => { editNom(cur.id, { name: e.target.value }); rerender(); }}
+            <textarea autoFocus={!cur.name} value={cur.name} rows={3} onChange={e => { editNom(cur.id, { name: e.target.value }); rerender(); }}
               placeholder="Наименование — цвет пиши прямо здесь"
               style={{ ...inputS, width: "100%", resize: "vertical", fontWeight: 600, lineHeight: 1.35 }} />
             <div style={{ fontSize: 9.5, color: DIM, fontWeight: 700, marginTop: 6 }}>{(cur.brandName || "") + " · id " + cur.id}</div>
@@ -288,7 +287,12 @@ export default function NomEditorV2({ onClose, initialEditId }) {
         ? <button onClick={delSelected} style={{ background: RED, border: "none", borderRadius: 9, padding: "8px 12px", fontSize: 11.5, fontWeight: 800, color: "#fff", cursor: "pointer", fontFamily: "inherit" }}>{"Удалить " + sel.size + "? Да"}</button>
         : <button disabled={!sel.size} onClick={() => { setDelSelAsk(true); setTimeout(() => setDelSelAsk(false), 4000); }} style={{ background: "rgba(255,59,48,.08)", border: "none", borderRadius: 9, padding: "8px 12px", fontSize: 11.5, fontWeight: 700, color: sel.size ? RED : DIM, cursor: sel.size ? "pointer" : "default", fontFamily: "inherit" }}>{"Удалить"}</button>}
     </div>) : (<div style={{ flexShrink: 0, background: "#fff", borderTop: "1px solid " + LINE, padding: "10px 12px", display: "flex", gap: 8 }}>
-      <button onClick={() => setAddOpen(true)} style={{ flex: 1, background: ACC, border: "none", borderRadius: 11, padding: 12, color: "#fff", fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{"Новая позиция"}</button>
+      <button onClick={() => {
+        const b = brands.find(x => x.id === curBrand);
+        const type = filterCat === "all" ? "profile" : filterCat;
+        const n = addNewNom("", 0, type === "work" ? "м.п." : type === "canvas" ? "м²" : "шт", type, b ? { id: b.id, name: b.name, color: b.color } : null);
+        setOpenId(n.id); rerender();
+      }} style={{ flex: 1, background: ACC, border: "none", borderRadius: 11, padding: 12, color: "#fff", fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{"Новая позиция"}</button>
     </div>)}
 
     {/* шторка массовой правки цен */}
@@ -329,42 +333,5 @@ export default function NomEditorV2({ onClose, initialEditId }) {
       </div>
     </div>)}
 
-    {/* шторка новой позиции */}
-    {addOpen && <AddSheet brands={brands} curBrand={curBrand} onClose={() => setAddOpen(false)} onAdded={id => { setAddOpen(false); setOpenId(id); rerender(); }} />}
-  </div>);
-}
-
-function AddSheet({ brands, curBrand, onClose, onAdded }) {
-  const [name, setName] = useState("");
-  const [type, setType] = useState("profile");
-  const [unit, setUnit] = useState("шт");
-  const [price, setPrice] = useState("");
-  const [brand, setBrand] = useState(curBrand);
-  const inputS = { background: BG, border: "1px solid " + LINE, borderRadius: 9, padding: "9px 11px", fontSize: 13, color: DARK, fontFamily: "inherit", outline: "none", boxSizing: "border-box", width: "100%" };
-  const add = () => {
-    if (!name.trim()) return;
-    const b = brands.find(x => x.id === brand);
-    const n = addNewNom(name.trim(), parseFloat(String(price).replace(",", ".")) || 0, unit, type, b ? { id: b.id, name: b.name, color: b.color } : null);
-    onAdded(n.id);
-  };
-  return (<div onClick={e => { if (e.target === e.currentTarget) onClose(); }} style={{ position: "fixed", inset: 0, zIndex: 70, background: "rgba(20,22,35,.45)", display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
-    <div style={{ background: "#fff", borderRadius: "16px 16px 0 0", padding: "14px 16px 28px", maxHeight: "80vh", overflowY: "auto" }}>
-      <div style={{ width: 36, height: 4, background: "#e3e4ee", borderRadius: 2, margin: "0 auto 12px" }} />
-      <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 12 }}>{"Новая позиция"}</div>
-      <textarea autoFocus value={name} rows={2} onChange={e => setName(e.target.value)} placeholder="Наименование" style={{ ...inputS, resize: "vertical", marginBottom: 8 }} />
-      <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-        <input value={price} onChange={e => setPrice(e.target.value)} inputMode="decimal" placeholder="Цена ₽" style={{ ...inputS, flex: 1 }} />
-        <select value={unit} onChange={e => setUnit(e.target.value)} style={{ ...inputS, width: 100 }}>{UNITS.map(u => <option key={u} value={u}>{u}</option>)}</select>
-      </div>
-      <div style={{ display: "flex", gap: 5, marginBottom: 8 }}>{CATS.map(c => { const a = type === c.id; return (
-        <button key={c.id} onClick={() => setType(c.id)} style={{ flex: 1, background: a ? c.c : BG, color: a ? "#fff" : SUB, border: "none", borderRadius: 8, padding: "8px 4px", fontSize: 11.5, fontWeight: a ? 800 : 600, cursor: "pointer", fontFamily: "inherit" }}>{c.l}</button>); })}</div>
-      <select value={brand} onChange={e => setBrand(e.target.value)} style={{ ...inputS, marginBottom: 14 }}>
-        {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-      </select>
-      <div style={{ display: "flex", gap: 8 }}>
-        <button onClick={add} style={{ flex: 1, background: ACC, border: "none", borderRadius: 11, padding: 12, color: "#fff", fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{"Добавить"}</button>
-        <button onClick={onClose} style={{ background: BG, border: "none", borderRadius: 11, padding: "12px 16px", color: SUB, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit" }}>{"Отмена"}</button>
-      </div>
-    </div>
   </div>);
 }

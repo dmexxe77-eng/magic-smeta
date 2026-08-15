@@ -330,7 +330,7 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
         <div style={{display:'flex',alignItems:'center',gap:6}}>
           <div style={{textAlign:'right'}}>
             <div style={{fontSize:15,fontWeight:700,color:'#1e2530'}}>{fmt(grand)+' ₽'}</div>
-            {onSnapshotUpdate&&<button onClick={()=>{try{const snap=snapNomPrices(rooms,CALC_STATE_REF.presets,CALC_STATE_REF.globalOpts||[]);if(Object.keys(snap).length>0){handleSnapshotUpdate(snap);setEstEd({});}}catch(e){}}} style={{background:'none',border:'none',padding:0,color:'#4F46E5',fontSize:9,cursor:'pointer',fontFamily:'inherit',lineHeight:1.2}}>{'🔄 обновить цены'}</button>}
+            {/* кнопка «обновить цены» убрана: цены сметы фиксируются снапшотом заказа */}
           </div>
         </div>
       }
