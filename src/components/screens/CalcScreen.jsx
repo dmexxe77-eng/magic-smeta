@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import NomEditor from "./NomEditor.jsx";
+import NomEditor from "./NomEditorV2.jsx";
 import ButtonEditor from "../editor/ButtonEditor.jsx";
 import { T, setT, THEMES } from "../../theme.js";
 import { fmt, uid, deep, safeStr } from "../../utils/helpers.js";
@@ -707,7 +707,7 @@ td.total-val{font-weight:700;color:#1e2530}
             const projectCustomer="";
             const projectType=expType==="perRoom"?"По помещениям":(expType==="totalDraw"?"Общая + чертежи":"Общая смета");
             let html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>Смета — '+(orderName||'')+'</title><style>'+css+'</style></head><body><div class="page">';
-            html+='<div class="header"><div class="hdr"><div class="hdr-left"><div class="hdr-title">Данные проекта</div><div class="hdr-grid"><div class="hdr-k">Название</div><div class="hdr-v">'+projectName+'</div><div class="hdr-k">Заказчик</div><div class="hdr-v">'+projectCustomer+'</div><div class="hdr-k">Тип сметы</div><div class="hdr-v">'+projectType+'</div><div class="hdr-k">Помещений</div><div class="hdr-v">'+activeRooms.length+'</div><div class="hdr-k">Площадь</div><div class="hdr-v">'+fmt(totalArea)+' м²</div></div></div><div class="hdr-right"><div><div class="co-brand">Magic</div><div class="co-name">студия отделки стен и потолков</div></div><div class="co-line">г.Хабаровск, ул.Промышленная, д.7<br/>тел: 8(924)4008040 Губарь Николай</div></div></div></div>';
+            html+='<div class="header"><div class="hdr"><div class="hdr-left"><div class="hdr-title">Данные проекта</div><div class="hdr-grid"><div class="hdr-k">Название</div><div class="hdr-v">'+projectName+'</div><div class="hdr-k">Заказчик</div><div class="hdr-v">'+projectCustomer+'</div><div class="hdr-k">Тип сметы</div><div class="hdr-v">'+projectType+'</div><div class="hdr-k">Помещений</div><div class="hdr-v">'+activeRooms.length+'</div><div class="hdr-k">Площадь</div><div class="hdr-v">'+fmt(totalArea)+' м²</div></div></div><div class="hdr-right"><div><div class="co-brand">ZAMER.PRO</div><div class="co-name">студия отделки стен и потолков</div></div><div class="co-line">г.Хабаровск, ул.Промышленная, д.7<br/>тел: 8(924)4008040 Губарь Николай</div></div></div></div>';
             html+='<div class="body">';
 
             if(expType==="perRoom"){
@@ -785,7 +785,7 @@ td.total-val{font-weight:700;color:#1e2530}
               html+='</tbody><tfoot><tr class="subtotal"><td colspan="5" class="r">Итого работы:</td><td class="r">'+fmtRub(workTot)+'</td></tr></tfoot></table>';
               html+=renderGrand(grand);
             }
-            html+='</div><div class="footer"><span>MAGIC</span><span>'+nowDate+'</span></div></div></body></html>';
+            html+='</div><div class="footer"><span>ZAMER.PRO</span><span>'+nowDate+'</span></div></div></body></html>';
             setExportHtml(html);
             setShowExport(false);
           }} style={{width:"100%",marginTop:12,background:T.accent,border:"none",borderRadius:12,padding:12,color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{"Скачать"}</button>

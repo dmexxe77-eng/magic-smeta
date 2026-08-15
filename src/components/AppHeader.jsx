@@ -12,13 +12,15 @@ export function AppHeader({onBack,onMenu,title,subtitle,right,showMenu}){
             <svg width="16" height="16" fill="none" stroke={DARK} strokeWidth="2" strokeLinecap="round"><path d="M10 4L6 8l4 4"/></svg>
           </button>
         )}
-        <div style={{width:34,height:34,borderRadius:9,background:DARK,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-          <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-            <rect x="3" y="10" width="14" height="2" rx="1" fill={ACC}/>
-            <rect x="5" y="6" width="10" height="2" rx="1" fill={ACC} opacity="0.5"/>
-            <rect x="7" y="14" width="6" height="2" rx="1" fill={ACC} opacity="0.25"/>
-          </svg>
-        </div>
+        {/* Логотип ZAMER.PRO: тёмный squircle, план помещения индиговым контуром, белые точки-вершины */}
+        <svg width="34" height="34" viewBox="0 0 120 120" style={{display:"block",flexShrink:0}}>
+          <rect width="120" height="120" rx="27" fill={DARK}/>
+          <path d="M32 30 L90 30 L90 62 L64 62 L64 90 L32 90 Z" fill="rgba(99,102,241,.18)" stroke="#6366f1" strokeWidth="5.5" strokeLinejoin="round"/>
+          <g fill="#fff">
+            <circle cx="32" cy="30" r="5.5"/><circle cx="90" cy="30" r="5.5"/><circle cx="90" cy="62" r="5.5"/>
+            <circle cx="64" cy="62" r="5.5"/><circle cx="64" cy="90" r="5.5"/><circle cx="32" cy="90" r="5.5"/>
+          </g>
+        </svg>
         {title&&(
           <div style={{minWidth:0}}>
             <div style={{fontSize:13,fontWeight:700,color:T.text||DARK,letterSpacing:"0.5px",lineHeight:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:160}}>{title}</div>
@@ -26,9 +28,9 @@ export function AppHeader({onBack,onMenu,title,subtitle,right,showMenu}){
           </div>
         )}
         {!title&&(
-          <div>
-            <div style={{fontSize:16,fontWeight:700,color:T.text||DARK,letterSpacing:"1.5px",lineHeight:1}}>MAGIC</div>
-            <div style={{fontSize:8,color:ACC,letterSpacing:"2px",marginTop:2}}>STUDIO</div>
+          <div style={{lineHeight:1}}>
+            <div style={{fontSize:14,fontWeight:700,color:T.text||DARK,letterSpacing:"1.2px",lineHeight:1}}>ZAMER</div>
+            <div style={{fontSize:8,color:ACC,letterSpacing:"2.2px",marginTop:2,fontWeight:700}}>.PRO</div>
           </div>
         )}
       </div>

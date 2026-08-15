@@ -17,7 +17,7 @@ import CompassBuilder from "../builders/CompassBuilder.jsx";
 import ManualBuilder from "../builders/ManualBuilder.jsx";
 import PdfPagePicker from "../builders/PdfPagePicker.jsx";
 
-import NomEditor from "./NomEditor.jsx";
+import NomEditor from "./NomEditorV2.jsx";
 
 /* ── Хелперы периода. PeriodBar ВНЕ компонента: объявленный внутри рендера компонент
    пересоздаётся с новой identity на каждый setState → React размонтирует поддерево
