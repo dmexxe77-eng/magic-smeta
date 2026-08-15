@@ -69,10 +69,11 @@ export function migrateLegacy(legacyPresets, sharedFavs, customBlocks) {
   const presets = (legacyPresets || []).map(p => {
     const blockId = p.cat || "other";
     const ord = (orderInBlock[blockId] = (orderInBlock[blockId] ?? -1) + 1);
-    const ko = p.ko || {}, srcMap = p.src || {};
+    const ko = p.ko || {}, srcMap = p.src || {}, mu = p.mu || {};
     const mk = (nomId, defSrc, i) => {
       const it = { nomId, src: srcMap[nomId] || defSrc, order: i };
       if (ko[nomId] != null && ko[nomId] !== 1) it.k = ko[nomId];
+      if (mu[nomId]) it.m = true;
       return it;
     };
     const items = [
@@ -126,13 +127,15 @@ export function toLegacyPresets(config) {
       items: sorted.filter(i => i.src === "param").map(i => i.nomId),
       options: sorted.filter(i => i.src !== "param").map(i => i.nomId),
     };
-    const ko = {}, srcMap = {};
+    const ko = {}, srcMap = {}, mu = {};
     sorted.forEach(i => {
       if (i.k != null && Number(i.k) !== 1) ko[i.nomId] = Number(i.k);
       if (i.src && i.src !== "param") srcMap[i.nomId] = i.src;
+      if (i.m) mu[i.nomId] = 1;
     });
     if (Object.keys(ko).length) out.ko = ko;
     if (Object.keys(srcMap).length) out.src = srcMap;
+    if (Object.keys(mu).length) out.mu = mu;
     if (p.param) out.param = { ...p.param };
     if (p._legacy) Object.assign(out, p._legacy);
     return out;

@@ -5,7 +5,7 @@
    Архивные позиции (старая база) здесь не показываются — они живут только в старых сметах. */
 import { useState, useEffect, useMemo, useRef } from "react";
 import { fmt, uid } from "../../utils/helpers.js";
-import { ALL_NOM, NB, addNewNom, deleteNom, RUNTIME_EDITED_NOMS, activeNoms, NOM_V2_BRAND_GROUPS } from "../../data/nomenclature.jsx";
+import { ALL_NOM, NB, addNewNom, deleteNom, RUNTIME_EDITED_NOMS, activeNoms, allBrandGroups, addBrand, deleteBrand } from "../../data/nomenclature.jsx";
 import { persistNomPhotoToIdb, deleteNomPhotoFromIdb } from "../../utils/storage.js";
 
 const ACC = "#4F46E5", DARK = "#1e2530", DIM = "#a5a9b8", SUB = "#5a6070";
@@ -32,8 +32,14 @@ function editNom(id, patch) {
 }
 
 export default function NomEditorV2({ onClose, initialEditId }) {
-  const [brands, setBrands] = useState(() => NOM_V2_BRAND_GROUPS);
-  const [curBrand, setCurBrand] = useState(NOM_V2_BRAND_GROUPS[0]?.id || "");
+  const [brands, setBrands] = useState(() => allBrandGroups());
+  const [curBrand, setCurBrand] = useState(allBrandGroups()[0]?.id || "");
+  const [brandSheet, setBrandSheet] = useState(false);
+  const [newBrandName, setNewBrandName] = useState("");
+  const [newBrandColor, setNewBrandColor] = useState("#4F46E5");
+  const [delBrandId, setDelBrandId] = useState(null);
+  const [delAsk, setDelAsk] = useState(false);      /* подтверждение удаления позиции */
+  const [delSelAsk, setDelSelAsk] = useState(false); /* подтверждение массового удаления */
   const [filterCat, setFilterCat] = useState("all");
   const [q, setQ] = useState("");
   const [searchAll, setSearchAll] = useState(false);
@@ -51,6 +57,7 @@ export default function NomEditorV2({ onClose, initialEditId }) {
   /* фото новой базы — ленивый чанк 1.2 МБ, тянем только при открытии редактора */
   useEffect(() => { import("../../data/nomV2Images.js").then(m => setImgs(m.NOM_V2_IMAGES)).catch(() => {}); }, []);
   useEffect(() => { if (initialEditId) { const n = NB(initialEditId); if (n?.brand) setCurBrand(n.brand); } }, [initialEditId]);
+  useEffect(() => { setDelAsk(false); }, [openId]);
 
   const all = activeNoms();
   const query = q.trim().toLowerCase();
@@ -71,7 +78,7 @@ export default function NomEditorV2({ onClose, initialEditId }) {
     sel.forEach(id => { const n = NB(id); if (n) editNom(id, { price: Math.round((n.price || 0) * (1 + pct / 100) * 100) / 100 }); });
     setBulkOpen(false); setBulkPct(""); setSel(new Set()); setSelMode(false); rerender();
   };
-  const delSelected = () => { sel.forEach(id => deleteNom(id)); setSel(new Set()); setSelMode(false); rerender(); };
+  const delSelected = () => { sel.forEach(id => deleteNom(id)); setSel(new Set()); setSelMode(false); setDelSelAsk(false); rerender(); };
 
   /* ── стили ── */
   const card = { background: "#fff", borderRadius: 14, border: "1px solid " + LINE };
@@ -154,8 +161,11 @@ export default function NomEditorV2({ onClose, initialEditId }) {
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={() => { const n = NB(cur.id); const c = addNewNom(n.name + " копия", n.price, n.unit, n.type, n.brand ? { id: n.brand, name: n.brandName, color: n.brandColor } : null); ["mult", "cost", "inst", "note", "img"].forEach(k => { if (n[k] !== undefined) c[k] = n[k]; }); setOpenId(c.id); rerender(); }}
             style={{ flex: 1, background: "#fff", border: "1px solid " + LINE, borderRadius: 11, padding: 12, fontSize: 12.5, fontWeight: 700, color: SUB, cursor: "pointer", fontFamily: "inherit" }}>{"Дублировать"}</button>
-          <button onClick={() => { deleteNom(cur.id); deleteNomPhotoFromIdb(cur.id); setOpenId(null); rerender(); }}
-            style={{ flex: 1, background: "rgba(255,59,48,.08)", border: "none", borderRadius: 11, padding: 12, fontSize: 12.5, fontWeight: 700, color: RED, cursor: "pointer", fontFamily: "inherit" }}>{"Удалить"}</button>
+          {delAsk
+            ? <button onClick={() => { deleteNom(cur.id); deleteNomPhotoFromIdb(cur.id); setDelAsk(false); setOpenId(null); rerender(); }}
+                style={{ flex: 1, background: RED, border: "none", borderRadius: 11, padding: 12, fontSize: 12.5, fontWeight: 800, color: "#fff", cursor: "pointer", fontFamily: "inherit" }}>{"Точно удалить?"}</button>
+            : <button onClick={() => { setDelAsk(true); setTimeout(() => setDelAsk(false), 4000); }}
+                style={{ flex: 1, background: "rgba(255,59,48,.08)", border: "none", borderRadius: 11, padding: 12, fontSize: 12.5, fontWeight: 700, color: RED, cursor: "pointer", fontFamily: "inherit" }}>{"Удалить"}</button>}
         </div>
       </div>
     </div>);
@@ -164,6 +174,12 @@ export default function NomEditorV2({ onClose, initialEditId }) {
   /* ── список ── */
   const brandObj = brands.find(b => b.id === curBrand) || brands[0] || { name: "", id: "" };
   const folders = CATS.map(c => ({ c, items: inBrand.filter(n => catOf(n) === c.id) })).filter(f => f.items.length);
+  /* всё, что сейчас на экране — для «выбрать все» в режиме выбора */
+  const visible = results ? results.scoped : folders.filter(f => filterCat === "all" || f.c.id === filterCat).flatMap(f => f.items);
+  const allVisibleOn = visible.length > 0 && visible.every(n => sel.has(n.id));
+  const toggleAllVisible = () => setSel(s2 => { const n = new Set(s2); if (allVisibleOn) visible.forEach(x => n.delete(x.id)); else visible.forEach(x => n.add(x.id)); return n; });
+  const scopeLabel = results ? (searchAll ? "во всём найденном" : "в найденном")
+    : (filterCat === "all" ? "в разделе " + brandObj.name : "в категории «" + (CATS.find(c => c.id === filterCat)?.l || "") + "»");
   const itemRow = (n, showBrand) => {
     const ph = photoOf(n), c = CATS.find(x => x.id === catOf(n));
     const checked = sel.has(n.id);
@@ -209,11 +225,29 @@ export default function NomEditorV2({ onClose, initialEditId }) {
             <div style={{ width: 30, height: 30, borderRadius: 9, background: b.color || ACC, color: "#fff", fontSize: 10, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{initials(b.name)}</div>
             <div style={{ fontSize: 9.5, fontWeight: a ? 800 : 600, color: a ? ACC : SUB, textAlign: "center", lineHeight: 1.15, overflow: "hidden", textOverflow: "ellipsis", width: "100%", whiteSpace: "nowrap" }}>{b.name}</div>
             <div style={{ fontSize: 9, color: DIM, fontWeight: 700 }}>{n || "—"}</div>
+            {a && b.custom && (delBrandId === b.id
+              ? <span onClick={e => { e.stopPropagation(); if (n === 0) { deleteBrand(b.id); const rest = allBrandGroups(); setBrands(rest); setCurBrand(rest[0]?.id || ""); } setDelBrandId(null); }}
+                  style={{ fontSize: 8.5, fontWeight: 800, color: "#fff", background: n === 0 ? "#ff3b30" : "#c2c5d1", borderRadius: 5, padding: "2px 5px", marginTop: 2 }}>{n === 0 ? "удалить?" : "не пуст"}</span>
+              : <span onClick={e => { e.stopPropagation(); setDelBrandId(b.id); setTimeout(() => setDelBrandId(x => x === b.id ? null : x), 3000); }}
+                  style={{ fontSize: 10, fontWeight: 800, color: "#ff3b30", marginTop: 1 }}>{"✕"}</span>)}
           </button>); })}
+        <button onClick={() => { setNewBrandName(""); setNewBrandColor("#4F46E5"); setBrandSheet(true); }}
+          style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, background: "transparent", border: "1.5px dashed #d7d9e3", borderRadius: 10, padding: "8px 2px", cursor: "pointer", fontFamily: "inherit", marginTop: 2 }}>
+          <div style={{ width: 30, height: 30, borderRadius: 9, background: BG, color: ACC, fontSize: 15, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{"+"}</div>
+          <div style={{ fontSize: 9.5, fontWeight: 700, color: ACC }}>{"раздел"}</div>
+        </button>
       </div>
 
       {/* список */}
       <div style={{ flex: 1, minWidth: 0, overflowY: "auto", paddingBottom: 80 }}>
+        {selMode && visible.length > 0 && (
+          <div onClick={toggleAllVisible} style={{ display: "flex", alignItems: "center", gap: 9, padding: "9px 12px", background: allVisibleOn ? "rgba(79,70,229,.07)" : "#fff", borderBottom: "1px solid " + LINE, cursor: "pointer", position: "sticky", top: 0, zIndex: 2 }}>
+            <div style={{ width: 19, height: 19, borderRadius: 6, border: "1.5px solid " + (allVisibleOn ? ACC : "#d7d9e3"), background: allVisibleOn ? ACC : "#fff", color: "#fff", fontSize: 12, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{allVisibleOn ? "✓" : ""}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: allVisibleOn ? ACC : DARK }}>{allVisibleOn ? "Снять выделение" : "Выбрать все"}</div>
+              <div style={{ fontSize: 9.5, color: DIM, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{plur(visible.length, "позиция", "позиции", "позиций") + " " + scopeLabel}</div>
+            </div>
+          </div>)}
         {results ? (<>
           <div style={{ padding: "10px 12px 6px" }}>
             <div style={{ fontSize: 13, fontWeight: 800 }}>{"Поиск"}</div>
@@ -250,7 +284,9 @@ export default function NomEditorV2({ onClose, initialEditId }) {
       <div style={{ fontSize: 11.5, fontWeight: 800, color: sel.size ? ACC : DIM }}>{"Выбрано: " + sel.size}</div>
       <div style={{ flex: 1 }} />
       <button disabled={!sel.size} onClick={() => setBulkOpen(true)} style={{ background: BG, border: "none", borderRadius: 9, padding: "8px 12px", fontSize: 11.5, fontWeight: 700, color: sel.size ? DARK : DIM, cursor: sel.size ? "pointer" : "default", fontFamily: "inherit" }}>{"Цены ±%"}</button>
-      <button disabled={!sel.size} onClick={delSelected} style={{ background: "rgba(255,59,48,.08)", border: "none", borderRadius: 9, padding: "8px 12px", fontSize: 11.5, fontWeight: 700, color: sel.size ? RED : DIM, cursor: sel.size ? "pointer" : "default", fontFamily: "inherit" }}>{"Удалить"}</button>
+      {delSelAsk
+        ? <button onClick={delSelected} style={{ background: RED, border: "none", borderRadius: 9, padding: "8px 12px", fontSize: 11.5, fontWeight: 800, color: "#fff", cursor: "pointer", fontFamily: "inherit" }}>{"Удалить " + sel.size + "? Да"}</button>
+        : <button disabled={!sel.size} onClick={() => { setDelSelAsk(true); setTimeout(() => setDelSelAsk(false), 4000); }} style={{ background: "rgba(255,59,48,.08)", border: "none", borderRadius: 9, padding: "8px 12px", fontSize: 11.5, fontWeight: 700, color: sel.size ? RED : DIM, cursor: sel.size ? "pointer" : "default", fontFamily: "inherit" }}>{"Удалить"}</button>}
     </div>) : (<div style={{ flexShrink: 0, background: "#fff", borderTop: "1px solid " + LINE, padding: "10px 12px", display: "flex", gap: 8 }}>
       <button onClick={() => setAddOpen(true)} style={{ flex: 1, background: ACC, border: "none", borderRadius: 11, padding: 12, color: "#fff", fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{"Новая позиция"}</button>
     </div>)}
@@ -268,6 +304,27 @@ export default function NomEditorV2({ onClose, initialEditId }) {
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={applyBulk} style={{ flex: 1, background: ACC, border: "none", borderRadius: 11, padding: 12, color: "#fff", fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{"Применить"}</button>
           <button onClick={() => setBulkOpen(false)} style={{ background: BG, border: "none", borderRadius: 11, padding: "12px 16px", color: SUB, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit" }}>{"Отмена"}</button>
+        </div>
+      </div>
+    </div>)}
+
+    {/* шторка нового раздела */}
+    {brandSheet && (<div onClick={e => { if (e.target === e.currentTarget) setBrandSheet(false); }} style={{ position: "fixed", inset: 0, zIndex: 70, background: "rgba(20,22,35,.45)", display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+      <div style={{ background: "#fff", borderRadius: "16px 16px 0 0", padding: "14px 16px 28px" }}>
+        <div style={{ width: 36, height: 4, background: "#e3e4ee", borderRadius: 2, margin: "0 auto 12px" }} />
+        <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 12 }}>{"Новый раздел"}</div>
+        <input autoFocus value={newBrandName} onChange={e => setNewBrandName(e.target.value)}
+          onKeyDown={e => { if (e.key === "Enter" && newBrandName.trim()) { const b = addBrand(newBrandName, newBrandColor); setBrands(allBrandGroups()); setCurBrand(b.id); setBrandSheet(false); } }}
+          placeholder="Название, напр. «Свои материалы»" style={{ ...inputS, width: "100%", marginBottom: 10 }} />
+        <div style={{ fontSize: 10, color: DIM, fontWeight: 700, marginBottom: 6 }}>{"ЦВЕТ"}</div>
+        <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginBottom: 14 }}>
+          {["#4F46E5", "#0a84ff", "#15803d", "#c77700", "#be3455", "#7c5cbf", "#0f8a8a", "#6b7280"].map(c => (
+            <span key={c} onClick={() => setNewBrandColor(c)} style={{ width: 30, height: 30, borderRadius: 9, background: c, cursor: "pointer", border: newBrandColor === c ? "3px solid #1e2530" : "3px solid transparent" }} />))}
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => { if (!newBrandName.trim()) return; const b = addBrand(newBrandName, newBrandColor); setBrands(allBrandGroups()); setCurBrand(b.id); setBrandSheet(false); }}
+            style={{ flex: 1, background: ACC, border: "none", borderRadius: 11, padding: 12, color: "#fff", fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>{"Создать"}</button>
+          <button onClick={() => setBrandSheet(false)} style={{ background: BG, border: "none", borderRadius: 11, padding: "12px 16px", color: SUB, fontSize: 12.5, cursor: "pointer", fontFamily: "inherit" }}>{"Отмена"}</button>
         </div>
       </div>
     </div>)}

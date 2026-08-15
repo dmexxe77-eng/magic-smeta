@@ -1,8 +1,8 @@
 import { uid, safeJsonParse, safeStr } from "../utils/helpers.js";
 import { loadNomPhotoFromIdb, revokeObjectUrl, idbGet, idbPut } from '../utils/storage.js';
 import { NOM_V2 } from "./nomenclatureV2.js";
-import { applyKo, baseOfSrc, legacyOptionSrc } from "./qty.js";
-import { ALL_NOM, NOM_GEN, NOM_EXT, NB, USER_NOMS_CUSTOM, USER_NOMS_EDITED, USER_NOMS_DELETED, addNewNom, deleteNom, DELETED_NOM_IDS, RUNTIME_EDITED_NOMS } from "./nomenclature.jsx";
+import { applyKo, applyMult, baseOfSrc, legacyOptionSrc } from "./qty.js";
+import { ALL_NOM, NOM_GEN, NOM_EXT, NB, USER_NOMS_CUSTOM, USER_NOMS_EDITED, USER_NOMS_DELETED, addNewNom, deleteNom, DELETED_NOM_IDS, RUNTIME_EDITED_NOMS, RUNTIME_BRANDS } from "./nomenclature.jsx";
 import { P, PF, LIGHT, OPT, DEFAULT_MAT, KK, PIMG } from "./profiles.js";
 import USER_SNAPSHOT from "./userSnapshot.json"; /* полные данные пользователя: пресеты, номенклатура, проекты */
 import { newRoom, newR, gA, gP } from '../utils/roomUtils.js';
@@ -105,6 +105,10 @@ export function applyNomsSnapshot(snap){
   DELETED_NOM_IDS.push(...deletedNomIds);
   RUNTIME_EDITED_NOMS.length=0;
   RUNTIME_EDITED_NOMS.push(...editedNoms);
+  if(Array.isArray(snap.customBrands)){
+    RUNTIME_BRANDS.length=0;
+    RUNTIME_BRANDS.push(...snap.customBrands);
+  }
 }
 
 export async function hydrateNomsPhotosFromIdb(){
@@ -197,13 +201,13 @@ export function buildEst(rooms,allPresets,gOpts,priceSnap){
       const preset=_find(inst.btnId);
       if(!preset)return;
       const qBase=useQty!=null?useQty:(inst.qty||0);
-      const koMap=preset.ko||{},srcMap=preset.src||{};
+      const koMap=preset.ko||{},srcMap=preset.src||{},muMap=preset.mu||{};
       (preset.items||[]).forEach(nomId=>{
         const nom=NB(nomId);if(!nom)return;
         if(inst.off?.[nomId]===true)return;
         const iq=inst.iq?.[nomId];
         /* норма расхода: k на 1 единицу параметра; ручная правка (iq) главнее */
-        const qUse=(iq!=null?iq:applyKo(qBase,koMap[nomId],nom.unit));
+        const qUse=(iq!=null?iq:applyMult(applyKo(qBase,koMap[nomId],nom.unit),nom.mult,muMap[nomId]));
         if(qUse<=0)return;
         if(nom.type==="profile"||nom.type==="canvas"||nom.type==="option")addM(nomId,nom.name+(nom.type==="canvas"?" ("+r.name+")":""),qUse,nom.unit,gPrice(nomId,nom.price));
         else addW(nomId,nom.name,qUse,nom.unit,gPrice(nomId,nom.price));

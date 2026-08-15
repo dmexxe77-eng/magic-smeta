@@ -75,6 +75,22 @@ export const ALL_NOM=(()=>{
 /* Активные позиции — то, что показываем в редакторах и списках выбора */
 export const activeNoms=()=>ALL_NOM.filter(n=>!n.arch);
 export const isArchived=id=>!!NB(id)?.arch;
+/* Свои разделы, созданные в редакторе номенклатур (переживают перезагрузку через снапшот) */
+export const RUNTIME_BRANDS=[];
+export function addBrand(name,color){
+  const b={id:"br"+uid(),name:String(name||"Раздел").trim(),color:color||"#4F46E5",custom:true};
+  RUNTIME_BRANDS.push(b);
+  try{window.dispatchEvent(new CustomEvent("magicapp:nomChanged"));}catch(e){}
+  return b;
+}
+export function deleteBrand(id){
+  const i=RUNTIME_BRANDS.findIndex(b=>b.id===id);
+  if(i>=0)RUNTIME_BRANDS.splice(i,1);
+  try{window.dispatchEvent(new CustomEvent("magicapp:nomChanged"));}catch(e){}
+}
+/* Разделы новой базы + свои */
+export const allBrandGroups=()=>[...NOM_V2_BRAND_GROUPS,...RUNTIME_BRANDS];
+
 /* Бренды новой базы (для группировки в редакторах) */
 export const NOM_V2_BRAND_GROUPS=(()=>{
   const seen={};

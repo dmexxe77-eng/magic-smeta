@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { T, setT, THEMES, IS_PRO_OVERRIDE, setIsProOverride} from "./theme.js";
 import { uid, safeJsonParse } from "./utils/helpers.js";
 import { AUTO_SAVE_KEY, AUTO_SAVE_META_KEY, idbPut, idbGet } from "./utils/storage.js";
-import { RUNTIME_EDITED_NOMS, DELETED_NOM_IDS, USER_NOMS_CUSTOM, USER_NOMS_EDITED, ALL_NOM} from "./data/nomenclature.jsx";
+import { RUNTIME_EDITED_NOMS, DELETED_NOM_IDS, USER_NOMS_CUSTOM, USER_NOMS_EDITED, ALL_NOM, RUNTIME_BRANDS} from "./data/nomenclature.jsx";
 import { USER_PRESETS_OVERRIDE, USER_FAVS_OVERRIDE, INITIAL_NOM_SNAPSHOT, INITIAL_ORDERS, CALC_STATE_REF, newRoom, newR, applyNomsSnapshot, sanitizeCustomNoms, sanitizeEditedNoms, sanitizeOrdersForStorage, hydrateNomsPhotosFromIdb, loadAppStateFromIdb, saveAppStateToIdb, snapNomPrices} from "./data/presets.js";
 import { buttonsExportData, applyButtonsImport } from "./data/buttonsStore.js";
 import HomeScreen from "./components/screens/HomeScreen.jsx";
@@ -132,7 +132,8 @@ export default function App(){
         noms:{
           customNoms:sanitizeCustomNoms(ALL_NOM.filter(n=>n.id&&n.id.startsWith("u"))),
           editedNoms:sanitizeEditedNoms(RUNTIME_EDITED_NOMS),
-          deletedNomIds:DELETED_NOM_IDS
+          deletedNomIds:DELETED_NOM_IDS,
+          customBrands:RUNTIME_BRANDS
         },
         orders:sanitizeOrdersForStorage(ordersRef.current)
       };
@@ -173,7 +174,7 @@ export default function App(){
         const snap={
           v:2,ts:Date.now(),theme:themeRef.current,isProOverride:!!IS_PRO_OVERRIDE,
           calc:{presets:CALC_STATE_REF.presets,sharedFavs:CALC_STATE_REF.sharedFavs,globalOpts:CALC_STATE_REF.globalOpts||[],customBlocks:CALC_STATE_REF.customBlocks||[]},
-          noms:{customNoms:sanitizeCustomNoms(ALL_NOM.filter(n=>n.id&&n.id.startsWith("u"))),editedNoms:sanitizeEditedNoms(RUNTIME_EDITED_NOMS),deletedNomIds:DELETED_NOM_IDS},
+          noms:{customNoms:sanitizeCustomNoms(ALL_NOM.filter(n=>n.id&&n.id.startsWith("u"))),editedNoms:sanitizeEditedNoms(RUNTIME_EDITED_NOMS),deletedNomIds:DELETED_NOM_IDS,customBrands:RUNTIME_BRANDS},
           orders
         };
         window.localStorage.setItem(AUTO_SAVE_KEY,JSON.stringify(snap));
@@ -237,6 +238,7 @@ export default function App(){
     customNoms:ALL_NOM.filter(n=>n.id.startsWith("u")),
     editedNoms:RUNTIME_EDITED_NOMS,
     deletedNomIds:DELETED_NOM_IDS,
+    customBrands:RUNTIME_BRANDS,
     orders:orders.map(o=>({...o,planImage:undefined,rooms:(o.rooms||[]).map(r=>({...r,imgPts:undefined,aImg:undefined}))}))
   });
   const manualSave=()=>{try{window.dispatchEvent(new Event("magicapp:saveNow"));}catch(e){}};
@@ -276,7 +278,8 @@ export default function App(){
         applyNomsSnapshot({
           customNoms:d.customNoms||[],
           editedNoms:d.editedNoms||[],
-          deletedNomIds:d.deletedNomIds||[]
+          deletedNomIds:d.deletedNomIds||[],
+          customBrands:d.customBrands||[]
         });
         const cn=(d.customNoms||[]).length;
         const en=(d.editedNoms||[]).length;

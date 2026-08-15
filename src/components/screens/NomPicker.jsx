@@ -4,7 +4,7 @@
    Архивные позиции (старая база) не показываются. */
 import { useState, useMemo, useEffect } from "react";
 import { fmt } from "../../utils/helpers.js";
-import { activeNoms, NOM_V2_BRAND_GROUPS } from "../../data/nomenclature.jsx";
+import { activeNoms, allBrandGroups } from "../../data/nomenclature.jsx";
 
 const ACC = "#4F46E5", DARK = "#1e2530", DIM = "#a5a9b8", SUB = "#5a6070";
 const LINE = "#f1f1f8", BG = "#f2f3fa";
@@ -18,7 +18,7 @@ const initials = s => String(s || "?").replace(/[^A-Za-zА-Яа-я0-9 ]/g, "").s
 const plur = (n, a, b, c) => { const m = n % 100, k = n % 10; return n + " " + (m > 10 && m < 20 ? c : k === 1 ? a : k > 1 && k < 5 ? b : c); };
 
 export default function NomPicker({ title = "Добавить позиции", exclude, onPick, onClose }) {
-  const brands = NOM_V2_BRAND_GROUPS;
+  const brands = allBrandGroups();
   const [curBrand, setCurBrand] = useState(brands[0]?.id || "");
   const [filterCat, setFilterCat] = useState("all");
   const [q, setQ] = useState("");
@@ -43,7 +43,6 @@ export default function NomPicker({ title = "Добавить позиции", e
   const toggle = id => setSel(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const brandObj = brands.find(b => b.id === curBrand) || brands[0] || { name: "" };
   const folders = CATS.map(c => ({ c, items: inBrand.filter(n => catOf(n) === c.id) })).filter(f => f.items.length);
-
   const row = (n, showBrand) => {
     const ph = photoOf(n), c = CATS.find(x => x.id === catOf(n));
     const on = sel.has(n.id);

@@ -214,6 +214,14 @@ export default function ButtonEditor({ presets, sharedFavs, customBlocks, initia
                 <div style={{ fontSize: 10, color: nom ? "#a5a9b8" : "#ff3b30" }}>{nom ? fmt(nom.price) + " ₽/" + nom.unit : "удалена из базы — в смету не попадает, удалите ✕ или замените"}</div>
               </div>
               <button onClick={() => setSrcSheetIdx(i)} style={{ background: meta.color + "14", color: meta.color, border: "none", borderRadius: 8, padding: "5px 9px", fontSize: 10.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>{meta.icon + " " + (meta.short || meta.label)}</button>
+              {it.src === "param" && nom?.mult > 0 && (
+                <button onClick={() => setItems(sortedItems.map((x, j) => j === i ? (x.m ? (({ m, ...rest }) => rest)(x) : { ...x, m: true }) : x))}
+                  title={"округлять вверх до кратного " + nom.mult + " " + nom.unit + " (палки/упаковки)"}
+                  style={it.m
+                    ? { background: "rgba(22,163,74,.12)", color: "#16a34a", border: "none", borderRadius: 8, padding: "5px 9px", fontSize: 10.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }
+                    : { background: "transparent", color: "#a5a9b8", border: "1px solid #e3e4ee", borderRadius: 8, padding: "4px 9px", fontSize: 10.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>
+                  {it.m ? "⧉" + nom.mult : "кратн."}
+                </button>)}
               {it.src === "param" && (hasKo(it.src, it.k)
                 ? <button onClick={() => setKoSheetIdx(i)} style={{ background: "#1e2530", color: "#fff", border: "none", borderRadius: 8, padding: "5px 9px", fontSize: 10.5, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>{"×" + koOf(it.k)}</button>
                 : <button onClick={() => setKoSheetIdx(i)} style={{ background: "transparent", color: "#a5a9b8", border: "1px solid #e3e4ee", borderRadius: 8, padding: "4px 9px", fontSize: 10.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>{"норма"}</button>)}

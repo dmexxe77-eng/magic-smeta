@@ -10,7 +10,7 @@ import { ALL_NOM, NB, addNewNom, deleteNom, DELETED_NOM_IDS, RUNTIME_EDITED_NOMS
 import { PRESETS_GEN, PRbyId, USER_PRESETS_OVERRIDE, USER_FAVS_OVERRIDE, BLOCK_CFG, CALC_STATE_REF, newRoom, newR, gA, gP, buildEst, sanitizeOrdersForStorage, applyNomsSnapshot } from "../../data/presets.js";
 import { btnS, N, SecH, Sel, ProfSel, ProfDD, OptsInline, ProfLine, NI, ProGate } from "../ui.jsx";
 import { SRC_META, legacyOptionSrc } from "../../data/buttonsStore.js";
-import { applyKo, koOf, hasKo } from "../../data/qty.js";
+import { applyKo, applyMult, koOf, hasKo } from "../../data/qty.js";
 import PolyMini from "../canvas/PolyMini.jsx";
 import PolyEditorFull from "../canvas/PolyEditorFull.jsx";
 import TracingCanvas from "../canvas/TracingCanvas.jsx";
@@ -227,15 +227,15 @@ function CalcBlock({config,instance,onChange,presets,onPresets,autoAngles,onAppl
     {pr&&(()=>{
       /* ЕДИНЫЙ список позиций (ТЗ 3.1): бывшие items → src 'param', бывшие options → углы или manual.
          Хранение не меняется: param-строки пишут правки в iq, остальные — в oq (их читает buildEst). */
-      const koMap=pr.ko||{},srcMap=pr.src||{};
+      const koMap=pr.ko||{},srcMap=pr.src||{},muMap=pr.mu||{};
       const rows=[
-        ...items.map(n=>({n,src:srcMap[n.id]||"param",k:koMap[n.id]})),
-        ...opts.map(n=>({n,src:srcMap[n.id]||legacyOptionSrc(n.id),k:koMap[n.id]})),
+        ...items.map(n=>({n,src:srcMap[n.id]||"param",k:koMap[n.id],m:muMap[n.id]})),
+        ...opts.map(n=>({n,src:srcMap[n.id]||legacyOptionSrc(n.id),k:koMap[n.id],m:muMap[n.id]})),
       ];
       return(<div>
         <div style={{fontSize:9,fontWeight:700,color:T.dim,margin:"2px 0 3px",textTransform:"uppercase",letterSpacing:"0.5px"}}>{"Позиции"}</div>
         {rows.length===0&&<div style={{fontSize:10,color:T.dim,padding:"6px 0",textAlign:"center"}}>{"У этой кнопки пока нет позиций — добавьте в редакторе ✎"}</div>}
-        {rows.map(({n,src,k})=>{
+        {rows.map(({n,src,k,m})=>{
           const on=instance.off?.[n.id]!==true;
           const meta=SRC_META[src]||SRC_META.manual;
           const isParam=src==="param";
@@ -243,7 +243,7 @@ function CalcBlock({config,instance,onChange,presets,onPresets,autoAngles,onAppl
           const iq=instance.iq?.[n.id];
           /* норма расхода: та же формула, что в смете (qty.js) */
           const qUse=isParam
-            ?(iq!=null?iq:applyKo(baseQ,k,n.unit))
+            ?(iq!=null?iq:applyMult(applyKo(baseQ,k,n.unit),n.mult,m))
             :(instance.oq?.[n.id]||0);
           const showKo=isParam&&hasKo(src,k);
           const manualZero=src==="manual"&&!qUse;
@@ -255,6 +255,7 @@ function CalcBlock({config,instance,onChange,presets,onPresets,autoAngles,onAppl
               <div style={{fontSize:9,color:T.dim,display:"flex",alignItems:"center",gap:3}}>
                 <span>{fmt(gp(n))+" ₽/"+n.unit}</span>
                 <span title={meta.label} style={{color:meta.color,fontWeight:800,fontSize:10}}>{meta.icon}</span>
+                {isParam&&m&&n.mult>0&&<span title={"кратность: "+n.mult+" "+n.unit} style={{background:"rgba(22,163,74,.12)",color:"#16a34a",fontSize:9,fontWeight:800,borderRadius:5,padding:"1px 5px"}}>{"⧉"+n.mult}</span>}
                 {showKo&&<span title={"норма: "+koOf(k)+" на 1 "+(src==="param"?"ед. параметра":"ед. источника")} style={{background:"rgba(79,70,229,.1)",color:"#4F46E5",fontSize:9,fontWeight:800,borderRadius:5,padding:"1px 5px"}}>{"×"+koOf(k)}</span>}
                 {on
                   ?<span style={{display:"inline-flex",border:manualZero?"1px dashed #c2c5d1":"1px solid transparent",borderRadius:6,opacity:manualZero?0.7:1}}><NI value={qUse} onChange={setQ} w={isParam?44:34}/></span>

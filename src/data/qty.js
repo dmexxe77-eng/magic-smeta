@@ -38,3 +38,12 @@ export const legacyOptionSrc = nomId =>
   nomId === "o_inner_angle" ? "corn_in" :
   nomId === "o_outer_angle" ? "corn_out" :
   nomId === "o_angle" ? "corn_all" : "manual";
+
+/* Кратность упаковки/палки (поле mult в номенклатуре).
+   Включается флажком у позиции: количество округляется вверх до кратного.
+   Напр. профиль палками по 2 м: 30,65 м → 32 м (16 палок). */
+export function applyMult(q, mult, use) {
+  const m = Number(mult) || 0;
+  if (!use || m <= 0) return q;
+  return Math.round(Math.ceil((Number(q) || 0) / m - 1e-9) * m * 1000) / 1000;
+}
