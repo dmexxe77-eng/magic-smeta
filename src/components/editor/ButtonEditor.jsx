@@ -5,7 +5,8 @@
 import { useState, useRef, useEffect } from "react";
 import { T } from "../../theme.js";
 import { fmt, uid } from "../../utils/helpers.js";
-import { NB, activeNoms, NOM_V2_BRAND_GROUPS } from "../../data/nomenclature.jsx";
+import { NB } from "../../data/nomenclature.jsx";
+import NomPicker from "../screens/NomPicker.jsx";
 import { SRC_META, smartSrcFor, migrateLegacy, toLegacyPresets, favsOfConfig } from "../../data/buttonsStore.js";
 
 const IND = "#4F46E5";
@@ -99,9 +100,10 @@ export default function ButtonEditor({ presets, sharedFavs, customBlocks, initia
   /* ── Позиции ── */
   const sortedItems = cur ? [...cur.items].sort((a, b) => (a.order || 0) - (b.order || 0)) : [];
   const setItems = items => patchPreset(cur.id, { items: items.map((it, i) => ({ ...it, order: i })) });
-  const addNomItem = nomId => {
-    const nom = NB(nomId);
-    setItems([...sortedItems, { nomId, src: smartSrcFor(nom?.name), order: sortedItems.length }]);
+  const addNomItems = ids => {
+    const add = ids.filter(id => !sortedItems.some(i => i.nomId === id))
+      .map((id, k) => ({ nomId: id, src: smartSrcFor(NB(id)?.name), order: sortedItems.length + k }));
+    if (add.length) setItems([...sortedItems, ...add]);
     setNomSheet(false); setNomQ("");
   };
 
@@ -250,40 +252,15 @@ export default function ButtonEditor({ presets, sharedFavs, customBlocks, initia
       </div>);
     })()}
 
-    {/* Шторка выбора номенклатуры (поиск + бренды) */}
-    {nomSheet && (() => {
-      const q = nomQ.trim().toLowerCase();
-      const match = n => n?.name && (!q || n.name.toLowerCase().includes(q)) && n.type !== "option";
-      const act = activeNoms();
-      const brands = NOM_V2_BRAND_GROUPS.map(g => ({ id: g.id, name: g.name, color: g.color, noms: act.filter(n => n.brand === g.id && match(n)) })).filter(g => g.noms.length);
-      const other = act.filter(n => !n.brand && match(n));
-      const nomRow = n => (<div key={n.id} onClick={() => addNomItem(n.id)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, padding: "7px 8px", borderRadius: 8, cursor: "pointer", borderBottom: "0.5px solid #f6f6fb" }}>
-        <span style={{ flex: 1, minWidth: 0, fontSize: 11.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{n.name}</span>
-        <span style={{ fontSize: 10.5, color: "#a5a9b8", flexShrink: 0 }}>{fmt(n.price) + " ₽/" + n.unit}</span>
-      </div>);
-      return (<div style={sheetWrap} onClick={e => { if (e.target === e.currentTarget) { setNomSheet(false); setNomQ(""); } }}>
-        <div style={{ ...sheet, minHeight: "60vh" }}>
-          <div style={{ width: 36, height: 4, background: "#e3e4ee", borderRadius: 2, margin: "0 auto 12px" }} />
-          <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8 }}>{"Добавить номенклатуру"}</div>
-          <input autoFocus value={nomQ} onChange={e => setNomQ(e.target.value)} placeholder="🔍 Поиск по базе..." style={{ ...inputS, marginBottom: 8 }} />
-          {brands.map(g => (<div key={g.id}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, margin: "8px 0 2px" }}>
-              <span style={{ width: 8, height: 8, borderRadius: 2, background: g.color || IND }} />
-              <span style={{ fontSize: 9.5, fontWeight: 800, color: "#8a8fa3", letterSpacing: "0.5px" }}>{g.name.toUpperCase()}</span>
-              <span style={{ fontSize: 9, color: "#c2c5d1" }}>{g.noms.length}</span>
-            </div>
-            {g.noms.slice(0, q ? 50 : 8).map(nomRow)}
-            {!q && g.noms.length > 8 && <div style={{ fontSize: 9.5, color: "#c2c5d1", padding: "3px 8px" }}>{"ещё " + (g.noms.length - 8) + " — уточните поиск"}</div>}
-          </div>))}
-          {other.length > 0 && (<div>
-            <div style={{ fontSize: 9.5, fontWeight: 800, color: "#8a8fa3", letterSpacing: "0.5px", margin: "8px 0 2px" }}>{"ДРУГОЕ"}</div>
-            {other.slice(0, q ? 80 : 10).map(nomRow)}
-            {!q && other.length > 10 && <div style={{ fontSize: 9.5, color: "#c2c5d1", padding: "3px 8px" }}>{"ещё " + (other.length - 10) + " — уточните поиск"}</div>}
-          </div>)}
-          {!brands.length && !other.length && <div style={{ fontSize: 11, color: "#a5a9b8", textAlign: "center", padding: 16 }}>{"Ничего не найдено"}</div>}
-        </div>
-      </div>);
-    })()}
+    {/* Выбор номенклатуры — полноэкранный, как редактор номенклатур */}
+    {nomSheet && cur && (
+      <NomPicker
+        title={"Позиции кнопки «" + cur.name + "»"}
+        exclude={sortedItems.map(i => i.nomId)}
+        onPick={addNomItems}
+        onClose={() => { setNomSheet(false); setNomQ(""); }}
+      />
+    )}
   </div>);
 }
 
