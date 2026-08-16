@@ -56,12 +56,7 @@ function PolyMini({verts,areaOverride,perimOverride,onClick,roll}){
       <div style={{fontSize:9,color:T.dim}}>{"S="+fmt(areaOverride!=null?areaOverride:poly.a)+" м² P="+fmt(perimOverride!=null?perimOverride:poly.p)+" м"}</div>
       <div style={{fontSize:9}}><span style={{color:T.green}}>{"●"+inn+"вн "}</span><span style={{color:T.red}}>{"●"+out+"вш "}</span><span style={{color:T.accent,fontWeight:600}}>{"✎"}</span></div>
     </div>
-    {roll&&<div onClick={e=>e.stopPropagation()} style={{display:"flex",alignItems:"center",gap:3,flexWrap:"wrap",marginTop:3}}>
-      <button onClick={roll.onFlip} title="Положить ролик по другой стороне" style={{background:T.actBg,border:"1px solid "+T.accent+"55",borderRadius:7,padding:"2px 8px",fontSize:9,fontWeight:700,color:T.accent,cursor:"pointer",fontFamily:"inherit"}}>{"⇄ сторона"}</button>
-      {(roll.widths||[]).map(w=>(<button key={w.id} onClick={()=>roll.onPick(w.id)}
-        style={{background:w.active?T.actBg:"transparent",border:"1px solid "+(w.active?T.accent:(w.rec?"#16a34a55":T.border)),borderRadius:7,padding:"2px 6px",fontSize:9,fontWeight:w.active?700:500,color:w.active?T.accent:(w.rec?"#16a34a":T.sub),cursor:"pointer",fontFamily:"inherit"}}>{w.cm+(w.rec&&!w.active?"★":"")}</button>))}
-      {(roll.widths||[]).length>0&&<span style={{fontSize:8,color:T.dim}}>{"см"}</span>}
-    </div>}
+
   </div>);
 }
 

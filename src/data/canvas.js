@@ -15,13 +15,19 @@ export function seriesKey(name) {
     .toLowerCase();
 }
 
-/* Все ширины одной серии, по возрастанию */
-export function canvasSiblings(nom, list) {
-  if (!nom) return [];
-  const key = seriesKey(nom.name);
-  return (list || [])
-    .filter(n => n.type === "canvas" && n.w && seriesKey(n.name) === key)
-    .sort((a, b) => a.w - b.w);
+/* Доступные ширины ролика полотна: список ws (метры) на позиции.
+   Совместимость: у неархивных старых позиций может остаться одиночная w. */
+export function widthList(nom, pool) {
+  if (!nom) return null;
+  if (Array.isArray(nom.ws) && nom.ws.length) return [...nom.ws].sort((a, b) => a - b);
+  if (nom.w) {
+    /* архивная позиция конкретной ширины (старые кнопки) — ищем серию с ws */
+    const key = seriesKey(nom.name);
+    const surv = (pool || []).find(n => n.type === "canvas" && Array.isArray(n.ws) && n.ws.length && seriesKey(n.name) === key);
+    if (surv) return [...surv.ws].sort((a, b) => a - b);
+    return [nom.w];
+  }
+  return null;
 }
 
 /* Габарит помещения по чертежу: {a — длинная сторона, b — короткая} */
@@ -63,25 +69,6 @@ export function canvasUsage(box, W, shrink = 0, dir = null) {
   return { ...best, area: Math.round(best.area * 100) / 100, width: W };
 }
 
-/* План полотна кнопки.
-   ≥2 полотен с шириной внутри кнопки — пользователь сам задал набор ширин:
-   это варианты (названия могут быть любыми), в смету идёт один выбранный.
-   Одно полотно — ширины ищем в базе по серии (название без «NNN см»). */
-export function canvasPlan(presetNoms, wPick, allNoms, fit) {
-  const cvAll = (presetNoms || []).filter(n => n && n.type === "canvas");
-  const base = cvAll[0] || null;
-  if (!base) return { base: null, nom: null, opts: [], explicit: false };
-  const cvW = cvAll.filter(n => n.w);
-  const explicit = cvW.length > 1;
-  const opts = explicit ? [...cvW].sort((a, b) => a.w - b.w) : canvasSiblings(base, allNoms);
-  const pick = wPick ? opts.find(n => n.id === wPick) || null : null;
-  /* Без ручного выбора — берём выгодную ширину автоматически (fit: габарит,
-     усадка, направление). Ручной выбор всегда сильнее. */
-  let auto = null;
-  if (!pick && fit?.box) auto = bestCanvasWidth(fit.box, opts, fit.shrink || 0, fit.dir || null)?.nom || null;
-  return { base, nom: pick || auto || base, opts, explicit };
-}
-
 /* ── Раскрой: настройки живут на кнопке ──
    ПВХ: усадка N% (полотно заказывают меньше и тянут — влияет на подбор ширины).
    Ткань: усадки нет, но припуск N см с каждой стороны (входит в габарит). */
@@ -97,16 +84,9 @@ export function cutParams(preset, inst) {
   return { mode: null, shrink, marginM: inst?.margin || 0, label: "усадка " + shrink + "%" };
 }
 
-/* Подобрать ширину: приоритет — без шва, среди равных по числу полос — дешевле в деньгах */
-export function bestCanvasWidth(box, noms, shrink = 0, dir = null) {
-  const opts = (noms || []).filter(n => n.w).map(n => ({ nom: n, use: canvasUsage(box, n.w, shrink, dir) })).filter(x => x.use);
+/* Подобрать ширину из списка: без шва → меньше расход → уже ролик */
+export function bestWidth(box, ws, shrink = 0, dir = null) {
+  const opts = (ws || []).map(w => ({ w, use: canvasUsage(box, w, shrink, dir) })).filter(x => x.use);
   if (!opts.length) return null;
-  /* Шов дороже лишних метров: сначала цельное полотно (меньше полос).
-     Дальше сравниваем деньги — у разных ширин своя цена за м². */
-  const cost = o => o.use.area * (o.nom.price || 0);
-  return opts.sort((x, y) =>
-    x.use.strips - y.use.strips ||
-    cost(x) - cost(y) ||
-    x.use.area - y.use.area ||
-    x.nom.w - y.nom.w)[0];
+  return opts.sort((x, y) => x.use.strips - y.use.strips || x.use.area - y.use.area || x.w - y.w)[0];
 }

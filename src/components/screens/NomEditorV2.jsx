@@ -26,7 +26,7 @@ function editNom(id, patch) {
   Object.assign(n, patch);
   const i = RUNTIME_EDITED_NOMS.findIndex(x => x.id === id);
   const rec = { id, name: n.name, price: n.price, unit: n.unit, type: n.type };
-  ["mult", "cost", "inst", "note", "w"].forEach(k => { if (n[k] !== undefined) rec[k] = n[k]; });
+  ["mult", "cost", "inst", "note", "ws"].forEach(k => { if (n[k] !== undefined) rec[k] = n[k]; });
   if (i >= 0) RUNTIME_EDITED_NOMS[i] = rec; else RUNTIME_EDITED_NOMS.push(rec);
   try { window.dispatchEvent(new Event("magicapp:saveNow")); } catch (e) {}
 }
@@ -141,8 +141,10 @@ export default function NomEditorV2({ onClose, initialEditId }) {
               <button key={u} onClick={() => { editNom(cur.id, { unit: u }); rerender(); }} style={{ background: a ? DARK : BG, color: a ? "#fff" : SUB, border: "none", borderRadius: 7, padding: "5px 9px", fontSize: 10.5, fontWeight: a ? 800 : 600, cursor: "pointer", fontFamily: "inherit" }}>{u}</button>); })}</div>
           </div>
           {cur.type === "canvas" && <div style={rowS}>
-            <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 12.5, fontWeight: 600 }}>{"Ширина ролика"}</div><div style={{ fontSize: 9.5, color: DIM, fontWeight: 700 }}>{"для подбора ширины и перерасхода"}</div></div>
-            <input value={cur.w ? Math.round(cur.w * 100) : ""} inputMode="numeric" placeholder="—" onChange={e => { const v = parseInt(e.target.value, 10); editNom(cur.id, { w: v > 0 ? Math.round(v) / 100 : 0 }); rerender(); }} style={{ ...inputS, width: 76, textAlign: "right", fontWeight: 700 }} />
+            <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 12.5, fontWeight: 600 }}>{"Ширины ролика"}</div><div style={{ fontSize: 9.5, color: DIM, fontWeight: 700 }}>{"через запятую, см — для расчёта перерасхода"}</div></div>
+            <input defaultValue={(cur.ws || []).map(w => Math.round(w * 100)).join(", ")} inputMode="numeric" placeholder="200, 320, 500"
+              onBlur={e => { const ws = e.target.value.split(/[,;\s]+/).map(x => parseInt(x, 10)).filter(x => x > 0).map(x => x / 100); editNom(cur.id, { ws }); rerender(); }}
+              style={{ ...inputS, width: 150, textAlign: "right", fontWeight: 700 }} />
             <span style={{ fontSize: 12, color: DIM, fontWeight: 700 }}>{"см"}</span>
           </div>}
           <div style={{ ...rowS, borderBottom: "none" }}>
@@ -166,7 +168,7 @@ export default function NomEditorV2({ onClose, initialEditId }) {
         </div>
 
         <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={() => { const n = NB(cur.id); const c = addNewNom(n.name + " копия", n.price, n.unit, n.type, n.brand ? { id: n.brand, name: n.brandName, color: n.brandColor } : null); ["mult", "cost", "inst", "note", "img", "w"].forEach(k => { if (n[k] !== undefined) c[k] = n[k]; }); setOpenId(c.id); rerender(); }}
+          <button onClick={() => { const n = NB(cur.id); const c = addNewNom(n.name + " копия", n.price, n.unit, n.type, n.brand ? { id: n.brand, name: n.brandName, color: n.brandColor } : null); ["mult", "cost", "inst", "note", "img", "ws"].forEach(k => { if (n[k] !== undefined) c[k] = n[k]; }); setOpenId(c.id); rerender(); }}
             style={{ flex: 1, background: "#fff", border: "1px solid " + LINE, borderRadius: 11, padding: 12, fontSize: 12.5, fontWeight: 700, color: SUB, cursor: "pointer", fontFamily: "inherit" }}>{"Дублировать"}</button>
           {delAsk
             ? <button onClick={() => { deleteNom(cur.id); deleteNomPhotoFromIdb(cur.id); setDelAsk(false); closeCard(); }}

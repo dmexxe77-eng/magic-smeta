@@ -2,7 +2,8 @@ import { uid, safeJsonParse, safeStr } from "../utils/helpers.js";
 import { loadNomPhotoFromIdb, revokeObjectUrl, idbGet, idbPut } from '../utils/storage.js';
 import { NOM_V2 } from "./nomenclatureV2.js";
 import { applyKo, applyMult, baseOfSrc, legacyOptionSrc } from "./qty.js";
-import { canvasPlan, cutParams, roomBox } from "./canvas.js";
+import { seriesKey } from "./canvas.js";
+
 import { ALL_NOM, NOM_GEN, NOM_EXT, NB, USER_NOMS_CUSTOM, USER_NOMS_EDITED, USER_NOMS_DELETED, addNewNom, deleteNom, DELETED_NOM_IDS, RUNTIME_EDITED_NOMS, RUNTIME_BRANDS } from "./nomenclature.jsx";
 import { P, PF, LIGHT, OPT, DEFAULT_MAT, KK, PIMG } from "./profiles.js";
 import USER_SNAPSHOT from "./userSnapshot.json"; /* полные данные пользователя: пресеты, номенклатура, проекты */
@@ -244,21 +245,18 @@ export function buildEst(rooms,allPresets,gOpts,priceSnap){
       }
       /* Материал полотна по canvasArea, монтаж по a */
       /* Ширина ролика выбирается под помещение — подменяем позицию полотна в кнопке */
-      /* Полотна кнопки — варианты ширины (см. canvasPlan): в смету идёт одно —
-         выбранное вручную, иначе автоматически выгодное под габарит. */
-      const _cp=cutParams(cPreset,r.canvas);
-      const _rb=r.v?roomBox(r.v,_cp.marginM):null;
-      const cvPlan=canvasPlan((cPreset?.items||[]).map(id=>NB(id)),r.canvas?.wPick,ALL_NOM.filter(n=>!n.arch),_rb?{box:_rb,shrink:_cp.shrink,dir:r.canvas?.wDir}:null);
-      let _cvSeen=false;
-      const cItems=(cPreset?.items||[]).flatMap(id=>{
-        const base=NB(id);
-        if(cvPlan.base&&base&&base.type==="canvas"){
-          if(cvPlan.explicit&&!base.w)return[id];
-          if(_cvSeen)return[];
-          _cvSeen=true;
-          return[cvPlan.nom.id];
-        }
-        return[id];
+      /* Ширина ролика — параметр расчёта перерасхода (overcutArea хранится в
+         комнате), позиции полотна не подменяются: полотно одно, цена одна.
+         Страховка: если в кнопке несколько полотен одной серии (старые кнопки
+         с шириной в названии) — считаем одно, не сумму. */
+      const _cvKeys=new Set();
+      const cItems=(cPreset?.items||[]).filter(id=>{
+        const n=NB(id);
+        if(!n||n.type!=="canvas")return true;
+        const k=seriesKey(n.name);
+        if(_cvKeys.has(k))return false;
+        _cvKeys.add(k);
+        return true;
       });
       cItems.forEach(nomId=>{
         const nom=NB(nomId);if(!nom)return;

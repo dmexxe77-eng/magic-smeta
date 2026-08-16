@@ -11,7 +11,7 @@ import { PRESETS_GEN, PRbyId, USER_PRESETS_OVERRIDE, USER_FAVS_OVERRIDE, BLOCK_C
 import { btnS, N, SecH, Sel, ProfSel, ProfDD, OptsInline, ProfLine, NI, ProGate } from "../ui.jsx";
 import { SRC_META, legacyOptionSrc } from "../../data/buttonsStore.js";
 import { applyKo, applyMult, koOf, hasKo } from "../../data/qty.js";
-import { roomBox, canvasUsage, bestCanvasWidth, cutParams, canvasPlan } from "../../data/canvas.js";
+import { roomBox, canvasUsage, bestWidth, widthList, cutParams, seriesKey } from "../../data/canvas.js";
 import PolyMini from "../canvas/PolyMini.jsx";
 import PolyEditorFull from "../canvas/PolyEditorFull.jsx";
 import TracingCanvas from "../canvas/TracingCanvas.jsx";
@@ -182,6 +182,7 @@ function FavEditor2({allPresets,favIds:_rawFavIds,setFavIds,maxFav,onEditPreset,
 
 function CalcBlock({config,instance,onChange,presets,onPresets,autoAngles,roomInfo,onApplyAll,favIds,setFavIds,onEditNom,nomSnap,onOpenEditor}){
   const[showFav,setShowFav]=useState(false);const[editPr,setEditPr]=useState(null);
+  const[cutOpen,setCutOpen]=useState(false); /* раскрывашка деталей перерасхода */
   /* Подсветка активного блока: последний, внутри которого был клик/тап */
   const blkRef=useRef(null);const[blkActive,setBlkActive]=useState(false);
   useEffect(()=>{
@@ -194,21 +195,14 @@ function CalcBlock({config,instance,onChange,presets,onPresets,autoAngles,roomIn
   /* Настройки раскроя (усадка ПВХ / припуск ткани) живут на кнопке */
   const cutP=config.cat==="canvas"?cutParams(pr,instance):null;
   const box=config.cat==="canvas"?roomBox(instance.verts,cutP?cutP.marginM:0):null;
-  /* План полотна: варианты ширины из кнопки (или серия из базы). Ручной выбор
-     подменяет позицию, без него автоматически берётся выгодная ширина. */
-  const plan=config.cat==="canvas"?canvasPlan((pr?.items||[]).map(id=>NB(id)),instance.wPick,activeNoms(),box?{box,shrink:cutP.shrink,dir:instance.wDir}:null):null;
-  let _cvSeen=false;
-  const items=(pr?.items||[]).map(id=>{
-    const base=NB(id);
-    if(plan&&base&&base.type==="canvas"){
-      if(plan.explicit&&!base.w)return base; /* полотно без ширины — обычная строка */
-      /* группа вариантов: в списке ровно одно полотно — выбранное */
-      if(_cvSeen)return null;
-      _cvSeen=true;
-      return plan.nom;
-    }
-    return base;
-  }).filter(Boolean);
+  const _cvKeys=new Set();
+  const items=(pr?.items||[]).map(id=>NB(id)).filter(Boolean).filter(n=>{
+    if(n.type!=="canvas")return true;
+    const k=seriesKey(n.name);
+    if(_cvKeys.has(k))return false; /* полотна одной серии — одна строка */
+    _cvKeys.add(k);
+    return true;
+  });
   const opts=(pr?.options||[]).map(id=>NB(id)).filter(Boolean);
   const q=instance.qty||0;const upd=patch=>onChange({...instance,...patch});
   /* Подпись/единица главного параметра — из param выбранной кнопки (редактор), иначе из конфига блока */
@@ -240,17 +234,19 @@ function CalcBlock({config,instance,onChange,presets,onPresets,autoAngles,roomIn
     });
     if(changed)upd({oq});
   },[instance.btnId,pr,roomInfo?.area,roomInfo?.perim,roomInfo?.cIn,roomInfo?.cOut]);
-  /* ── Полотно: ширина ролика и расход ── */
-  const canvasNom=plan?plan.nom:null;
-  const widthOpts=plan?plan.opts:[];
+  /* ── Полотно: ширина ролика — параметр перерасхода ── */
+  const canvasNom=config.cat==="canvas"?items.find(n=>n.type==="canvas"):null;
+  const ws=canvasNom?widthList(canvasNom,activeNoms()):null;
   const shrink=cutP?cutP.shrink:0;
-  const usage=(box&&canvasNom?.w)?canvasUsage(box,canvasNom.w,shrink,instance.wDir):null;
+  const auto=(box&&ws)?bestWidth(box,ws,shrink,instance.wDir):null;
+  const wEff=instance.wSel||auto?.w||null; /* ручной выбор сильнее автоматики */
+  const usage=(box&&wEff)?canvasUsage(box,wEff,shrink,instance.wDir):null;
   /* Пересчёт перерасхода: полотно кроится полосой во всю ширину ролика */
   useEffect(()=>{
     if(config.cat!=="canvas"||!instance.overcut)return;
     if(!usage)return;
     if(usage.area!==instance.overcutArea)upd({overcutArea:usage.area});
-  },[instance.overcut,instance.verts,instance.wPick,instance.margin,usage?.area]);
+  },[instance.overcut,instance.verts,instance.wSel,instance.wDir,usage?.area]);
   const ocArea=instance.overcut&&instance.overcutArea?instance.overcutArea:null;
   /* peEff: if config is main profile and room has subP extras/curtains, reduce q */
   const peEffQ=(config.id==="main"&&instance._subTotal)?Math.max(0,q-instance._subTotal):q;
@@ -276,36 +272,38 @@ function CalcBlock({config,instance,onChange,presets,onPresets,autoAngles,roomIn
     {(()=>{const safeFavIds=Array.isArray(favIds)?favIds:[];const favBtns=presets.filter(p=>safeFavIds.includes(p.id));
       /* Единый вид чипов во всех блоках: ширина по содержимому, перенос на строки.
          Раньше 3+ кнопок растягивались в сетку на всю ширину, 1–2 — нет: блоки выглядели по-разному. */
-      return(<div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:8}}>{favBtns.map(p=>{const a=p.id===instance.btnId;return(<button key={p.id} onClick={()=>upd({btnId:a?"":p.id,off:{},oq:{},...(config.cat==="canvas"?{iq:{},wPick:null,wDir:null}:{})})} style={{flex:"0 1 auto",minWidth:100,maxWidth:"100%",background:a?T.actBg:T.pillBg,border:"1.5px solid "+(a?T.accent:T.border),borderRadius:10,padding:"5px 14px",cursor:"pointer",textAlign:"center",fontFamily:"inherit",color:a?T.accent:T.sub,fontSize:10,fontWeight:a?600:400,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</button>);})}{onOpenEditor&&<button onClick={()=>onOpenEditor(config.cat,instance.btnId)} title="Редактор кнопок" style={{flex:"0 0 auto",minWidth:32,background:"transparent",border:"1.5px dashed rgba(79,70,229,0.35)",borderRadius:10,padding:"5px 8px",cursor:"pointer",color:T.accent,fontSize:11,fontFamily:"inherit"}}>{"✎"}</button>}</div>);})()}
+      return(<div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:8}}>{favBtns.map(p=>{const a=p.id===instance.btnId;return(<button key={p.id} onClick={()=>upd({btnId:a?"":p.id,off:{},oq:{},...(config.cat==="canvas"?{iq:{},wSel:null,wDir:null}:{})})} style={{flex:"0 1 auto",minWidth:100,maxWidth:"100%",background:a?T.actBg:T.pillBg,border:"1.5px solid "+(a?T.accent:T.border),borderRadius:10,padding:"5px 14px",cursor:"pointer",textAlign:"center",fontFamily:"inherit",color:a?T.accent:T.sub,fontSize:10,fontWeight:a?600:400,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</button>);})}{onOpenEditor&&<button onClick={()=>onOpenEditor(config.cat,instance.btnId)} title="Редактор кнопок" style={{flex:"0 0 auto",minWidth:32,background:"transparent",border:"1.5px dashed rgba(79,70,229,0.35)",borderRadius:10,padding:"5px 8px",cursor:"pointer",color:T.accent,fontSize:11,fontFamily:"inherit"}}>{"✎"}</button>}</div>);})()}
     <div style={{display:"flex",alignItems:"center",gap:4,padding:"4px 0",borderTop:"0.5px solid "+T.border,marginBottom:config.cat==="canvas"?2:6}}><span style={{fontSize:11,color:T.sub}}>{qtyLabel+":"}</span><NI value={q} onChange={v=>upd({qty:v})} w={44}/><span style={{fontSize:10,color:T.dim}}>{qtyUnit}</span>{config.id==="main"&&instance._subTotal>0&&<span style={{fontSize:9,color:T.orange,marginLeft:4}}>{"(эфф. "+fmt(effectiveQ)+")"}</span>}{config.subP&&<label style={{display:"flex",alignItems:"center",gap:3,fontSize:9,color:instance.subP?T.green:T.dim,cursor:"pointer",marginLeft:"auto"}}><input type="checkbox" checked={!!instance.subP} onChange={e=>upd({subP:e.target.checked})} style={{accentColor:"#30d158",width:11,height:11}}/>{"Вычесть из осн. профиля"}</label>}</div>
     {config.cat==="canvas"&&(()=>{
-      const best=box?bestCanvasWidth(box,widthOpts,shrink,instance.wDir):null;
-      const cur=canvasNom;
+      const sum=instance.overcut&&usage
+        ?("ролик "+Math.round(wEff*100)+" · "+(usage.strips>1?usage.strips+" полосы (шов)":"без шва")+" · "+fmt(usage.area)+" м²"+(instance.wSel?"":" · авто"))
+        :null;
+      const rows=(instance.overcut&&cutOpen&&box&&ws)?ws.map(w=>({w,u:canvasUsage(box,w,shrink,instance.wDir)})).filter(x=>x.u):[];
       return(<div style={{marginBottom:6}}>
-        <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:widthOpts.length>1?5:0}}>
-          <label style={{display:"flex",alignItems:"center",gap:4,fontSize:10,color:instance.overcut?T.orange:T.dim,cursor:"pointer"}}>
-            <input type="checkbox" checked={!!instance.overcut} onChange={e=>upd({overcut:e.target.checked})} style={{accentColor:T.orange,width:12,height:12}}/>{"Перерасход материала"}
+        <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0}}>
+          <label style={{display:"flex",alignItems:"center",gap:4,fontSize:10,color:instance.overcut?T.orange:T.dim,cursor:"pointer",flexShrink:0}}>
+            <input type="checkbox" checked={!!instance.overcut} onChange={e=>{upd({overcut:e.target.checked});if(!e.target.checked)setCutOpen(false);}} style={{accentColor:T.orange,width:12,height:12}}/>{"Перерасход"}
           </label>
-          {box&&<span style={{fontSize:9,color:T.dim,marginLeft:6}}>{"габарит "+fmt(box.a)+"×"+fmt(box.b)+" м"}</span>}
-          {box&&widthOpts.length>0&&cutP&&<span style={{fontSize:9,color:T.sub,marginLeft:6}}>{cutP.label}</span>}
-          {instance.overcut&&usage&&<span style={{fontSize:9,color:T.orange,marginLeft:"auto",fontWeight:700}}>
-            {"▸ "+fmt(usage.area)+" м² · "+(usage.strips>1?usage.strips+" полосы (шов)":"без шва")}
-          </span>}
+          {sum
+            ?<span onClick={()=>setCutOpen(o=>!o)} style={{display:"flex",alignItems:"center",gap:4,fontSize:10,color:T.orange,fontWeight:700,cursor:"pointer",marginLeft:"auto",minWidth:0}}>
+              <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{sum}</span>
+              <span style={{fontSize:8,color:T.dim,flexShrink:0}}>{cutOpen?"▲":"▼"}</span>
+            </span>
+            :(box&&<span style={{fontSize:9,color:T.dim,marginLeft:"auto"}}>{"габарит "+fmt(box.a)+"×"+fmt(box.b)+" м"}</span>)}
         </div>
-        {widthOpts.length>1&&(<div style={{display:"flex",alignItems:"center",gap:4,flexWrap:"wrap"}}>
-          <span style={{fontSize:9,color:T.dim,fontWeight:600}}>{"Ширина:"}</span>
-          {widthOpts.map(n=>{
-            const a=cur&&n.id===cur.id;
-            const u=box?canvasUsage(box,n.w,shrink,instance.wDir):null;
-            const rec=best&&best.nom.id===n.id;
-            return(<button key={n.id} onClick={()=>upd({wPick:n.id})}
-              title={u?("расход "+fmt(u.area)+" м² · "+(u.strips>1?u.strips+" полосы (шов)":"без шва")+" · "+fmt(n.price)+" ₽/м² · ≈ "+fmt(Math.round(u.area*(n.price||0)))+" ₽"):""}
-              style={{background:a?T.actBg:T.pillBg,border:"1px solid "+(a?T.accent:(rec?"#16a34a55":T.border)),borderRadius:7,padding:"3px 8px",fontSize:9.5,fontWeight:a?700:500,color:a?T.accent:(rec?"#16a34a":T.sub),cursor:"pointer",fontFamily:"inherit"}}>
-              {Math.round(n.w*100)}{rec&&!a?" ★":""}
-            </button>);
-          })}
-          <span style={{fontSize:8.5,color:T.dim}}>{"см"}</span>
-          {best&&cur&&best.nom.id!==cur.id&&<span onClick={()=>upd({wPick:best.nom.id})} style={{fontSize:9,color:"#16a34a",cursor:"pointer",fontWeight:700,marginLeft:2}}>{"★ выгоднее "+Math.round(best.nom.w*100)}</span>}
+        {instance.overcut&&cutOpen&&(<div style={{marginTop:5,background:T.card2,borderRadius:10,padding:8}}>
+          <div style={{fontSize:9,color:T.dim,marginBottom:6}}>{(box?"габарит "+fmt(box.a)+"×"+fmt(box.b)+" м":"")+(cutP?" · "+cutP.label:"")}</div>
+          {rows.map(({w,u})=>{const sel=wEff===w;const isAuto=auto&&auto.w===w;
+            return(<div key={w} onClick={()=>upd({wSel:instance.wSel===w?null:w})}
+              style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 8px",borderRadius:8,marginBottom:2,cursor:"pointer",background:sel?T.actBg:"transparent",border:"1px solid "+(sel?T.accent:"transparent")}}>
+              <span style={{fontSize:10.5,fontWeight:sel?700:500,color:sel?T.accent:T.text}}>{Math.round(w*100)+" см · "+(u.strips>1?u.strips+" полосы (шов)":"без шва")}</span>
+              <span style={{fontSize:10,color:sel?T.accent:T.sub}}>{fmt(u.area)+" м²"+(isAuto?" · авто":"")}</span>
+            </div>);})}
+          {rows.length===0&&<div style={{fontSize:10,color:T.dim,textAlign:"center",padding:4}}>{"У полотна не указаны ширины ролика — задайте их в номенклатуре"}</div>}
+          <div style={{display:"flex",gap:6,marginTop:6}}>
+            {usage&&<button onClick={()=>upd({wDir:usage.dir==="a"?"b":"a"})} style={{background:T.actBg,border:"1px solid "+T.accent+"55",borderRadius:8,padding:"4px 10px",fontSize:9.5,fontWeight:700,color:T.accent,cursor:"pointer",fontFamily:"inherit"}}>{"⇄ сторона"}</button>}
+            {instance.wSel&&<button onClick={()=>upd({wSel:null})} style={{background:"transparent",border:"1px solid "+T.border,borderRadius:8,padding:"4px 10px",fontSize:9.5,fontWeight:700,color:T.sub,cursor:"pointer",fontFamily:"inherit"}}>{"автоматически"}</button>}
+          </div>
         </div>)}
       </div>);
     })()}
