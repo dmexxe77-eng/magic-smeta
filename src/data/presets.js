@@ -2,7 +2,7 @@ import { uid, safeJsonParse, safeStr } from "../utils/helpers.js";
 import { loadNomPhotoFromIdb, revokeObjectUrl, idbGet, idbPut } from '../utils/storage.js';
 import { NOM_V2 } from "./nomenclatureV2.js";
 import { applyKo, applyMult, baseOfSrc, legacyOptionSrc } from "./qty.js";
-import { canvasPlan } from "./canvas.js";
+import { canvasPlan, cutParams, roomBox } from "./canvas.js";
 import { ALL_NOM, NOM_GEN, NOM_EXT, NB, USER_NOMS_CUSTOM, USER_NOMS_EDITED, USER_NOMS_DELETED, addNewNom, deleteNom, DELETED_NOM_IDS, RUNTIME_EDITED_NOMS, RUNTIME_BRANDS } from "./nomenclature.jsx";
 import { P, PF, LIGHT, OPT, DEFAULT_MAT, KK, PIMG } from "./profiles.js";
 import USER_SNAPSHOT from "./userSnapshot.json"; /* полные данные пользователя: пресеты, номенклатура, проекты */
@@ -244,9 +244,11 @@ export function buildEst(rooms,allPresets,gOpts,priceSnap){
       }
       /* Материал полотна по canvasArea, монтаж по a */
       /* Ширина ролика выбирается под помещение — подменяем позицию полотна в кнопке */
-      /* Полотна кнопки — варианты ширины (см. canvasPlan): в смету идёт одно
-         выбранное; чужой wPick (от прошлой кнопки) в план не попадает. */
-      const cvPlan=canvasPlan((cPreset?.items||[]).map(id=>NB(id)),r.canvas?.wPick,ALL_NOM.filter(n=>!n.arch));
+      /* Полотна кнопки — варианты ширины (см. canvasPlan): в смету идёт одно —
+         выбранное вручную, иначе автоматически выгодное под габарит. */
+      const _cp=cutParams(cPreset,r.canvas);
+      const _rb=r.v?roomBox(r.v,_cp.marginM):null;
+      const cvPlan=canvasPlan((cPreset?.items||[]).map(id=>NB(id)),r.canvas?.wPick,ALL_NOM.filter(n=>!n.arch),_rb?{box:_rb,shrink:_cp.shrink,dir:r.canvas?.wDir}:null);
       let _cvSeen=false;
       const cItems=(cPreset?.items||[]).flatMap(id=>{
         const base=NB(id);

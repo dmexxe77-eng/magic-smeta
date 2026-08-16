@@ -191,9 +191,12 @@ function CalcBlock({config,instance,onChange,presets,onPresets,autoAngles,roomIn
   },[]);
   const pr=presets.find(p=>p.id===instance.btnId);
   /* Выбранная ширина ролика подменяет позицию полотна — как это делает buildEst */
-  /* План полотна: варианты ширины из кнопки (или серия из базы), выбранная —
-     подменяет позицию. Чужой wPick (от прошлой кнопки) в план не попадает. */
-  const plan=config.cat==="canvas"?canvasPlan((pr?.items||[]).map(id=>NB(id)),instance.wPick,activeNoms()):null;
+  /* Настройки раскроя (усадка ПВХ / припуск ткани) живут на кнопке */
+  const cutP=config.cat==="canvas"?cutParams(pr,instance):null;
+  const box=config.cat==="canvas"?roomBox(instance.verts,cutP?cutP.marginM:0):null;
+  /* План полотна: варианты ширины из кнопки (или серия из базы). Ручной выбор
+     подменяет позицию, без него автоматически берётся выгодная ширина. */
+  const plan=config.cat==="canvas"?canvasPlan((pr?.items||[]).map(id=>NB(id)),instance.wPick,activeNoms(),box?{box,shrink:cutP.shrink,dir:instance.wDir}:null):null;
   let _cvSeen=false;
   const items=(pr?.items||[]).map(id=>{
     const base=NB(id);
@@ -240,10 +243,7 @@ function CalcBlock({config,instance,onChange,presets,onPresets,autoAngles,roomIn
   /* ── Полотно: ширина ролика и расход ── */
   const canvasNom=plan?plan.nom:null;
   const widthOpts=plan?plan.opts:[];
-  /* Настройки раскроя (усадка ПВХ / припуск ткани) живут на кнопке */
-  const cutP=config.cat==="canvas"?cutParams(pr,instance):null;
   const shrink=cutP?cutP.shrink:0;
-  const box=config.cat==="canvas"?roomBox(instance.verts,cutP?cutP.marginM:0):null;
   const usage=(box&&canvasNom?.w)?canvasUsage(box,canvasNom.w,shrink,instance.wDir):null;
   /* Пересчёт перерасхода: полотно кроится полосой во всю ширину ролика */
   useEffect(()=>{

@@ -385,10 +385,10 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
             /* Раскрой полотна для чертежа — только при включённом перерасходе */
             if(!r.canvas?.overcut)return null;
             const cPr=presets.find(p=>p.id===r.canvas?.btnId);if(!cPr)return null;
-            const plan=canvasPlan((cPr.items||[]).map(id=>NB(id)),r.canvas?.wPick,activeNoms());
-            const cNom=plan.nom;
             const cp=cutParams(cPr,r.canvas); /* усадка/припуск — из кнопки */
             const rbox=roomBox(r.v,cp.marginM);
+            const plan=canvasPlan((cPr.items||[]).map(id=>NB(id)),r.canvas?.wPick,activeNoms(),rbox?{box:rbox,shrink:cp.shrink,dir:r.canvas?.wDir}:null);
+            const cNom=plan.nom;
             if(!cNom?.w||!rbox)return null;
             const use=canvasUsage(rbox,cNom.w,cp.shrink,r.canvas?.wDir);if(!use)return null;
             const sibs=plan.opts;

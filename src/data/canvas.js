@@ -67,7 +67,7 @@ export function canvasUsage(box, W, shrink = 0, dir = null) {
    ≥2 полотен с шириной внутри кнопки — пользователь сам задал набор ширин:
    это варианты (названия могут быть любыми), в смету идёт один выбранный.
    Одно полотно — ширины ищем в базе по серии (название без «NNN см»). */
-export function canvasPlan(presetNoms, wPick, allNoms) {
+export function canvasPlan(presetNoms, wPick, allNoms, fit) {
   const cvAll = (presetNoms || []).filter(n => n && n.type === "canvas");
   const base = cvAll[0] || null;
   if (!base) return { base: null, nom: null, opts: [], explicit: false };
@@ -75,7 +75,11 @@ export function canvasPlan(presetNoms, wPick, allNoms) {
   const explicit = cvW.length > 1;
   const opts = explicit ? [...cvW].sort((a, b) => a.w - b.w) : canvasSiblings(base, allNoms);
   const pick = wPick ? opts.find(n => n.id === wPick) || null : null;
-  return { base, nom: pick || base, opts, explicit };
+  /* Без ручного выбора — берём выгодную ширину автоматически (fit: габарит,
+     усадка, направление). Ручной выбор всегда сильнее. */
+  let auto = null;
+  if (!pick && fit?.box) auto = bestCanvasWidth(fit.box, opts, fit.shrink || 0, fit.dir || null)?.nom || null;
+  return { base, nom: pick || auto || base, opts, explicit };
 }
 
 /* ── Раскрой: настройки живут на кнопке ──
