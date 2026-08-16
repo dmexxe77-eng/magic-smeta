@@ -2,8 +2,9 @@ import { uid } from "./helpers.js";
 import { calcPoly, getAngles } from "./geometry.js";
 
 export function newRoom(name){return{id:uid(),name:name||"Новое",on:true,v:[[0,0],[3,0],[3,3],[0,3]],imgPts:null,aO:null,pO:null,
-  canvas:{id:uid(),btnId:"btn_c_msd",qty:9,off:{},oq:{}},
-  mainProf:{id:uid(),btnId:"btn_p_2",qty:12,off:{},oq:{}},
+  /* Новый проект начинается пустым: кнопки не выбраны, замерщик отмечает нужное */
+  canvas:{id:uid(),btnId:"",qty:9,off:{},oq:{}},
+  mainProf:{id:uid(),btnId:"",qty:12,off:{},oq:{}},
   extraCanvas:[],extras:[],lights:[],tracks:[],curtains:[],extraItems:[],
   mats2:[],film:false};}
 
