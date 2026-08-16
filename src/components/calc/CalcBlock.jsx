@@ -11,7 +11,7 @@ import { PRESETS_GEN, PRbyId, USER_PRESETS_OVERRIDE, USER_FAVS_OVERRIDE, BLOCK_C
 import { btnS, N, SecH, Sel, ProfSel, ProfDD, OptsInline, ProfLine, NI, ProGate } from "../ui.jsx";
 import { SRC_META, legacyOptionSrc } from "../../data/buttonsStore.js";
 import { applyKo, applyMult, koOf, hasKo } from "../../data/qty.js";
-import { canvasSiblings, roomBox, canvasUsage, bestCanvasWidth } from "../../data/canvas.js";
+import { canvasSiblings, roomBox, canvasUsage, bestCanvasWidth, cutParams } from "../../data/canvas.js";
 import PolyMini from "../canvas/PolyMini.jsx";
 import PolyEditorFull from "../canvas/PolyEditorFull.jsx";
 import TracingCanvas from "../canvas/TracingCanvas.jsx";
@@ -231,8 +231,10 @@ function CalcBlock({config,instance,onChange,presets,onPresets,autoAngles,roomIn
     ? (instance.wPick?NB(instance.wPick):items.find(n=>n.type==="canvas"))
     : null;
   const widthOpts=canvasNom?canvasSiblings(canvasNom,activeNoms()):[];
-  const box=config.cat==="canvas"?roomBox(instance.verts,instance.margin||0):null;
-  const shrink=instance.shrink==null?8:instance.shrink; /* усадка полотна, % — влияет на выбор ширины, не на расход */
+  /* Настройки раскроя (усадка ПВХ / припуск ткани) живут на кнопке */
+  const cutP=config.cat==="canvas"?cutParams(pr,instance):null;
+  const shrink=cutP?cutP.shrink:0;
+  const box=config.cat==="canvas"?roomBox(instance.verts,cutP?cutP.marginM:0):null;
   const usage=(box&&canvasNom?.w)?canvasUsage(box,canvasNom.w,shrink,instance.wDir):null;
   /* Пересчёт перерасхода: полотно кроится полосой во всю ширину ролика */
   useEffect(()=>{
@@ -276,7 +278,7 @@ function CalcBlock({config,instance,onChange,presets,onPresets,autoAngles,roomIn
             <input type="checkbox" checked={!!instance.overcut} onChange={e=>upd({overcut:e.target.checked})} style={{accentColor:T.orange,width:12,height:12}}/>{"Перерасход материала"}
           </label>
           {box&&<span style={{fontSize:9,color:T.dim,marginLeft:6}}>{"габарит "+fmt(box.a)+"×"+fmt(box.b)+" м"}</span>}
-          {box&&widthOpts.length>0&&<span style={{display:"inline-flex",alignItems:"center",gap:2,fontSize:9,color:shrink>0?T.sub:T.dim,marginLeft:6}}>{"усадка"}<NI value={shrink} onChange={v=>upd({shrink:Math.max(0,Math.min(15,v))})} w={26}/>{"%"}</span>}
+          {box&&widthOpts.length>0&&cutP&&<span style={{fontSize:9,color:T.sub,marginLeft:6}}>{cutP.label}</span>}
           {instance.overcut&&usage&&<span style={{fontSize:9,color:T.orange,marginLeft:"auto",fontWeight:700}}>
             {"▸ "+fmt(usage.area)+" м² · "+(usage.strips>1?usage.strips+" полосы (шов)":"без шва")}
           </span>}
@@ -288,7 +290,7 @@ function CalcBlock({config,instance,onChange,presets,onPresets,autoAngles,roomIn
             const u=box?canvasUsage(box,n.w,shrink,instance.wDir):null;
             const rec=best&&best.nom.id===n.id;
             return(<button key={n.id} onClick={()=>upd({wPick:n.id})}
-              title={u?("расход "+fmt(u.area)+" м² · "+(u.strips>1?u.strips+" полосы (шов)":"без шва")+" · "+fmt(n.price)+" ₽/м²"):""}
+              title={u?("расход "+fmt(u.area)+" м² · "+(u.strips>1?u.strips+" полосы (шов)":"без шва")+" · "+fmt(n.price)+" ₽/м² · ≈ "+fmt(Math.round(u.area*(n.price||0)))+" ₽"):""}
               style={{background:a?T.actBg:T.pillBg,border:"1px solid "+(a?T.accent:(rec?"#16a34a55":T.border)),borderRadius:7,padding:"3px 8px",fontSize:9.5,fontWeight:a?700:500,color:a?T.accent:(rec?"#16a34a":T.sub),cursor:"pointer",fontFamily:"inherit"}}>
               {Math.round(n.w*100)}{rec&&!a?" ★":""}
             </button>);

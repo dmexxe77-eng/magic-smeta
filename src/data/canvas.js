@@ -63,14 +63,31 @@ export function canvasUsage(box, W, shrink = 0, dir = null) {
   return { ...best, area: Math.round(best.area * 100) / 100, width: W };
 }
 
-/* Подобрать ширину: приоритет — без шва, среди равных по числу полос — экономнее */
+/* ── Раскрой: настройки живут на кнопке ──
+   ПВХ: усадка N% (полотно заказывают меньше и тянут — влияет на подбор ширины).
+   Ткань: усадки нет, но припуск N см с каждой стороны (входит в габарит). */
+export const isFabricName = name => /ткань|clipso|descor|cerutti|черутти/i.test(String(name || ""));
+export const defaultCut = nom => isFabricName(nom?.name) ? { mode: "fabric", margin: 15 } : { mode: "pvc", shrink: 8 };
+export function cutParams(preset, inst) {
+  const cut = preset?.cut;
+  if (cut) return cut.mode === "fabric"
+    ? { mode: "fabric", shrink: 0, marginM: (cut.margin ?? 15) / 100, label: "припуск " + (cut.margin ?? 15) + " см/сторона" }
+    : { mode: "pvc", shrink: cut.shrink ?? 8, marginM: 0, label: "усадка " + (cut.shrink ?? 8) + "%" };
+  /* кнопка без настроек раскроя — прежнее поведение (усадка из комнаты, по умолчанию 8%) */
+  const shrink = inst?.shrink == null ? 8 : inst.shrink;
+  return { mode: null, shrink, marginM: inst?.margin || 0, label: "усадка " + shrink + "%" };
+}
+
+/* Подобрать ширину: приоритет — без шва, среди равных по числу полос — дешевле в деньгах */
 export function bestCanvasWidth(box, noms, shrink = 0, dir = null) {
   const opts = (noms || []).filter(n => n.w).map(n => ({ nom: n, use: canvasUsage(box, n.w, shrink, dir) })).filter(x => x.use);
   if (!opts.length) return null;
-  /* Шов дороже лишних метров: сначала цельное полотно (меньше полос),
-     затем меньший расход, затем более узкий ролик. */
+  /* Шов дороже лишних метров: сначала цельное полотно (меньше полос).
+     Дальше сравниваем деньги — у разных ширин своя цена за м². */
+  const cost = o => o.use.area * (o.nom.price || 0);
   return opts.sort((x, y) =>
     x.use.strips - y.use.strips ||
+    cost(x) - cost(y) ||
     x.use.area - y.use.area ||
     x.nom.w - y.nom.w)[0];
 }

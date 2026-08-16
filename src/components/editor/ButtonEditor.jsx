@@ -8,6 +8,7 @@ import { fmt, uid } from "../../utils/helpers.js";
 import { NB } from "../../data/nomenclature.jsx";
 import NomPicker from "../screens/NomPicker.jsx";
 import { koOf, hasKo, applyKo } from "../../data/qty.js";
+import { defaultCut } from "../../data/canvas.js";
 import { SRC_META, smartSrcFor, migrateLegacy, toLegacyPresets, favsOfConfig } from "../../data/buttonsStore.js";
 
 const IND = "#4F46E5";
@@ -108,7 +109,16 @@ export default function ButtonEditor({ presets, sharedFavs, customBlocks, initia
   const addNomItems = ids => {
     const add = ids.filter(id => !sortedItems.some(i => i.nomId === id))
       .map((id, k) => ({ nomId: id, src: smartSrcFor(NB(id)?.name), order: sortedItems.length + k }));
-    if (add.length) setItems([...sortedItems, ...add]);
+    if (add.length) {
+      const newItems = [...sortedItems, ...add].map((it, i) => ({ ...it, order: i }));
+      const patch = { items: newItems };
+      /* Полотно: тип раскроя угадываем по названию (ткань → припуск, ПВХ → усадка) */
+      if (blockId === "canvas" && !cur.cut) {
+        const cNom = newItems.map(i => NB(i.nomId)).find(n => n?.type === "canvas");
+        if (cNom) patch.cut = defaultCut(cNom);
+      }
+      patchPreset(cur.id, patch);
+    }
     setNomSheet(false); setNomQ("");
   };
 
@@ -200,6 +210,36 @@ export default function ButtonEditor({ presets, sharedFavs, customBlocks, initia
           </div>)}
           <div style={{ fontSize: 9.5, color: "#8a8fa3", lineHeight: 1.5 }}>{"Параметр умножает позиции с привязкой «× Параметр». S/P берутся с чертежа помещения, «Вручную» — вводит замерщик."}</div>
         </div>
+
+        {/* 3b. Раскрой полотна — только для блока «Полотно» */}
+        {blockId === "canvas" && (() => {
+          const cut = cur.cut || { mode: "pvc", shrink: 8 };
+          const fab = cut.mode === "fabric";
+          const setCut = c => patchPreset(cur.id, { cut: c });
+          const mchip = a => ({ flex: 1, background: a ? IND : "#fff", color: a ? "#fff" : "#5a6070", border: "1px solid " + (a ? IND : "#e8e8f2"), borderRadius: 9, padding: "8px 4px", fontSize: 11, fontWeight: a ? 700 : 500, cursor: "pointer", fontFamily: "inherit" });
+          const numS = { width: 54, background: "#f2f3fa", border: "1px solid #f1f1f8", borderRadius: 8, padding: "6px 8px", fontSize: 12, fontFamily: "inherit", outline: "none", textAlign: "center", boxSizing: "border-box" };
+          return (<div style={card}>
+            <div style={{ fontSize: 10, fontWeight: 800, color: "#a5a9b8", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 8 }}>{"Раскрой полотна"}</div>
+            <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+              <button onClick={() => setCut({ mode: "pvc", shrink: cut.shrink ?? 8 })} style={mchip(!fab)}>{"ПВХ · усадка"}</button>
+              <button onClick={() => setCut({ mode: "fabric", margin: cut.margin ?? 15 })} style={mchip(fab)}>{"Ткань · припуск"}</button>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+              {fab ? (<>
+                <span style={{ fontSize: 11, color: "#5a6070" }}>{"Припуск"}</span>
+                <input type="number" value={cut.margin ?? 15} onChange={e => setCut({ mode: "fabric", margin: Math.max(0, Math.min(50, Number(e.target.value) || 0)) })} style={numS} />
+                <span style={{ fontSize: 11, color: "#5a6070" }}>{"см с каждой стороны"}</span>
+              </>) : (<>
+                <span style={{ fontSize: 11, color: "#5a6070" }}>{"Усадка"}</span>
+                <input type="number" value={cut.shrink ?? 8} onChange={e => setCut({ mode: "pvc", shrink: Math.max(0, Math.min(15, Number(e.target.value) || 0)) })} style={numS} />
+                <span style={{ fontSize: 11, color: "#5a6070" }}>{"%"}</span>
+              </>)}
+            </div>
+            <div style={{ fontSize: 9.5, color: "#8a8fa3", lineHeight: 1.5 }}>{fab
+              ? "Ткань не тянется: к габариту помещения добавляется припуск с каждой стороны — он входит в подбор ширины и перерасход."
+              : "ПВХ тянется: ролик перекрывает сторону до ширины ÷ (1 − усадка), поэтому часто хватает более узкого ролика."}</div>
+          </div>);
+        })()}
 
         {/* 4. Позиции */}
         <div style={card}>
