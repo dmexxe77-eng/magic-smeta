@@ -11,7 +11,7 @@ import { P, PF, Pmp, Pap, Pcu, Ptr, DEFAULT_MAT, KK, LIGHT, OPT, PIMG, DEFAULT_F
 import { ALL_NOM, NB, addNewNom, deleteNom, DELETED_NOM_IDS, NOM_BRAND_GROUPS, activeNoms } from "../../data/nomenclature.jsx";
 import { PRESETS_GEN, PRbyId, USER_PRESETS_OVERRIDE, USER_FAVS_OVERRIDE, BLOCK_CFG, CALC_STATE_REF, snapNomPrices, newRoom, newR, gA, gP, buildEst, sanitizeOrdersForStorage, applyNomsSnapshot, resolveNomByEstimateLine, STATUSES} from "../../data/presets.js";
 import { btnS, N, SecH, Sel, ProfSel, ProfDD, OptsInline, ProfLine, NI, ProGate } from "../ui.jsx";
-import { canvasSiblings, roomBox, canvasUsage, bestCanvasWidth, cutParams, seriesKey, presetWidthOptions } from "../../data/canvas.js";
+import { roomBox, canvasUsage, bestCanvasWidth, cutParams, canvasPlan } from "../../data/canvas.js";
 import { AppHeader } from "../AppHeader.jsx";
 import PolyMini from "../canvas/PolyMini.jsx";
 import PolyEditorFull from "../canvas/PolyEditorFull.jsx";
@@ -385,21 +385,20 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
             /* Раскрой полотна для чертежа — только при включённом перерасходе */
             if(!r.canvas?.overcut)return null;
             const cPr=presets.find(p=>p.id===r.canvas?.btnId);if(!cPr)return null;
-            const cvBase=(cPr.items||[]).map(id=>NB(id)).find(n=>n?.type==="canvas");
-            const pickNom=r.canvas?.wPick?NB(r.canvas.wPick):null;
-            const cNom=(pickNom&&cvBase&&pickNom.type==="canvas"&&seriesKey(pickNom.name)===seriesKey(cvBase.name))?pickNom:cvBase;
+            const plan=canvasPlan((cPr.items||[]).map(id=>NB(id)),r.canvas?.wPick,activeNoms());
+            const cNom=plan.nom;
             const cp=cutParams(cPr,r.canvas); /* усадка/припуск — из кнопки */
             const rbox=roomBox(r.v,cp.marginM);
             if(!cNom?.w||!rbox)return null;
             const use=canvasUsage(rbox,cNom.w,cp.shrink,r.canvas?.wDir);if(!use)return null;
-            const sibs=presetWidthOptions((cPr.items||[]).map(id=>NB(id)),cvBase,activeNoms());
+            const sibs=plan.opts;
             const best=bestCanvasWidth(rbox,sibs,cp.shrink,r.canvas?.wDir);
             /* полосы идут вдоль стороны use.dir; ширина ролика ложится поперёк неё */
             const axis=(use.dir==="a")===(rbox.ax==="x")?"y":"x";
             return{cm:Math.round(cNom.w*100),wM:cNom.w,mM:cp.marginM,k:1-(cp.shrink||0)/100,strips:use.strips,axis,
+              /* ширины не дублируем — они выбираются в блоке «Полотно» */
               onFlip:()=>u(r.id,rm=>{rm.canvas={...(rm.canvas||{}),wDir:use.dir==="a"?"b":"a"};return rm;}),
-              widths:sibs.length>1?sibs.map(n=>({id:n.id,cm:Math.round(n.w*100),active:n.id===cNom.id,rec:best&&best.nom.id===n.id})):[],
-              onPick:id=>u(r.id,rm=>{rm.canvas={...(rm.canvas||{}),wPick:id};return rm;})};
+              widths:[]};
           })()}/>
         </div>
       </div>

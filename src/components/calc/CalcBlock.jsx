@@ -11,7 +11,7 @@ import { PRESETS_GEN, PRbyId, USER_PRESETS_OVERRIDE, USER_FAVS_OVERRIDE, BLOCK_C
 import { btnS, N, SecH, Sel, ProfSel, ProfDD, OptsInline, ProfLine, NI, ProGate } from "../ui.jsx";
 import { SRC_META, legacyOptionSrc } from "../../data/buttonsStore.js";
 import { applyKo, applyMult, koOf, hasKo } from "../../data/qty.js";
-import { canvasSiblings, roomBox, canvasUsage, bestCanvasWidth, cutParams, seriesKey, presetWidthOptions } from "../../data/canvas.js";
+import { roomBox, canvasUsage, bestCanvasWidth, cutParams, canvasPlan } from "../../data/canvas.js";
 import PolyMini from "../canvas/PolyMini.jsx";
 import PolyEditorFull from "../canvas/PolyEditorFull.jsx";
 import TracingCanvas from "../canvas/TracingCanvas.jsx";
@@ -191,19 +191,18 @@ function CalcBlock({config,instance,onChange,presets,onPresets,autoAngles,roomIn
   },[]);
   const pr=presets.find(p=>p.id===instance.btnId);
   /* Выбранная ширина ролика подменяет позицию полотна — как это делает buildEst */
-  /* Ширина (wPick) — вариант той же серии, что полотно кнопки. Чужая (осталась
-     от прошлой кнопки) игнорируется, иначе к ткани подмешивается ПВХ. */
-  const cvBase=config.cat==="canvas"?(pr?.items||[]).map(id=>NB(id)).find(n=>n?.type==="canvas"):null;
-  const pickNom=config.cat==="canvas"&&instance.wPick?NB(instance.wPick):null;
-  const pickOk=!!(pickNom&&cvBase&&pickNom.type==="canvas"&&seriesKey(pickNom.name)===seriesKey(cvBase.name));
+  /* План полотна: варианты ширины из кнопки (или серия из базы), выбранная —
+     подменяет позицию. Чужой wPick (от прошлой кнопки) в план не попадает. */
+  const plan=config.cat==="canvas"?canvasPlan((pr?.items||[]).map(id=>NB(id)),instance.wPick,activeNoms()):null;
   let _cvSeen=false;
   const items=(pr?.items||[]).map(id=>{
     const base=NB(id);
-    if(config.cat==="canvas"&&base&&base.type==="canvas"&&cvBase&&seriesKey(base.name)===seriesKey(cvBase.name)){
-      /* полотна одной серии — варианты ширины: в списке ровно одно, выбранное */
+    if(plan&&base&&base.type==="canvas"){
+      if(plan.explicit&&!base.w)return base; /* полотно без ширины — обычная строка */
+      /* группа вариантов: в списке ровно одно полотно — выбранное */
       if(_cvSeen)return null;
       _cvSeen=true;
-      return pickOk?pickNom:base;
+      return plan.nom;
     }
     return base;
   }).filter(Boolean);
@@ -239,8 +238,8 @@ function CalcBlock({config,instance,onChange,presets,onPresets,autoAngles,roomIn
     if(changed)upd({oq});
   },[instance.btnId,pr,roomInfo?.area,roomInfo?.perim,roomInfo?.cIn,roomInfo?.cOut]);
   /* ── Полотно: ширина ролика и расход ── */
-  const canvasNom=config.cat==="canvas"?(pickOk?pickNom:cvBase):null;
-  const widthOpts=cvBase?presetWidthOptions((pr?.items||[]).map(id=>NB(id)),cvBase,activeNoms()):[];
+  const canvasNom=plan?plan.nom:null;
+  const widthOpts=plan?plan.opts:[];
   /* Настройки раскроя (усадка ПВХ / припуск ткани) живут на кнопке */
   const cutP=config.cat==="canvas"?cutParams(pr,instance):null;
   const shrink=cutP?cutP.shrink:0;

@@ -63,16 +63,19 @@ export function canvasUsage(box, W, shrink = 0, dir = null) {
   return { ...best, area: Math.round(best.area * 100) / 100, width: W };
 }
 
-/* Полотна одной серии внутри кнопки — варианты ширины, а не отдельные строки.
-   ≥2 таких позиций → пользователь сам задал набор ширин; одна → вся серия из базы. */
-export function presetWidthOptions(presetNoms, base, allNoms) {
-  if (!base) return [];
-  const key = seriesKey(base.name);
-  const own = (presetNoms || [])
-    .filter(n => n && n.type === "canvas" && n.w && seriesKey(n.name) === key)
-    .sort((a, b) => a.w - b.w);
-  if (own.length > 1) return own;
-  return canvasSiblings(base, allNoms);
+/* План полотна кнопки.
+   ≥2 полотен с шириной внутри кнопки — пользователь сам задал набор ширин:
+   это варианты (названия могут быть любыми), в смету идёт один выбранный.
+   Одно полотно — ширины ищем в базе по серии (название без «NNN см»). */
+export function canvasPlan(presetNoms, wPick, allNoms) {
+  const cvAll = (presetNoms || []).filter(n => n && n.type === "canvas");
+  const base = cvAll[0] || null;
+  if (!base) return { base: null, nom: null, opts: [], explicit: false };
+  const cvW = cvAll.filter(n => n.w);
+  const explicit = cvW.length > 1;
+  const opts = explicit ? [...cvW].sort((a, b) => a.w - b.w) : canvasSiblings(base, allNoms);
+  const pick = wPick ? opts.find(n => n.id === wPick) || null : null;
+  return { base, nom: pick || base, opts, explicit };
 }
 
 /* ── Раскрой: настройки живут на кнопке ──
