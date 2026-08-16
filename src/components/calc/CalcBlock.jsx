@@ -11,6 +11,7 @@ import { PRESETS_GEN, PRbyId, USER_PRESETS_OVERRIDE, USER_FAVS_OVERRIDE, BLOCK_C
 import { btnS, N, SecH, Sel, ProfSel, ProfDD, OptsInline, ProfLine, NI, ProGate } from "../ui.jsx";
 import { SRC_META, legacyOptionSrc } from "../../data/buttonsStore.js";
 import { applyKo, applyMult, koOf, hasKo } from "../../data/qty.js";
+import { canvasSiblings, roomBox, canvasUsage, bestCanvasWidth } from "../../data/canvas.js";
 import PolyMini from "../canvas/PolyMini.jsx";
 import PolyEditorFull from "../canvas/PolyEditorFull.jsx";
 import TracingCanvas from "../canvas/TracingCanvas.jsx";
@@ -212,8 +213,19 @@ function CalcBlock({config,instance,onChange,presets,onPresets,autoAngles,roomIn
     });
     if(changed)upd({oq});
   },[instance.btnId,pr,roomInfo?.area,roomInfo?.perim,roomInfo?.cIn,roomInfo?.cOut]);
-  /* Calc overcut area from verts */
-  useEffect(()=>{if(!instance.overcut||!instance.verts||instance.verts.length<3)return;const xs=instance.verts.map(p=>p[0]),ys=instance.verts.map(p=>p[1]);const bw=Math.max(...xs)-Math.min(...xs)+0.3,bh=Math.max(...ys)-Math.min(...ys)+0.3;const newArea=Math.round(bw*bh*100)/100;if(newArea!==instance.overcutArea)upd({overcutArea:newArea});},[instance.overcut,instance.verts]);
+  /* ── Полотно: ширина ролика и расход ── */
+  const canvasNom=config.cat==="canvas"
+    ? (instance.wPick?NB(instance.wPick):items.find(n=>n.type==="canvas"))
+    : null;
+  const widthOpts=canvasNom?canvasSiblings(canvasNom,activeNoms()):[];
+  const box=config.cat==="canvas"?roomBox(instance.verts,instance.margin||0):null;
+  const usage=(box&&canvasNom?.w)?canvasUsage(box,canvasNom.w):null;
+  /* Пересчёт перерасхода: полотно кроится полосой во всю ширину ролика */
+  useEffect(()=>{
+    if(config.cat!=="canvas"||!instance.overcut)return;
+    if(!usage)return;
+    if(usage.area!==instance.overcutArea)upd({overcutArea:usage.area});
+  },[instance.overcut,instance.verts,instance.wPick,instance.margin,usage?.area]);
   const ocArea=instance.overcut&&instance.overcutArea?instance.overcutArea:null;
   /* peEff: if config is main profile and room has subP extras/curtains, reduce q */
   const peEffQ=(config.id==="main"&&instance._subTotal)?Math.max(0,q-instance._subTotal):q;
@@ -241,7 +253,36 @@ function CalcBlock({config,instance,onChange,presets,onPresets,autoAngles,roomIn
          Раньше 3+ кнопок растягивались в сетку на всю ширину, 1–2 — нет: блоки выглядели по-разному. */
       return(<div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:8}}>{favBtns.map(p=>{const a=p.id===instance.btnId;return(<button key={p.id} onClick={()=>upd({btnId:p.id,off:{},oq:{},...(config.cat==="canvas"?{iq:{}}:{})})} style={{flex:"0 1 auto",minWidth:100,maxWidth:"100%",background:a?T.actBg:T.pillBg,border:"1.5px solid "+(a?T.accent:T.border),borderRadius:10,padding:"5px 14px",cursor:"pointer",textAlign:"center",fontFamily:"inherit",color:a?T.accent:T.sub,fontSize:10,fontWeight:a?600:400,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</button>);})}{onOpenEditor&&<button onClick={()=>onOpenEditor(config.cat,instance.btnId)} title="Редактор кнопок" style={{flex:"0 0 auto",minWidth:32,background:"transparent",border:"1.5px dashed rgba(79,70,229,0.35)",borderRadius:10,padding:"5px 8px",cursor:"pointer",color:T.accent,fontSize:11,fontFamily:"inherit"}}>{"✎"}</button>}</div>);})()}
     <div style={{display:"flex",alignItems:"center",gap:4,padding:"4px 0",borderTop:"0.5px solid "+T.border,marginBottom:config.cat==="canvas"?2:6}}><span style={{fontSize:11,color:T.sub}}>{qtyLabel+":"}</span><NI value={q} onChange={v=>upd({qty:v})} w={44}/><span style={{fontSize:10,color:T.dim}}>{qtyUnit}</span>{config.id==="main"&&instance._subTotal>0&&<span style={{fontSize:9,color:T.orange,marginLeft:4}}>{"(эфф. "+fmt(effectiveQ)+")"}</span>}{config.subP&&<label style={{display:"flex",alignItems:"center",gap:3,fontSize:9,color:instance.subP?T.green:T.dim,cursor:"pointer",marginLeft:"auto"}}><input type="checkbox" checked={!!instance.subP} onChange={e=>upd({subP:e.target.checked})} style={{accentColor:"#30d158",width:11,height:11}}/>{"Вычесть из осн. профиля"}</label>}</div>
-    {config.cat==="canvas"&&<div style={{display:"flex",alignItems:"center",gap:4,marginBottom:6}}><label style={{display:"flex",alignItems:"center",gap:4,fontSize:10,color:instance.overcut?T.orange:T.dim,cursor:"pointer"}}><input type="checkbox" checked={!!instance.overcut} onChange={e=>upd({overcut:e.target.checked})} style={{accentColor:T.orange,width:12,height:12}}/>{"Перерасход материала"}</label>{instance.overcut&&<span style={{fontSize:9,color:T.orange,marginLeft:"auto"}}>{"▸ "+fmt(instance.overcutArea||0)+" м²"}</span>}<span style={{fontSize:9,color:T.dim,cursor:"pointer",padding:"2px 6px",background:T.pillBg,borderRadius:6,border:"1px solid "+T.border,marginLeft:instance.overcut?"4px":"auto"}}>{"⚙"}</span></div>}
+    {config.cat==="canvas"&&(()=>{
+      const best=box?bestCanvasWidth(box,widthOpts):null;
+      const cur=canvasNom;
+      return(<div style={{marginBottom:6}}>
+        <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:widthOpts.length>1?5:0}}>
+          <label style={{display:"flex",alignItems:"center",gap:4,fontSize:10,color:instance.overcut?T.orange:T.dim,cursor:"pointer"}}>
+            <input type="checkbox" checked={!!instance.overcut} onChange={e=>upd({overcut:e.target.checked})} style={{accentColor:T.orange,width:12,height:12}}/>{"Перерасход материала"}
+          </label>
+          {box&&<span style={{fontSize:9,color:T.dim,marginLeft:6}}>{"габарит "+fmt(box.a)+"×"+fmt(box.b)+" м"}</span>}
+          {instance.overcut&&usage&&<span style={{fontSize:9,color:T.orange,marginLeft:"auto",fontWeight:700}}>
+            {"▸ "+fmt(usage.area)+" м²"+(usage.strips>1?" · "+usage.strips+" полосы":"")}
+          </span>}
+        </div>
+        {widthOpts.length>1&&(<div style={{display:"flex",alignItems:"center",gap:4,flexWrap:"wrap"}}>
+          <span style={{fontSize:9,color:T.dim,fontWeight:600}}>{"Ширина:"}</span>
+          {widthOpts.map(n=>{
+            const a=cur&&n.id===cur.id;
+            const u=box?canvasUsage(box,n.w):null;
+            const rec=best&&best.nom.id===n.id;
+            return(<button key={n.id} onClick={()=>upd({wPick:n.id})}
+              title={u?("расход "+fmt(u.area)+" м²"+(u.strips>1?", полос "+u.strips:"")+" · "+fmt(n.price)+" ₽/м²"):""}
+              style={{background:a?T.actBg:T.pillBg,border:"1px solid "+(a?T.accent:(rec?"#16a34a55":T.border)),borderRadius:7,padding:"3px 8px",fontSize:9.5,fontWeight:a?700:500,color:a?T.accent:(rec?"#16a34a":T.sub),cursor:"pointer",fontFamily:"inherit"}}>
+              {Math.round(n.w*100)}{rec&&!a?" ★":""}
+            </button>);
+          })}
+          <span style={{fontSize:8.5,color:T.dim}}>{"см"}</span>
+          {best&&cur&&best.nom.id!==cur.id&&<span onClick={()=>upd({wPick:best.nom.id})} style={{fontSize:9,color:"#16a34a",cursor:"pointer",fontWeight:700,marginLeft:2}}>{"★ выгоднее "+Math.round(best.nom.w*100)}</span>}
+        </div>)}
+      </div>);
+    })()}
     {pr&&(()=>{
       /* ЕДИНЫЙ список позиций (ТЗ 3.1): бывшие items → src 'param', бывшие options → углы или manual.
          Хранение не меняется: param-строки пишут правки в iq, остальные — в oq (их читает buildEst). */

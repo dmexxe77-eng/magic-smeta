@@ -230,14 +230,25 @@ export function buildEst(rooms,allPresets,gOpts,priceSnap){
     /* Полотно — для ткани: bounding box + 15cm */
     if(r.canvas){
       const cPreset=_find(r.canvas?.btnId);
+      /* Перерасход: берём число, посчитанное блоком (там известны ширина ролика и запас).
+         Так старые сметы остаются нетронутыми — у них это значение уже сохранено. */
       let canvasArea=a;
-      if(r.canvas?.overcut&&r.v&&r.v.length>=3){
-        const xs=r.v.map(p=>p[0]),ys=r.v.map(p=>p[1]);
-        const bw=Math.max(...xs)-Math.min(...xs)+0.3,bh=Math.max(...ys)-Math.min(...ys)+0.3;
-        canvasArea=Math.round(bw*bh*100)/100;
+      if(r.canvas?.overcut){
+        if(r.canvas.overcutArea>0)canvasArea=r.canvas.overcutArea;
+        else if(r.v&&r.v.length>=3){
+          const xs=r.v.map(p=>p[0]),ys=r.v.map(p=>p[1]);
+          const bw=Math.max(...xs)-Math.min(...xs),bh=Math.max(...ys)-Math.min(...ys);
+          canvasArea=Math.round(bw*bh*100)/100;
+        }
       }
       /* Материал полотна по canvasArea, монтаж по a */
-      const cItems=(cPreset?.items||[]);
+      /* Ширина ролика выбирается под помещение — подменяем позицию полотна в кнопке */
+      const cItems=(cPreset?.items||[]).map(id=>{
+        const pick=r.canvas?.wPick;
+        if(!pick)return id;
+        const base=NB(id);
+        return (base&&base.type==="canvas")?pick:id;
+      });
       cItems.forEach(nomId=>{
         const nom=NB(nomId);if(!nom)return;
         if(r.canvas.off?.[nomId]===true)return;
