@@ -10,6 +10,7 @@ import CalcScreen from "./components/screens/CalcScreen.jsx";
 import NewOrderFlow from "./components/screens/NewOrderFlow.jsx";
 import PdfPagePicker from "./components/builders/PdfPagePicker.jsx";
 import AppMenu from "./components/AppMenu.jsx";
+import { DEFAULT_CONTRACT_TPL, CONTRACT_TPL_REF } from "./data/contract.js";
 import NomEditor from "./components/screens/NomEditorV2.jsx";
 
 export default function App(){
@@ -22,6 +23,7 @@ export default function App(){
   }
   const[screen,setScreen]=useState("home");
   const[menuOpen,setMenuOpen]=useState(false);   /* меню (три полоски) — с любого экрана */
+  const[contractTpl,setContractTpl]=useState(DEFAULT_CONTRACT_TPL); /* шаблон договора — один на студию */
   const[nomEdOpen,setNomEdOpen]=useState(false);
   const[orders,setOrders]=useState(INITIAL_ORDERS); /* стартовые проекты из userSnapshot.json — актуальны для новых устройств; на устройствах с локальными данными их перекрывает автосейв */
   const[curId,setCurId]=useState(null);
@@ -67,6 +69,7 @@ export default function App(){
           try{window.dispatchEvent(new CustomEvent("magicapp:proOverride",{detail:{value:IS_PRO_OVERRIDE}}));}catch(e){}
         }
         if(snap.theme)setTheme(snap.theme);
+        if(snap.contract&&typeof snap.contract==="object")setContractTpl({...DEFAULT_CONTRACT_TPL,...snap.contract});
         if(Array.isArray(snap.orders))setOrders(snap.orders);
         if(snap.calc){
           if(snap.calc.presets)CALC_STATE_REF.presets=snap.calc.presets;
@@ -112,6 +115,7 @@ export default function App(){
   // Обновляем ref синхронно во время рендера — не через useEffect чтобы избежать race condition с auto-save
   ordersRef.current=orders;
   themeRef.current=theme;
+  CONTRACT_TPL_REF.current=contractTpl;
 
   useEffect(()=>{
     if(typeof window==="undefined")return;
@@ -127,6 +131,7 @@ export default function App(){
         ts:Date.now(),
         theme:themeRef.current,
         isProOverride:!!IS_PRO_OVERRIDE,
+        contract:CONTRACT_TPL_REF.current||undefined,
         calc:{
           presets:CALC_STATE_REF.presets,
           sharedFavs:CALC_STATE_REF.sharedFavs,
@@ -177,6 +182,7 @@ export default function App(){
         const orders=sanitizeOrdersForStorage(ordersRef.current).map(o=>({...o,planImage:undefined}));
         const snap={
           v:2,ts:Date.now(),theme:themeRef.current,isProOverride:!!IS_PRO_OVERRIDE,
+          contract:CONTRACT_TPL_REF.current||undefined,
           calc:{presets:CALC_STATE_REF.presets,sharedFavs:CALC_STATE_REF.sharedFavs,globalOpts:CALC_STATE_REF.globalOpts||[],customBlocks:CALC_STATE_REF.customBlocks||[]},
           noms:{customNoms:sanitizeCustomNoms(ALL_NOM.filter(n=>n.id&&n.id.startsWith("u"))),editedNoms:sanitizeEditedNoms(RUNTIME_EDITED_NOMS),deletedNomIds:DELETED_NOM_IDS,customBrands:RUNTIME_BRANDS},
           orders
@@ -210,7 +216,7 @@ export default function App(){
   const addClient=(name)=>{const id="c"+uid();setAppClients(p=>[...p,{id,name,phone:"",email:"",address:""}]);return id;};
   const addDesigner=(name,studio)=>{const id="d"+uid();setAppDesigners(p=>[...p,{id,name,studio:studio||"",phone:"",bonusType:"pct",bonusRate:5,note:""}]);return id;};
   const createOrder=(info,method)=>{
-    const ord={id:uid(),name:info.name||"Заказ",client:info.client||"",clientId:info.clientId||"",phone:info.phone||"",address:info.address||"",designer:info.designer||"",designerId:info.designerId||"",notes:info.notes||"",date:new Date().toLocaleDateString("ru-RU"),rooms:[],method,status:"new",planImage:null};
+    const ord={id:uid(),name:info.name||"Заказ",client:info.client||"",clientId:info.clientId||"",phone:info.phone||"",address:info.address||"",designer:info.designer||"",designerId:info.designerId||"",notes:info.notes||"",date:new Date().toLocaleDateString("ru-RU"),rooms:[],method,status:"order",planImage:null};
     setOrders(prev=>[ord,...prev]);
     setCurId(ord.id);
     if(method==="none"){setScreen("home");}
@@ -243,11 +249,14 @@ export default function App(){
     editedNoms:RUNTIME_EDITED_NOMS,
     deletedNomIds:DELETED_NOM_IDS,
     customBrands:RUNTIME_BRANDS,
+    contract:CONTRACT_TPL_REF.current||undefined,
     orders:orders.map(o=>({...o,planImage:undefined,rooms:(o.rooms||[]).map(r=>({...r,imgPts:undefined,aImg:undefined}))}))
   });
   const manualSave=()=>{try{window.dispatchEvent(new Event("magicapp:saveNow"));}catch(e){}};
 
   const handleImport=(jsonText)=>{
+    /* шаблон договора из бэкапа */
+    try{const d0=JSON.parse(jsonText);if(d0&&d0.contract&&typeof d0.contract==="object")setContractTpl({...DEFAULT_CONTRACT_TPL,...d0.contract});}catch(e){}
     try{
       const d=JSON.parse(jsonText);
       if(!d||typeof d!=="object")throw new Error("Неверный формат файла");
@@ -333,7 +342,7 @@ export default function App(){
     }
   };
 
-  if(screen==="home")content=(<HomeScreen orders={orders} setOrders={setOrders} onOpen={openOrder} onNew={()=>setScreen("new")} onStatusChange={changeStatus} theme={theme} setTheme={setTheme} onFullExport={buildFullExport} onSaveNow={manualSave} onImport={handleImport} saveStatus={saveStatus} returnOrderId={curId} onMenu={()=>setMenuOpen(true)}/>);
+  if(screen==="home")content=(<HomeScreen orders={orders} setOrders={setOrders} onOpen={openOrder} onNew={()=>setScreen("new")} onStatusChange={changeStatus} theme={theme} setTheme={setTheme} onFullExport={buildFullExport} onSaveNow={manualSave} onImport={handleImport} saveStatus={saveStatus} returnOrderId={curId} onMenu={()=>setMenuOpen(true)} contractTpl={contractTpl} setContractTpl={setContractTpl}/>);
   else if(screen==="new")content=(<NewOrderFlow onBack={()=>setScreen("home")} onCreate={createOrder} clients={appClients} designers={appDesigners} onAddClient={addClient} onAddDesigner={addDesigner}/>);
   else if(screen==="pickImage")content=(<div style={{minHeight:"100vh",background:T.bg,color:T.text,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16,padding:20}}>
     <div style={{fontSize:14,fontWeight:600}}>{"Загрузите план потолков"}</div>
@@ -375,7 +384,7 @@ export default function App(){
     }}
     onPlanImageChange={img=>{setPlanImg(img);if(curId)setOrders(prev=>prev.map(o=>o.id===curId?{...o,planImage:img}:o));}}
   />);
-  else content=(<HomeScreen orders={orders} setOrders={setOrders} onOpen={openOrder} onNew={()=>setScreen("new")} onStatusChange={changeStatus} theme={theme} setTheme={setTheme} onFullExport={buildFullExport} onSaveNow={manualSave} onImport={handleImport} saveStatus={saveStatus} returnOrderId={curId} onMenu={()=>setMenuOpen(true)}/>);
+  else content=(<HomeScreen orders={orders} setOrders={setOrders} onOpen={openOrder} onNew={()=>setScreen("new")} onStatusChange={changeStatus} theme={theme} setTheme={setTheme} onFullExport={buildFullExport} onSaveNow={manualSave} onImport={handleImport} saveStatus={saveStatus} returnOrderId={curId} onMenu={()=>setMenuOpen(true)} contractTpl={contractTpl} setContractTpl={setContractTpl}/>);
 
   return(<div style={{fontFamily:"'Inter',-apple-system,BlinkMacSystemFont,'SF Pro Display',system-ui,sans-serif",background:T.bg,color:T.text,minHeight:"100vh"}}>
     <style>{"@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');*{box-sizing:border-box;margin:0;padding:0;font-family:inherit}::-webkit-scrollbar{width:3px}select{outline:none;font-family:inherit}input[type=number]::-webkit-inner-spin-button{opacity:.3}@media(min-width:980px){.mw{max-width:1180px!important;margin-left:auto!important;margin-right:auto!important}.mw-wide{max-width:1340px!important;margin-left:auto!important;margin-right:auto!important}.proj-grid{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:10px;align-items:start}.proj-grid>div{margin-bottom:0!important}.info-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:12px;align-items:start}.info-grid>div{margin-bottom:0!important}.calc-2pane{display:grid;grid-template-columns:360px minmax(0,1fr);gap:14px;align-items:start}.calc-chart{position:sticky;top:12px}}"}</style>

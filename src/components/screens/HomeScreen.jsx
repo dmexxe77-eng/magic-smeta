@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { AppHeader } from "../AppHeader.jsx";
+import ContractScreen from "./ContractScreen.jsx";
 import { T, setT, THEMES, IS_PRO_OVERRIDE, setIsProOverride} from "../../theme.js";
 import { fmt, uid, deep, safeStr } from "../../utils/helpers.js";
 import { calcPoly, getAngles, countAngles, effectiveOq, getAutoOq } from "../../utils/geometry.js";
@@ -55,7 +56,7 @@ function PeriodBar({mode,setMode,ym,setYm,from,setFrom,to,setTo}){
   </div>);
 }
 
-function HomeScreen({onMenu,orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme,onFullExport,onSaveNow,onImport,saveStatus,returnOrderId}){
+function HomeScreen({onMenu,contractTpl,setContractTpl,orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme,onFullExport,onSaveNow,onImport,saveStatus,returnOrderId}){
   const[tab,setTab]       = useState("home");
   const[showNomEd,setShowNomEd] = useState(false);
   const[delOrderId,setDelOrderId] = useState(null);
@@ -97,6 +98,7 @@ function HomeScreen({onMenu,orders,setOrders,onOpen,onNew,onStatusChange,theme,s
   const[selClient,setSelClient]   = useState(null);
   const[selDesigner,setSelDesigner] = useState(null);
   const[projTab,setProjTab]       = useState("info");
+  const[showContract,setShowContract] = useState(false);
   const[editOrd,setEditOrd]       = useState(null);
 
   const[showAddCl,setShowAddCl]   = useState(false);
@@ -309,12 +311,12 @@ function HomeScreen({onMenu,orders,setOrders,onOpen,onNew,onStatusChange,theme,s
                   </div>
                 </button>
                 {/* Договор */}
-                <button disabled style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",
-                  justifyContent:"center",gap:2,background:T.faint,border:"1px dashed "+T.border,
-                  borderRadius:10,padding:"7px 4px",cursor:"default",fontFamily:"inherit",opacity:0.5}}>
+                <button onClick={()=>setShowContract(true)} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",
+                  justifyContent:"center",gap:2,background:ABGC,border:"1px solid "+ACC+"33",
+                  borderRadius:10,padding:"7px 4px",cursor:"pointer",fontFamily:"inherit"}}>
                   <span style={{fontSize:15}}>📄</span>
-                  <div style={{fontSize:9,color:T.sub,textAlign:"center"}}>Договор</div>
-                  <span style={{fontSize:7,color:T.dim,background:T.border,borderRadius:3,padding:"1px 3px"}}>Soon</span>
+                  <div style={{fontSize:9,color:ACC,fontWeight:700,textAlign:"center"}}>Договор</div>
+                  {ord.contract&&<span style={{fontSize:7,color:"#16a34a",background:"rgba(22,163,74,0.1)",borderRadius:3,padding:"1px 3px"}}>{"№ "+ord.contract.number}</span>}
                 </button>
                 {/* ТЗ на монтаж */}
                 <button disabled style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",
@@ -451,6 +453,15 @@ function HomeScreen({onMenu,orders,setOrders,onOpen,onNew,onStatusChange,theme,s
             </div>
           ):(<ProGate feature="Расчёт выплат — план PRO"><div style={{background:T.card,borderRadius:15,padding:16,color:T.dim,textAlign:"center",fontSize:13}}>{"Монтажники и бонусы дизайнеру"}</div></ProGate>))}
         </div>
+      {/* Договор — поверх карточки проекта */}
+      {showContract&&(()=>{
+        const fin=calcFin(ord);
+        const est=(ord.rooms||[]).length>0?buildEst(ord.rooms,CALC_STATE_REF.presets,CALC_STATE_REF.globalOpts||[],ord.nomSnapshot||null):{mats:[],works:[]};
+        return(<ContractScreen ord={ord} est={est} total={fin.total} area={fin.area}
+          tpl={contractTpl} onTplChange={setContractTpl}
+          onSaveContract={c=>setOrders(prev=>prev.map(o=>o.id===ord.id?{...o,contract:c}:o))}
+          onClose={()=>setShowContract(false)}/>);
+      })()}
       </div>
     );
   }
@@ -653,7 +664,9 @@ function HomeScreen({onMenu,orders,setOrders,onOpen,onNew,onStatusChange,theme,s
             <div style={{fontSize:12,color:T.dim}}>{[fin.area>0?fn(fin.area)+" м²":"",ord.date?"🗓 "+ord.date:""].filter(Boolean).join(" · ")}</div>
             {fin.total>0&&<div style={{fontSize:16,fontWeight:700,color:T.text}}>{ff(fin.total)+" ₽"}</div>}
           </div>
-          {fin.total>0&&(<div>
+          {/* Оплаты и долг показываем только после заключения договора:
+              на этапах заявки/расчёта/согласования это ещё не финансы, а оценка */}
+          {fin.total>0&&["contract","install","done"].includes(ord.status)&&(<div>
             <div style={{height:3,background:T.card2,borderRadius:3,overflow:"hidden"}}>
               <div style={{height:"100%",width:`${Math.min(pct,100)}%`,background:ACC,borderRadius:3}}/>
             </div>
