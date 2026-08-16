@@ -11,6 +11,7 @@ import { P, PF, Pmp, Pap, Pcu, Ptr, DEFAULT_MAT, KK, LIGHT, OPT, PIMG, DEFAULT_F
 import { ALL_NOM, NB, addNewNom, deleteNom, DELETED_NOM_IDS, NOM_BRAND_GROUPS, activeNoms } from "../../data/nomenclature.jsx";
 import { PRESETS_GEN, PRbyId, USER_PRESETS_OVERRIDE, USER_FAVS_OVERRIDE, BLOCK_CFG, CALC_STATE_REF, snapNomPrices, newRoom, newR, gA, gP, buildEst, sanitizeOrdersForStorage, applyNomsSnapshot, resolveNomByEstimateLine, STATUSES} from "../../data/presets.js";
 import { btnS, N, SecH, Sel, ProfSel, ProfDD, OptsInline, ProfLine, NI, ProGate } from "../ui.jsx";
+import { canvasSiblings, roomBox, canvasUsage, bestCanvasWidth } from "../../data/canvas.js";
 import { AppHeader } from "../AppHeader.jsx";
 import PolyMini from "../canvas/PolyMini.jsx";
 import PolyEditorFull from "../canvas/PolyEditorFull.jsx";
@@ -380,7 +381,23 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
       {/* PolyMini + кнопка нового редактора */}
       <div style={{display:"flex",gap:6,marginBottom:6}}>
         <div style={{flex:1}} onClick={()=>setPolyEdit(true)}>
-          <PolyMini verts={r.v} areaOverride={r.aO} perimOverride={r.pO} showBBox={r.canvas?.overcut}/>
+          <PolyMini verts={r.v} areaOverride={r.aO} perimOverride={r.pO} showBBox={r.canvas?.overcut} roll={(()=>{
+            /* Раскрой полотна для чертежа: какая сторона перекрывается шириной ролика */
+            const cPr=presets.find(p=>p.id===r.canvas?.btnId);if(!cPr)return null;
+            const cNom=r.canvas?.wPick?NB(r.canvas.wPick):(cPr.items||[]).map(id=>NB(id)).find(n=>n?.type==="canvas");
+            const rbox=roomBox(r.v,r.canvas?.margin||0);
+            if(!cNom?.w||!rbox)return null;
+            const shr=r.canvas?.shrink==null?8:r.canvas.shrink;
+            const use=canvasUsage(rbox,cNom.w,shr,r.canvas?.wDir);if(!use)return null;
+            const sibs=canvasSiblings(cNom,activeNoms());
+            const best=bestCanvasWidth(rbox,sibs,shr,r.canvas?.wDir);
+            /* полосы идут вдоль стороны use.dir; ширина ролика ложится поперёк неё */
+            const axis=(use.dir==="a")===(rbox.ax==="x")?"y":"x";
+            return{cm:Math.round(cNom.w*100),wM:cNom.w,strips:use.strips,axis,
+              onFlip:()=>u(r.id,rm=>{rm.canvas={...(rm.canvas||{}),wDir:use.dir==="a"?"b":"a"};return rm;}),
+              widths:sibs.length>1?sibs.map(n=>({id:n.id,cm:Math.round(n.w*100),active:n.id===cNom.id,rec:best&&best.nom.id===n.id})):[],
+              onPick:id=>u(r.id,rm=>{rm.canvas={...(rm.canvas||{}),wPick:id};return rm;})};
+          })()}/>
         </div>
       </div>
       </div>
