@@ -51,10 +51,13 @@ export function canvasUsage(box, W, shrink = 0, dir = null) {
   const k = 1 - (Number(shrink) || 0) / 100;
   const { a, b } = box;
   const variants = [];
-  /* полосы вдоль стороны side, ширина ролика перекрывает cross (с учётом усадки) */
+  /* Полосы вдоль стороны side, ширина ролика перекрывает cross.
+     Усадка влияет только на то, сколько полос нужно (узкий ролик растягивается
+     и дотягивается до стороны) — площадь материала не бывает меньше фактической:
+     полотно уже комнаты считается по фактическому перекрытию. */
   const along = (side, cross, name) => {
     const strips = Math.max(1, Math.ceil((cross * k) / W - 1e-9));
-    variants.push({ area: strips * W * side, strips, along: side, dir: name });
+    variants.push({ area: Math.max(strips * W, cross) * side, strips, along: side, dir: name });
   };
   if (dir === "a" || dir === "b") {
     /* направление раскроя задано вручную */
