@@ -36,17 +36,22 @@ export function roomBox(verts, z = 0) {
 /* Расход полотна шириной W на габарит a×b.
    Полоса кроится во всю ширину ролика, длина — по второй стороне.
    Ориентацию выбираем ту, что дешевле: ролик может «лечь» и вдоль длинной стороны. */
-export function canvasUsage(box, W) {
+export function canvasUsage(box, W, shrink = 0) {
   if (!box || !W) return null;
+  /* Усадка: полотно заказывают меньше габарита и растягивают, поэтому ролик W
+     перекрывает сторону до W/(1−s). На выбор ширины влияет, на расход — нет:
+     площадь считаем по полному габариту. */
+  const k = 1 - (Number(shrink) || 0) / 100;
   const { a, b } = box;
+  const needA = a * k, needB = b * k;
   const variants = [];
-  /* одной полосой: ширина ролика перекрывает одну из сторон */
-  if (W >= b) variants.push({ area: W * a, strips: 1, along: a });
-  if (W >= a) variants.push({ area: W * b, strips: 1, along: b });
+  /* одной полосой: ширина ролика перекрывает одну из сторон (с учётом усадки) */
+  if (W >= needB - 1e-9) variants.push({ area: W * a, strips: 1, along: a });
+  if (W >= needA - 1e-9) variants.push({ area: W * b, strips: 1, along: b });
   /* не перекрывает — несколько полос со спайкой */
   if (!variants.length) {
-    variants.push({ area: Math.ceil(b / W) * W * a, strips: Math.ceil(b / W), along: a });
-    variants.push({ area: Math.ceil(a / W) * W * b, strips: Math.ceil(a / W), along: b });
+    variants.push({ area: Math.ceil(needB / W) * W * a, strips: Math.ceil(needB / W), along: a });
+    variants.push({ area: Math.ceil(needA / W) * W * b, strips: Math.ceil(needA / W), along: b });
   }
   /* Приоритет — цельное полотно: сначала меньше полос, потом меньше расход. */
   const best = variants.sort((x, y) => x.strips - y.strips || x.area - y.area)[0];
@@ -54,8 +59,8 @@ export function canvasUsage(box, W) {
 }
 
 /* Подобрать ширину: приоритет — без шва, среди равных по числу полос — экономнее */
-export function bestCanvasWidth(box, noms) {
-  const opts = (noms || []).filter(n => n.w).map(n => ({ nom: n, use: canvasUsage(box, n.w) })).filter(x => x.use);
+export function bestCanvasWidth(box, noms, shrink = 0) {
+  const opts = (noms || []).filter(n => n.w).map(n => ({ nom: n, use: canvasUsage(box, n.w, shrink) })).filter(x => x.use);
   if (!opts.length) return null;
   /* Шов дороже лишних метров: сначала цельное полотно (меньше полос),
      затем меньший расход, затем более узкий ролик. */

@@ -226,7 +226,8 @@ function CalcBlock({config,instance,onChange,presets,onPresets,autoAngles,roomIn
     : null;
   const widthOpts=canvasNom?canvasSiblings(canvasNom,activeNoms()):[];
   const box=config.cat==="canvas"?roomBox(instance.verts,instance.margin||0):null;
-  const usage=(box&&canvasNom?.w)?canvasUsage(box,canvasNom.w):null;
+  const shrink=instance.shrink==null?8:instance.shrink; /* усадка полотна, % — влияет на выбор ширины, не на расход */
+  const usage=(box&&canvasNom?.w)?canvasUsage(box,canvasNom.w,shrink):null;
   /* Пересчёт перерасхода: полотно кроится полосой во всю ширину ролика */
   useEffect(()=>{
     if(config.cat!=="canvas"||!instance.overcut)return;
@@ -261,7 +262,7 @@ function CalcBlock({config,instance,onChange,presets,onPresets,autoAngles,roomIn
       return(<div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:8}}>{favBtns.map(p=>{const a=p.id===instance.btnId;return(<button key={p.id} onClick={()=>upd({btnId:p.id,off:{},oq:{},...(config.cat==="canvas"?{iq:{}}:{})})} style={{flex:"0 1 auto",minWidth:100,maxWidth:"100%",background:a?T.actBg:T.pillBg,border:"1.5px solid "+(a?T.accent:T.border),borderRadius:10,padding:"5px 14px",cursor:"pointer",textAlign:"center",fontFamily:"inherit",color:a?T.accent:T.sub,fontSize:10,fontWeight:a?600:400,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</button>);})}{onOpenEditor&&<button onClick={()=>onOpenEditor(config.cat,instance.btnId)} title="Редактор кнопок" style={{flex:"0 0 auto",minWidth:32,background:"transparent",border:"1.5px dashed rgba(79,70,229,0.35)",borderRadius:10,padding:"5px 8px",cursor:"pointer",color:T.accent,fontSize:11,fontFamily:"inherit"}}>{"✎"}</button>}</div>);})()}
     <div style={{display:"flex",alignItems:"center",gap:4,padding:"4px 0",borderTop:"0.5px solid "+T.border,marginBottom:config.cat==="canvas"?2:6}}><span style={{fontSize:11,color:T.sub}}>{qtyLabel+":"}</span><NI value={q} onChange={v=>upd({qty:v})} w={44}/><span style={{fontSize:10,color:T.dim}}>{qtyUnit}</span>{config.id==="main"&&instance._subTotal>0&&<span style={{fontSize:9,color:T.orange,marginLeft:4}}>{"(эфф. "+fmt(effectiveQ)+")"}</span>}{config.subP&&<label style={{display:"flex",alignItems:"center",gap:3,fontSize:9,color:instance.subP?T.green:T.dim,cursor:"pointer",marginLeft:"auto"}}><input type="checkbox" checked={!!instance.subP} onChange={e=>upd({subP:e.target.checked})} style={{accentColor:"#30d158",width:11,height:11}}/>{"Вычесть из осн. профиля"}</label>}</div>
     {config.cat==="canvas"&&(()=>{
-      const best=box?bestCanvasWidth(box,widthOpts):null;
+      const best=box?bestCanvasWidth(box,widthOpts,shrink):null;
       const cur=canvasNom;
       return(<div style={{marginBottom:6}}>
         <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:widthOpts.length>1?5:0}}>
@@ -269,6 +270,7 @@ function CalcBlock({config,instance,onChange,presets,onPresets,autoAngles,roomIn
             <input type="checkbox" checked={!!instance.overcut} onChange={e=>upd({overcut:e.target.checked})} style={{accentColor:T.orange,width:12,height:12}}/>{"Перерасход материала"}
           </label>
           {box&&<span style={{fontSize:9,color:T.dim,marginLeft:6}}>{"габарит "+fmt(box.a)+"×"+fmt(box.b)+" м"}</span>}
+          {box&&widthOpts.length>0&&<span style={{display:"inline-flex",alignItems:"center",gap:2,fontSize:9,color:shrink>0?T.sub:T.dim,marginLeft:6}}>{"усадка"}<NI value={shrink} onChange={v=>upd({shrink:Math.max(0,Math.min(15,v))})} w={26}/>{"%"}</span>}
           {instance.overcut&&usage&&<span style={{fontSize:9,color:T.orange,marginLeft:"auto",fontWeight:700}}>
             {"▸ "+fmt(usage.area)+" м² · "+(usage.strips>1?usage.strips+" полосы (шов)":"без шва")}
           </span>}
@@ -277,7 +279,7 @@ function CalcBlock({config,instance,onChange,presets,onPresets,autoAngles,roomIn
           <span style={{fontSize:9,color:T.dim,fontWeight:600}}>{"Ширина:"}</span>
           {widthOpts.map(n=>{
             const a=cur&&n.id===cur.id;
-            const u=box?canvasUsage(box,n.w):null;
+            const u=box?canvasUsage(box,n.w,shrink):null;
             const rec=best&&best.nom.id===n.id;
             return(<button key={n.id} onClick={()=>upd({wPick:n.id})}
               title={u?("расход "+fmt(u.area)+" м² · "+(u.strips>1?u.strips+" полосы (шов)":"без шва")+" · "+fmt(n.price)+" ₽/м²"):""}
