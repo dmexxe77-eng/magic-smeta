@@ -4,9 +4,10 @@ import Svg, { Path, Circle } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getAllNoms, getNom } from '../../data/calcBlocks';
 import { fmt } from '../../utils/geometry';
+import { COLORS } from '../ui';
 
 // Gear icon
-const GearIcon = ({ size = 14, color = '#9ca3af' }: { size?: number; color?: string }) => (
+const GearIcon = ({ size = 14, color = COLORS.subtle }: { size?: number; color?: string }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path
       d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 0 1 8.4 12 3.6 3.6 0 0 1 12 8.4a3.6 3.6 0 0 1 3.6 3.6 3.6 3.6 0 0 1-3.6 3.6z"
@@ -15,12 +16,12 @@ const GearIcon = ({ size = 14, color = '#9ca3af' }: { size?: number; color?: str
   </Svg>
 );
 
-// Green filled checkmark circle
+// Filled checkmark circle — accent fill / glass empty (theme-aware)
 const CheckCircle = ({ checked, size = 22 }: { checked: boolean; size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24">
-    <Circle cx="12" cy="12" r="11" fill={checked ? '#16a34a' : '#ffffff'} stroke={checked ? '#16a34a' : '#d1d5db'} strokeWidth="1.5" />
+    <Circle cx="12" cy="12" r="11" fill={checked ? '#0A84FF' : COLORS.glassHi} stroke={checked ? '#0A84FF' : COLORS.borderStrong} strokeWidth="1.5" />
     {checked && (
-      <Path d="M7 12.5l3.5 3.5L17 9" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      <Path d="M7 12.5l3.5 3.5L17 9" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
     )}
   </Svg>
 );
@@ -66,30 +67,31 @@ export default function RoomOptionsBlock({
 
   return (
     <View style={{
-      backgroundColor: '#ffffff',
-      borderRadius: 12, borderWidth: 1, borderColor: '#e8e8e4',
-      marginBottom: 8,
-      paddingHorizontal: 12, paddingVertical: 8,
+      backgroundColor: COLORS.glass,
+      borderRadius: 14, borderWidth: 1, borderColor: COLORS.glassEdge,
+      marginBottom: 10,
+      paddingHorizontal: 14, paddingVertical: 12,
     }}>
       {/* Header */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: optionIds.length > 0 ? 4 : 0 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: optionIds.length > 0 ? 8 : 0 }}>
         <Text style={{
           flex: 1,
-          fontSize: 9, fontWeight: '700',
-          color: '#9ca3af',
-          letterSpacing: 1.2,
+          fontSize: 10, fontWeight: '700',
+          color: COLORS.muted,
+          letterSpacing: 1.6,
         }}>
           {title}
         </Text>
         <Pressable
           onPress={() => setShowEditor(true)}
           style={{
-            width: 22, height: 22, borderRadius: 5,
-            backgroundColor: '#f3f4f6',
+            width: 26, height: 26, borderRadius: 8,
+            backgroundColor: COLORS.glassHi,
+            borderWidth: 1, borderColor: COLORS.glassEdge,
             alignItems: 'center', justifyContent: 'center',
           }}
         >
-          <GearIcon size={12} />
+          <GearIcon size={13} color={COLORS.muted} />
         </Pressable>
       </View>
 
@@ -112,15 +114,15 @@ export default function RoomOptionsBlock({
           >
             <CheckCircle checked={isOn} size={16} />
             <View style={{ flex: 1 }}>
-              <Text style={{ color: '#1e2030', fontSize: 11, fontWeight: '500' }} numberOfLines={1}>
+              <Text style={{ color: COLORS.ink, fontSize: 11, fontWeight: '500' }} numberOfLines={1}>
                 {nom.name}
               </Text>
-              <Text style={{ color: '#9ca3af', fontSize: 9 }}>
+              <Text style={{ color: COLORS.subtle, fontSize: 9 }}>
                 {fmt(qty)} {unitLabel(binding)} × {fmt(nom.price)}
               </Text>
             </View>
             <Text style={{
-              color: isOn ? '#4F46E5' : '#d1d5db',
+              color: isOn ? '#0A84FF' : COLORS.faint,
               fontSize: 11, fontWeight: '700',
             }}>
               {fmt(itemTotal)}
@@ -196,15 +198,15 @@ function EditOptionsModal({
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
+      <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
         <View style={{
           flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
           paddingHorizontal: 16, paddingTop: insets.top + 8, paddingBottom: 12,
-          borderBottomWidth: 1, borderBottomColor: '#e8e8e4',
+          borderBottomWidth: 1, borderBottomColor: COLORS.border,
         }}>
-          <Text style={{ fontSize: 18, fontWeight: '700', color: '#1e2030', flex: 1 }}>Опции помещения</Text>
+          <Text style={{ fontSize: 18, fontWeight: '700', color: COLORS.ink, flex: 1, letterSpacing: -0.3 }}>Опции помещения</Text>
           <Pressable onPress={() => onSave(Array.from(selected), bindings)} style={{ paddingHorizontal: 12, paddingVertical: 8 }}>
-            <Text style={{ color: '#4F46E5', fontSize: 16, fontWeight: '600' }}>Готово</Text>
+            <Text style={{ color: '#0A84FF', fontSize: 15, fontWeight: '700' }}>Готово</Text>
           </Pressable>
         </View>
 
@@ -212,12 +214,13 @@ function EditOptionsModal({
           <TextInput
             value={search}
             onChangeText={setSearch}
-            placeholder="🔍  Поиск позиций..."
-            placeholderTextColor="#b0b0ba"
+            placeholder="Поиск позиций..."
+            placeholderTextColor={COLORS.subtle}
             style={{
-              backgroundColor: '#f7f7f5', borderWidth: 1, borderColor: '#e8e8e4',
-              borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10,
-              color: '#1e2030', fontSize: 14,
+              backgroundColor: COLORS.glassHi,
+              borderWidth: 1, borderColor: COLORS.glassEdge,
+              borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11,
+              color: COLORS.ink, fontSize: 14,
             }}
           />
         </View>
@@ -231,7 +234,7 @@ function EditOptionsModal({
                 key={nom.id}
                 style={{
                   paddingVertical: 10, paddingHorizontal: 12,
-                  borderBottomWidth: 1, borderBottomColor: '#e8e8e4',
+                  borderBottomWidth: 1, borderBottomColor: COLORS.border,
                 }}
               >
                 <Pressable
@@ -240,26 +243,26 @@ function EditOptionsModal({
                 >
                   <CheckCircle checked={isSel} size={22} />
                   <View style={{ flex: 1 }}>
-                    <Text style={{ color: '#1e2030', fontSize: 13, fontWeight: '500' }}>{nom.name}</Text>
-                    <Text style={{ color: '#6b6b7a', fontSize: 11 }}>{fmt(nom.price)} ₽/{nom.unit}</Text>
+                    <Text style={{ color: COLORS.ink, fontSize: 13, fontWeight: '500' }}>{nom.name}</Text>
+                    <Text style={{ color: COLORS.muted, fontSize: 11 }}>{fmt(nom.price)} ₽/{nom.unit}</Text>
                   </View>
                 </Pressable>
 
                 {/* Area/Perimeter toggle for selected items */}
                 {isSel && (
                   <View style={{ flexDirection: 'row', marginTop: 8, marginLeft: 32, gap: 6 }}>
-                    <Text style={{ color: '#6b6b7a', fontSize: 11, alignSelf: 'center', marginRight: 4 }}>
+                    <Text style={{ color: COLORS.muted, fontSize: 11, alignSelf: 'center', marginRight: 4 }}>
                       Считать от:
                     </Text>
                     <Pressable
                       onPress={() => setBinding(nom.id, 'area')}
                       style={{
                         paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6,
-                        backgroundColor: binding === 'area' ? '#4F46E5' : '#f7f7f5',
-                        borderWidth: 1, borderColor: binding === 'area' ? '#4F46E5' : '#e8e8e4',
+                        backgroundColor: binding === 'area' ? '#0A84FF' : COLORS.glassHi,
+                        borderWidth: 1, borderColor: binding === 'area' ? '#0A84FF' : COLORS.glassEdge,
                       }}
                     >
-                      <Text style={{ color: binding === 'area' ? '#ffffff' : '#1e2030', fontSize: 11, fontWeight: '600' }}>
+                      <Text style={{ color: binding === 'area' ? '#FFFFFF' : COLORS.ink, fontSize: 11, fontWeight: '600' }}>
                         Площадь (м²)
                       </Text>
                     </Pressable>
@@ -267,11 +270,11 @@ function EditOptionsModal({
                       onPress={() => setBinding(nom.id, 'perimeter')}
                       style={{
                         paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6,
-                        backgroundColor: binding === 'perimeter' ? '#4F46E5' : '#f7f7f5',
-                        borderWidth: 1, borderColor: binding === 'perimeter' ? '#4F46E5' : '#e8e8e4',
+                        backgroundColor: binding === 'perimeter' ? '#0A84FF' : COLORS.glassHi,
+                        borderWidth: 1, borderColor: binding === 'perimeter' ? '#0A84FF' : COLORS.glassEdge,
                       }}
                     >
-                      <Text style={{ color: binding === 'perimeter' ? '#ffffff' : '#1e2030', fontSize: 11, fontWeight: '600' }}>
+                      <Text style={{ color: binding === 'perimeter' ? '#FFFFFF' : COLORS.ink, fontSize: 11, fontWeight: '600' }}>
                         Периметр (м.п.)
                       </Text>
                     </Pressable>

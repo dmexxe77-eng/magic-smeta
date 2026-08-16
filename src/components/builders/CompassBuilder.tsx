@@ -43,7 +43,7 @@ function CompassDial({ heading, size = 140 }: { heading: number; size?: number }
 
   const dirs = [
     { label: 'С', deg: 0, color: '#dc2626' },
-    { label: 'В', deg: 90, color: '#4F46E5' },
+    { label: 'В', deg: 90, color: '#0A84FF' },
     { label: 'Ю', deg: 180, color: '#b0b0ba' },
     { label: 'З', deg: 270, color: '#b0b0ba' },
   ];
@@ -91,10 +91,10 @@ function CompassDial({ heading, size = 140 }: { heading: number; size?: number }
       {/* Needle */}
       <Line x1={cx} y1={cy} x2={nx} y2={ny} stroke="#dc2626" strokeWidth={3} strokeLinecap="round" />
       <Line x1={cx} y1={cy} x2={sx} y2={sy} stroke="#999" strokeWidth={2} strokeLinecap="round" />
-      <Circle cx={cx} cy={cy} r={5} fill="#4F46E5" />
+      <Circle cx={cx} cy={cy} r={5} fill="#0A84FF" />
 
       {/* Heading text */}
-      <SvgText x={cx} y={cy + 34} textAnchor="middle" fill="#4F46E5" fontSize={14} fontWeight="900">
+      <SvgText x={cx} y={cy + 34} textAnchor="middle" fill="#0A84FF" fontSize={14} fontWeight="900">
         {heading}°
       </SvgText>
     </Svg>
@@ -155,8 +155,8 @@ function FloorPlanPreview({ sides }: { sides: Side[] }) {
         const my = (y1 + y2) / 2;
         return (
           <React.Fragment key={i}>
-            <Line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#4F46E5" strokeWidth={2} />
-            <SvgText x={mx} y={my - 4} textAnchor="middle" fill="#4F46E5" fontSize={8} fontWeight="600">
+            <Line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#0A84FF" strokeWidth={2} />
+            <SvgText x={mx} y={my - 4} textAnchor="middle" fill="#0A84FF" fontSize={8} fontWeight="600">
               {s.cm} см
             </SvgText>
           </React.Fragment>
@@ -170,7 +170,7 @@ function FloorPlanPreview({ sides }: { sides: Side[] }) {
             cx={sx}
             cy={sy}
             r={3.5}
-            fill={i === 0 ? '#16a34a' : i === pts.length - 1 ? '#f59e0b' : '#4F46E5'}
+            fill={i === 0 ? '#16a34a' : i === pts.length - 1 ? '#f59e0b' : '#0A84FF'}
           />
         );
       })}

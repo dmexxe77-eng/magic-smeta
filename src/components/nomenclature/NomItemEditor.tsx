@@ -85,7 +85,7 @@ export function NomItemEditor({ visible, nom, folders, isNew, onSave, onDelete, 
                 width: 64, height: 64, borderRadius: 12,
                 backgroundColor: '#f7f7f5',
                 borderWidth: 1, borderStyle: image ? 'solid' : 'dashed',
-                borderColor: image ? '#4F46E5' : '#e8e8e4',
+                borderColor: image ? '#0A84FF' : '#e8e8e4',
                 alignItems: 'center', justifyContent: 'center',
                 overflow: 'hidden',
               }}
@@ -175,8 +175,8 @@ export function NomItemEditor({ visible, nom, folders, isNew, onSave, onDelete, 
                     key={f.id} onPress={() => setBrand(f.id)}
                     style={{
                       paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999,
-                      backgroundColor: brand === f.id ? '#4F46E5' : '#f7f7f5',
-                      borderWidth: 1, borderColor: brand === f.id ? '#4F46E5' : '#e8e8e4',
+                      backgroundColor: brand === f.id ? '#0A84FF' : '#f7f7f5',
+                      borderWidth: 1, borderColor: brand === f.id ? '#0A84FF' : '#e8e8e4',
                     }}
                   >
                     <Text style={{ fontSize: 11, fontWeight: '700', color: brand === f.id ? '#fff' : '#6b6b7a' }}>
@@ -214,7 +214,7 @@ function PriceInput({ label, value, onChangeText, accent, disabled, hint }: {
 }) {
   return (
     <View className="flex-1">
-      <Text style={{ fontSize: 9, color: accent ? '#4F46E5' : '#9ca3af', fontWeight: '700' }}>
+      <Text style={{ fontSize: 9, color: accent ? '#0A84FF' : '#9ca3af', fontWeight: '700' }}>
         {label}
       </Text>
       <TextInput
@@ -226,7 +226,7 @@ function PriceInput({ label, value, onChangeText, accent, disabled, hint }: {
         keyboardType="decimal-pad"
         style={{
           backgroundColor: disabled ? '#f7f7f5' : '#fff',
-          borderWidth: 1, borderColor: accent ? '#4F46E5' : '#e8e8e4',
+          borderWidth: 1, borderColor: accent ? '#0A84FF' : '#e8e8e4',
           borderRadius: 8, paddingHorizontal: 8, paddingVertical: 6,
           fontSize: 14, fontWeight: '700',
           color: disabled ? '#b0b0ba' : '#1e2030',

@@ -22,14 +22,18 @@ import {
   EmptyState,
   Divider,
   Touchable,
+  FAB,
+  HeroCard,
+  COLORS,
+  SERIF,
 } from '../ui';
 import { AppMenu } from '../ui/AppMenu';
 import { fmt } from '../../utils/geometry';
 import type { Order, OrderStatus } from '../../types';
 
 const STATUS_COLOR: Record<OrderStatus, string> = {
-  new: '#9999A3', measuring: '#E5811A', calc: '#5E5CE6',
-  approval: '#E5811A', contract: '#0F9D58', done: '#0F9D58', cancelled: '#D93025',
+  new: COLORS.subtle, measuring: COLORS.warning, calc: COLORS.accent,
+  approval: COLORS.warning, contract: COLORS.success, done: COLORS.success, cancelled: COLORS.danger,
 };
 
 // ─── Status config ────────────────────────────────────────────────────
@@ -64,60 +68,79 @@ function OrderCard({
   const totalPaid = (order.payments ?? []).reduce((s, p) => s + p.amount, 0);
 
   return (
-    <Card
+    <Touchable
+      haptic="light"
       onPress={onPress}
-      className="mx-4 mb-3 overflow-hidden"
+      style={{
+        marginHorizontal: 16,
+        marginBottom: 10,
+        backgroundColor: COLORS.card,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        overflow: 'hidden',
+      }}
     >
-      {/* Цветная левая полоса по статусу — мгновенный visual scan списка */}
-      <View
-        className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl"
-        style={{ backgroundColor: STATUS_COLOR[order.status] }}
-      />
+      {/* Status stripe */}
+      <View style={{
+        position: 'absolute', left: 0, top: 0, bottom: 0, width: 3,
+        backgroundColor: STATUS_COLOR[order.status],
+      }} />
 
-      <View className="pl-4 pr-3 py-3">
-        <View className="flex-row items-start justify-between mb-1">
-          <View className="flex-1 mr-2">
-            <Text className="text-base font-bold text-ink">{order.name}</Text>
+      <View style={{ paddingLeft: 16, paddingRight: 12, paddingVertical: 14 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 4 }}>
+          <View style={{ flex: 1, marginRight: 8 }}>
+            <Text style={{ fontFamily: SERIF, fontSize: 17, fontWeight: '700', color: COLORS.ink, lineHeight: 21 }}>
+              {order.name}
+            </Text>
             {order.client ? (
-              <Text className="text-xs text-muted mt-0.5">{order.client}</Text>
+              <Text style={{ fontSize: 12, color: COLORS.muted, marginTop: 2 }}>{order.client}</Text>
             ) : null}
           </View>
-          <View className="flex-row items-center gap-2">
-            <Badge label={st.label} color={st.color} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Badge label={st.label} color={st.color} variant="soft" />
             <Touchable
               onPress={onDelete}
               haptic="warning"
-              className="w-7 h-7 rounded-full bg-red-50 items-center justify-center"
+              style={{
+                width: 26, height: 26, borderRadius: 13,
+                backgroundColor: COLORS.surface2,
+                alignItems: 'center', justifyContent: 'center',
+              }}
             >
-              <XIcon size={14} color="#D93025" strokeWidth={2.5} />
+              <XIcon size={13} color={COLORS.muted} strokeWidth={2} />
             </Touchable>
           </View>
         </View>
 
-        {totalArea > 0 && (
-          <View className="flex-row items-center mb-1">
-            <Text className="text-xs text-muted">
-              {fmt(totalArea)} м²  ·  {order.rooms.length} помещ.
-            </Text>
+        {(totalArea > 0 || (order.calcSnapshot && order.calcSnapshot.total > 0)) && (
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 6 }}>
+            {totalArea > 0 && (
+              <Text style={{ fontSize: 12, color: COLORS.muted }}>
+                {fmt(totalArea)} м²  ·  {order.rooms.length} помещ.
+              </Text>
+            )}
             {order.calcSnapshot && order.calcSnapshot.total > 0 && (
               <>
                 <View style={{ flex: 1 }} />
-                <Text className="text-sm font-bold text-accent">{fmt(order.calcSnapshot.total)} ₽</Text>
+                <Text style={{ fontFamily: SERIF, fontSize: 15, fontWeight: '700', color: COLORS.ink }}>
+                  {fmt(order.calcSnapshot.total)}<Text style={{ fontSize: 11, color: COLORS.muted }}> ₽</Text>
+                </Text>
               </>
             )}
           </View>
         )}
 
         {totalPaid > 0 && (
-          <View className="flex-row items-center gap-2 mt-1">
-            <Text className="text-xs text-muted">Оплачено:</Text>
-            <Text className="text-xs font-semibold text-success">
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
+            <Text style={{ fontSize: 11, color: COLORS.muted }}>Оплачено:</Text>
+            <Text style={{ fontSize: 11, fontWeight: '700', color: COLORS.success }}>
               {fmt(totalPaid)} ₽
             </Text>
           </View>
         )}
       </View>
-    </Card>
+    </Touchable>
   );
 }
 
@@ -152,11 +175,11 @@ function NewOrderModal({
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <View className="flex-1 bg-white">
-        <View className="flex-row items-center justify-between px-4 pt-14 pb-4 border-b border-border">
-          <Text className="text-lg font-bold text-navy">Новый проект</Text>
+      <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18, paddingTop: 56, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: COLORS.border }}>
+          <Text style={{ fontSize: 18, fontWeight: '700', color: COLORS.ink, letterSpacing: -0.3 }}>Новый проект</Text>
           <Pressable onPress={onClose}>
-            <Text className="text-muted text-base">Отмена</Text>
+            <Text style={{ color: COLORS.accent, fontSize: 15, fontWeight: '600' }}>Отмена</Text>
           </Pressable>
         </View>
         <ScrollView className="flex-1 px-4 pt-4">
@@ -257,58 +280,83 @@ export default function HomeScreen() {
     o => o.status !== 'done' && o.status !== 'cancelled'
   ).length;
 
+  const doneCount = state.orders.filter(o => o.status === 'done').length;
+
   return (
-    <View className="flex-1 bg-bg">
+    <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
       <AppHeader
         onMenu={() => setShowMenu(true)}
+        title="Magic"
+        subtitle="Studio"
         rightContent={
           state.isPro ? (
-            <View className="bg-navy px-3 py-1 rounded-full">
-              <Text className="text-accent-mid text-xs font-bold tracking-wider">PRO</Text>
+            <View style={{ backgroundColor: COLORS.ink, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 }}>
+              <Text style={{ color: COLORS.accent, fontSize: 10, fontWeight: '800', letterSpacing: 1.5 }}>PRO</Text>
             </View>
           ) : undefined
         }
       />
 
-      {/* FlatList виртуализирует карточки; шапка/поиск/фильтр идут в ListHeaderComponent */}
       <FlatList
         data={filtered}
         renderItem={renderOrder}
         keyExtractor={keyExtractor}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 130 }}
+        contentContainerStyle={{ paddingBottom: 140 }}
         ListHeaderComponent={
           <>
-            {/* Stats card */}
-            <View className="bg-navy mx-4 mt-4 rounded-2xl p-4 mb-4">
-              <Text className="text-white/50 text-[10px] font-bold tracking-widest mb-2">
+            {/* Hero stats — editorial dark slab with serif numerals */}
+            <HeroCard style={{ marginHorizontal: 16, marginTop: 18, marginBottom: 20 }}>
+              <Text style={{ color: COLORS.faint, fontSize: 10, fontWeight: '700', letterSpacing: 2.2, marginBottom: 10 }}>
                 АКТИВНЫЕ ОБЪЕКТЫ
               </Text>
-              <Text className="text-white text-4xl font-black mb-3">{state.orders.length}</Text>
-              <View className="flex-row gap-5">
+              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 16 }}>
+                <Text style={{ fontFamily: SERIF, color: '#FFFFFF', fontSize: 56, fontWeight: '700', lineHeight: 58 }}>
+                  {state.orders.length}
+                </Text>
+                <Text style={{ color: COLORS.faint, fontSize: 12, fontStyle: 'italic' }}>проектов</Text>
+              </View>
+              <View style={{ flexDirection: 'row', gap: 24, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)' }}>
                 <View>
-                  <Text className="text-white/40 text-[10px] mb-1">В работе</Text>
-                  <Text className="text-accent-mid text-xl font-black">{inWork}</Text>
+                  <Text style={{ color: COLORS.faint, fontSize: 10, fontWeight: '600', letterSpacing: 1.5, marginBottom: 3 }}>
+                    В РАБОТЕ
+                  </Text>
+                  <Text style={{ fontFamily: SERIF, color: COLORS.accent, fontSize: 22, fontWeight: '700' }}>
+                    {inWork}
+                  </Text>
                 </View>
+                <View style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.1)' }} />
                 <View>
-                  <Text className="text-white/40 text-[10px] mb-1">Сдано</Text>
-                  <Text className="text-green-400 text-xl font-black">
-                    {state.orders.filter(o => o.status === 'done').length}
+                  <Text style={{ color: COLORS.faint, fontSize: 10, fontWeight: '600', letterSpacing: 1.5, marginBottom: 3 }}>
+                    СДАНО
+                  </Text>
+                  <Text style={{ fontFamily: SERIF, color: '#FFFFFF', fontSize: 22, fontWeight: '700' }}>
+                    {doneCount}
                   </Text>
                 </View>
               </View>
-            </View>
+            </HeroCard>
 
             {/* Search */}
-            <View className="mx-4 mb-3">
-              <View className="bg-card border border-border rounded-xl px-3 py-2.5 flex-row items-center gap-2">
-                <Search size={16} color="#9999A3" />
+            <View style={{ marginHorizontal: 16, marginBottom: 12 }}>
+              <View style={{
+                backgroundColor: COLORS.card,
+                borderWidth: 1,
+                borderColor: COLORS.border,
+                borderRadius: 12,
+                paddingHorizontal: 14,
+                paddingVertical: 11,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 10,
+              }}>
+                <Search size={15} color={COLORS.subtle} strokeWidth={2} />
                 <TextInput
                   value={search}
                   onChangeText={setSearch}
-                  placeholder="Поиск проектов..."
-                  placeholderTextColor="#9999A3"
-                  className="flex-1 text-ink text-sm"
+                  placeholder="Поиск проектов"
+                  placeholderTextColor={COLORS.subtle}
+                  style={{ flex: 1, color: COLORS.ink, fontSize: 14 }}
                 />
               </View>
             </View>
@@ -317,38 +365,44 @@ export default function HomeScreen() {
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              className="mb-4"
-              contentContainerClassName="px-4 gap-2"
+              style={{ marginBottom: 16 }}
+              contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}
             >
-              <Pressable
-                onPress={() => setActiveStatus('all')}
-                className={`px-3 py-1.5 rounded-full border ${
-                  activeStatus === 'all' ? 'bg-navy border-navy' : 'bg-card border-border'
-                }`}
-              >
-                <Text className={`text-xs font-semibold ${activeStatus === 'all' ? 'text-white' : 'text-muted'}`}>
-                  Все
-                </Text>
-              </Pressable>
-              {STATUSES.slice(0, 5).map(s => (
-                <Pressable
-                  key={s.id}
-                  onPress={() => setActiveStatus(s.id)}
-                  className={`px-3 py-1.5 rounded-full border ${
-                    activeStatus === s.id ? 'bg-accent border-accent' : 'bg-card border-border'
-                  }`}
-                >
-                  <Text className={`text-xs font-semibold ${activeStatus === s.id ? 'text-white' : 'text-muted'}`}>
-                    {s.label}
-                  </Text>
-                </Pressable>
-              ))}
+              {(['all', ...STATUSES.slice(0, 5).map(s => s.id)] as Array<OrderStatus | 'all'>).map(id => {
+                const label = id === 'all' ? 'Все' : STATUSES.find(s => s.id === id)?.label ?? id;
+                const active = activeStatus === id;
+                return (
+                  <Touchable
+                    key={id}
+                    haptic="selection"
+                    scale={0.96}
+                    onPress={() => setActiveStatus(id)}
+                    style={{
+                      paddingHorizontal: 14,
+                      paddingVertical: 7,
+                      borderRadius: 999,
+                      backgroundColor: active ? COLORS.ink : 'transparent',
+                      borderWidth: 1,
+                      borderColor: active ? COLORS.ink : COLORS.border,
+                    }}
+                  >
+                    <Text style={{
+                      fontSize: 12,
+                      fontWeight: active ? '700' : '600',
+                      color: active ? '#FFFFFF' : COLORS.muted,
+                      letterSpacing: 0.2,
+                    }}>
+                      {label}
+                    </Text>
+                  </Touchable>
+                );
+              })}
             </ScrollView>
           </>
         }
         ListEmptyComponent={
           <EmptyState
-            icon={<FolderOpen size={32} strokeWidth={1.5} color="#5C5C6B" />}
+            icon={<FolderOpen size={28} strokeWidth={1.5} color={COLORS.muted} />}
             title="Проектов нет"
             desc="Создайте первый проект чтобы начать работу"
             action={<Button label="Новый проект" onPress={() => setShowNew(true)} size="md" />}
@@ -360,36 +414,11 @@ export default function HomeScreen() {
         removeClippedSubviews
       />
 
-      {/* FAB — учитывает SafeArea (на iPhone без home button нижняя зона жеста) */}
-      <View
-        pointerEvents="box-none"
-        style={{
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          bottom: insets.bottom + 16,
-          alignItems: 'center',
-        }}
-      >
-        <Touchable
-          onPress={() => setShowNew(true)}
-          haptic="medium"
-          scale={0.95}
-          className="bg-accent rounded-full flex-row items-center gap-2"
-          style={{
-            paddingHorizontal: 22,
-            paddingVertical: 13,
-            shadowColor: '#1E2030',
-            shadowOffset: { width: 0, height: 6 },
-            shadowOpacity: 0.22,
-            shadowRadius: 12,
-            elevation: 8,
-          }}
-        >
-          <Plus size={18} color="#fff" strokeWidth={2.75} />
-          <Text className="text-white font-bold text-base">Новый проект</Text>
-        </Touchable>
-      </View>
+      {/* FAB — corner-anchored circle in terracotta */}
+      <FAB
+        icon={<Plus size={22} color="#FFFFFF" strokeWidth={2.5} />}
+        onPress={() => setShowNew(true)}
+      />
 
       <NewOrderModal
         visible={showNew}

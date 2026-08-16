@@ -9,14 +9,42 @@ import {
   Alert,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { Search, Plus } from 'lucide-react-native';
+import {
+  Search, Plus,
+  Layers, Frame, Triangle, Lightbulb, Sparkles, Blinds, Wrench,
+} from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import type { CalcBlock, Preset, NomRef } from '../../data/calcBlocks';
 import { getNom, getNomPrice, calcPresetTotal, getDefaultMainQty, getAllNoms } from '../../data/calcBlocks';
 import type { NomItem } from '../../data/nomenclature';
 import { fmt } from '../../utils/geometry';
 import { useApp } from '../../store/AppContext';
-import { Toggle, Touchable } from '../ui';
+import { Toggle, Touchable, COLORS } from '../ui';
+
+// ─── Block icon registry ─────────────────────────────────────────────
+// Supports new lucide-name keys AND legacy emoji keys (for existing data)
+const BLOCK_ICONS: Record<string, React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>> = {
+  'canvas':         Layers,
+  'profile-main':   Frame,
+  'profile-extra':  Triangle,
+  'lights':         Lightbulb,
+  'linear-light':   Sparkles,
+  'curtains':       Blinds,
+  'custom':         Wrench,
+  // Legacy emoji fallback
+  '🎨': Layers,
+  '📏': Frame,
+  '📐': Triangle,
+  '💡': Lightbulb,
+  '💫': Sparkles,
+  '🪟': Blinds,
+  '🔧': Wrench,
+};
+
+function BlockIcon({ name, size = 16, color = COLORS.ink }: { name: string; size?: number; color?: string }) {
+  const Icon = BLOCK_ICONS[name] ?? Layers;
+  return <Icon size={size} color={color} strokeWidth={1.8} />;
+}
 
 // ─── Checkbox row (label + box) ─────────────────────────────────────
 function CheckboxRow({ label, checked, onToggle }: { label: string; checked: boolean; onToggle: () => void }) {
@@ -24,15 +52,15 @@ function CheckboxRow({ label, checked, onToggle }: { label: string; checked: boo
     <Pressable onPress={onToggle} className="flex-row items-center gap-1.5 ml-2" hitSlop={6}>
       <Text style={{
         fontSize: 10, fontWeight: '600',
-        color: checked ? '#4F46E5' : '#6b6b7a',
+        color: checked ? '#0A84FF' : '#9BA3BD',
       }}>
         {label}
       </Text>
       <View style={{
         width: 16, height: 16, borderRadius: 4,
         borderWidth: 1.5,
-        borderColor: checked ? '#4F46E5' : '#b0b0ba',
-        backgroundColor: checked ? '#4F46E5' : 'transparent',
+        borderColor: checked ? '#0A84FF' : '#6B7290',
+        backgroundColor: checked ? '#0A84FF' : 'transparent',
         alignItems: 'center', justifyContent: 'center',
       }}>
         {checked && (
@@ -44,7 +72,7 @@ function CheckboxRow({ label, checked, onToggle }: { label: string; checked: boo
 }
 
 // ─── Pencil Icon (edit) ─────────────────────────────────────────────
-const PencilIcon = ({ size = 18, color = '#4F46E5' }: { size?: number; color?: string }) => (
+const PencilIcon = ({ size = 18, color = COLORS.accent }: { size?: number; color?: string }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path
       d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
@@ -68,16 +96,16 @@ function QtyCell({ value, onChange, small }: { value: number; onChange: (v: numb
         autoFocus
         onBlur={() => { onChange(parseFloat(tmp.replace(',', '.')) || 0); setEditing(false); }}
         onSubmitEditing={() => { onChange(parseFloat(tmp.replace(',', '.')) || 0); setEditing(false); }}
-        style={{ width: small ? 40 : 50, paddingHorizontal: 4, paddingVertical: 2, borderWidth: 1, borderColor: '#4F46E5', borderRadius: 6, backgroundColor: '#f7f7f5', fontSize: 11, textAlign: 'center', color: '#1e2030' }}
+        style={{ width: small ? 40 : 50, paddingHorizontal: 4, paddingVertical: 2, borderWidth: 1, borderColor: '#0A84FF', borderRadius: 6, backgroundColor: '#1B2138', fontSize: 11, textAlign: 'center', color: '#F2F4FA' }}
       />
     );
   }
   return (
     <Pressable
       onPress={() => { setTmp(value === 0 ? '' : String(value)); setEditing(true); }}
-      style={{ width: small ? 40 : 50, paddingHorizontal: 4, paddingVertical: 2, borderWidth: 1, borderColor: '#e8e8e4', borderRadius: 6, backgroundColor: '#f7f7f5', alignItems: 'center' }}
+      style={{ width: small ? 40 : 50, paddingHorizontal: 4, paddingVertical: 2, borderWidth: 1, borderColor: '#262C44', borderRadius: 6, backgroundColor: '#1B2138', alignItems: 'center' }}
     >
-      <Text style={{ fontSize: 11, color: '#1e2030', fontWeight: '600' }}>{value > 0 ? fmt(value) : '—'}</Text>
+      <Text style={{ fontSize: 11, color: '#F2F4FA', fontWeight: '600' }}>{value > 0 ? fmt(value) : '—'}</Text>
     </Pressable>
   );
 }
@@ -118,11 +146,11 @@ function PresetEditorModal({
   if (!editingPreset) {
     return (
       <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-        <View className="flex-1 bg-white">
-          <View className="flex-row items-center justify-between px-4 pt-14 pb-3 border-b border-border">
-            <Text className="text-lg font-bold text-navy flex-1">Пресеты блока</Text>
-            <Pressable onPress={() => { onSave(presets); onClose(); }} className="px-3 py-2">
-              <Text className="text-accent text-base font-semibold">Готово</Text>
+        <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 56, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: COLORS.border }}>
+            <Text style={{ fontSize: 18, fontWeight: '700', color: COLORS.ink, flex: 1, letterSpacing: -0.3 }}>Пресеты блока</Text>
+            <Pressable onPress={() => { onSave(presets); onClose(); }} style={{ paddingHorizontal: 12, paddingVertical: 8 }}>
+              <Text style={{ color: COLORS.accent, fontSize: 15, fontWeight: '700' }}>Готово</Text>
             </Pressable>
           </View>
           <ScrollView className="flex-1 p-4">
@@ -133,7 +161,7 @@ function PresetEditorModal({
                 <View key={preset.id} className="bg-bg rounded-xl border border-border p-3 mb-3">
                   <View className="flex-row items-center justify-between">
                     <View className="flex-1 mr-2">
-                      <Text className="text-navy font-bold text-sm">{preset.name}</Text>
+                      <Text className="text-ink font-bold text-sm">{preset.name}</Text>
                       <Text className="text-muted text-xs mt-0.5" numberOfLines={1}>{itemNames}</Text>
                     </View>
                     <View className="flex-row items-center gap-3">
@@ -166,7 +194,7 @@ function PresetEditorModal({
                   return (
                     <View key={t.id} className="bg-bg/50 rounded-xl border border-dashed border-border p-3 mb-3 flex-row items-center justify-between">
                       <View className="flex-1 mr-2">
-                        <Text className="text-navy font-semibold text-sm">{t.name}</Text>
+                        <Text className="text-ink font-semibold text-sm">{t.name}</Text>
                         {itemNames ? (
                           <Text className="text-muted text-xs mt-0.5" numberOfLines={1}>{itemNames}</Text>
                         ) : null}
@@ -282,11 +310,11 @@ function PresetEditView({ preset, onSave, onCancel }: { preset: Preset; onSave: 
 
   return (
     <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={onCancel}>
-      <View className="flex-1 bg-white">
-        <View className="flex-row items-center justify-between px-4 pt-14 pb-3 border-b border-border">
-          <Text className="text-base font-bold text-navy">Редактирование кнопки</Text>
-          <Pressable onPress={onCancel} className="w-10 h-10 items-center justify-center">
-            <Text className="text-red-400 text-xl">✕</Text>
+      <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 56, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: COLORS.border }}>
+          <Text style={{ fontSize: 17, fontWeight: '700', color: COLORS.ink, letterSpacing: -0.3 }}>Редактирование кнопки</Text>
+          <Pressable onPress={onCancel} style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ color: COLORS.danger, fontSize: 18 }}>✕</Text>
           </Pressable>
         </View>
 
@@ -295,8 +323,8 @@ function PresetEditView({ preset, onSave, onCancel }: { preset: Preset; onSave: 
             value={name}
             onChangeText={setName}
             placeholder="Название кнопки"
-            placeholderTextColor="#b0b0ba"
-            className="bg-bg border border-border rounded-xl px-3 py-2.5 text-navy text-sm mb-3"
+            placeholderTextColor="#6B7290"
+            className="bg-bg border border-border rounded-xl px-3 py-2.5 text-ink text-sm mb-3"
           />
 
           {/* ITEMS */}
@@ -305,8 +333,8 @@ function PresetEditView({ preset, onSave, onCancel }: { preset: Preset; onSave: 
             value={searchItems}
             onChangeText={setSearchItems}
             placeholder="Поиск..."
-            placeholderTextColor="#b0b0ba"
-            className="bg-bg border border-border rounded-lg px-2 py-1.5 text-navy text-[11px] mb-1"
+            placeholderTextColor="#6B7290"
+            className="bg-bg border border-border rounded-lg px-2 py-1.5 text-ink text-[11px] mb-1"
           />
           {filteredNoms.slice(0, 15).map(nom => (
             <Pressable
@@ -319,7 +347,7 @@ function PresetEditView({ preset, onSave, onCancel }: { preset: Preset; onSave: 
                   value={itemIds.has(nom.id)}
                   onValueChange={() => toggleItem(nom.id)}
                 />
-                <Text className="text-navy text-xs flex-1" numberOfLines={1}>{nom.name}</Text>
+                <Text className="text-ink text-xs flex-1" numberOfLines={1}>{nom.name}</Text>
               </View>
               <Text className="text-orange-500 text-[11px] font-bold">{fmt(nom.price)}</Text>
             </Pressable>
@@ -328,13 +356,13 @@ function PresetEditView({ preset, onSave, onCancel }: { preset: Preset; onSave: 
           <View className="h-3" />
 
           {/* OPTIONS */}
-          <Text className="text-xs font-bold text-green-600 tracking-widest mb-1">ОПЦИИ</Text>
+          <Text className="text-xs font-bold text-muted tracking-widest mb-1">ОПЦИИ</Text>
           <TextInput
             value={searchOpts}
             onChangeText={setSearchOpts}
             placeholder="Поиск..."
-            placeholderTextColor="#b0b0ba"
-            className="bg-bg border border-border rounded-lg px-2 py-1.5 text-navy text-[11px] mb-1"
+            placeholderTextColor="#6B7290"
+            className="bg-bg border border-border rounded-lg px-2 py-1.5 text-ink text-[11px] mb-1"
           />
           {filteredOpts.slice(0, 15).map(nom => (
             <Pressable
@@ -346,9 +374,8 @@ function PresetEditView({ preset, onSave, onCancel }: { preset: Preset; onSave: 
                 <Toggle
                   value={optIds.has(nom.id)}
                   onValueChange={() => toggleOpt(nom.id)}
-                  color="#0F9D58"
                 />
-                <Text className="text-navy text-xs flex-1" numberOfLines={1}>{nom.name}</Text>
+                <Text className="text-ink text-xs flex-1" numberOfLines={1}>{nom.name}</Text>
               </View>
               <Text className="text-orange-500 text-[11px] font-bold">{fmt(nom.price)}</Text>
             </Pressable>
@@ -422,34 +449,50 @@ export default function CalcBlockView({
   const bindUnit = block.bindTo === 'area' ? 'м²' : block.bindTo === 'perimeter' ? 'м.п.' : 'шт';
 
   return (
-    <View className="bg-card rounded-2xl border border-border overflow-hidden mb-3">
+    <View style={{
+      backgroundColor: COLORS.card,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      overflow: 'hidden',
+      marginBottom: 10,
+    }}>
       {/* Header */}
-      <Pressable onPress={onToggleExpanded} className="flex-row items-center justify-between px-3 py-2.5">
-        <View className="flex-row items-center gap-2 flex-1 mr-2">
-          <Text className="text-sm">{block.icon}</Text>
-          <View className="flex-1">
-            <Text className="text-[10px] font-bold text-navy tracking-wider" numberOfLines={1}>
+      <Pressable onPress={onToggleExpanded} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 12 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8, gap: 10 }}>
+          <View style={{
+            width: 32, height: 32, borderRadius: 10,
+            backgroundColor: 'rgba(10,132,255,0.14)',
+            borderWidth: 1, borderColor: 'rgba(10,132,255,0.30)',
+            alignItems: 'center', justifyContent: 'center',
+          }}>
+            <BlockIcon name={block.icon} size={16} color={COLORS.accent} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 11, fontWeight: '700', color: COLORS.ink, letterSpacing: 1.2 }} numberOfLines={1}>
               {block.title}
             </Text>
             {activePreset && blockTotal > 0 && (
-              <Text className="text-xs font-semibold text-accent" numberOfLines={1}>
-                ({activePreset.name})
+              <Text style={{ fontSize: 11, fontWeight: '600', color: COLORS.accent, marginTop: 1 }} numberOfLines={1}>
+                {activePreset.name}
               </Text>
             )}
           </View>
         </View>
-        <View className="flex-row items-center gap-2">
-          <Text className="text-xs font-bold text-accent">{fmt(blockTotal)} ₽</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          {blockTotal > 0 && (
+            <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.ink }}>{fmt(blockTotal)} ₽</Text>
+          )}
           {onDuplicate && (
             <Pressable
               onPress={onDuplicate}
               style={{
-                width: 26, height: 26, borderRadius: 6,
-                backgroundColor: '#eeeeff',
+                width: 28, height: 28, borderRadius: 8,
+                backgroundColor: COLORS.accentSoft,
                 alignItems: 'center', justifyContent: 'center',
               }}
             >
-              <Text style={{ color: '#4F46E5', fontSize: 16, fontWeight: '800', lineHeight: 18 }}>+</Text>
+              <Plus size={14} color={COLORS.accent} strokeWidth={2.5} />
             </Pressable>
           )}
           {onDelete && (
@@ -457,25 +500,25 @@ export default function CalcBlockView({
               onPress={onDelete}
               onLongPress={onDelete}
               style={{
-                width: 26, height: 26, borderRadius: 6,
-                backgroundColor: '#fee2e2',
+                width: 28, height: 28, borderRadius: 8,
+                backgroundColor: '#F1D7D3',
                 alignItems: 'center', justifyContent: 'center',
               }}
             >
-              <Text style={{ color: '#dc2626', fontSize: 13, fontWeight: '800', lineHeight: 14 }}>×</Text>
+              <Text style={{ color: COLORS.danger, fontSize: 14, fontWeight: '800', lineHeight: 15 }}>×</Text>
             </Pressable>
           )}
           <Pressable
             onPress={() => setShowEditor(true)}
             style={{
-              width: 26, height: 26, borderRadius: 6,
-              backgroundColor: '#eeeeff',
+              width: 28, height: 28, borderRadius: 8,
+              backgroundColor: COLORS.surface2,
               alignItems: 'center', justifyContent: 'center',
             }}
           >
-            <PencilIcon size={14} />
+            <PencilIcon size={14} color={COLORS.ink} />
           </Pressable>
-          <Text className="text-muted" style={{ fontSize: 8, opacity: 0.5 }}>{block.expanded ? '▲' : '▼'}</Text>
+          <Text style={{ color: COLORS.subtle, fontSize: 9 }}>{block.expanded ? '▲' : '▼'}</Text>
         </View>
       </Pressable>
 
@@ -498,7 +541,7 @@ export default function CalcBlockView({
                         marginRight: 4,
                       }}
                     >
-                      <Text style={{ color: i === 0 ? '#b0b0ba' : '#4F46E5', fontSize: 12, fontWeight: '900' }}>‹</Text>
+                      <Text style={{ color: i === 0 ? '#6B7290' : '#0A84FF', fontSize: 12, fontWeight: '900' }}>‹</Text>
                     </Pressable>
                   )}
                   <Touchable
@@ -531,7 +574,7 @@ export default function CalcBlockView({
                       }}
                     >
                       <Text style={{
-                        color: i === block.presets.length - 1 ? '#b0b0ba' : '#4F46E5',
+                        color: i === block.presets.length - 1 ? '#6B7290' : '#0A84FF',
                         fontSize: 12, fontWeight: '900',
                       }}>›</Text>
                     </Pressable>
@@ -542,10 +585,15 @@ export default function CalcBlockView({
           </ScrollView>
 
           {/* Main qty + (опционально) чекбокс «Применять ко всем» справа */}
-          <View className="flex-row items-center px-3 py-1 bg-bg/50 gap-1">
-            <Text className="text-muted text-[10px]">{bindLabel}</Text>
+          <View style={{
+            flexDirection: 'row', alignItems: 'center',
+            paddingHorizontal: 12, paddingVertical: 8, gap: 6,
+            backgroundColor: COLORS.glass,
+            borderTopWidth: 1, borderBottomWidth: 1, borderColor: COLORS.border,
+          }}>
+            <Text style={{ color: COLORS.muted, fontSize: 11, fontWeight: '700' }}>{bindLabel}</Text>
             <QtyCell value={effectiveMainQty} onChange={onChangeMainQty} />
-            <Text className="text-muted text-xs">{bindUnit}</Text>
+            <Text style={{ color: COLORS.muted, fontSize: 12 }}>{bindUnit}</Text>
 
             {(onToggleSyncToProject || onToggleSubtractFromMain) && (
               <>
@@ -569,26 +617,30 @@ export default function CalcBlockView({
           </View>
 
           {/* Two columns */}
-          <View className="flex-row px-3 pb-2 pt-1">
+          <View style={{ flexDirection: 'row', paddingHorizontal: 12, paddingBottom: 8, paddingTop: 4 }}>
             {/* LEFT — Items */}
-            <View className="flex-1 pr-1">
-              <Text className="text-[11px] font-bold text-accent tracking-widest mb-0.5">ПОЗИЦИИ</Text>
+            <View style={{ flex: 1, paddingRight: 6 }}>
+              <Text style={{ fontSize: 10, fontWeight: '700', color: COLORS.muted, letterSpacing: 1.6, marginBottom: 6 }}>ПОЗИЦИИ</Text>
               {activePreset.items.map(ref => {
                 const nom = getNom(ref.nomId);
                 if (!nom) return null;
                 const price = getNomPrice(ref);
                 const total = ref.enabled ? effectiveMainQty * price : 0;
                 return (
-                  <View key={ref.nomId} className={`flex-row items-center py-1.5 gap-2 border-b border-border ${!ref.enabled ? 'opacity-40' : ''}`}>
+                  <View key={ref.nomId} style={{
+                    flexDirection: 'row', alignItems: 'center', paddingVertical: 7, gap: 8,
+                    borderBottomWidth: 1, borderBottomColor: COLORS.border,
+                    opacity: ref.enabled ? 1 : 0.4,
+                  }}>
                     <Toggle
                       value={ref.enabled}
                       onValueChange={() => onToggleNom('items', ref.nomId)}
                     />
-                    <View className="flex-1">
-                      <Text className="text-navy text-xs" numberOfLines={1}>{nom.name}</Text>
-                      <Text className="text-muted text-[11px]">{fmt(price)}×{fmt(effectiveMainQty)}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: COLORS.ink, fontSize: 12, fontWeight: '600' }} numberOfLines={1}>{nom.name}</Text>
+                      <Text style={{ color: COLORS.muted, fontSize: 10, marginTop: 1 }}>{fmt(price)}×{fmt(effectiveMainQty)}</Text>
                     </View>
-                    <Text className="text-accent text-xs font-bold">{fmt(total)}</Text>
+                    <Text style={{ color: COLORS.accent, fontSize: 12, fontWeight: '700' }}>{fmt(total)}</Text>
                   </View>
                 );
               })}
@@ -596,8 +648,8 @@ export default function CalcBlockView({
 
             {/* RIGHT — Options */}
             {activePreset.options.length > 0 && (
-              <View className="flex-1 pl-1 border-l border-border">
-                <Text className="text-[11px] font-bold text-green-600 tracking-widest mb-0.5">ОПЦИИ</Text>
+              <View style={{ flex: 1, paddingLeft: 6, borderLeftWidth: 1, borderLeftColor: COLORS.border }}>
+                <Text style={{ fontSize: 10, fontWeight: '700', color: COLORS.muted, letterSpacing: 1.6, marginBottom: 6 }}>ОПЦИИ</Text>
                 {activePreset.options.map(ref => {
                   const nom = getNom(ref.nomId);
                   if (!nom) return null;
@@ -605,15 +657,18 @@ export default function CalcBlockView({
                   const qty = optQtys[ref.nomId] ?? 0;
                   const total = ref.enabled ? qty * price : 0;
                   return (
-                    <View key={ref.nomId} className={`flex-row items-center py-1.5 gap-2 border-b border-border ${!ref.enabled ? 'opacity-40' : ''}`}>
+                    <View key={ref.nomId} style={{
+                      flexDirection: 'row', alignItems: 'center', paddingVertical: 7, gap: 6,
+                      borderBottomWidth: 1, borderBottomColor: COLORS.border,
+                      opacity: ref.enabled ? 1 : 0.4,
+                    }}>
                       <Toggle
                         value={ref.enabled}
                         onValueChange={() => onToggleNom('options', ref.nomId)}
-                        color="#0F9D58"
                       />
-                      <Text className="text-navy text-xs flex-1" numberOfLines={1}>{nom.name}</Text>
+                      <Text style={{ color: COLORS.ink, fontSize: 12, fontWeight: '600', flex: 1 }} numberOfLines={1}>{nom.name}</Text>
                       <QtyCell value={qty} onChange={v => onChangeOptQty(ref.nomId, v)} small />
-                      <Text className="text-success text-xs font-bold ml-1 w-12 text-right">{fmt(total)}</Text>
+                      <Text style={{ color: COLORS.accent, fontSize: 12, fontWeight: '700', marginLeft: 4, width: 48, textAlign: 'right' }}>{fmt(total)}</Text>
                     </View>
                   );
                 })}

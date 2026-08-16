@@ -61,7 +61,7 @@ function PagePreview({ pdfUri, pageIdx, onPress }: {
         </View>
       ) : (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <ActivityIndicator size="small" color="#4F46E5" />
+          <ActivityIndicator size="small" color="#0A84FF" />
         </View>
       )}
       <View style={{
@@ -161,12 +161,12 @@ export default function PdfPicker({ onImage, onBack, insets, initialPdfUri }: Pd
 
       {renderingHi ? (
         <View className="flex-1 items-center justify-center gap-3">
-          <ActivityIndicator size="large" color="#4F46E5" />
+          <ActivityIndicator size="large" color="#0A84FF" />
           <Text className="text-muted text-sm">Подготовка страницы в макс. качестве…</Text>
         </View>
       ) : picking || !pdfUri || totalPages == null ? (
         <View className="flex-1 items-center justify-center gap-3">
-          <ActivityIndicator size="large" color="#4F46E5" />
+          <ActivityIndicator size="large" color="#0A84FF" />
           <Text className="text-muted text-sm">
             {picking ? 'Выбор файла…' : 'Чтение PDF…'}
           </Text>

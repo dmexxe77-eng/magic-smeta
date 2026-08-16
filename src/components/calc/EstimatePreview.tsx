@@ -7,7 +7,7 @@ import { fmt, calcPoly } from '../../utils/geometry';
 import { buildEstimate, MODE_LABELS, type EstimateMode, type EstimateLine, type EstimateData } from '../../utils/estimate';
 import type { CalcBlock } from '../../data/calcBlocks';
 import type { Room, NomItem, Vertex } from '../../types';
-import { Touchable } from '../ui';
+import { Touchable, HeroCard, COLORS, SERIF } from '../ui';
 
 interface Props {
   visible: boolean;
@@ -19,7 +19,7 @@ interface Props {
   mainQtysAll: Record<string, Record<string, number>>;
   optQtysAll: Record<string, Record<string, number>>;
   roomOptIds: string[];
-  roomOptEnabled: Record<string, boolean>;
+  roomOptEnabled: Record<string, Record<string, boolean>> | Record<string, boolean>;
   roomOptBindings: Record<string, 'area' | 'perimeter'>;
   mergedNoms: NomItem[];
   perRoomPresets?: Record<string, Record<string, string>>;
@@ -71,25 +71,25 @@ export default function EstimatePreview({
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <View className="flex-1 bg-bg">
+      <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
         {/* Header */}
-        <View className="bg-white border-b border-border px-4 pb-3" style={{ paddingTop: insets.top + 6 }}>
-          <View className="flex-row items-center justify-between mb-3">
-            <View className="flex-1 mr-3">
-              <Text className="text-[10px] font-bold uppercase text-muted" style={{ letterSpacing: 1.8 }}>
-                {scope ? 'Смета помещения' : 'Смета проекта'}
+        <View style={{ backgroundColor: COLORS.bg, borderBottomWidth: 1, borderBottomColor: COLORS.border, paddingHorizontal: 18, paddingBottom: 14, paddingTop: insets.top + 10 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 }}>
+            <View style={{ flex: 1, marginRight: 12 }}>
+              <Text style={{ fontSize: 10, fontWeight: '700', color: COLORS.subtle, letterSpacing: 2 }}>
+                {scope ? 'СМЕТА ПОМЕЩЕНИЯ' : 'СМЕТА ПРОЕКТА'}
               </Text>
-              <Text className="text-lg font-black text-ink mt-0.5" numberOfLines={1}>
+              <Text style={{ fontFamily: SERIF, fontSize: 22, fontWeight: '700', color: COLORS.ink, marginTop: 2, lineHeight: 26 }} numberOfLines={1}>
                 {scope ? scope : orderName}
               </Text>
-              {scope && <Text className="text-muted text-xs mt-0.5" numberOfLines={1}>{orderName}</Text>}
+              {scope && <Text style={{ color: COLORS.muted, fontSize: 12, marginTop: 2, fontStyle: 'italic' }} numberOfLines={1}>{orderName}</Text>}
             </View>
-            <Touchable haptic="light" onPress={onClose} className="px-2 py-2">
-              <Text className="text-accent text-sm font-semibold">Закрыть</Text>
+            <Touchable haptic="light" onPress={onClose} style={{ paddingHorizontal: 8, paddingVertical: 6 }}>
+              <Text style={{ color: COLORS.accent, fontSize: 14, fontWeight: '700' }}>Закрыть</Text>
             </Touchable>
           </View>
 
-          {/* Mode — navy pills, prominent */}
+          {/* Mode pills — glass, accent active */}
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -107,15 +107,18 @@ export default function EstimatePreview({
                     paddingHorizontal: 16,
                     paddingVertical: 9,
                     borderRadius: 999,
-                    backgroundColor: isActive ? '#1E2030' : '#FFFFFF',
+                    backgroundColor: isActive ? COLORS.accent : COLORS.glass,
                     borderWidth: 1,
-                    borderColor: isActive ? '#1E2030' : '#E6E6E1',
+                    borderColor: isActive ? COLORS.accent : COLORS.glassEdge,
+                    shadowColor: isActive ? COLORS.accent : undefined,
+                    shadowOpacity: isActive ? 0.4 : 0,
+                    shadowRadius: 10,
                   }}
                 >
                   <Text style={{
                     fontSize: 13,
                     fontWeight: '700',
-                    color: isActive ? '#FFFFFF' : '#5C5C6B',
+                    color: isActive ? '#FFFFFF' : COLORS.muted,
                     letterSpacing: 0.2,
                   }}>{MODE_LABELS[m]}</Text>
                 </Touchable>
@@ -123,20 +126,20 @@ export default function EstimatePreview({
             })}
           </ScrollView>
 
-          {/* Row 1 — grouping (если несколько комнат) + Чертёж */}
-          <View className="flex-row items-center gap-1.5 mt-2.5">
+          {/* Row 1 — grouping + drawing */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12 }}>
             {!scope && rooms.length > 1 && (
               <>
                 <ColToggle label="Общая" on={grouping === 'aggregate'} onPress={() => setGrouping('aggregate')} />
                 <ColToggle label="По помещениям" on={grouping === 'per-room'} onPress={() => setGrouping('per-room')} />
-                <View style={{ width: 1, height: 20, backgroundColor: '#E6E6E1', marginHorizontal: 4 }} />
+                <View style={{ width: 1, height: 20, backgroundColor: COLORS.border, marginHorizontal: 4 }} />
               </>
             )}
             <ColToggle label="Чертёж" on={withDrawings} onPress={() => setWithDrawings(v => !v)} />
           </View>
 
           {/* Row 2 — column filters */}
-          <View className="flex-row gap-1.5 mt-2">
+          <View style={{ flexDirection: 'row', gap: 6, marginTop: 8 }}>
             <ColToggle label="Кол-во" on={cols.qty} onPress={() => setCols(c => ({ ...c, qty: !c.qty }))} />
             <ColToggle label="Цена" on={cols.price} onPress={() => setCols(c => ({ ...c, price: !c.price }))} />
             <ColToggle label="Итого" on={cols.total} onPress={() => setCols(c => ({ ...c, total: !c.total }))} />
@@ -161,14 +164,14 @@ export default function EstimatePreview({
               )}
               {/* Чертежи всех помещений после общей сметы */}
               {withDrawings && rooms.some(r => r.v.length >= 3) && (
-                <View className="mt-4 mx-3 bg-card rounded-2xl border border-border overflow-hidden">
-                  <View className="bg-navy px-3 py-2">
-                    <Text className="text-white text-[10px] font-black tracking-widest">ЧЕРТЕЖИ ПОМЕЩЕНИЙ</Text>
+                <View style={{ marginTop: 14, marginHorizontal: 14, backgroundColor: COLORS.card, borderRadius: 14, borderWidth: 1, borderColor: COLORS.border, overflow: 'hidden' }}>
+                  <View style={{ backgroundColor: COLORS.ink, paddingHorizontal: 14, paddingVertical: 9 }}>
+                    <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '700', letterSpacing: 2 }}>ЧЕРТЕЖИ ПОМЕЩЕНИЙ</Text>
                   </View>
                   <View className="p-3 gap-3">
                     {rooms.map(room => room.v.length >= 3 && (
                       <View key={room.id} className="items-center pb-2 border-b border-border/50">
-                        <Text className="text-navy text-xs font-bold mb-2">{room.name}</Text>
+                        <Text className="text-ink text-xs font-bold mb-2">{room.name}</Text>
                         <RoomDrawing verts={room.v} />
                         <Text className="text-muted text-[10px] mt-1">
                           S = {fmt(room.aO ?? calcPoly(room.v).a)} м² · P = {fmt(room.pO ?? calcPoly(room.v).p)} м.п.
@@ -183,12 +186,18 @@ export default function EstimatePreview({
             perRoomData.map(({ room, data }) => {
               if (data.total === 0) return null;
               return (
-                <View key={room.id} className="mt-4 mx-3">
-                  <View className="bg-accent/10 border border-accent/30 rounded-t-2xl px-4 py-2.5 flex-row items-center justify-between">
-                    <Text className="text-accent text-sm font-black tracking-wide" numberOfLines={1}>
+                <View key={room.id} style={{ marginTop: 14, marginHorizontal: 14 }}>
+                  <View style={{
+                    backgroundColor: COLORS.accentSoft,
+                    borderWidth: 1, borderColor: COLORS.accent,
+                    borderTopLeftRadius: 14, borderTopRightRadius: 14,
+                    paddingHorizontal: 14, paddingVertical: 10,
+                    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                  }}>
+                    <Text style={{ fontFamily: SERIF, color: COLORS.accentInk, fontSize: 15, fontWeight: '700' }} numberOfLines={1}>
                       {room.name}
                     </Text>
-                    <Text className="text-accent text-sm font-black">{fmt(data.total)} ₽</Text>
+                    <Text style={{ fontFamily: SERIF, color: COLORS.accentInk, fontSize: 15, fontWeight: '700' }}>{fmt(data.total)} ₽</Text>
                   </View>
                   {data.materials.length > 0 && (
                     <Section title="МАТЕРИАЛЫ" lines={data.materials} total={data.materialsTotal} cols={cols} embedded />
@@ -198,9 +207,16 @@ export default function EstimatePreview({
                   )}
                   {/* Чертёж после сметы помещения */}
                   {withDrawings && room.v.length >= 3 && (
-                    <View className="bg-white border border-border rounded-b-2xl px-4 py-3 items-center">
+                    <View style={{
+                      backgroundColor: COLORS.card,
+                      borderWidth: 1, borderTopWidth: 0,
+                      borderColor: COLORS.border,
+                      borderBottomLeftRadius: 14, borderBottomRightRadius: 14,
+                      paddingHorizontal: 14, paddingVertical: 14,
+                      alignItems: 'center',
+                    }}>
                       <RoomDrawing verts={room.v} />
-                      <Text className="text-muted text-xs mt-1">
+                      <Text style={{ color: COLORS.muted, fontSize: 11, marginTop: 4, fontStyle: 'italic' }}>
                         S = {fmt(room.aO ?? calcPoly(room.v).a)} м² · P = {fmt(room.pO ?? calcPoly(room.v).p)} м.п.
                       </Text>
                     </View>
@@ -211,25 +227,38 @@ export default function EstimatePreview({
           )}
         </ScrollView>
 
-        {/* Footer total + export */}
-        <View
-          className="bg-navy"
-          style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: insets.bottom + 12, gap: 8 }}
-        >
-          <View className="flex-row justify-between items-baseline">
-            <Text style={{ color: '#a5b4fc', fontSize: 11, fontWeight: '700', letterSpacing: 2 }}>
-              ИТОГО
-            </Text>
-            <Text className="text-white text-2xl font-black">{fmt(grandTotal)} ₽</Text>
-          </View>
-          <Touchable
-            haptic="medium"
-            onPress={handleExport}
-            className="bg-accent rounded-xl py-3 flex-row items-center justify-center gap-2"
-          >
-            <Share2 size={16} color="#FFFFFF" strokeWidth={2.5} />
-            <Text className="text-white text-sm font-bold">Экспорт сметы</Text>
-          </Touchable>
+        {/* Footer total + export — glass slab */}
+        <View style={{ paddingHorizontal: 14, paddingTop: 12, paddingBottom: insets.bottom + 12, backgroundColor: COLORS.bg2 }}>
+          <HeroCard>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 14 }}>
+              <Text style={{ color: COLORS.muted, fontSize: 11, fontWeight: '700', letterSpacing: 2.2 }}>
+                ИТОГО
+              </Text>
+              <Text style={{ color: '#FFFFFF', fontSize: 30, fontWeight: '700', letterSpacing: -0.5 }}>
+                {fmt(grandTotal)}<Text style={{ fontSize: 18, color: COLORS.muted, fontWeight: '600' }}> ₽</Text>
+              </Text>
+            </View>
+            <Touchable
+              haptic="medium"
+              onPress={handleExport}
+              style={{
+                borderRadius: 999,
+                paddingVertical: 13,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                backgroundColor: COLORS.accent,
+                shadowColor: COLORS.accent,
+                shadowOpacity: 0.4,
+                shadowRadius: 12,
+                shadowOffset: { width: 0, height: 4 },
+              }}
+            >
+              <Share2 size={15} color="#FFFFFF" strokeWidth={2.3} />
+              <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '700', letterSpacing: 0.3 }}>Экспорт сметы</Text>
+            </Touchable>
+          </HeroCard>
         </View>
       </View>
     </Modal>
@@ -244,12 +273,12 @@ function ColToggle({ label, on, onPress }: { label: string; on: boolean; onPress
       scale={0.94}
       onPress={onPress}
       style={{
-        paddingHorizontal: 11, paddingVertical: 6, borderRadius: 999,
-        backgroundColor: on ? '#5E5CE6' : '#FFFFFF',
-        borderWidth: 1, borderColor: on ? '#5E5CE6' : '#E6E6E1',
+        paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999,
+        backgroundColor: on ? COLORS.accent : 'transparent',
+        borderWidth: 1, borderColor: on ? COLORS.accent : COLORS.border,
       }}
     >
-      <Text style={{ fontSize: 11, fontWeight: '700', color: on ? '#fff' : '#5C5C6B', letterSpacing: 0.2 }}>
+      <Text style={{ fontSize: 11, fontWeight: '700', color: on ? '#FFFFFF' : COLORS.muted, letterSpacing: 0.2 }}>
         {label}
       </Text>
     </Touchable>
@@ -270,8 +299,8 @@ function RoomDrawing({ verts, size = 200 }: { verts: Vertex[]; size?: number }) 
   const h = rh * sc + 2 * pad;
   const pts = verts.map(v => `${pad + (v.x - mnx) * sc},${pad + (v.y - mny) * sc}`).join(' ');
   return (
-    <Svg width={w} height={h} style={{ backgroundColor: '#fafaf8', borderRadius: 6 }}>
-      <SvgPolygon points={pts} fill="rgba(79,70,229,0.08)" stroke="#4F46E5" strokeWidth={1.5} />
+    <Svg width={w} height={h} style={{ backgroundColor: COLORS.surface2, borderRadius: 6 }}>
+      <SvgPolygon points={pts} fill="rgba(184,85,63,0.08)" stroke={COLORS.accent} strokeWidth={1.5} />
     </Svg>
   );
 }
@@ -286,28 +315,36 @@ function Section({ title, lines, total, cols, embedded }: {
   title: string; lines: EstimateLine[]; total: number; cols: Cols; embedded?: boolean;
 }) {
   return (
-    <View className={`${embedded ? 'mx-0' : 'mt-4 mx-3'} bg-card border border-border overflow-hidden ${embedded ? '' : 'rounded-2xl'}`}>
-      <View className="bg-navy px-3 py-2 flex-row justify-between items-center">
-        <Text className="text-white text-[10px] font-black tracking-widest">{title}</Text>
-        <Text className="text-accent-mid text-xs font-bold">{fmt(total)} ₽</Text>
+    <View style={{
+      marginHorizontal: embedded ? 0 : 14,
+      marginTop: embedded ? 0 : 14,
+      backgroundColor: COLORS.card,
+      borderWidth: 1,
+      borderColor: COLORS.glassEdge,
+      borderRadius: embedded ? 0 : 14,
+      overflow: 'hidden',
+    }}>
+      <View style={{ backgroundColor: COLORS.surface2, paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: COLORS.border }}>
+        <Text style={{ color: COLORS.ink, fontSize: 10, fontWeight: '700', letterSpacing: 2 }}>{title}</Text>
+        <Text style={{ color: COLORS.accent, fontSize: 13, fontWeight: '700' }}>{fmt(total)} ₽</Text>
       </View>
 
       {/* Column headers */}
       <View className="flex-row items-center px-3 py-1.5 bg-bg/50 border-b border-border">
-        <Text style={{ width: COL_NUM, fontSize: 9, color: '#9ca3af', fontWeight: '700' }}>№</Text>
-        <Text style={{ flex: 1, fontSize: 9, color: '#9ca3af', fontWeight: '700' }}>НАИМЕНОВАНИЕ</Text>
+        <Text style={{ width: COL_NUM, fontSize: 9, color: '#6B7290', fontWeight: '700' }}>№</Text>
+        <Text style={{ flex: 1, fontSize: 9, color: '#6B7290', fontWeight: '700' }}>НАИМЕНОВАНИЕ</Text>
         {cols.qty && (
-          <Text style={{ width: COL_QTY, fontSize: 9, color: '#9ca3af', fontWeight: '700', textAlign: 'right' }}>
+          <Text style={{ width: COL_QTY, fontSize: 9, color: '#6B7290', fontWeight: '700', textAlign: 'right' }}>
             КОЛ-ВО
           </Text>
         )}
         {cols.price && (
-          <Text style={{ width: COL_PRICE, fontSize: 9, color: '#9ca3af', fontWeight: '700', textAlign: 'right' }}>
+          <Text style={{ width: COL_PRICE, fontSize: 9, color: '#6B7290', fontWeight: '700', textAlign: 'right' }}>
             ЦЕНА
           </Text>
         )}
         {cols.total && (
-          <Text style={{ width: COL_TOTAL, fontSize: 9, color: '#9ca3af', fontWeight: '700', textAlign: 'right' }}>
+          <Text style={{ width: COL_TOTAL, fontSize: 9, color: '#6B7290', fontWeight: '700', textAlign: 'right' }}>
             ИТОГО
           </Text>
         )}
@@ -316,22 +353,22 @@ function Section({ title, lines, total, cols, embedded }: {
       {/* Rows */}
       {lines.map((l, i) => (
         <View key={`${l.nomId}-${i}`} className="flex-row items-center px-3 py-2 border-b border-border/50">
-          <Text style={{ width: COL_NUM, fontSize: 10, color: '#9ca3af', fontWeight: '700' }}>{i + 1}</Text>
-          <Text style={{ flex: 1, fontSize: 11, color: '#1e2030', fontWeight: '600', paddingRight: 6 }} numberOfLines={2}>
+          <Text style={{ width: COL_NUM, fontSize: 10, color: '#6B7290', fontWeight: '700' }}>{i + 1}</Text>
+          <Text style={{ flex: 1, fontSize: 11, color: '#F2F4FA', fontWeight: '600', paddingRight: 6 }} numberOfLines={2}>
             {l.name}
           </Text>
           {cols.qty && (
-            <Text style={{ width: COL_QTY, fontSize: 11, color: '#1e2030', textAlign: 'right' }}>
+            <Text style={{ width: COL_QTY, fontSize: 11, color: '#F2F4FA', textAlign: 'right' }}>
               {fmt(l.qty)} {l.unit}
             </Text>
           )}
           {cols.price && (
-            <Text style={{ width: COL_PRICE, fontSize: 11, color: '#6b6b7a', textAlign: 'right' }}>
+            <Text style={{ width: COL_PRICE, fontSize: 11, color: '#9BA3BD', textAlign: 'right' }}>
               {fmt(l.price)} ₽
             </Text>
           )}
           {cols.total && (
-            <Text style={{ width: COL_TOTAL, fontSize: 11, color: '#1e2030', fontWeight: '700', textAlign: 'right' }}>
+            <Text style={{ width: COL_TOTAL, fontSize: 11, color: '#F2F4FA', fontWeight: '700', textAlign: 'right' }}>
               {fmt(l.total)} ₽
             </Text>
           )}

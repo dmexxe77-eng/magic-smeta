@@ -1,6 +1,8 @@
 import { View, Text, Pressable, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Boxes, Settings, X as XIcon, ChevronRight } from 'lucide-react-native';
+import { COLORS, Touchable } from './index';
 
 interface AppMenuProps {
   visible: boolean;
@@ -16,6 +18,11 @@ export function AppMenu({ visible, onClose }: AppMenuProps) {
     setTimeout(() => router.push(path as any), 100);
   };
 
+  const items: Array<{ Icon: typeof Boxes; title: string; desc: string; onPress: () => void }> = [
+    { Icon: Boxes,    title: 'Номенклатуры', desc: 'Редактор каталога товаров и услуг', onPress: () => go('/nomenclature') },
+    { Icon: Settings, title: 'Настройки',    desc: 'Тема, данные, экспорт',              onPress: () => { onClose(); router.push('/(tabs)/settings' as any); } },
+  ];
+
   return (
     <Modal
       visible={visible}
@@ -23,49 +30,64 @@ export function AppMenu({ visible, onClose }: AppMenuProps) {
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <View className="flex-1 bg-white" style={{ paddingTop: insets.top + 10 }}>
+      <View style={{ flex: 1, backgroundColor: COLORS.bg, paddingTop: insets.top + 10 }}>
         {/* Handle bar */}
-        <View className="items-center mb-4">
-          <View className="w-10 h-1 rounded-full bg-border" />
+        <View style={{ alignItems: 'center', marginBottom: 16 }}>
+          <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: COLORS.borderStrong }} />
         </View>
 
         {/* Header */}
-        <View className="flex-row items-center justify-between px-5 mb-6">
-          <Text className="text-xl font-black text-navy">Меню</Text>
-          <Pressable onPress={onClose} className="w-9 h-9 rounded-full bg-bg items-center justify-center">
-            <Text className="text-muted text-lg">✕</Text>
-          </Pressable>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 22 }}>
+          <Text style={{ fontSize: 22, fontWeight: '700', color: COLORS.ink, letterSpacing: -0.3 }}>Меню</Text>
+          <Touchable
+            haptic="light"
+            onPress={onClose}
+            style={{
+              width: 36, height: 36, borderRadius: 18,
+              backgroundColor: COLORS.glass,
+              borderWidth: 1, borderColor: COLORS.glassEdge,
+              alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            <XIcon size={16} color={COLORS.muted} strokeWidth={2.2} />
+          </Touchable>
         </View>
 
         {/* Menu items */}
-        <View className="px-4 gap-2">
-          <Pressable
-            onPress={() => go('/nomenclature')}
-            className="flex-row items-center bg-bg border border-border rounded-2xl px-4 py-4"
-          >
-            <View className="w-10 h-10 rounded-xl bg-accent-light items-center justify-center mr-3">
-              <Text className="text-lg">📦</Text>
-            </View>
-            <View className="flex-1">
-              <Text className="text-navy font-bold text-base">Номенклатуры</Text>
-              <Text className="text-muted text-xs mt-0.5">Редактор каталога товаров и услуг</Text>
-            </View>
-            <Text className="text-muted text-lg">›</Text>
-          </Pressable>
-
-          <Pressable
-            onPress={() => { onClose(); router.push('/(tabs)/settings' as any); }}
-            className="flex-row items-center bg-bg border border-border rounded-2xl px-4 py-4"
-          >
-            <View className="w-10 h-10 rounded-xl bg-accent-light items-center justify-center mr-3">
-              <Text className="text-lg">⚙️</Text>
-            </View>
-            <View className="flex-1">
-              <Text className="text-navy font-bold text-base">Настройки</Text>
-              <Text className="text-muted text-xs mt-0.5">Тема, данные, экспорт</Text>
-            </View>
-            <Text className="text-muted text-lg">›</Text>
-          </Pressable>
+        <View style={{ paddingHorizontal: 16, gap: 10 }}>
+          {items.map(item => (
+            <Touchable
+              key={item.title}
+              haptic="light"
+              onPress={item.onPress}
+              style={{
+                flexDirection: 'row', alignItems: 'center',
+                backgroundColor: COLORS.glass,
+                borderWidth: 1, borderColor: COLORS.glassEdge,
+                borderRadius: 16,
+                paddingHorizontal: 14, paddingVertical: 14,
+              }}
+            >
+              <View style={{
+                width: 42, height: 42, borderRadius: 11,
+                backgroundColor: COLORS.accentSoft,
+                borderWidth: 1, borderColor: 'rgba(10,132,255,0.30)',
+                alignItems: 'center', justifyContent: 'center',
+                marginRight: 12,
+              }}>
+                <item.Icon size={20} color={COLORS.accent} strokeWidth={2} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: COLORS.ink, fontSize: 15, fontWeight: '700', letterSpacing: -0.2 }}>
+                  {item.title}
+                </Text>
+                <Text style={{ color: COLORS.muted, fontSize: 12, marginTop: 2 }}>
+                  {item.desc}
+                </Text>
+              </View>
+              <ChevronRight size={18} color={COLORS.subtle} strokeWidth={2} />
+            </Touchable>
+          ))}
         </View>
       </View>
     </Modal>

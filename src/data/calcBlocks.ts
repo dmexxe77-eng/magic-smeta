@@ -113,13 +113,13 @@ export function createDefaultBlocks(): CalcBlock[] {
     ...extras,
   });
   return [
-    empty('canvas',         'ПОЛОТНО',              '🎨', 'area',      { perRoomPreset: true }),
-    empty('main_profile',   'ОСНОВНОЙ ПРОФИЛЬ',     '📏', 'perimeter', { perRoomPreset: true }),
-    empty('extra_profile',  'ДОП. ПРОФИЛЬ',         '📐', 'qty',       { canSubtractFromMain: true }),
-    empty('lights',         'СВЕТИЛЬНИКИ / ЛЮСТРА', '💡', 'qty'),
-    empty('linear_light',   'ЛИНЕЙНОЕ ОСВЕЩЕНИЕ',   '💫', 'qty'),
-    empty('curtains',       'ШТОРЫ',                '🪟', 'qty'),
-    empty('custom',         'СВОИ СБОРКИ',          '🔧', 'qty'),
+    empty('canvas',         'ПОЛОТНО',              'canvas',       'area',      { perRoomPreset: true }),
+    empty('main_profile',   'ОСНОВНОЙ ПРОФИЛЬ',     'profile-main', 'perimeter', { perRoomPreset: true }),
+    empty('extra_profile',  'ДОП. ПРОФИЛЬ',         'profile-extra','qty',       { canSubtractFromMain: true }),
+    empty('lights',         'СВЕТИЛЬНИКИ / ЛЮСТРА', 'lights',       'qty'),
+    empty('linear_light',   'ЛИНЕЙНОЕ ОСВЕЩЕНИЕ',   'linear-light', 'qty'),
+    empty('curtains',       'ШТОРЫ',                'curtains',     'qty'),
+    empty('custom',         'СВОИ СБОРКИ',          'custom',       'qty'),
   ];
 }
 

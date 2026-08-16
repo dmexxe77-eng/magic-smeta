@@ -33,7 +33,7 @@ import type { Room, Vertex } from '../../types';
 const ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 const SCREEN = Dimensions.get('window');
 const SNAP_PX = 8;
-const ROOM_COLORS = ['#4F46E5','#16a34a','#f59e0b','#dc2626','#8b5cf6','#06b6d4','#ec4899','#84cc16'];
+const ROOM_COLORS = ['#0A84FF','#16a34a','#f59e0b','#dc2626','#8b5cf6','#06b6d4','#ec4899','#84cc16'];
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -123,7 +123,7 @@ function CalibrationStep({ points, onCalibrate, insets }: {
         <View className="flex-row flex-wrap gap-2 justify-center">
           {Array.from({ length: n }).map((_, i) => (
             <Pressable key={i} onPress={() => setSel(i)}
-              style={{ backgroundColor: sel === i ? '#4F46E5' : '#f7f7f5', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: sel === i ? '#4F46E5' : '#e8e8e4' }}>
+              style={{ backgroundColor: sel === i ? '#0A84FF' : '#f7f7f5', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: sel === i ? '#0A84FF' : '#e8e8e4' }}>
               <Text style={{ color: sel === i ? '#fff' : '#555', fontSize: 13, fontWeight: '700' }}>
                 {ALPHA[i]}–{ALPHA[(i + 1) % n]}
               </Text>
@@ -565,7 +565,7 @@ export default function TraceBuilder({ existingNames, onFinishAll, onBack, sessi
               onPress={() => setShowGrid(v => !v)}
               style={{
                 paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
-                backgroundColor: showGrid ? '#4F46E5' : '#e8e8e4',
+                backgroundColor: showGrid ? '#0A84FF' : '#e8e8e4',
               }}
             >
               <Text style={{
@@ -607,7 +607,7 @@ export default function TraceBuilder({ existingNames, onFinishAll, onBack, sessi
                 <Defs>
                   <Pattern id="grid" x="0" y="0" width={GRID_STEP} height={GRID_STEP} patternUnits="userSpaceOnUse">
                     <SvgPath d={`M ${GRID_STEP} 0 L 0 0 0 ${GRID_STEP}`}
-                      stroke="#4F46E5" strokeWidth={0.15} opacity={0.5} fill="none" />
+                      stroke="#0A84FF" strokeWidth={0.15} opacity={0.5} fill="none" />
                   </Pattern>
                 </Defs>
                 <Rect x={0} y={0} width={imgW} height={imgH} fill="url(#grid)" />
@@ -647,7 +647,7 @@ export default function TraceBuilder({ existingNames, onFinishAll, onBack, sessi
             {/* Lines */}
             {points.map((p, i) => {
               if (i === 0) return null;
-              return <Line key={`l-${i}`} x1={points[i-1].x} y1={points[i-1].y} x2={p.x} y2={p.y} stroke="#4F46E5" strokeWidth={2} />;
+              return <Line key={`l-${i}`} x1={points[i-1].x} y1={points[i-1].y} x2={p.x} y2={p.y} stroke="#0A84FF" strokeWidth={2} />;
             })}
 
             {/* Side lengths */}
@@ -657,14 +657,14 @@ export default function TraceBuilder({ existingNames, onFinishAll, onBack, sessi
               if (!cm) return null;
               const p2 = points[i + 1];
               return <SvgText key={`cl-${i}`} x={(p.x+p2.x)/2} y={(p.y+p2.y)/2 - 5}
-                textAnchor="middle" fill="#4F46E5" fontSize={8} fontWeight="600">{cm}</SvgText>;
+                textAnchor="middle" fill="#0A84FF" fontSize={8} fontWeight="600">{cm}</SvgText>;
             })}
 
             {/* Points with letters */}
             {points.map((p, i) => (
               <G key={`p-${i}`}>
-                <SvgCircle cx={p.x} cy={p.y} r={6} fill={i === 0 ? '#16a34a' : '#4F46E5'} stroke="white" strokeWidth={1.5} />
-                <SvgText x={p.x} y={p.y - 10} textAnchor="middle" fill="#4F46E5" fontSize={10} fontWeight="800">{ALPHA[i]}</SvgText>
+                <SvgCircle cx={p.x} cy={p.y} r={6} fill={i === 0 ? '#16a34a' : '#0A84FF'} stroke="white" strokeWidth={1.5} />
+                <SvgText x={p.x} y={p.y - 10} textAnchor="middle" fill="#0A84FF" fontSize={10} fontWeight="800">{ALPHA[i]}</SvgText>
               </G>
             ))}
 
@@ -707,7 +707,7 @@ export default function TraceBuilder({ existingNames, onFinishAll, onBack, sessi
           return (
             <View pointerEvents="none" style={{
               position: 'absolute', left: lLeft, top: lTop, width: sz, height: sz,
-              borderRadius: sz / 2, borderWidth: 3, borderColor: '#4F46E5',
+              borderRadius: sz / 2, borderWidth: 3, borderColor: '#0A84FF',
               overflow: 'hidden', backgroundColor: '#fff',
             }}>
               <Image source={{ uri: imageUri }} style={{
@@ -732,7 +732,7 @@ export default function TraceBuilder({ existingNames, onFinishAll, onBack, sessi
                   <Defs>
                     <Pattern id="grid-loupe" x="0" y="0" width={GRID_STEP} height={GRID_STEP} patternUnits="userSpaceOnUse">
                       <SvgPath d={`M ${GRID_STEP} 0 L 0 0 0 ${GRID_STEP}`}
-                        stroke="#4F46E5" strokeWidth={0.15} opacity={0.5} fill="none" />
+                        stroke="#0A84FF" strokeWidth={0.15} opacity={0.5} fill="none" />
                     </Pattern>
                   </Defs>
                   <Rect x={0} y={0} width={imgW} height={imgH} fill="url(#grid-loupe)" />
@@ -741,7 +741,7 @@ export default function TraceBuilder({ existingNames, onFinishAll, onBack, sessi
               <View style={{ ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center' }}>
                 <View style={{ width: sz, height: 1.5, backgroundColor: 'rgba(79,70,229,0.3)', position: 'absolute' }} />
                 <View style={{ width: 1.5, height: sz, backgroundColor: 'rgba(79,70,229,0.3)', position: 'absolute' }} />
-                <View style={{ width: 8, height: 8, borderRadius: 4, borderWidth: 2, borderColor: '#4F46E5' }} />
+                <View style={{ width: 8, height: 8, borderRadius: 4, borderWidth: 2, borderColor: '#0A84FF' }} />
               </View>
             </View>
           );

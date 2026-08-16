@@ -263,13 +263,13 @@ export default function NomenclatureScreen() {
               borderRadius: 17,
               borderWidth: 1,
               borderStyle: 'dashed',
-              borderColor: '#4F46E5',
+              borderColor: '#0A84FF',
               backgroundColor: '#eeeeff',
               justifyContent: 'center',
               alignItems: 'center',
             }}
           >
-            <Text style={{ fontSize: 12, fontWeight: '700', color: '#4F46E5' }}>+ Папка</Text>
+            <Text style={{ fontSize: 12, fontWeight: '700', color: '#0A84FF' }}>+ Папка</Text>
           </Pressable>
         </ScrollView>
       )}

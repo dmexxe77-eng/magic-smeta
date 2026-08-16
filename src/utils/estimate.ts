@@ -24,6 +24,25 @@ export interface EstimateData {
   total: number;
 }
 
+/**
+ * Extract per-room enabled flags from roomOptEnabled.
+ * Supports two shapes:
+ *  - new:    Record<roomId, Record<nomId, boolean>>
+ *  - legacy: Record<nomId, boolean> — applied to every room
+ * Detection: if any value is itself an object, treat as new shape.
+ */
+export function getRoomOptEnabled(
+  state: Record<string, boolean> | Record<string, Record<string, boolean>>,
+  roomId: string,
+): Record<string, boolean> {
+  const values = Object.values(state);
+  const isNested = values.some(v => typeof v === 'object' && v !== null);
+  if (isNested) {
+    return (state as Record<string, Record<string, boolean>>)[roomId] ?? {};
+  }
+  return state as Record<string, boolean>;
+}
+
 function priceFor(nom: DataNomItem, mode: EstimateMode): number {
   // purchasePrice exists on user-edited noms (TypeNomItem); fall back to retail
   const purchase = (nom as unknown as TypeNomItem).purchasePrice;
@@ -121,7 +140,8 @@ export function buildEstimate(
   mainQtysAll: Record<string, Record<string, number>>,
   optQtysAll: Record<string, Record<string, number>>,
   roomOptIds: string[],
-  roomOptEnabled: Record<string, boolean>,
+  // Per-room enabled map. Legacy flat shape (Record<nomId, boolean>) auto-detected.
+  roomOptEnabled: Record<string, boolean> | Record<string, Record<string, boolean>>,
   roomOptBindings: Record<string, 'area' | 'perimeter'>,
   mergedNoms: TypeNomItem[],
   mode: EstimateMode,
@@ -175,9 +195,15 @@ export function buildEstimate(
       }
     }
 
-    // Room options (защита стен/пола etc)
+    // Room options (защита стен/пола etc) — per-room with legacy fallback
+    // Inline detection: if any value is an object → new per-room shape, else flat legacy.
+    const optValues = Object.values(roomOptEnabled);
+    const isNested = optValues.some(v => typeof v === 'object' && v !== null);
+    const enabledForRoom: Record<string, boolean> = isNested
+      ? ((roomOptEnabled as Record<string, Record<string, boolean>>)[room.id] ?? {})
+      : (roomOptEnabled as Record<string, boolean>);
     for (const id of roomOptIds) {
-      if (!roomOptEnabled[id]) continue;
+      if (!enabledForRoom[id]) continue;
       const nom = nomMap.get(id);
       if (!nom || !shouldInclude(nom, mode)) continue;
       const binding = roomOptBindings[id] || (nom.bindTo === 'area' ? 'area' : 'perimeter');

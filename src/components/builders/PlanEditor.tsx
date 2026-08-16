@@ -21,7 +21,7 @@ import { calcPoly, countAngles, getAngles, fmt } from '../../utils/geometry';
 import { InnerCornerIcon, OuterCornerIcon } from '../ui/CornerIcons';
 
 const SCREEN = Dimensions.get('window');
-const ACC = '#4F46E5';
+const ACC = '#0A84FF';
 const GREEN = '#16a34a';
 const RED = '#dc2626';
 

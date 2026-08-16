@@ -97,7 +97,8 @@ export interface Order {
     perRoomPresets: Record<string, Record<string, string>>;     // [roomId][blockId]
     subtractFromMain: Record<string, boolean>;                  // [blockId]
     roomOptIds: string[];
-    roomOptEnabled: Record<string, boolean>;
+    // Per-room enabled flags: [roomId][nomId]. Legacy flat shape accepted on load.
+    roomOptEnabled: Record<string, Record<string, boolean>> | Record<string, boolean>;
     roomOptBindings: Record<string, 'area' | 'perimeter'>;
   };
 }

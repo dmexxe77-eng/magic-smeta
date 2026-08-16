@@ -11,7 +11,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Svg, { Polygon as SvgPolygon, Line, Circle as SvgCircle, Text as SvgText } from 'react-native-svg';
 import { useApp, useOrder } from '../../store/AppContext';
-import { AppHeader, Button, Card, SectionHeader, Divider, EmptyState } from '../ui';
+import { AppHeader, Button, Card, SectionHeader, Divider, EmptyState, Touchable, HeroCard, COLORS, SERIF } from '../ui';
+import { ChevronLeft, RefreshCw, PenLine, Compass, Hand } from 'lucide-react-native';
 import { calcPoly, countAngles, fmt } from '../../utils/geometry';
 import { generateId } from '../../utils/storage';
 import type { Room, Vertex } from '../../types';
@@ -29,8 +30,8 @@ import { useResponsive } from '../../hooks/useResponsive';
 
 // ─── Constants ────────────────────────────────────────────────────────
 
-const ACC = '#4F46E5';
-const DARK = '#1e2030';
+const ACC = '#0A84FF';
+const DARK = '#F2F4FA';
 
 // ─── Room Mini Preview ────────────────────────────────────────────────
 
@@ -61,8 +62,8 @@ function RoomMini({ verts, size = 80 }: { verts: Vertex[]; size?: number }) {
     .join(' ');
 
   return (
-    <Svg width={size} height={size} style={{ borderRadius: 10, backgroundColor: '#fff' }}>
-      <SvgPolygon points={pts} fill="rgba(79,70,229,0.08)" stroke={ACC} strokeWidth={1.5} />
+    <Svg width={size} height={size} style={{ borderRadius: 10, backgroundColor: COLORS.glass }}>
+      <SvgPolygon points={pts} fill="rgba(10,132,255,0.10)" stroke={ACC} strokeWidth={1.5} />
     </Svg>
   );
 }
@@ -119,8 +120,21 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
   const [roomOptIds, setRoomOptIds] = useState<string[]>(
     () => savedCalcState?.roomOptIds ?? ['w_prot', 'w_floor']
   );
-  const [roomOptEnabled, setRoomOptEnabled] = useState<Record<string, boolean>>(
-    () => savedCalcState?.roomOptEnabled ?? {}
+  // roomOptEnabled is per-room: Record<roomId, Record<nomId, boolean>>.
+  // Migrate legacy flat shape (Record<nomId, boolean>) by copying to each existing room.
+  const [roomOptEnabled, setRoomOptEnabled] = useState<Record<string, Record<string, boolean>>>(
+    () => {
+      const saved = savedCalcState?.roomOptEnabled ?? {};
+      const values = Object.values(saved);
+      const isNested = values.some(v => typeof v === 'object' && v !== null);
+      if (isNested) return saved as unknown as Record<string, Record<string, boolean>>;
+      // Legacy migration: apply flat state to every existing room
+      const flat = saved as Record<string, boolean>;
+      const next: Record<string, Record<string, boolean>> = {};
+      const roomIds = order?.rooms.map(r => r.id) ?? [];
+      for (const rid of roomIds) next[rid] = { ...flat };
+      return next;
+    }
   );
   const [roomOptBindings, setRoomOptBindings] = useState<Record<string, 'area' | 'perimeter'>>(
     () => savedCalcState?.roomOptBindings ?? { w_prot: 'perimeter', w_floor: 'area' }
@@ -156,10 +170,11 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
   const roomArea = activeRoom?.aO ?? (activeRoom ? calcPoly(activeRoom.v).a : 0);
   const roomPerim = activeRoom?.pO ?? (activeRoom ? calcPoly(activeRoom.v).p : 0);
 
-  // Options total helper — parameterised by area/perim so it works for any room
-  const calcOptsTotalFor = (a: number, p: number) => {
+  // Options total helper — per-room enabled
+  const calcOptsTotalFor = (roomId: string | null, a: number, p: number) => {
+    const enabled = roomId ? (roomOptEnabled[roomId] ?? {}) : {};
     return roomOptIds.reduce((sum, id) => {
-      if (!roomOptEnabled[id]) return sum;
+      if (!enabled[id]) return sum;
       const nom = mergedNoms.find(n => n.id === id);
       if (!nom) return sum;
       const binding = roomOptBindings[id] || (nom.bindTo === 'area' ? 'area' : 'perimeter');
@@ -205,7 +220,7 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
   // Total for current (active) room
   const grand = blocks.reduce((sum, block) =>
     sum + blockTotalForRoom(block, activeRoomId, roomArea, roomPerim), 0
-  ) + calcOptsTotalFor(roomArea, roomPerim);
+  ) + calcOptsTotalFor(activeRoomId, roomArea, roomPerim);
 
   // Total across all project rooms
   const projectTotal = rooms.reduce((sum, room) => {
@@ -213,7 +228,7 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
     const p = room.pO ?? calcPoly(room.v).p;
     const blocksTotal = blocks.reduce((bs, b) =>
       bs + blockTotalForRoom(b, room.id, a, p), 0);
-    return sum + blocksTotal + calcOptsTotalFor(a, p);
+    return sum + blocksTotal + calcOptsTotalFor(room.id, a, p);
   }, 0);
 
   // Sync calcSnapshot + полный calcState в order — debounced
@@ -503,90 +518,95 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
     );
   }
 
+  const builderModes: Array<{ key: string; label: string; icon: React.ComponentType<any>; onPress: () => void; show: boolean }> = [
+    { key: 'trace', label: 'Обводка', icon: PenLine, onPress: () => { setTraceSession(null); setShowTracer(true); }, show: true },
+    { key: 'edit',  label: 'Редакт.', icon: PenLine, onPress: () => setShowTracer(true), show: !!traceSession },
+    { key: 'meas',  label: 'Замер',   icon: Compass, onPress: () => setShowBuilder(true), show: true },
+    { key: 'manual',label: 'Ручной',  icon: Hand,    onPress: () => { setEditingPlanRoomId(null); setShowPlanEditor(true); }, show: true },
+  ];
+
   return (
-    <View className="flex-1 bg-bg">
-      {/* Header */}
-      <View className="bg-white border-b border-border">
-        <View className="flex-row items-center px-4 pb-2 gap-3" style={{ paddingTop: insets.top + 4 }}>
-          {/* Back + logo */}
-          <View className="flex-row items-center gap-2 flex-shrink-0">
-            <Pressable
-              onPress={() => router.back()}
-              className="w-9 h-9 rounded-[9px] bg-bg items-center justify-center"
-            >
-              <Text className="text-navy text-xl font-bold">‹</Text>
-            </Pressable>
-            <View className="w-9 h-9 rounded-[9px] bg-navy items-center justify-center">
-              <View className="gap-[3px]">
-                <View className="w-[14px] h-[2px] rounded-sm bg-accent" />
-                <View className="w-[10px] h-[2px] rounded-sm bg-accent opacity-60" />
-                <View className="w-[7px] h-[2px] rounded-sm bg-accent opacity-30" />
-              </View>
-            </View>
-            <View>
-              <Text className="text-[13px] font-bold tracking-widest text-navy">MAGIC</Text>
-              <Text className="text-[9px] font-semibold tracking-[3px] text-accent -mt-0.5">КАЛЬКУЛЯТОР</Text>
-            </View>
-          </View>
+    <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
+      {/* Header — editorial */}
+      <View style={{
+        backgroundColor: COLORS.bg,
+        borderBottomWidth: 1,
+        borderBottomColor: COLORS.border,
+      }}>
+        {/* Row 1: back + brand + total */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: insets.top + 8, paddingBottom: 8, gap: 12 }}>
+          <Touchable
+            haptic="light"
+            onPress={() => router.back()}
+            style={{
+              width: 34, height: 34, borderRadius: 17,
+              backgroundColor: COLORS.surface2,
+              alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            <ChevronLeft size={20} color={COLORS.ink} strokeWidth={2} />
+          </Touchable>
 
-          {/* Total + refresh */}
-          <View className="flex-1 items-end">
-            <Text style={{ fontSize: 8, fontWeight: '700', letterSpacing: 1.5, color: '#9ca3af' }}>
-              ПРОЕКТ
-            </Text>
-            <Text className="text-base font-black text-navy">{fmt(projectTotal)} ₽</Text>
-            <Pressable onPress={handleRefreshPrices}>
-              <Text className="text-[10px] text-accent">🔄 обновить цены</Text>
-            </Pressable>
-          </View>
-        </View>
-
-        {/* Order name + builder buttons */}
-        <View className="flex-row items-center px-4 pb-2.5 gap-2">
-          <View className="flex-1">
-            <Text style={{ fontSize: 8, fontWeight: '700', letterSpacing: 1.5, color: '#9ca3af' }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 9, fontWeight: '700', letterSpacing: 2, color: COLORS.subtle }}>
               ОБЪЕКТ
             </Text>
-            <Text className="text-sm font-semibold text-navy" numberOfLines={1}>
+            <Text style={{ fontFamily: SERIF, fontSize: 19, fontWeight: '700', color: COLORS.ink, lineHeight: 22 }} numberOfLines={1}>
               {order.name}
             </Text>
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-shrink-0">
-            <View className="flex-row gap-1.5">
-              {[
-                { label: 'Обводка', color: '#4F46E5', bg: 'rgba(79,70,229,0.08)', border: 'rgba(79,70,229,0.2)' },
-                ...(traceSession ? [{ label: '✏️ Ред.', color: '#16a34a', bg: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.2)' }] : []),
-                { label: 'Замер 🧭', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)' },
-                { label: 'Ручн.', color: '#888', bg: '#f2f3fa', border: '#eeeef8' },
-              ].map(b => (
-                <Pressable
-                  key={b.label}
-                  onPress={() => {
-                    if (b.label === 'Обводка') {
-                      setTraceSession(null);
-                      setShowTracer(true);
-                    } else if (b.label === '✏️ Ред.') {
-                      setShowTracer(true);
-                    } else if (b.label.includes('Замер')) {
-                      setShowBuilder(true);
-                    } else if (b.label === 'Ручн.') {
-                      setEditingPlanRoomId(null);
-                      setShowPlanEditor(true);
-                    }
-                  }}
-                  style={{ backgroundColor: b.bg, borderColor: b.border, borderWidth: 0.5 }}
-                  className="px-2.5 py-1.5 rounded-lg"
-                >
-                  <Text style={{ color: b.color }} className="text-[10px] font-semibold">
-                    {b.label}
-                  </Text>
-                </Pressable>
-              ))}
+
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text style={{ fontSize: 9, fontWeight: '700', letterSpacing: 2, color: COLORS.subtle }}>
+              ПРОЕКТ
+            </Text>
+            <Text style={{ fontFamily: SERIF, fontSize: 22, fontWeight: '700', color: COLORS.ink, lineHeight: 26 }}>
+              {fmt(projectTotal)}<Text style={{ fontSize: 14, color: COLORS.muted }}> ₽</Text>
+            </Text>
+            <Touchable haptic="light" onPress={handleRefreshPrices} style={{ marginTop: 2, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <RefreshCw size={10} color={COLORS.accent} strokeWidth={2.2} />
+              <Text style={{ fontSize: 10, color: COLORS.accent, fontWeight: '600' }}>обновить цены</Text>
+            </Touchable>
+          </View>
+        </View>
+
+        {/* Row 2: mode pills — unified, with lucide icons */}
+        <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {builderModes.filter(m => m.show).map(m => {
+                const Icon = m.icon;
+                return (
+                  <Touchable
+                    key={m.key}
+                    haptic="selection"
+                    scale={0.96}
+                    onPress={m.onPress}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      borderRadius: 999,
+                      backgroundColor: COLORS.card,
+                      borderWidth: 1,
+                      borderColor: COLORS.border,
+                    }}
+                  >
+                    <Icon size={13} color={COLORS.ink} strokeWidth={1.8} />
+                    <Text style={{ fontSize: 12, color: COLORS.ink, fontWeight: '600', letterSpacing: 0.2 }}>
+                      {m.label}
+                    </Text>
+                  </Touchable>
+                );
+              })}
             </View>
           </ScrollView>
         </View>
 
-        <View className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-accent" />
+        {/* Terracotta hairline (signature) */}
+        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 1.5, backgroundColor: COLORS.accent }} />
       </View>
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
@@ -594,44 +614,62 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          className="py-2 bg-white border-b border-border"
-          contentContainerClassName="px-3 gap-2"
+          style={{ backgroundColor: COLORS.bg, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: COLORS.border }}
+          contentContainerStyle={{ paddingHorizontal: 14, gap: 8 }}
         >
-          {rooms.map(rm => (
-            <Pressable
-              key={rm.id}
-              onPress={() => setActiveRoomId(rm.id)}
-              onLongPress={() => handleDeleteRoom(rm.id)}
-              className={`px-3 py-2 rounded-xl border ${
-                rm.id === activeRoomId
-                  ? 'bg-navy border-navy'
-                  : 'bg-white border-border'
-              }`}
-            >
-              <Text
-                className={`text-xs font-semibold ${
-                  rm.id === activeRoomId ? 'text-white' : 'text-muted'
-                }`}
+          {rooms.map(rm => {
+            const active = rm.id === activeRoomId;
+            return (
+              <Touchable
+                key={rm.id}
+                haptic="selection"
+                scale={0.97}
+                onPress={() => setActiveRoomId(rm.id)}
+                onLongPress={() => handleDeleteRoom(rm.id)}
+                style={{
+                  paddingHorizontal: 14,
+                  paddingVertical: 9,
+                  borderRadius: 12,
+                  backgroundColor: active ? COLORS.accent : COLORS.glass,
+                  borderWidth: 1,
+                  borderColor: active ? COLORS.accent : COLORS.glassEdge,
+                  minWidth: 64,
+                  shadowColor: active ? COLORS.accent : undefined,
+                  shadowOpacity: active ? 0.4 : 0,
+                  shadowRadius: 12,
+                }}
               >
-                {rm.name}
-              </Text>
-              {rm.aO != null && (
-                <Text
-                  className={`text-[10px] mt-0.5 ${
-                    rm.id === activeRoomId ? 'text-white/60' : 'text-muted'
-                  }`}
-                >
-                  {fmt(rm.aO)} м²
+                <Text style={{
+                  fontSize: 12, fontWeight: '700',
+                  color: active ? '#FFFFFF' : COLORS.ink,
+                }}>
+                  {rm.name}
                 </Text>
-              )}
-            </Pressable>
-          ))}
-          <Pressable
+                {rm.aO != null && (
+                  <Text style={{
+                    fontSize: 10, marginTop: 2, fontWeight: '500',
+                    color: active ? 'rgba(255,255,255,0.7)' : COLORS.muted,
+                  }}>
+                    {fmt(rm.aO)} м²
+                  </Text>
+                )}
+              </Touchable>
+            );
+          })}
+          <Touchable
+            haptic="light"
+            scale={0.97}
             onPress={() => setShowBuilder(true)}
-            className="px-3 py-2 rounded-xl border border-dashed border-border items-center justify-center"
+            style={{
+              paddingHorizontal: 14, paddingVertical: 9,
+              borderRadius: 12,
+              borderWidth: 1, borderStyle: 'dashed',
+              borderColor: COLORS.borderStrong,
+              alignItems: 'center', justifyContent: 'center',
+            }}
           >
-            <Text className="text-muted text-xs">+ Помещение</Text>
-          </Pressable>
+            <Text style={{ color: COLORS.muted, fontSize: 12, fontWeight: '600' }}>+ Помещение</Text>
+          </Touchable>
         </ScrollView>
 
         <View className="p-3 gap-3">
@@ -641,12 +679,12 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
               <View className="flex-row gap-3 items-start">
                 <Pressable onPress={() => { setEditingPlanRoomId(activeRoom.id); setShowPlanEditor(true); }}>
                   <RoomMini verts={activeRoom.v} size={90} />
-                  <Text style={{ color: '#4F46E5', fontSize: 10, textAlign: 'center', marginTop: 2, fontWeight: '600' }}>
-                    ✏️ Редактор
+                  <Text style={{ color: COLORS.accent, fontSize: 10, textAlign: 'center', marginTop: 4, fontWeight: '600', letterSpacing: 0.3 }}>
+                    Редактор
                   </Text>
                 </Pressable>
                 <View className="flex-1">
-                  <Text className="text-base font-bold text-navy mb-1">
+                  <Text className="text-base font-bold text-ink mb-1">
                     {activeRoom.name}
                   </Text>
                   <View className="gap-1">
@@ -663,7 +701,7 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
                           </View>
                           <View className="flex-row gap-2">
                             <Text className="text-muted text-xs">Периметр:</Text>
-                            <Text className="text-navy text-xs font-semibold">{fmt(perim)} м.п.</Text>
+                            <Text className="text-ink text-xs font-semibold">{fmt(perim)} м.п.</Text>
                           </View>
                           <View className="flex-row gap-3 mt-0.5">
                             <View className="flex-row gap-1 items-center">
@@ -697,15 +735,21 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
             />
           )}
 
-          {/* Room Options above Canvas */}
-          {rooms.length > 0 && (
+          {/* Room Options above Canvas — per-room state */}
+          {rooms.length > 0 && activeRoomId && (
             <RoomOptionsBlock
               area={roomArea}
               perimeter={roomPerim}
               optionIds={roomOptIds}
-              enabled={roomOptEnabled}
+              enabled={roomOptEnabled[activeRoomId] ?? {}}
               bindings={roomOptBindings}
-              onToggle={(id) => setRoomOptEnabled(prev => ({ ...prev, [id]: !prev[id] }))}
+              onToggle={(id) => setRoomOptEnabled(prev => {
+                const current = prev[activeRoomId] ?? {};
+                return {
+                  ...prev,
+                  [activeRoomId]: { ...current, [id]: !current[id] },
+                };
+              })}
               onUpdateOptions={(ids, bnds) => { setRoomOptIds(ids); setRoomOptBindings(bnds); }}
             />
           )}
@@ -759,36 +803,53 @@ export default function CalcScreen({ orderId }: CalcScreenProps) {
 
           {/* Room total — tap → estimate for this room only */}
           {activeRoom && (
-            <Pressable
+            <Touchable
+              haptic="medium"
+              scale={0.98}
               onPress={() => { setEstimateRoomId(activeRoom.id); setShowEstimate(true); }}
-              className="bg-navy rounded-2xl p-4"
             >
-              <View className="flex-row justify-between items-baseline">
-                <View className="flex-1 mr-2">
-                  <Text style={{ color: '#a5b4fc', fontSize: 10, fontWeight: '700', letterSpacing: 2 }}>
-                    ПОМЕЩЕНИЕ  ›
-                  </Text>
-                  <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700', marginTop: 2 }} numberOfLines={1}>
-                    {activeRoom.name}
-                  </Text>
-                  <Text style={{ color: '#a5b4fc', fontSize: 10, marginTop: 2 }}>
-                    Тап — смета помещения
+              <HeroCard>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                  <View style={{ flex: 1, marginRight: 8 }}>
+                    <Text style={{ color: COLORS.subtle, fontSize: 10, fontWeight: '700', letterSpacing: 2 }}>
+                      СМЕТА ПОМЕЩЕНИЯ →
+                    </Text>
+                    <Text style={{ color: '#FFFFFF', fontSize: 19, fontWeight: '700', marginTop: 4, letterSpacing: -0.3 }} numberOfLines={1}>
+                      {activeRoom.name}
+                    </Text>
+                  </View>
+                  <Text style={{ color: '#FFFFFF', fontSize: 26, fontWeight: '700', letterSpacing: -0.5 }}>
+                    {fmt(grand)}<Text style={{ fontSize: 16, color: COLORS.muted, fontWeight: '600' }}> ₽</Text>
                   </Text>
                 </View>
-                <Text className="text-white text-xl font-black">{fmt(grand)} ₽</Text>
-              </View>
-            </Pressable>
+              </HeroCard>
+            </Touchable>
           )}
 
           {/* Estimate preview button — full project */}
           {rooms.length > 0 && (
-            <Pressable
+            <Touchable
+              haptic="medium"
               onPress={() => { setEstimateRoomId(null); setShowEstimate(true); }}
-              className="bg-accent rounded-2xl p-4 flex-row items-center justify-center gap-2"
-              style={{ elevation: 3 }}
+              style={{
+                backgroundColor: COLORS.accent,
+                borderRadius: 999,
+                paddingVertical: 14,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                shadowColor: COLORS.accent,
+                shadowOpacity: 0.3,
+                shadowRadius: 10,
+                shadowOffset: { width: 0, height: 4 },
+                elevation: 4,
+              }}
             >
-              <Text className="text-white text-base font-bold">📄 Смета по всему проекту</Text>
-            </Pressable>
+              <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '700', letterSpacing: 0.4 }}>
+                Смета по всему проекту →
+              </Text>
+            </Touchable>
           )}
         </View>
 

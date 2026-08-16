@@ -14,7 +14,7 @@ import {
   Calculator, ShoppingCart, Wrench, FileText, MapPin, Phone, Lock,
 } from 'lucide-react-native';
 import { useApp, useOrder } from '../../store/AppContext';
-import { AppHeader, Badge, Button, Card, SectionHeader, Divider, Touchable } from '../ui';
+import { AppHeader, Badge, Button, Card, SectionHeader, Divider, Touchable, SegmentedControl, HeroCard, COLORS, SERIF } from '../ui';
 import { fmt } from '../../utils/geometry';
 import type { Order, OrderStatus } from '../../types';
 
@@ -41,10 +41,25 @@ function ActionTile({ Icon, label, onPress }: { Icon: LucideIcon; label: string;
     <Touchable
       onPress={onPress}
       haptic="light"
-      className="flex-1 bg-bg border border-border rounded-xl py-3 px-2 items-center gap-1.5"
+      style={{
+        flex: 1,
+        backgroundColor: COLORS.surface2,
+        borderRadius: 14,
+        paddingVertical: 16,
+        paddingHorizontal: 8,
+        alignItems: 'center',
+        gap: 8,
+      }}
     >
-      <Icon size={20} color="#5C5C6B" strokeWidth={1.8} />
-      <Text className="text-xs font-semibold text-ink text-center" numberOfLines={1}>
+      <View style={{
+        width: 38, height: 38, borderRadius: 10,
+        backgroundColor: COLORS.card,
+        alignItems: 'center', justifyContent: 'center',
+        borderWidth: 1, borderColor: COLORS.border,
+      }}>
+        <Icon size={18} color={COLORS.ink} strokeWidth={1.7} />
+      </View>
+      <Text style={{ fontSize: 11, fontWeight: '600', color: COLORS.ink, textAlign: 'center', letterSpacing: 0.2 }} numberOfLines={1}>
         {label}
       </Text>
     </Touchable>
@@ -94,13 +109,13 @@ function ProjectField({
           value={tmp}
           onChangeText={setTmp}
           placeholder={placeholder}
-          placeholderTextColor="#b0b0ba"
+          placeholderTextColor="#6B7290"
           autoFocus
           multiline={multiline}
           keyboardType={keyboardType}
           onBlur={save}
           onSubmitEditing={!multiline ? save : undefined}
-          className="bg-bg border border-border rounded-lg px-3 py-2 text-navy text-sm"
+          className="bg-bg border border-border rounded-lg px-3 py-2 text-ink text-sm"
         />
       </View>
     );
@@ -114,7 +129,7 @@ function ProjectField({
     >
       <Text className="text-muted text-sm">{label}</Text>
       <Text
-        className={`text-sm font-medium flex-1 text-right ml-3 ${value ? (isPhone ? 'text-accent' : 'text-navy') : 'text-accent/70'}`}
+        className={`text-sm font-medium flex-1 text-right ml-3 ${value ? (isPhone ? 'text-accent' : 'text-ink') : 'text-accent/70'}`}
         numberOfLines={multiline ? 2 : 1}
       >
         {value || `+ ${placeholder ?? 'Указать'}`}
@@ -138,7 +153,7 @@ function CalendarCard({ order }: { order: Order }) {
           <Text className="text-muted text-sm">Расчёт</Text>
           <Text className="text-[10px] text-muted/60">обновляется автоматически</Text>
         </View>
-        <Text className={`text-sm font-medium ${order.calcSnapshot ? 'text-navy' : 'text-muted/50'}`}>
+        <Text className={`text-sm font-medium ${order.calcSnapshot ? 'text-ink' : 'text-muted/50'}`}>
           {order.calcSnapshot?.updatedAt ?? '—'}
         </Text>
       </View>
@@ -160,16 +175,16 @@ function DateRow({ label, value, onSave }: { label: string; value?: string; onSa
           value={tmp}
           onChangeText={setTmp}
           placeholder="ДД.ММ.ГГГГ"
-          placeholderTextColor="#b0b0ba"
+          placeholderTextColor="#6B7290"
           autoFocus
           onBlur={commit}
           onSubmitEditing={commit}
           keyboardType="numbers-and-punctuation"
-          className="bg-bg border border-border rounded-lg px-3 py-1 text-navy text-sm w-32 text-right"
+          className="bg-bg border border-border rounded-lg px-3 py-1 text-ink text-sm w-32 text-right"
         />
       ) : (
         <Pressable onPress={() => { setTmp(value ?? ''); setEditing(true); }}>
-          <Text className={`text-sm font-medium ${value ? 'text-navy' : 'text-accent'}`}>
+          <Text className={`text-sm font-medium ${value ? 'text-ink' : 'text-accent'}`}>
             {value || '+ Указать'}
           </Text>
         </Pressable>
@@ -211,118 +226,153 @@ export default function OrderScreen({ orderId }: OrderScreenProps) {
       />
 
       {/* Status bar */}
-      <View className="bg-white border-b border-border py-2">
+      <View style={{ backgroundColor: COLORS.bg, borderBottomWidth: 1, borderBottomColor: COLORS.border, paddingVertical: 10 }}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 16, gap: 8, alignItems: 'center' }}
         >
-          {STATUSES.map(s => (
-            <Pressable
-              key={s.id}
-              onPress={() =>
-                dispatch({ type: 'SET_ORDER_STATUS', id: order.id, status: s.id })
-              }
-              style={{ paddingHorizontal: 16, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: order.status === s.id ? '#4F46E5' : '#e8e8e4', backgroundColor: order.status === s.id ? '#4F46E5' : '#fff' }}
-            >
-              <Text
-                className={`text-xs font-semibold ${
-                  order.status === s.id ? 'text-white' : 'text-muted'
-                }`}
+          {STATUSES.map(s => {
+            const active = order.status === s.id;
+            return (
+              <Touchable
+                key={s.id}
+                haptic="selection"
+                scale={0.96}
+                onPress={() => dispatch({ type: 'SET_ORDER_STATUS', id: order.id, status: s.id })}
+                style={{
+                  paddingHorizontal: 14,
+                  paddingVertical: 7,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: active ? COLORS.accent : COLORS.border,
+                  backgroundColor: active ? COLORS.accent : 'transparent',
+                }}
               >
-                {s.label}
-              </Text>
-            </Pressable>
-          ))}
+                <Text style={{
+                  fontSize: 12,
+                  fontWeight: active ? '700' : '600',
+                  color: active ? '#FFFFFF' : COLORS.muted,
+                  letterSpacing: 0.2,
+                }}>
+                  {s.label}
+                </Text>
+              </Touchable>
+            );
+          })}
         </ScrollView>
       </View>
 
-      {/* Tabs */}
-      <View className="bg-white flex-row border-b border-border">
-        {(['info', 'finance', 'salary'] as const).map(t => (
-          <Pressable
-            key={t}
-            onPress={() => setTab(t)}
-            className={`flex-1 py-3 border-b-2 ${
-              tab === t ? 'border-accent' : 'border-transparent'
-            }`}
-          >
-            <Text
-              className={`text-center text-sm font-semibold ${
-                tab === t ? 'text-accent' : 'text-muted'
-              }`}
-            >
-              {t === 'info' ? 'Инфо' : t === 'finance' ? 'Финансы' : 'Выплаты'}
-            </Text>
-          </Pressable>
-        ))}
+      {/* Tabs — segmented control */}
+      <View style={{ paddingHorizontal: 16, paddingVertical: 12, backgroundColor: COLORS.bg, borderBottomWidth: 1, borderBottomColor: COLORS.border }}>
+        <SegmentedControl
+          value={tab}
+          onChange={(t) => setTab(t as 'info' | 'finance' | 'salary')}
+          options={[
+            { id: 'info', label: 'Инфо' },
+            { id: 'finance', label: 'Финансы' },
+            { id: 'salary', label: 'Выплаты' },
+          ]}
+        />
       </View>
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {tab === 'info' && (
-          <View className="p-4 gap-4">
-            {/* Hero — название проекта, площадь / итого, кол-во помещений */}
-            <View className="bg-navy rounded-2xl p-4">
-              <Text style={{ color: '#a5b4fc', fontSize: 10, fontWeight: '700', letterSpacing: 1.5 }}>
+          <View style={{ padding: 16, gap: 14 }}>
+            {/* Hero — editorial dark slab */}
+            <HeroCard>
+              <Text style={{ color: COLORS.faint, fontSize: 10, fontWeight: '700', letterSpacing: 2 }}>
                 ПРОЕКТ
               </Text>
-              <Text className="text-white text-lg font-bold mb-3" numberOfLines={2}>
+              <Text style={{ fontFamily: SERIF, color: '#FFFFFF', fontSize: 24, fontWeight: '700', marginTop: 4, marginBottom: 18 }} numberOfLines={2}>
                 {order.name}
               </Text>
-              <View className="flex-row justify-between items-end">
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                 <View>
-                  <Text style={{ color: '#a5b4fc', fontSize: 9, fontWeight: '700', letterSpacing: 1 }}>
+                  <Text style={{ color: COLORS.faint, fontSize: 9, fontWeight: '700', letterSpacing: 1.5 }}>
                     ПЛОЩАДЬ
                   </Text>
-                  <Text className="text-white text-2xl font-black">{fmt(totalArea)} м²</Text>
+                  <Text style={{ fontFamily: SERIF, color: '#FFFFFF', fontSize: 30, fontWeight: '700', marginTop: 2 }}>
+                    {fmt(totalArea)}<Text style={{ fontSize: 16, color: COLORS.faint }}> м²</Text>
+                  </Text>
+                  <Text style={{ color: COLORS.faint, fontSize: 11, marginTop: 2, fontStyle: 'italic' }}>
+                    {order.rooms.length} {order.rooms.length === 1 ? 'помещение' : 'помещений'}
+                  </Text>
                 </View>
-                <View className="items-end">
-                  <Text style={{ color: '#a5b4fc', fontSize: 9, fontWeight: '700', letterSpacing: 1 }}>
+                <View style={{ width: 1, height: 50, backgroundColor: 'rgba(255,255,255,0.12)' }} />
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={{ color: COLORS.faint, fontSize: 9, fontWeight: '700', letterSpacing: 1.5 }}>
                     ИТОГО
                   </Text>
-                  <Text className="text-white text-2xl font-black">
-                    {order.calcSnapshot ? `${fmt(order.calcSnapshot.total)} ₽` : '—'}
-                  </Text>
+                  {order.calcSnapshot && order.calcSnapshot.total > 0 ? (
+                    <>
+                      <Text style={{ fontFamily: SERIF, color: COLORS.accent, fontSize: 30, fontWeight: '700', marginTop: 2 }}>
+                        {fmt(order.calcSnapshot.total)}<Text style={{ fontSize: 16, color: COLORS.faint }}> ₽</Text>
+                      </Text>
+                      <Text style={{ color: COLORS.faint, fontSize: 11, marginTop: 2, fontStyle: 'italic' }}>
+                        {order.calcSnapshot.updatedAt}
+                      </Text>
+                    </>
+                  ) : (
+                    <>
+                      <Text style={{ fontFamily: SERIF, color: 'rgba(255,255,255,0.3)', fontSize: 30, fontWeight: '700', marginTop: 2 }}>
+                        —
+                      </Text>
+                      <Text style={{ color: COLORS.faint, fontSize: 11, marginTop: 2, fontStyle: 'italic' }}>
+                        нет расчёта
+                      </Text>
+                    </>
+                  )}
                 </View>
               </View>
-              <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 6 }}>
-                {order.rooms.length} помещений
-                {order.calcSnapshot && `  ·  расчёт ${order.calcSnapshot.updatedAt}`}
+            </HeroCard>
+
+            {/* Primary action: Calculator (large CTA) */}
+            <Touchable
+              haptic="medium"
+              onPress={() => router.push(`/calc/${order.id}` as any)}
+              style={{
+                backgroundColor: COLORS.accent,
+                borderRadius: 14,
+                paddingVertical: 16,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 10,
+                shadowColor: COLORS.accent,
+                shadowOpacity: 0.3,
+                shadowRadius: 10,
+                shadowOffset: { width: 0, height: 4 },
+                elevation: 4,
+              }}
+            >
+              <Calculator size={18} color="#FFFFFF" strokeWidth={2.2} />
+              <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '700', letterSpacing: 0.3 }}>
+                Открыть калькулятор сметы
               </Text>
+            </Touchable>
+
+            {/* Secondary actions — 3 tiles */}
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <ActionTile
+                Icon={ShoppingCart}
+                label="КП товаров"
+                onPress={() => Alert.alert('Скоро', 'Коммерческое предложение')}
+              />
+              <ActionTile
+                Icon={Wrench}
+                label="ТЗ монтажа"
+                onPress={() => Alert.alert('Скоро', 'Техзадание на монтаж')}
+              />
+              <ActionTile
+                Icon={FileText}
+                label="Договор"
+                onPress={() => Alert.alert('Скоро', 'Договор по шаблону')}
+              />
             </View>
 
-            {/* Actions */}
-            <Card className="p-3">
-              <SectionHeader title="Действия" />
-              <Touchable
-                onPress={() => router.push(`/calc/${order.id}` as any)}
-                haptic="medium"
-                className="bg-accent rounded-xl py-3 px-4 flex-row items-center justify-center gap-2 mb-2"
-              >
-                <Calculator size={18} color="#fff" strokeWidth={2.2} />
-                <Text className="text-white text-sm font-bold">Калькулятор сметы</Text>
-              </Touchable>
-              <View className="flex-row gap-2">
-                <ActionTile
-                  Icon={ShoppingCart}
-                  label="КП товаров"
-                  onPress={() => Alert.alert('Скоро', 'Коммерческое предложение')}
-                />
-                <ActionTile
-                  Icon={Wrench}
-                  label="ТЗ монтажа"
-                  onPress={() => Alert.alert('Скоро', 'Техзадание на монтаж')}
-                />
-                <ActionTile
-                  Icon={FileText}
-                  label="Договор"
-                  onPress={() => Alert.alert('Скоро', 'Договор по шаблону')}
-                />
-              </View>
-            </Card>
-
-            {/* Project data — клиент, телефон, адрес */}
-            <Card className="p-3">
+            {/* Project data */}
+            <Card style={{ padding: 16 }}>
               <SectionHeader title="Данные проекта" />
               <ProjectField label="Клиент" value={order.client} order={order} field="client" placeholder="Имя клиента" />
               <ProjectField label="Телефон" value={order.phone} order={order} field="phone" placeholder="+7 (900) 000-00-00" isPhone keyboardType="phone-pad" />
@@ -331,43 +381,53 @@ export default function OrderScreen({ orderId }: OrderScreenProps) {
                 <Touchable
                   onPress={() => openRouteForAddress(order.address!)}
                   haptic="light"
-                  className="mt-2 flex-row items-center justify-center gap-2 py-2 rounded-lg bg-accent-soft"
+                  style={{
+                    marginTop: 10,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                    paddingVertical: 9,
+                    borderRadius: 10,
+                    backgroundColor: COLORS.accentSoft,
+                  }}
                 >
-                  <MapPin size={14} color="#5E5CE6" strokeWidth={2.2} />
-                  <Text className="text-accent text-xs font-semibold">Проложить маршрут</Text>
+                  <MapPin size={13} color={COLORS.accent} strokeWidth={2.2} />
+                  <Text style={{ color: COLORS.accent, fontSize: 12, fontWeight: '700' }}>Проложить маршрут</Text>
                 </Touchable>
               )}
+              <View style={{ height: 8 }} />
               <ProjectField label="Дизайнер" value={order.designer} order={order} field="designer" placeholder="Имя дизайнера" />
               <ProjectField label="Заметки" value={order.notes} order={order} field="notes" placeholder="Заметки по проекту" multiline />
             </Card>
 
-            {/* Calendar — даты расчёта / замера / монтажа */}
+            {/* Calendar */}
             <CalendarCard order={order} />
           </View>
         )}
 
         {tab === 'finance' && (
-          <View className="p-4">
-            <View className="bg-navy rounded-2xl p-4 mb-4">
-              <Text className="text-white/50 text-[10px] font-bold tracking-widest mb-1">
+          <View style={{ padding: 16 }}>
+            <HeroCard style={{ marginBottom: 16 }}>
+              <Text style={{ color: COLORS.faint, fontSize: 10, fontWeight: '700', letterSpacing: 2, marginBottom: 8 }}>
                 ОПЛАЧЕНО
               </Text>
-              <Text className="text-white text-3xl font-black">
-                {fmt(totalPaid)} ₽
+              <Text style={{ fontFamily: SERIF, color: '#FFFFFF', fontSize: 40, fontWeight: '700' }}>
+                {fmt(totalPaid)}<Text style={{ fontSize: 22, color: COLORS.faint }}> ₽</Text>
               </Text>
-            </View>
-            <View className="flex-row items-center justify-center py-8 gap-2">
-              <Lock size={14} color="#5C5C6B" strokeWidth={2} />
-              <Text className="text-muted text-sm">Доступно в PRO</Text>
+            </HeroCard>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 30, gap: 8 }}>
+              <Lock size={14} color={COLORS.muted} strokeWidth={2} />
+              <Text style={{ color: COLORS.muted, fontSize: 13 }}>Доступно в PRO</Text>
             </View>
           </View>
         )}
 
         {tab === 'salary' && (
-          <View className="p-4">
-            <View className="flex-row items-center justify-center py-8 gap-2">
-              <Lock size={14} color="#5C5C6B" strokeWidth={2} />
-              <Text className="text-muted text-sm">Доступно в PRO</Text>
+          <View style={{ padding: 16 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 60, gap: 8 }}>
+              <Lock size={14} color={COLORS.muted} strokeWidth={2} />
+              <Text style={{ color: COLORS.muted, fontSize: 13 }}>Доступно в PRO</Text>
             </View>
           </View>
         )}
