@@ -55,11 +55,9 @@ function PeriodBar({mode,setMode,ym,setYm,from,setFrom,to,setTo}){
   </div>);
 }
 
-function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme,onFullExport,onSaveNow,onImport,saveStatus,returnOrderId}){
+function HomeScreen({onMenu,orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme,onFullExport,onSaveNow,onImport,saveStatus,returnOrderId}){
   const[tab,setTab]       = useState("home");
-  const[showMenu,setShowMenu] = useState(false);
   const[showNomEd,setShowNomEd] = useState(false);
-  const[showFullExp,setShowFullExp] = useState(null);
   const[delOrderId,setDelOrderId] = useState(null);
   const[statusFilter,setStatusFilter] = useState(null);
   const ymNow=(()=>{const n=new Date();return n.getFullYear()+"-"+String(n.getMonth()+1).padStart(2,"0");})();
@@ -72,23 +70,8 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
   const[statsYm,setStatsYm] = useState(ymNow);
   const[statsFrom,setStatsFrom] = useState("");
   const[statsTo,setStatsTo] = useState("");
-  const[devUnlock,setDevUnlock] = useState(IS_PRO_OVERRIDE);
-  const isPro = devUnlock;
-  const toggleDev=()=>{
-    setIsProOverride(!IS_PRO_OVERRIDE);
-    setDevUnlock(IS_PRO_OVERRIDE);
-    try{window.dispatchEvent(new CustomEvent("magicapp:proOverride",{detail:{value:IS_PRO_OVERRIDE}}));}catch(e){}
-  };
+  const isPro = true; /* PRO всегда включён */
 
-  useEffect(()=>{
-    const onPro=(e)=>{
-      const v=!!(e?.detail?.value);
-      setIsProOverride(v);
-      setDevUnlock(v);
-    };
-    try{window.addEventListener("magicapp:proOverride", onPro);}catch(e){}
-    return ()=>{try{window.removeEventListener("magicapp:proOverride", onPro);}catch(e){};};
-  },[]);
 
   const savedTxt=saveStatus?.ts
     ?("Сохранено: "+new Date(saveStatus.ts).toLocaleTimeString("ru-RU")+(saveStatus?.ordersInDb!=null?(" · в БД проектов: "+saveStatus.ordersInDb):""))
@@ -178,7 +161,7 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
 
   /* ══ Шапка с лого ══ */
   const TopBar=()=>(<>
-    <AppHeader onMenu={()=>setShowMenu(!showMenu)} right={isPro?<div style={{background:DARK,color:ACC,fontSize:10,fontWeight:700,padding:"4px 12px",borderRadius:20,letterSpacing:"0.8px"}}>PRO</div>:null}/>
+    <AppHeader onMenu={onMenu}/>
       {/* Tab bar */}
       <div style={{background:T.card,display:"flex",margin:"0",borderBottom:`2px solid ${ACC}`,paddingTop:2}}>
         {[{id:"home",l:"Проекты"},{id:"clients",l:"Клиенты",pro:true},{id:"designers",l:"Дизайнеры",pro:true},{id:"finance",l:"Финансы",pro:true},{id:"stats",l:"Аналитика",pro:true}].map(t=>{
@@ -261,7 +244,7 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
         {/* header */}
         <AppHeader
           onBack={()=>{setSelOrder(null);setEditOrd(null);setAddPay(false);setAddExp(false);}}
-          onMenu={()=>setShowMenu(!showMenu)}
+          onMenu={onMenu}
           title={ord.name}
           subtitle={ord.client||undefined}
         />
@@ -592,64 +575,6 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
     <TopBar/>
 
     {/* ── SETTINGS DRAWER ── */}
-    {showMenu&&(<div style={{position:"fixed",inset:0,zIndex:50,display:"flex"}}>
-      <div style={{flex:1,background:"rgba(0,0,0,0.3)"}} onClick={()=>setShowMenu(false)}/>
-      <div style={{width:270,background:T.card,borderLeft:"0.5px solid #eeeef8",padding:18,display:"flex",flexDirection:"column",gap:3,overflowY:"auto"}}>
-        <div style={{fontSize:16,fontWeight:700,color:T.text,marginBottom:12}}>{"Настройки"}</div>
-        <div style={{fontSize:11,color:T.sub,marginBottom:6}}>{"Оформление"}</div>
-        <div style={{display:"flex",background:T.bg,borderRadius:10,padding:3,marginBottom:14}}>
-          <button onClick={()=>setTheme("light")}
-            style={{flex:1,padding:"7px 4px",borderRadius:8,border:"none",
-              background:theme==="light"?"#fff":"transparent",
-              color:theme==="light"?"#1e2530":"#aaa",
-              fontSize:11,fontWeight:theme==="light"?700:400,cursor:"pointer",fontFamily:"inherit",
-              display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
-            <span style={{fontSize:12}}>{"☀️"}</span>{"Светлая"}
-          </button>
-          <button onClick={()=>setTheme("dark")}
-            style={{flex:1,padding:"7px 4px",borderRadius:8,border:"none",
-              background:theme==="dark"?"#1e2530":"transparent",
-              color:theme==="dark"?"#e6edf3":"#aaa",
-              fontSize:11,fontWeight:theme==="dark"?700:400,cursor:"pointer",fontFamily:"inherit",
-              display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
-            <span style={{fontSize:12}}>{"🌙"}</span>{"Тёмная"}
-          </button>
-        </div>
-        <div style={{fontSize:11,color:T.sub,marginBottom:6}}>{"Тариф"}</div>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",background:T.bg,borderRadius:11,padding:"11px 13px",marginBottom:14}}>
-          <div><div style={{fontSize:13,fontWeight:700,color:isPro?ACC:"#ff9f0a"}}>{isPro?"PRO активен":"Базовый"}</div><div style={{fontSize:10,color:T.sub,marginTop:2}}>{isPro?"Все функции открыты":"Финансы — PRO"}</div></div>
-          <div onClick={toggleDev} style={{width:44,height:26,borderRadius:13,background:isPro?ACC:"#ddd",cursor:"pointer",position:"relative",flexShrink:0}}>
-            <div style={{width:22,height:22,borderRadius:11,background:T.card,position:"absolute",top:2,left:isPro?20:2,transition:"left 0.18s",boxShadow:"0 1px 3px rgba(0,0,0,0.2)"}}/>
-          </div>
-        </div>
-        <button onClick={()=>{setShowMenu(false);setShowNomEd(true);}} style={{width:"100%",background:ABGC,border:"none",borderRadius:11,padding:12,color:ACC,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginBottom:6,textAlign:"left"}}>{"📋 Редактор номенклатур"}</button>
-        {onFullExport&&<button onClick={()=>{const d=onFullExport();setShowFullExp(d);setShowMenu(false);}} style={{width:"100%",background:"rgba(22,163,74,0.08)",border:"none",borderRadius:11,padding:12,color:T.green,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",textAlign:"left",marginBottom:6}}>{"💾 Сохранить настройки"}</button>}
-        {onImport&&(<>
-          <input id="import-file-input" type="file" accept=".json" style={{display:"none"}} onChange={e=>{
-            const f=e.target.files?.[0];if(!f)return;
-            const r=new FileReader();
-            r.onload=ev=>{
-              onImport(ev.target.result);
-              setShowMenu(false);
-            };
-            r.readAsText(f);
-            e.target.value="";
-          }}/>
-          <button onClick={()=>{document.getElementById("import-file-input")?.click();}} style={{width:"100%",background:"rgba(99,102,241,0.08)",border:"none",borderRadius:11,padding:12,color:ACC,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",textAlign:"left",marginBottom:6}}>{"⬆ Загрузить данные"}</button>
-        </>)}
-        <button onClick={()=>{
-          if(window.confirm("Сбросить локальные данные?\nПриложение откроется с актуальными данными из кода (проекты, кнопки, номенклатура).")){
-            try{
-              Object.keys(localStorage).filter(k=>k.startsWith("magicapp")).forEach(k=>localStorage.removeItem(k));
-              const dbs=["magicapp_idb_v1","magicapp-idb"];
-              dbs.forEach(db=>{try{indexedDB.deleteDatabase(db);}catch(e){}});
-            }catch(e){}
-            window.location.reload();
-          }
-        }} style={{width:"100%",background:"rgba(220,38,38,0.07)",border:"none",borderRadius:11,padding:10,color:"#dc2626",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit",textAlign:"left",marginTop:6}}>{"🔄 Сбросить локальные данные"}</button>
-        <div style={{fontSize:10,color:T.dim,marginTop:6,lineHeight:1.6}}>{"Версия 2.1 · "+ALL_NOM.length+" номенклатур"}</div>
-      </div>
-    </div>)}
 
     {/* ══ ПРОЕКТЫ ══ */}
     {tab==="home"&&(<div className="mw" style={{padding:"13px 14px",paddingBottom:90}}>
@@ -1058,43 +983,6 @@ function HomeScreen({orders,setOrders,onOpen,onNew,onStatusChange,theme,setTheme
     })()}
 
     {/* Полный экспорт */}
-    {showFullExp&&(()=>{
-      const d=showFullExp;
-      const ordClean=(d.orders||[]).map(o=>({...o,rooms:(o.rooms||[]).map(r=>{const{imgPts,...rr}=r;return rr;})}));
-      /* Выгружаем ВСЁ, что собрал buildFullExport: помимо кнопок и номенклатуры —
-         глобальные опции, свои блоки, конфигурацию кнопок v1 (нормы/кратность/источники)
-         и свои разделы. Раньше эти поля терялись, и бэкап восстанавливался неполным. */
-      const full={...d,orders:ordClean};
-      const json=JSON.stringify(full,null,2);
-      return(<div style={{position:"fixed",inset:0,zIndex:60,background:"rgba(0,0,0,0.3)",overflow:"auto",display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
-        <div style={{background:T.card,borderRadius:"20px 20px 0 0",padding:"20px 16px 36px",width:"100%",maxWidth:480}}>
-          <div style={{width:36,height:4,background:"#eee",borderRadius:2,margin:"0 auto 14px"}}/>
-          <div style={{fontSize:16,fontWeight:700,color:T.text,marginBottom:3}}>{"Экспорт настроек"}</div>
-          <div style={{fontSize:12,color:T.sub,marginBottom:13}}>{"Скопируйте и отправьте разработчику"}</div>
-          <div style={{display:"flex",gap:8,marginBottom:11,flexWrap:"wrap"}}>
-            {[["Кнопок",(d.presets||[]).length,ACC],["Избр.",(Object.values(d.sharedFavs||{}).flat().length),ACC],["Ном.",(d.customNoms||[]).length,"#16a34a"],["Проектов",(d.orders||[]).length,"#7c5cbf"]].map(([l,n,c])=>(<div key={l} style={{background:T.faint,borderRadius:9,padding:"7px 11px",textAlign:"center"}}><div style={{color:c,fontSize:16,fontWeight:700}}>{n}</div><div style={{color:T.dim,fontSize:9}}>{l}</div></div>))}
-          </div>
-          <div style={{background:T.faint,borderRadius:11,padding:10,fontSize:9,color:T.green,fontFamily:"monospace",maxHeight:120,overflowY:"auto",marginBottom:11,lineHeight:1.7,wordBreak:"break-all",userSelect:"all"}}>
-            {json.slice(0,1500)+(json.length>1500?"...":"")}
-          </div>
-          <div style={{background:"rgba(99,102,241,0.07)",borderRadius:10,padding:"9px 12px",marginBottom:11,fontSize:11,color:T.sub,lineHeight:1.5}}>
-            {"📎 Скачайте файл → загрузите в чат разработчику → он обновит приложение с вашими данными"}
-          </div>
-          <button onClick={()=>{
-            const ts=new Date().toISOString().slice(0,10);
-            const fname=`magicapp_backup_${ts}.json`;
-            const blob=new Blob([json],{type:"application/json"});
-            const url=URL.createObjectURL(blob);
-            const a=document.createElement("a");a.href=url;a.download=fname;
-            document.body.appendChild(a);a.click();
-            document.body.removeChild(a);URL.revokeObjectURL(url);
-          }} style={{width:"100%",background:ACC,border:"none",borderRadius:12,padding:13,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginBottom:7}}>{"⬇ Скачать файл"}</button>
-          <button onClick={()=>{try{navigator.clipboard.writeText(json);}catch(e){const ta=document.createElement("textarea");ta.value=json;document.body.appendChild(ta);ta.select();document.execCommand("copy");document.body.removeChild(ta);}}}
-            style={{width:"100%",background:T.faint,border:"none",borderRadius:12,padding:12,color:T.sub,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",marginBottom:7}}>{"Копировать текст"}</button>
-          <button onClick={()=>setShowFullExp(null)} style={{width:"100%",background:T.bg,border:"none",borderRadius:12,padding:12,color:T.sub,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>{"Закрыть"}</button>
-        </div>
-      </div>);
-    })()}
   </div>);
 }
 

@@ -7,6 +7,6 @@ light:{bg:"#f2f3fa",card:"#fff",card2:"#eeeef8",text:"#1e2530",accent:"#4F46E5",
 export let T = THEMES.light;
 export function setT(name) { T = THEMES[name] || THEMES.light; }
 
-// IS_PRO_OVERRIDE — флаг разблокировки Pro-функций
-export let IS_PRO_OVERRIDE = false;
-export function setIsProOverride(v) { IS_PRO_OVERRIDE = v; }
+// PRO всегда включён — тариф из приложения убран
+export let IS_PRO_OVERRIDE = true;
+export function setIsProOverride() { IS_PRO_OVERRIDE = true; }

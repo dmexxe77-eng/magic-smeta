@@ -9,6 +9,8 @@ import HomeScreen from "./components/screens/HomeScreen.jsx";
 import CalcScreen from "./components/screens/CalcScreen.jsx";
 import NewOrderFlow from "./components/screens/NewOrderFlow.jsx";
 import PdfPagePicker from "./components/builders/PdfPagePicker.jsx";
+import AppMenu from "./components/AppMenu.jsx";
+import NomEditor from "./components/screens/NomEditorV2.jsx";
 
 export default function App(){
   // URL ?reset=1 — hard clear all local data and reload
@@ -19,6 +21,8 @@ export default function App(){
     return null;
   }
   const[screen,setScreen]=useState("home");
+  const[menuOpen,setMenuOpen]=useState(false);   /* меню (три полоски) — с любого экрана */
+  const[nomEdOpen,setNomEdOpen]=useState(false);
   const[orders,setOrders]=useState(INITIAL_ORDERS); /* стартовые проекты из userSnapshot.json — актуальны для новых устройств; на устройствах с локальными данными их перекрывает автосейв */
   const[curId,setCurId]=useState(null);
   const[planImg,setPlanImg]=useState(null);
@@ -329,7 +333,7 @@ export default function App(){
     }
   };
 
-  if(screen==="home")content=(<HomeScreen orders={orders} setOrders={setOrders} onOpen={openOrder} onNew={()=>setScreen("new")} onStatusChange={changeStatus} theme={theme} setTheme={setTheme} onFullExport={buildFullExport} onSaveNow={manualSave} onImport={handleImport} saveStatus={saveStatus} returnOrderId={curId}/>);
+  if(screen==="home")content=(<HomeScreen orders={orders} setOrders={setOrders} onOpen={openOrder} onNew={()=>setScreen("new")} onStatusChange={changeStatus} theme={theme} setTheme={setTheme} onFullExport={buildFullExport} onSaveNow={manualSave} onImport={handleImport} saveStatus={saveStatus} returnOrderId={curId} onMenu={()=>setMenuOpen(true)}/>);
   else if(screen==="new")content=(<NewOrderFlow onBack={()=>setScreen("home")} onCreate={createOrder} clients={appClients} designers={appDesigners} onAddClient={addClient} onAddDesigner={addDesigner}/>);
   else if(screen==="pickImage")content=(<div style={{minHeight:"100vh",background:T.bg,color:T.text,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16,padding:20}}>
     <div style={{fontSize:14,fontWeight:600}}>{"Загрузите план потолков"}</div>
@@ -339,7 +343,7 @@ export default function App(){
     <button onClick={()=>{setScreen("calc");}} style={{color:T.dim,background:"none",border:"none",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>{"Пропустить"}</button>
   </div>);
   else if(screen==="pdfPick"&&pdfData2)content=(<PdfPagePicker pdfData={pdfData2} onSelect={img=>{setPdfData2(null);setPlanImg(img);if(curId)setOrders(prev=>prev.map(o=>o.id===curId?{...o,planImage:img}:o));setScreen("calc");}} onBack={()=>{setPdfData2(null);setScreen("pickImage");}}/>);
-  else if(screen==="calc"&&curOrder)content=(<CalcScreen
+  else if(screen==="calc"&&curOrder)content=(<CalcScreen onMenu={()=>setMenuOpen(true)}
     initRooms={curOrder.rooms}
     orderName={curOrder.name}
     onBack={()=>{
@@ -371,11 +375,14 @@ export default function App(){
     }}
     onPlanImageChange={img=>{setPlanImg(img);if(curId)setOrders(prev=>prev.map(o=>o.id===curId?{...o,planImage:img}:o));}}
   />);
-  else content=(<HomeScreen orders={orders} setOrders={setOrders} onOpen={openOrder} onNew={()=>setScreen("new")} onStatusChange={changeStatus} theme={theme} setTheme={setTheme} onFullExport={buildFullExport} onSaveNow={manualSave} onImport={handleImport} saveStatus={saveStatus} returnOrderId={curId}/>);
+  else content=(<HomeScreen orders={orders} setOrders={setOrders} onOpen={openOrder} onNew={()=>setScreen("new")} onStatusChange={changeStatus} theme={theme} setTheme={setTheme} onFullExport={buildFullExport} onSaveNow={manualSave} onImport={handleImport} saveStatus={saveStatus} returnOrderId={curId} onMenu={()=>setMenuOpen(true)}/>);
 
   return(<div style={{fontFamily:"'Inter',-apple-system,BlinkMacSystemFont,'SF Pro Display',system-ui,sans-serif",background:T.bg,color:T.text,minHeight:"100vh"}}>
     <style>{"@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');*{box-sizing:border-box;margin:0;padding:0;font-family:inherit}::-webkit-scrollbar{width:3px}select{outline:none;font-family:inherit}input[type=number]::-webkit-inner-spin-button{opacity:.3}@media(min-width:980px){.mw{max-width:1180px!important;margin-left:auto!important;margin-right:auto!important}.mw-wide{max-width:1340px!important;margin-left:auto!important;margin-right:auto!important}.proj-grid{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:10px;align-items:start}.proj-grid>div{margin-bottom:0!important}.info-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:12px;align-items:start}.info-grid>div{margin-bottom:0!important}.calc-2pane{display:grid;grid-template-columns:360px minmax(0,1fr);gap:14px;align-items:start}.calc-chart{position:sticky;top:12px}}"}</style>
     {content}
+    <AppMenu open={menuOpen} onClose={()=>setMenuOpen(false)} theme={theme} setTheme={setTheme}
+      onFullExport={buildFullExport} onImport={handleImport} onOpenNomEd={()=>setNomEdOpen(true)}/>
+    {nomEdOpen&&<NomEditor onClose={()=>setNomEdOpen(false)}/>}
   </div>);
 }
 

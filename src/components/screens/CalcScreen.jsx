@@ -82,7 +82,7 @@ function BuilderSelect({ onSelect, onBack, rooms, onFileChosen }) {
   );
 }
 
-function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,initMode,onPlanImageChange,onSnapshotUpdate,initNomSnapshot}){
+function CalcScreen({onMenu,initRooms,orderName,onBack,onRoomsChange,initPlanImage,initMode,onPlanImageChange,onSnapshotUpdate,initNomSnapshot}){
   const[mode,setMode]=useState(initMode||"main");
   const[nomSnapshot,setNomSnapshot]=useState(initNomSnapshot||null);
   const nomSnapshotRef=useRef(initNomSnapshot||null);
@@ -327,7 +327,7 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
     {/* HEADER */}
     <AppHeader
       onBack={onBack}
-      onMenu={null}
+      onMenu={onMenu}
       title={null}
       subtitle="КАЛЬКУЛЯТОР"
       right={
