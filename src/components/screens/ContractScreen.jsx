@@ -5,6 +5,7 @@ import { useState, useRef } from "react";
 import { fmt } from "../../utils/helpers.js";
 import { compressImg } from "../../utils/imageUtils.js";
 import { DEFAULT_CONTRACT_TPL, CONTRACT_STYLES, contractFields, contractHtml, nextContractNumber } from "../../data/contract.js";
+import { htmlToPdf } from "../../utils/pdf.js";
 
 const IND = "#4F46E5";
 const card = { background: "#fff", borderRadius: 14, padding: 13, marginBottom: 10, border: "1px solid #f1f1f8" };
@@ -27,13 +28,13 @@ export default function ContractScreen({ ord, est, total, area, tpl, onTplChange
   const patchHead = p => patch({ head: { ...t.head, ...p } });
   const patchSec = (id, p) => patch({ sections: t.sections.map(s => s.id === id ? { ...s, ...p } : s) });
 
-  const doPrint = () => {
-    const w = window.open("", "_blank");
-    if (!w) return;
-    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Договор ${num}</title>
-      <style>@page{margin:14mm;} body{margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;}</style></head><body>${html}</body></html>`);
-    w.document.close();
-    setTimeout(() => { w.focus(); w.print(); }, 300);
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const doPrint = async () => {
+    /* скачиваем настоящий PDF-файл — window.open блокируется браузерами и webview */
+    if (pdfBusy) return;
+    setPdfBusy(true);
+    try { await htmlToPdf(html, "Договор_" + num + "_" + (ord.name || "")); }
+    finally { setPdfBusy(false); }
   };
   const doSave = () => {
     /* снапшот в проект: номер занят — двигаем счётчик */
@@ -81,7 +82,7 @@ export default function ContractScreen({ ord, est, total, area, tpl, onTplChange
             {saved && <span style={{ color: "#16a34a", fontWeight: 700 }}>{"  ·  сохранён договор № " + saved.number + " от " + saved.date}</span>}
           </div>
           <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-            <button onClick={doPrint} style={{ flex: 1, background: IND, border: "none", borderRadius: 10, padding: 11, color: "#fff", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>{"⬇ PDF / Печать"}</button>
+            <button onClick={doPrint} disabled={pdfBusy} style={{ flex: 1, background: IND, border: "none", borderRadius: 10, padding: 11, color: "#fff", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", opacity: pdfBusy ? 0.6 : 1 }}>{pdfBusy ? "Готовлю PDF…" : "⬇ Скачать PDF"}</button>
             <button onClick={doSave} style={{ flex: 1, background: "rgba(22,163,74,0.1)", border: "none", borderRadius: 10, padding: 11, color: "#16a34a", fontSize: 12.5, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>{saved ? "Перегенерировать и сохранить" : "Сохранить в проект"}</button>
           </div>
         </div>

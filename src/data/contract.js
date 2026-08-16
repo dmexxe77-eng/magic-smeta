@@ -120,7 +120,7 @@ export function contractHtml(tpl, fields, est) {
   const specRows = [...(est?.mats || []).map(l => ({ ...l, t: "Материалы" })), ...(est?.works || []).map(l => ({ ...l, t: "Работы" }))];
   const specTotal = specRows.reduce((s, l) => s + l.q * l.p, 0);
   const spec = specRows.length ? `
-    <h3 style="margin:18px 0 6px;font-size:${compact ? 11 : 12}px;">Приложение №1 — Спецификация</h3>
+    <h3 class="no-split" style="margin:18px 0 6px;font-size:${compact ? 11 : 12}px;">Приложение №1 — Спецификация</h3>
     <table style="width:100%;border-collapse:collapse;font-size:${compact ? 9 : 10}px;">
       <tr style="background:#f2f3fa;">
         <th style="border:0.5px solid #ccc;padding:4px 6px;text-align:left;">Наименование</th>
@@ -159,9 +159,9 @@ export function contractHtml(tpl, fields, est) {
     </div>
     <p style="margin:0 0 10px;">${esc(h.legal || h.company || "Исполнитель")}, именуемый в дальнейшем «Исполнитель», с одной стороны, и <b>${esc(fields["клиент"]) || "____________"}</b>${fields["телефон"] ? ", тел. " + esc(fields["телефон"]) : ""}, именуемый(ая) в дальнейшем «Заказчик», с другой стороны, заключили настоящий договор о нижеследующем:</p>
     ${(tpl.sections || []).map((sec, i) => `
-      <h3 style="margin:12px 0 4px;font-size:${compact ? 11 : 12}px;color:${st.accent};">${i + 1}. ${esc(sec.title)}</h3>
+      <h3 class="no-split" style="margin:12px 0 4px;font-size:${compact ? 11 : 12}px;color:${st.accent};">${i + 1}. ${esc(sec.title)}</h3>
       <p style="margin:0;">${esc(fillText(sec.text, fields))}</p>`).join("")}
-    ${h.bank ? `<h3 style="margin:14px 0 4px;font-size:${compact ? 11 : 12}px;color:${st.accent};">Реквизиты Исполнителя</h3><p style="margin:0;white-space:pre-line;font-size:${compact ? 9 : 10}px;">${esc(h.bank)}</p>` : ""}
+    ${h.bank ? `<h3 class="no-split" style="margin:14px 0 4px;font-size:${compact ? 11 : 12}px;color:${st.accent};">Реквизиты Исполнителя</h3><p style="margin:0;white-space:pre-line;font-size:${compact ? 9 : 10}px;">${esc(h.bank)}</p>` : ""}
     <div style="display:flex;gap:24px;margin-top:26px;">
       <div style="flex:1;">
         <div style="font-weight:700;margin-bottom:22px;">Исполнитель</div>
