@@ -48,19 +48,19 @@ export function canvasUsage(box, W) {
     variants.push({ area: Math.ceil(b / W) * W * a, strips: Math.ceil(b / W), along: a });
     variants.push({ area: Math.ceil(a / W) * W * b, strips: Math.ceil(a / W), along: b });
   }
-  /* при равном расходе — вариант с меньшим числом полос (меньше спаек) */
-  const best = variants.sort((x, y) => x.area - y.area || x.strips - y.strips)[0];
+  /* Приоритет — цельное полотно: сначала меньше полос, потом меньше расход. */
+  const best = variants.sort((x, y) => x.strips - y.strips || x.area - y.area)[0];
   return { ...best, area: Math.round(best.area * 100) / 100, width: W };
 }
 
-/* Подобрать оптимальную ширину: минимальный расход, при равенстве — меньший ролик */
+/* Подобрать ширину: приоритет — без шва, среди равных по числу полос — экономнее */
 export function bestCanvasWidth(box, noms) {
   const opts = (noms || []).filter(n => n.w).map(n => ({ nom: n, use: canvasUsage(box, n.w) })).filter(x => x.use);
   if (!opts.length) return null;
-  /* Приоритет: меньший расход → меньше полос → уже ролик.
-     Иначе при равной площади выбирался узкий ролик с лишними спайками. */
+  /* Шов дороже лишних метров: сначала цельное полотно (меньше полос),
+     затем меньший расход, затем более узкий ролик. */
   return opts.sort((x, y) =>
-    x.use.area - y.use.area ||
     x.use.strips - y.use.strips ||
+    x.use.area - y.use.area ||
     x.nom.w - y.nom.w)[0];
 }

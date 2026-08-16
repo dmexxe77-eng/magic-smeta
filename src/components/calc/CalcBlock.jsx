@@ -182,6 +182,13 @@ function FavEditor2({allPresets,favIds:_rawFavIds,setFavIds,maxFav,onEditPreset,
 
 function CalcBlock({config,instance,onChange,presets,onPresets,autoAngles,roomInfo,onApplyAll,favIds,setFavIds,onEditNom,nomSnap,onOpenEditor}){
   const[showFav,setShowFav]=useState(false);const[editPr,setEditPr]=useState(null);
+  /* Подсветка активного блока: последний, внутри которого был клик/тап */
+  const blkRef=useRef(null);const[blkActive,setBlkActive]=useState(false);
+  useEffect(()=>{
+    const h=e=>{const inside=!!(blkRef.current&&blkRef.current.contains(e.target));setBlkActive(prev=>prev===inside?prev:inside);};
+    document.addEventListener("pointerdown",h,true);
+    return()=>document.removeEventListener("pointerdown",h,true);
+  },[]);
   const pr=presets.find(p=>p.id===instance.btnId);const items=(pr?.items||[]).map(id=>NB(id)).filter(Boolean);const opts=(pr?.options||[]).map(id=>NB(id)).filter(Boolean);
   const q=instance.qty||0;const upd=patch=>onChange({...instance,...patch});
   /* Подпись/единица главного параметра — из param выбранной кнопки (редактор), иначе из конфига блока */
@@ -240,7 +247,7 @@ function CalcBlock({config,instance,onChange,presets,onPresets,autoAngles,roomIn
   },0);
   const oTotal=opts.filter(n=>instance.off?.[n.id]!==true).reduce((s,n)=>s+(instance.oq?.[n.id]||0)*gp(n),0);
   const savePr=saved=>{onPresets(prev=>{const i=prev.findIndex(p=>p.id===saved.id);if(i>=0){const n=[...prev];n[i]=saved;return n;}return[...prev,{...saved,cat:config.cat}];});if(Array.isArray(favIds)&&!favIds.includes(saved.id))setFavIds([...(Array.isArray(favIds)?favIds:[]),saved.id]);setEditPr(null);};
-  return(<div style={{background:T.card,borderRadius:12,padding:10,marginBottom:8}}>
+  return(<div ref={blkRef} style={{background:T.card,borderRadius:12,padding:10,marginBottom:8,border:"1.5px solid "+(blkActive?T.accent:"transparent"),boxShadow:blkActive?"0 0 0 3px rgba(79,70,229,0.10)":"none",transition:"border-color .15s, box-shadow .15s"}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
       <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0}}>
         <span style={{fontSize:12.5,fontWeight:800,color:T.text,textTransform:"uppercase",letterSpacing:"0.4px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{config.title}</span>
@@ -263,7 +270,7 @@ function CalcBlock({config,instance,onChange,presets,onPresets,autoAngles,roomIn
           </label>
           {box&&<span style={{fontSize:9,color:T.dim,marginLeft:6}}>{"габарит "+fmt(box.a)+"×"+fmt(box.b)+" м"}</span>}
           {instance.overcut&&usage&&<span style={{fontSize:9,color:T.orange,marginLeft:"auto",fontWeight:700}}>
-            {"▸ "+fmt(usage.area)+" м²"+(usage.strips>1?" · "+usage.strips+" полосы":"")}
+            {"▸ "+fmt(usage.area)+" м² · "+(usage.strips>1?usage.strips+" полосы (шов)":"без шва")}
           </span>}
         </div>
         {widthOpts.length>1&&(<div style={{display:"flex",alignItems:"center",gap:4,flexWrap:"wrap"}}>
@@ -273,7 +280,7 @@ function CalcBlock({config,instance,onChange,presets,onPresets,autoAngles,roomIn
             const u=box?canvasUsage(box,n.w):null;
             const rec=best&&best.nom.id===n.id;
             return(<button key={n.id} onClick={()=>upd({wPick:n.id})}
-              title={u?("расход "+fmt(u.area)+" м²"+(u.strips>1?", полос "+u.strips:"")+" · "+fmt(n.price)+" ₽/м²"):""}
+              title={u?("расход "+fmt(u.area)+" м² · "+(u.strips>1?u.strips+" полосы (шов)":"без шва")+" · "+fmt(n.price)+" ₽/м²"):""}
               style={{background:a?T.actBg:T.pillBg,border:"1px solid "+(a?T.accent:(rec?"#16a34a55":T.border)),borderRadius:7,padding:"3px 8px",fontSize:9.5,fontWeight:a?700:500,color:a?T.accent:(rec?"#16a34a":T.sub),cursor:"pointer",fontFamily:"inherit"}}>
               {Math.round(n.w*100)}{rec&&!a?" ★":""}
             </button>);
@@ -331,7 +338,7 @@ function CalcBlock({config,instance,onChange,presets,onPresets,autoAngles,roomIn
     {editPr&&<PresetEditor preset={editPr} onSave={savePr} onClose={()=>setEditPr(null)}/>}
   </div>);}
 
-function MultiBlock({config,list,setList,presets,onPresets,favIds,setFavIds,onEditNom,nomSnap,onOpenEditor,roomInfo}){const add=()=>{const f=presets.filter(p=>p.cat===config.cat);setList(p=>[...p,{id:uid(),btnId:f[0]?.id||"",qty:0,off:{},oq:{}}]);};return(<div style={{marginBottom:8}}>{list.map((inst,i)=>(<div key={inst.id} style={{position:"relative"}}><span onClick={()=>setList(p=>{const n=[...p];n.splice(i,1);return n;})} style={{position:"absolute",top:4,right:36,color:T.red,cursor:"pointer",fontSize:13,zIndex:2,padding:4,background:T.card,borderRadius:6}}>{"×"}</span><CalcBlock config={config} instance={inst} favIds={favIds} setFavIds={setFavIds} onChange={v=>setList(p=>{const n=[...p];n[i]=v;return n;})} presets={presets} onPresets={onPresets} onEditNom={onEditNom} nomSnap={nomSnap} onOpenEditor={onOpenEditor} roomInfo={roomInfo}/></div>))}<div onClick={add} style={{textAlign:"center",padding:6,color:"#9aa0b2",fontSize:10.5,fontWeight:700,cursor:"pointer",background:"transparent"}}>{"+ "+config.title}</div></div>);}
+function MultiBlock({config,list,setList,presets,onPresets,favIds,setFavIds,onEditNom,nomSnap,onOpenEditor,roomInfo}){const add=()=>{const f=presets.filter(p=>p.cat===config.cat);setList(p=>[...p,{id:uid(),btnId:f[0]?.id||"",qty:0,off:{},oq:{}}]);};return(<div style={{marginBottom:8}}>{list.map((inst,i)=>(<div key={inst.id} style={{position:"relative"}}><span onClick={()=>setList(p=>{const n=[...p];n.splice(i,1);return n;})} style={{position:"absolute",top:4,right:36,color:T.red,cursor:"pointer",fontSize:13,zIndex:2,padding:4,background:T.card,borderRadius:6}}>{"×"}</span><CalcBlock config={config} instance={inst} favIds={favIds} setFavIds={setFavIds} onChange={v=>setList(p=>{const n=[...p];n[i]=v;return n;})} presets={presets} onPresets={onPresets} onEditNom={onEditNom} nomSnap={nomSnap} onOpenEditor={onOpenEditor} roomInfo={roomInfo}/></div>))}<div onClick={add} style={{textAlign:"center",padding:"9px 6px",color:T.accent,fontSize:11.5,fontWeight:700,cursor:"pointer",background:"rgba(79,70,229,0.05)",border:"1.5px dashed rgba(79,70,229,0.4)",borderRadius:10}}>{"+ "+config.title}</div></div>);}
 
 function ExtraBlock({list,setList,onEditNom,nomSnap}){const[showAdd,setShowAdd]=useState(false);const[sq,setSq]=useState("");return(<div style={{background:T.card,borderRadius:12,padding:10,marginBottom:8}}><div style={{fontSize:10,fontWeight:600,color:T.accent,textTransform:"uppercase",letterSpacing:"0.4px",marginBottom:6}}>{"Доп. работы и материалы"}</div>{list.map((item,i)=>{const n=NB(item.nomId);if(!n)return null;return(<div key={item.id} style={{display:"flex",alignItems:"center",gap:4,padding:"4px 0",borderBottom:"0.5px solid "+T.border}}><div style={{flex:1,minWidth:0}}><div style={{fontSize:11,color:T.text}}>{n.name}</div><div style={{fontSize:9,color:T.dim}}>{fmt((nomSnap&&nomSnap[n.id]!==undefined)?nomSnap[n.id]:n.price)+" /"+n.unit}</div></div><NI value={item.qty||0} onChange={v=>setList(p=>{const c=[...p];c[i]={...c[i],qty:v};return c;})} w={32}/><span style={{fontSize:11,fontWeight:500,color:T.accent,minWidth:40,textAlign:"right"}}>{fmt((item.qty||0)*((nomSnap&&nomSnap[n.id]!==undefined)?nomSnap[n.id]:n.price))}</span><span onClick={()=>onEditNom?.(item.nomId)} style={{color:T.accent,cursor:"pointer",fontSize:12,padding:2}}>✎</span><span onClick={()=>setList(p=>{const c=[...p];c.splice(i,1);return c;})} style={{color:T.red,cursor:"pointer",fontSize:13,padding:2}}>{"×"}</span></div>);})}<div onClick={()=>{setSq("");setShowAdd(true);}} style={{textAlign:"center",padding:8,color:T.accent,fontSize:11,cursor:"pointer",marginTop:4}}>{"+ Из номенклатур"}</div>{showAdd&&<div style={{position:"fixed",top:0,left:0,right:0,bottom:0,zIndex:35,background:T.overlay,overflow:"auto",padding:"16px 10px"}}><div style={{background:T.card,border:"1px solid "+T.border,borderRadius:16,padding:14,maxWidth:340,margin:"0 auto"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}><span style={{fontSize:14,fontWeight:600}}>{"Номенклатуры"}</span><span onClick={()=>setShowAdd(false)} style={{color:T.red,fontSize:16,cursor:"pointer"}}>{"×"}</span></div>{(()=>{const filtered=activeNoms().filter(n=>!sq||n.name.toLowerCase().includes(sq.toLowerCase()));return(<div><input value={sq} onChange={e=>setSq(e.target.value)} placeholder="🔍 Поиск номенклатур..." style={{width:"100%",background:T.inputBg,border:"1px solid "+T.border,borderRadius:8,padding:"6px 10px",color:T.text,fontSize:11,fontFamily:"inherit",boxSizing:"border-box",outline:"none",marginBottom:6}}/>
 {["profile","work","canvas"].map(type=>{const lst=filtered.filter(n=>n.type===type);if(!lst.length)return null;return(<div key={type}><div style={{fontSize:9,fontWeight:600,color:type==="profile"?T.accent:type==="work"?T.green:T.purple,textTransform:"uppercase",margin:"6px 0 3px"}}>{type==="profile"?"Материалы ("+lst.length+")":type==="work"?"Работы ("+lst.length+")":"Полотна"}</div>{lst.map(n=>(<div key={n.id} onClick={()=>{setList(p=>[...p,{id:uid(),nomId:n.id,qty:1}]);setShowAdd(false);}} style={{padding:6,background:T.pillBg,borderRadius:8,marginBottom:2,cursor:"pointer",display:"flex",justifyContent:"space-between"}}><span style={{fontSize:10,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>{n.name}</span><span style={{fontSize:10,color:T.dim,flexShrink:0,marginLeft:4}}>{fmt(n.price)}</span></div>))}</div>);})}</div>);})()}</div></div>}</div>);}

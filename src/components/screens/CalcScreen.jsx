@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import NomEditor from "./NomEditorV2.jsx";
+import NomPicker from "./NomPicker.jsx";
 import ButtonEditor from "../editor/ButtonEditor.jsx";
 import { T, setT, THEMES } from "../../theme.js";
 import { fmt, uid, deep, safeStr } from "../../utils/helpers.js";
@@ -114,7 +115,7 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
     return base;
   });
   /* globalOpts должен быть объявлен ДО useEffect который его использует */
-  const[globalOpts,setGlobalOpts]=useState([{id:uid(),name:"Укрытие стен защитной плёнкой",nomId:"w_prot",param:"perim",on:true}]);
+  const[globalOpts,setGlobalOpts]=useState([{id:uid(),name:"Укрытие стен защитной плёнкой",nomId:"w_prot",param:"perim",on:false}]);
   /* Свои блоки из редактора кнопок */
   const[customBlocks,setCustomBlocks]=useState(()=>Array.isArray(CALC_STATE_REF.customBlocks)?deep(CALC_STATE_REF.customBlocks):[]);
   /* Пишем текущее состояние в глобальный ref для экспорта */
@@ -122,7 +123,7 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
   const[pdfData,setPdfData]=useState(null);
   const[estEd,setEstEd]=useState({});
   const[showGlobalEdit,setShowGlobalEdit]=useState(false);
-  const[goNomSearch,setGoNomSearch]=useState("");
+  const[goNomPick,setGoNomPick]=useState(null); /* индекс пункта опций, для которого открыт выбор номенклатуры */
   const fRef=useRef(null);
 
   const[showNomEditor,setShowNomEditor]=useState(false);
@@ -396,58 +397,56 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
           const qty=go.param==="area"?gA(r):gP(r);
           const price=nom?.price||0;
           return(<div key={go.id} style={{display:"flex",alignItems:"center",gap:6,padding:"4px 0",borderBottom:gi<globalOpts.length-1?"0.5px solid "+T.border:"none"}}>
-            <input type="checkbox" checked={go.on!==false} onChange={e=>{setGlobalOpts(prev=>{const n=[...prev];n[gi]={...n[gi],on:e.target.checked};return n;});}} style={{accentColor:T.green,width:14,height:14}}/>
+            <input type="checkbox" checked={go.on===true} onChange={e=>{setGlobalOpts(prev=>{const n=[...prev];n[gi]={...n[gi],on:e.target.checked};return n;});}} style={{accentColor:T.green,width:14,height:14}}/>
             <div style={{flex:1}}>
-              <div style={{fontSize:11,color:go.on!==false?T.text:T.muted}}>{go.name}</div>
+              <div style={{fontSize:11,color:go.on===true?T.text:T.muted}}>{go.name}</div>
               <div style={{fontSize:9,color:T.dim}}>{fmt(qty)+" "+(go.param==="area"?"м²":"м.п.")+" × "+fmt(price)}</div>
             </div>
-            <span style={{fontSize:12,fontWeight:500,color:go.on!==false?T.accent:T.muted}}>{fmt(go.on!==false?qty*price:0)}</span>
+            <span style={{fontSize:12,fontWeight:500,color:go.on===true?T.accent:T.muted}}>{fmt(go.on===true?qty*price:0)}</span>
           </div>);
         })}
         {globalOpts.length===0&&<div style={{fontSize:10,color:T.dim,textAlign:"center",padding:4}}>{"Нет опций. Нажмите ⚙"}</div>}
       </div>
 
-      {/* Global Options Editor */}
-      {showGlobalEdit&&<div style={{position:"fixed",top:0,left:0,right:0,bottom:0,zIndex:40,background:T.overlay,overflow:"auto",padding:"16px 10px"}}>
-        <div style={{background:T.card,border:"1px solid "+T.border,borderRadius:16,padding:14,maxWidth:380,margin:"0 auto"}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-            <span style={{fontSize:14,fontWeight:600}}>{"Опции помещения"}</span>
-            <span onClick={()=>setShowGlobalEdit(false)} style={{color:T.red,fontSize:16,cursor:"pointer"}}>{"×"}</span>
-          </div>
-          <div style={{fontSize:10,color:T.dim,marginBottom:8}}>{"До 3 пунктов. Применяются ко всем помещениям."}</div>
-          {globalOpts.map((go,gi)=>(<div key={go.id} style={{background:T.card2,borderRadius:10,padding:10,marginBottom:8}}>
-            <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-              <span style={{fontSize:10,fontWeight:600,color:T.accent}}>{"Пункт "+(gi+1)}</span>
-              <span onClick={()=>setGlobalOpts(prev=>prev.filter((_,j)=>j!==gi))} style={{color:T.red,fontSize:11,cursor:"pointer"}}>{"Удалить"}</span>
+      {/* Опции помещения — оформление как в редакторе кнопок */}
+      {showGlobalEdit&&<div style={{position:"fixed",inset:0,zIndex:40,background:"#f2f3fa",overflowY:"auto",fontFamily:"'Inter',-apple-system,system-ui,sans-serif",color:"#1e2530"}}>
+        <div style={{position:"sticky",top:0,zIndex:5,background:"#fff",borderBottom:"2px solid #4F46E5",padding:"10px 14px",display:"flex",alignItems:"center",gap:10}}>
+          <button onClick={()=>setShowGlobalEdit(false)} style={{background:"rgba(79,70,229,0.1)",border:"none",borderRadius:9,width:32,height:32,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0}}>
+            <svg width="15" height="15" fill="none" stroke="#4F46E5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 3.5L5 8l4.5 4.5"/></svg>
+          </button>
+          <div style={{fontSize:15,fontWeight:800}}>{"Опции помещения"}</div>
+          <div style={{marginLeft:"auto",fontSize:10,color:"#a5a9b8"}}>{"до 3 пунктов · ко всем помещениям"}</div>
+        </div>
+        <div style={{maxWidth:560,margin:"0 auto",padding:"12px 12px 60px"}}>
+          {globalOpts.map((go,gi)=>(<div key={go.id} style={{background:"#fff",borderRadius:14,padding:13,marginBottom:10,border:"1px solid #f1f1f8"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+              <span style={{fontSize:10,fontWeight:800,color:"#4F46E5",textTransform:"uppercase",letterSpacing:"0.6px"}}>{"Пункт "+(gi+1)}</span>
+              <button onClick={()=>setGlobalOpts(prev=>prev.filter((_,j)=>j!==gi))} style={{background:"rgba(255,59,48,0.08)",border:"none",borderRadius:9,padding:"5px 10px",fontSize:10.5,fontWeight:700,color:"#ff3b30",cursor:"pointer",fontFamily:"inherit"}}>{"✕ Удалить"}</button>
             </div>
-            <input value={go.name} onChange={e=>{setGlobalOpts(prev=>{const n=[...prev];n[gi]={...n[gi],name:e.target.value};return n;});}} placeholder="Название" style={{width:"100%",background:T.card,border:"1px solid "+T.border,borderRadius:8,padding:"6px 10px",color:T.text,fontSize:12,fontFamily:"inherit",boxSizing:"border-box",outline:"none",marginBottom:6}}/>
+            <div style={{fontSize:10,color:"#a5a9b8",marginBottom:4}}>{"Название"}</div>
+            <input value={go.name} onChange={e=>{setGlobalOpts(prev=>{const n=[...prev];n[gi]={...n[gi],name:e.target.value};return n;});}} placeholder="Например: укрытие стен плёнкой" style={{width:"100%",background:"#f2f3fa",border:"1px solid #f1f1f8",borderRadius:10,padding:"9px 12px",color:"#1e2530",fontSize:13,fontFamily:"inherit",boxSizing:"border-box",outline:"none",marginBottom:10}}/>
+            <div style={{fontSize:10,color:"#a5a9b8",marginBottom:4}}>{"Номенклатура"}</div>
+            {go.nomId?(
+              <div style={{display:"flex",alignItems:"center",gap:10,background:"#f2f3fa",border:"1px solid rgba(79,70,229,0.35)",borderRadius:10,padding:"8px 10px",marginBottom:10}}>
+                <div onClick={()=>setGoNomPick(gi)} style={{flex:1,minWidth:0,cursor:"pointer"}}>
+                  <div style={{fontSize:12,color:"#1e2530",fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{NB(go.nomId)?.name||go.nomId}</div>
+                  <div style={{fontSize:9,color:"#a5a9b8"}}>{fmt(NB(go.nomId)?.price||0)+" ₽ · нажмите для смены"}</div>
+                </div>
+                <span onClick={()=>openNomEditorFromCalc(go.nomId)} style={{color:"#4F46E5",fontSize:13,cursor:"pointer",padding:"2px 6px",background:"rgba(79,70,229,0.08)",borderRadius:6,flexShrink:0}}>{"✎"}</span>
+              </div>
+            ):(
+              <button onClick={()=>setGoNomPick(gi)} style={{width:"100%",background:"transparent",color:"#4F46E5",border:"1.5px dashed rgba(79,70,229,0.4)",borderRadius:10,padding:9,fontSize:11.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginBottom:10}}>{"+ Выбрать номенклатуру"}</button>
+            )}
+            <div style={{fontSize:10,color:"#a5a9b8",marginBottom:4}}>{"Параметр"}</div>
             <div style={{display:"flex",gap:6}}>
-              <div style={{flex:1}}>
-                <div style={{fontSize:9,color:T.dim,marginBottom:2}}>{"Номенклатура"}</div>
-                {go.nomId?(<div onClick={()=>{setGlobalOpts(prev=>{const n=[...prev];n[gi]={...n[gi],nomId:""};return n;});setGoNomSearch("");}} style={{display:"flex",alignItems:"center",gap:10,background:T.card,border:"1px solid "+T.accent,borderRadius:8,padding:"6px 8px",cursor:"pointer"}}><div style={{flex:1,minWidth:0}}><div style={{fontSize:10,color:T.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{NB(go.nomId)?.name||go.nomId}</div><div style={{fontSize:8,color:T.dim}}>{fmt(NB(go.nomId)?.price||0)+" · нажмите для смены"}</div></div><div onClick={(e)=>{e.stopPropagation();openNomEditorFromCalc(go.nomId);}} style={{color:T.accent,fontSize:12,cursor:"pointer",padding:"0 4px",flexShrink:0}}>✎</div></div>):(<div>
-                  <input value={goNomSearch} onChange={e=>setGoNomSearch(e.target.value)} placeholder="🔍 Поиск номенклатуры..." style={{width:"100%",background:T.card,border:"1px solid "+T.border,borderRadius:8,padding:"6px 8px",color:T.text,fontSize:10,fontFamily:"inherit",boxSizing:"border-box",outline:"none",marginBottom:4}}/>
-                  <div style={{maxHeight:120,overflow:"auto",background:T.card,borderRadius:8}}>
-                    {activeNoms().filter(n=>{
-                      const s=(goNomSearch||"").trim();
-                      if(!n?.name)return false;
-                      if(n.type==="option")return false; /* скрываем базовый "option" — используем материальные/рабочие варианты */
-                      return !s ? true : n.name.toLowerCase().includes(s.toLowerCase());
-                    }).map(n=>(<div key={n.id} onClick={()=>{setGlobalOpts(prev=>{const nn=[...prev];nn[gi]={...nn[gi],nomId:n.id};return nn;});setGoNomSearch("");}} style={{padding:"4px 8px",fontSize:10,color:T.text,cursor:"pointer",borderBottom:"0.5px solid "+T.border,display:"flex",justifyContent:"space-between"}}><span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>{n.name}</span><span style={{color:T.accent,flexShrink:0,marginLeft:4}}>{fmt(n.price)}</span></div>))}
-                  </div>
-                </div>)}
-              </div>
-              <div style={{width:100}}>
-                <div style={{fontSize:9,color:T.dim,marginBottom:2}}>{"Параметр"}</div>
-                <select value={go.param||"perim"} onChange={e=>{setGlobalOpts(prev=>{const n=[...prev];n[gi]={...n[gi],param:e.target.value};return n;});}} style={{width:"100%",background:T.card,border:"1px solid "+T.border,borderRadius:8,padding:"6px 4px",color:T.text,fontSize:11,fontFamily:"inherit",outline:"none"}}>
-                  <option value="perim">{"Периметр"}</option>
-                  <option value="area">{"Площадь"}</option>
-                </select>
-              </div>
+              {[{v:"perim",l:"P · периметр"},{v:"area",l:"S · площадь"}].map(o=>{const a=(go.param||"perim")===o.v;
+                return(<button key={o.v} onClick={()=>setGlobalOpts(prev=>{const n=[...prev];n[gi]={...n[gi],param:o.v};return n;})} style={{flex:1,background:a?"#4F46E5":"#fff",color:a?"#fff":"#5a6070",border:"1px solid "+(a?"#4F46E5":"#e8e8f2"),borderRadius:9,padding:"8px 4px",fontSize:11,fontWeight:a?700:500,cursor:"pointer",fontFamily:"inherit"}}>{o.l}</button>);})}
             </div>
           </div>))}
-          {globalOpts.length<3&&<button onClick={()=>setGlobalOpts(prev=>[...prev,{id:uid(),name:"",nomId:"",param:"perim",on:true}])} style={{width:"100%",background:T.pillBg,border:"1px dashed "+T.accent,borderRadius:10,padding:8,color:T.accent,fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>{"+ Добавить пункт"}</button>}
-          <button onClick={()=>setShowGlobalEdit(false)} style={{width:"100%",marginTop:8,background:T.actBg,border:"1px solid "+T.accent+"40",borderRadius:10,padding:10,color:T.green,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{"Готово"}</button>
+          {globalOpts.length<3&&<button onClick={()=>setGlobalOpts(prev=>[...prev,{id:uid(),name:"",nomId:"",param:"perim",on:false}])} style={{width:"100%",background:"transparent",border:"1.5px dashed rgba(79,70,229,0.4)",borderRadius:10,padding:10,color:"#4F46E5",fontSize:11.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit",marginBottom:10}}>{"+ Добавить пункт"}</button>}
+          <button onClick={()=>setShowGlobalEdit(false)} style={{width:"100%",background:"#4F46E5",border:"none",borderRadius:10,padding:11,color:"#fff",fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{"Готово"}</button>
         </div>
+        {goNomPick!=null&&<NomPicker title="Номенклатура пункта" onPick={ids=>{const id=ids[0];if(id)setGlobalOpts(prev=>{const n=[...prev];const nm=NB(id);n[goNomPick]={...n[goNomPick],nomId:id,name:n[goNomPick].name||nm?.name||""};return n;});setGoNomPick(null);}} onClose={()=>setGoNomPick(null)}/>}
       </div>}
 
       {/* Quick Nom Editor */}
@@ -460,7 +459,7 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
       <CalcBlock config={BLOCK_CFG[0]} favIds={sharedFavs["canvas"]} setFavIds={ids=>setSharedFavs(p=>({...p,"canvas":ids}))} instance={{...(r.canvas||{}),verts:r.v}} onChange={v=>{const{verts,...rest}=v;const cleaned={...rest,iq:{}};u(r.id,rm=>{rm.canvas=cleaned;return rm;});if(cleaned.applyAll){rooms.forEach(rm2=>{if(rm2.id===r.id)return;const a2=gA(rm2);u(rm2.id,rm3=>{rm3.canvas={...cleaned,id:rm3.canvas?.id||uid(),qty:a2,iq:{}};return rm3;});});}}} presets={presets} onPresets={setPresets} autoAngles={autoAngles} onApplyAll={()=>{const cv={...(r.canvas||{}),iq:{}};rooms.forEach(rm2=>{if(rm2.id===r.id)return;const a2=gA(rm2);u(rm2.id,rm3=>{rm3.canvas={...JSON.parse(JSON.stringify(cv)),id:rm3.canvas?.id||uid(),qty:a2,iq:{}};return rm3;});});}} onEditNom={openNomEditorFromCalc} onOpenEditor={openButtonEditor} roomInfo={roomInfo} nomSnap={nomSnapshot}/>
       {/* Доп. полотна */}
       {(r.extraCanvas||[]).map((ec,i)=>(<div key={ec.id} style={{position:"relative"}}><span onClick={()=>u(r.id,rm=>{rm.extraCanvas.splice(i,1);return rm;})} style={{position:"absolute",top:4,right:36,color:T.red,cursor:"pointer",fontSize:13,zIndex:2,padding:4,background:T.card,borderRadius:6}}>{"×"}</span><CalcBlock config={{...BLOCK_CFG[0],title:"Доп. полотно #"+(i+1)}} favIds={sharedFavs["canvas"]} setFavIds={ids=>setSharedFavs(p=>({...p,"canvas":ids}))} instance={ec} onChange={v=>u(r.id,rm=>{rm.extraCanvas[i]=v;return rm;})} presets={presets} onPresets={setPresets} onEditNom={openNomEditorFromCalc} onOpenEditor={openButtonEditor} roomInfo={roomInfo} nomSnap={nomSnapshot}/></div>))}
-      <div onClick={()=>u(r.id,rm=>{if(!rm.extraCanvas)rm.extraCanvas=[];rm.extraCanvas.push({id:uid(),btnId:"btn_c_msd",qty:0,off:{},oq:{}});return rm;})} style={{textAlign:"center",padding:6,color:"#9aa0b2",fontSize:10.5,fontWeight:700,cursor:"pointer",background:"transparent",marginBottom:8}}>{"+ Доп. полотно"}</div>
+      <div onClick={()=>u(r.id,rm=>{if(!rm.extraCanvas)rm.extraCanvas=[];rm.extraCanvas.push({id:uid(),btnId:"btn_c_msd",qty:0,off:{},oq:{}});return rm;})} style={{textAlign:"center",padding:"9px 6px",color:T.accent,fontSize:11.5,fontWeight:700,cursor:"pointer",background:"rgba(79,70,229,0.05)",border:"1.5px dashed rgba(79,70,229,0.4)",borderRadius:10,marginBottom:8}}>{"+ Доп. полотно"}</div>
       <CalcBlock config={BLOCK_CFG[1]} favIds={sharedFavs["main"]} setFavIds={ids=>setSharedFavs(p=>({...p,"main":ids}))} instance={{...(r.mainProf||{}),_subTotal:(r.extras||[]).filter(x=>x.subP).reduce((s,x)=>s+(x.qty||0),0)+(r.curtains||[]).filter(x=>x.subP).reduce((s,x)=>s+(x.qty||0),0)}} onChange={v=>{u(r.id,rm=>{rm.mainProf=v;return rm;});if(v.applyAll){rooms.forEach(rm2=>{if(rm2.id===r.id)return;const p2=gP(rm2);const angs2=getAngles((rm2.v||[]).map(pp=>[pp[0]*1000,pp[1]*1000]));const inn2=angs2.filter(d=>d===90).length,out2=angs2.filter(d=>d===270).length;u(rm2.id,rm3=>{rm3.mainProf={...JSON.parse(JSON.stringify(v)),id:rm3.mainProf?.id||uid(),qty:p2,oq:{...v.oq,"o_inner_angle":inn2,"o_outer_angle":out2,"o_angle":inn2+out2}};return rm3;});});}}} presets={presets} onPresets={setPresets} autoAngles={autoAngles} onApplyAll={()=>{const mp=r.mainProf||{};rooms.forEach(rm2=>{if(rm2.id===r.id)return;const p2=gP(rm2);const angs2=getAngles((rm2.v||[]).map(pp=>[pp[0]*1000,pp[1]*1000]));const inn2=angs2.filter(d=>d===90).length,out2=angs2.filter(d=>d===270).length;u(rm2.id,rm3=>{rm3.mainProf={...JSON.parse(JSON.stringify(mp)),id:rm3.mainProf?.id||uid(),qty:p2,oq:{...mp.oq,"o_inner_angle":inn2,"o_outer_angle":out2,"o_angle":inn2+out2}};return rm3;});});}} onEditNom={openNomEditorFromCalc} onOpenEditor={openButtonEditor} roomInfo={roomInfo} nomSnap={nomSnapshot}/>
       <MultiBlock config={BLOCK_CFG[2]} favIds={sharedFavs["extra"]} setFavIds={ids=>setSharedFavs(p=>({...p,"extra":ids}))} list={r.extras||[]} setList={v=>{const fn=typeof v==="function"?v:()=>v;u(r.id,rm=>{rm.extras=fn(rm.extras||[]);return rm;});}} presets={presets} onPresets={setPresets} onEditNom={openNomEditorFromCalc} onOpenEditor={openButtonEditor} roomInfo={roomInfo} nomSnap={nomSnapshot}/>
       <MultiBlock config={BLOCK_CFG[3]} favIds={sharedFavs["light"]} setFavIds={ids=>setSharedFavs(p=>({...p,"light":ids}))} list={r.lights||[]} setList={v=>{const fn=typeof v==="function"?v:()=>v;u(r.id,rm=>{rm.lights=fn(rm.lights||[]);return rm;});}} presets={presets} onPresets={setPresets} onEditNom={openNomEditorFromCalc} onOpenEditor={openButtonEditor} roomInfo={roomInfo} nomSnap={nomSnapshot}/>
