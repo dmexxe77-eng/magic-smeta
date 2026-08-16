@@ -14,17 +14,19 @@ function PolyMini({verts,areaOverride,perimOverride,onClick,roll}){
   const rw=Math.max(mxx-mnx,0.001),rh=Math.max(mxy-mny,0.001);
   const W=300,H2=80,pad=12;
   /* Отрез может выходить за габарит (перерасход) и расширяться на припуск —
-     масштабируем по полному покрытию, чтобы ничего не уезжало за край. */
+     масштабируем по полному покрытию, чтобы ничего не уезжало за край.
+     Под подпись размера резервируем место сверху (или слева). */
   const mM=roll?.mM||0;
+  const padT=roll&&roll.axis==="x"?22:pad,padL=roll&&roll.axis==="y"?22:pad;
   const exX=roll?(roll.axis==="x"?Math.max(rw+2*mM,roll.strips*roll.wM):rw+2*mM):rw;
   const exY=roll?(roll.axis==="y"?Math.max(rh+2*mM,roll.strips*roll.wM):rh+2*mM):rh;
-  const msc=Math.min((W-2*pad)/exX,(H2-2*pad)/exY);
-  const mox=pad+(W-2*pad-exX*msc)/2+mM*msc,moy=pad+(H2-2*pad-exY*msc)/2+mM*msc;
+  const msc=Math.min((W-padL-pad)/exX,(H2-padT-pad)/exY);
+  const mox=padL+(W-padL-pad-exX*msc)/2+mM*msc,moy=padT+(H2-padT-pad-exY*msc)/2+mM*msc;
   return(<div onClick={onClick} style={{cursor:"pointer",background:T.pillBg,borderRadius:12,border:"1px solid "+T.pillBd,padding:6,marginBottom:4}}>
     <svg width="100%" height={H2} viewBox={`0 0 ${W} ${H2}`} preserveAspectRatio="xMidYMid meet" style={{borderRadius:8}}>
       <polygon points={pts.map(p=>`${mox+(p[0]-mnx)*msc},${moy+(p[1]-mny)*msc}`).join(" ")} fill={T.pillBd} stroke={T.actBd} strokeWidth="1.5"/>
       {roll&&(()=>{/* отрез: полосы полотна шириной ролика поверх чертежа */
-        const ac=T.accent,wPx=roll.wM*msc,mPx=mM*msc,lbl="ролик "+roll.cm+" см"+(roll.strips>1?" · "+roll.strips+" полосы":"");
+        const ac=T.accent,wPx=roll.wM*msc,mPx=mM*msc,lbl=roll.cm+" см";
         const x0=mox-mPx,y0=moy-mPx,lenX=(rw+2*mM)*msc,lenY=(rh+2*mM)*msc;
         const strips=[];
         for(let i=0;i<roll.strips;i++){
@@ -36,8 +38,14 @@ function PolyMini({verts,areaOverride,perimOverride,onClick,roll}){
             if(i>0)strips.push(<line key={"s"+i} x1={x0} y1={y0+i*wPx} x2={x0+lenX} y2={y0+i*wPx} stroke={T.red} strokeWidth="1.4"/>);
           }
         }
-        const topY=roll.axis==="y"?y0:y0;
-        return(<g>{strips}<text x={W/2} y={topY-3<9?H2-3:topY-3} textAnchor="middle" fill={ac} fontSize="7.5" fontWeight="700" fontFamily="-apple-system">{lbl}</text></g>);})()}
+        /* подпись — размер ширины, на той стороне, по которой лежит ролик */
+        let label;
+        if(roll.axis==="x"){const lx=x0+wPx/2,ly=y0-6;
+          label=<text x={lx} y={ly} textAnchor="middle" fill={ac} fontSize="8" fontWeight="700" fontFamily="-apple-system">{lbl}</text>;
+        }else{const lx=x0-7,ly=y0+wPx/2;
+          label=<text x={lx} y={ly} textAnchor="middle" transform={"rotate(-90 "+lx+" "+ly+")"} fill={ac} fontSize="8" fontWeight="700" fontFamily="-apple-system">{lbl}</text>;
+        }
+        return(<g>{strips}{label}</g>);})()}
       {pts.map((p,i)=>{const x=mox+(p[0]-mnx)*msc,y=moy+(p[1]-mny)*msc;const d=angs[i];const col=d===90?T.green:d===270?T.red:T.accent;return(<circle key={i} cx={x} cy={y} r={2.5} fill={col}/>);})}
     </svg>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:2}}>
