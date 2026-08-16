@@ -63,6 +63,18 @@ export function canvasUsage(box, W, shrink = 0, dir = null) {
   return { ...best, area: Math.round(best.area * 100) / 100, width: W };
 }
 
+/* Полотна одной серии внутри кнопки — варианты ширины, а не отдельные строки.
+   ≥2 таких позиций → пользователь сам задал набор ширин; одна → вся серия из базы. */
+export function presetWidthOptions(presetNoms, base, allNoms) {
+  if (!base) return [];
+  const key = seriesKey(base.name);
+  const own = (presetNoms || [])
+    .filter(n => n && n.type === "canvas" && n.w && seriesKey(n.name) === key)
+    .sort((a, b) => a.w - b.w);
+  if (own.length > 1) return own;
+  return canvasSiblings(base, allNoms);
+}
+
 /* ── Раскрой: настройки живут на кнопке ──
    ПВХ: усадка N% (полотно заказывают меньше и тянут — влияет на подбор ширины).
    Ткань: усадки нет, но припуск N см с каждой стороны (входит в габарит). */

@@ -11,7 +11,7 @@ import { P, PF, Pmp, Pap, Pcu, Ptr, DEFAULT_MAT, KK, LIGHT, OPT, PIMG, DEFAULT_F
 import { ALL_NOM, NB, addNewNom, deleteNom, DELETED_NOM_IDS, NOM_BRAND_GROUPS, activeNoms } from "../../data/nomenclature.jsx";
 import { PRESETS_GEN, PRbyId, USER_PRESETS_OVERRIDE, USER_FAVS_OVERRIDE, BLOCK_CFG, CALC_STATE_REF, snapNomPrices, newRoom, newR, gA, gP, buildEst, sanitizeOrdersForStorage, applyNomsSnapshot, resolveNomByEstimateLine, STATUSES} from "../../data/presets.js";
 import { btnS, N, SecH, Sel, ProfSel, ProfDD, OptsInline, ProfLine, NI, ProGate } from "../ui.jsx";
-import { canvasSiblings, roomBox, canvasUsage, bestCanvasWidth, cutParams } from "../../data/canvas.js";
+import { canvasSiblings, roomBox, canvasUsage, bestCanvasWidth, cutParams, seriesKey, presetWidthOptions } from "../../data/canvas.js";
 import { AppHeader } from "../AppHeader.jsx";
 import PolyMini from "../canvas/PolyMini.jsx";
 import PolyEditorFull from "../canvas/PolyEditorFull.jsx";
@@ -382,14 +382,17 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
       <div style={{display:"flex",gap:6,marginBottom:6}}>
         <div style={{flex:1}} onClick={()=>setPolyEdit(true)}>
           <PolyMini verts={r.v} areaOverride={r.aO} perimOverride={r.pO} roll={(()=>{
-            /* Раскрой полотна для чертежа: какая сторона перекрывается шириной ролика */
+            /* Раскрой полотна для чертежа — только при включённом перерасходе */
+            if(!r.canvas?.overcut)return null;
             const cPr=presets.find(p=>p.id===r.canvas?.btnId);if(!cPr)return null;
-            const cNom=r.canvas?.wPick?NB(r.canvas.wPick):(cPr.items||[]).map(id=>NB(id)).find(n=>n?.type==="canvas");
+            const cvBase=(cPr.items||[]).map(id=>NB(id)).find(n=>n?.type==="canvas");
+            const pickNom=r.canvas?.wPick?NB(r.canvas.wPick):null;
+            const cNom=(pickNom&&cvBase&&pickNom.type==="canvas"&&seriesKey(pickNom.name)===seriesKey(cvBase.name))?pickNom:cvBase;
             const cp=cutParams(cPr,r.canvas); /* усадка/припуск — из кнопки */
             const rbox=roomBox(r.v,cp.marginM);
             if(!cNom?.w||!rbox)return null;
             const use=canvasUsage(rbox,cNom.w,cp.shrink,r.canvas?.wDir);if(!use)return null;
-            const sibs=canvasSiblings(cNom,activeNoms());
+            const sibs=presetWidthOptions((cPr.items||[]).map(id=>NB(id)),cvBase,activeNoms());
             const best=bestCanvasWidth(rbox,sibs,cp.shrink,r.canvas?.wDir);
             /* полосы идут вдоль стороны use.dir; ширина ролика ложится поперёк неё */
             const axis=(use.dir==="a")===(rbox.ax==="x")?"y":"x";

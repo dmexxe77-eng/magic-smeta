@@ -11,7 +11,7 @@ import { PRESETS_GEN, PRbyId, USER_PRESETS_OVERRIDE, USER_FAVS_OVERRIDE, BLOCK_C
 import { btnS, N, SecH, Sel, ProfSel, ProfDD, OptsInline, ProfLine, NI, ProGate } from "../ui.jsx";
 import { SRC_META, legacyOptionSrc } from "../../data/buttonsStore.js";
 import { applyKo, applyMult, koOf, hasKo } from "../../data/qty.js";
-import { canvasSiblings, roomBox, canvasUsage, bestCanvasWidth, cutParams } from "../../data/canvas.js";
+import { canvasSiblings, roomBox, canvasUsage, bestCanvasWidth, cutParams, seriesKey, presetWidthOptions } from "../../data/canvas.js";
 import PolyMini from "../canvas/PolyMini.jsx";
 import PolyEditorFull from "../canvas/PolyEditorFull.jsx";
 import TracingCanvas from "../canvas/TracingCanvas.jsx";
@@ -191,9 +191,21 @@ function CalcBlock({config,instance,onChange,presets,onPresets,autoAngles,roomIn
   },[]);
   const pr=presets.find(p=>p.id===instance.btnId);
   /* Выбранная ширина ролика подменяет позицию полотна — как это делает buildEst */
+  /* Ширина (wPick) — вариант той же серии, что полотно кнопки. Чужая (осталась
+     от прошлой кнопки) игнорируется, иначе к ткани подмешивается ПВХ. */
+  const cvBase=config.cat==="canvas"?(pr?.items||[]).map(id=>NB(id)).find(n=>n?.type==="canvas"):null;
+  const pickNom=config.cat==="canvas"&&instance.wPick?NB(instance.wPick):null;
+  const pickOk=!!(pickNom&&cvBase&&pickNom.type==="canvas"&&seriesKey(pickNom.name)===seriesKey(cvBase.name));
+  let _cvSeen=false;
   const items=(pr?.items||[]).map(id=>{
-    if(config.cat==="canvas"&&instance.wPick){const base=NB(id);if(base&&base.type==="canvas")return NB(instance.wPick)||base;}
-    return NB(id);
+    const base=NB(id);
+    if(config.cat==="canvas"&&base&&base.type==="canvas"&&cvBase&&seriesKey(base.name)===seriesKey(cvBase.name)){
+      /* полотна одной серии — варианты ширины: в списке ровно одно, выбранное */
+      if(_cvSeen)return null;
+      _cvSeen=true;
+      return pickOk?pickNom:base;
+    }
+    return base;
   }).filter(Boolean);
   const opts=(pr?.options||[]).map(id=>NB(id)).filter(Boolean);
   const q=instance.qty||0;const upd=patch=>onChange({...instance,...patch});
@@ -227,10 +239,8 @@ function CalcBlock({config,instance,onChange,presets,onPresets,autoAngles,roomIn
     if(changed)upd({oq});
   },[instance.btnId,pr,roomInfo?.area,roomInfo?.perim,roomInfo?.cIn,roomInfo?.cOut]);
   /* ── Полотно: ширина ролика и расход ── */
-  const canvasNom=config.cat==="canvas"
-    ? (instance.wPick?NB(instance.wPick):items.find(n=>n.type==="canvas"))
-    : null;
-  const widthOpts=canvasNom?canvasSiblings(canvasNom,activeNoms()):[];
+  const canvasNom=config.cat==="canvas"?(pickOk?pickNom:cvBase):null;
+  const widthOpts=cvBase?presetWidthOptions((pr?.items||[]).map(id=>NB(id)),cvBase,activeNoms()):[];
   /* Настройки раскроя (усадка ПВХ / припуск ткани) живут на кнопке */
   const cutP=config.cat==="canvas"?cutParams(pr,instance):null;
   const shrink=cutP?cutP.shrink:0;
@@ -267,7 +277,7 @@ function CalcBlock({config,instance,onChange,presets,onPresets,autoAngles,roomIn
     {(()=>{const safeFavIds=Array.isArray(favIds)?favIds:[];const favBtns=presets.filter(p=>safeFavIds.includes(p.id));
       /* Единый вид чипов во всех блоках: ширина по содержимому, перенос на строки.
          Раньше 3+ кнопок растягивались в сетку на всю ширину, 1–2 — нет: блоки выглядели по-разному. */
-      return(<div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:8}}>{favBtns.map(p=>{const a=p.id===instance.btnId;return(<button key={p.id} onClick={()=>upd({btnId:a?"":p.id,off:{},oq:{},...(config.cat==="canvas"?{iq:{}}:{})})} style={{flex:"0 1 auto",minWidth:100,maxWidth:"100%",background:a?T.actBg:T.pillBg,border:"1.5px solid "+(a?T.accent:T.border),borderRadius:10,padding:"5px 14px",cursor:"pointer",textAlign:"center",fontFamily:"inherit",color:a?T.accent:T.sub,fontSize:10,fontWeight:a?600:400,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</button>);})}{onOpenEditor&&<button onClick={()=>onOpenEditor(config.cat,instance.btnId)} title="Редактор кнопок" style={{flex:"0 0 auto",minWidth:32,background:"transparent",border:"1.5px dashed rgba(79,70,229,0.35)",borderRadius:10,padding:"5px 8px",cursor:"pointer",color:T.accent,fontSize:11,fontFamily:"inherit"}}>{"✎"}</button>}</div>);})()}
+      return(<div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:8}}>{favBtns.map(p=>{const a=p.id===instance.btnId;return(<button key={p.id} onClick={()=>upd({btnId:a?"":p.id,off:{},oq:{},...(config.cat==="canvas"?{iq:{},wPick:null,wDir:null}:{})})} style={{flex:"0 1 auto",minWidth:100,maxWidth:"100%",background:a?T.actBg:T.pillBg,border:"1.5px solid "+(a?T.accent:T.border),borderRadius:10,padding:"5px 14px",cursor:"pointer",textAlign:"center",fontFamily:"inherit",color:a?T.accent:T.sub,fontSize:10,fontWeight:a?600:400,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</button>);})}{onOpenEditor&&<button onClick={()=>onOpenEditor(config.cat,instance.btnId)} title="Редактор кнопок" style={{flex:"0 0 auto",minWidth:32,background:"transparent",border:"1.5px dashed rgba(79,70,229,0.35)",borderRadius:10,padding:"5px 8px",cursor:"pointer",color:T.accent,fontSize:11,fontFamily:"inherit"}}>{"✎"}</button>}</div>);})()}
     <div style={{display:"flex",alignItems:"center",gap:4,padding:"4px 0",borderTop:"0.5px solid "+T.border,marginBottom:config.cat==="canvas"?2:6}}><span style={{fontSize:11,color:T.sub}}>{qtyLabel+":"}</span><NI value={q} onChange={v=>upd({qty:v})} w={44}/><span style={{fontSize:10,color:T.dim}}>{qtyUnit}</span>{config.id==="main"&&instance._subTotal>0&&<span style={{fontSize:9,color:T.orange,marginLeft:4}}>{"(эфф. "+fmt(effectiveQ)+")"}</span>}{config.subP&&<label style={{display:"flex",alignItems:"center",gap:3,fontSize:9,color:instance.subP?T.green:T.dim,cursor:"pointer",marginLeft:"auto"}}><input type="checkbox" checked={!!instance.subP} onChange={e=>upd({subP:e.target.checked})} style={{accentColor:"#30d158",width:11,height:11}}/>{"Вычесть из осн. профиля"}</label>}</div>
     {config.cat==="canvas"&&(()=>{
       const best=box?bestCanvasWidth(box,widthOpts,shrink,instance.wDir):null;
