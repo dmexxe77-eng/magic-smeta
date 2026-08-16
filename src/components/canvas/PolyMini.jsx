@@ -25,15 +25,22 @@ function PolyMini({verts,areaOverride,perimOverride,onClick,roll}){
   return(<div onClick={onClick} style={{cursor:"pointer",background:T.pillBg,borderRadius:12,border:"1px solid "+T.pillBd,padding:6,marginBottom:4}}>
     <svg width="100%" height={H2} viewBox={`0 0 ${W} ${H2}`} preserveAspectRatio="xMidYMid meet" style={{borderRadius:8}}>
       <polygon points={pts.map(p=>`${mox+(p[0]-mnx)*msc},${moy+(p[1]-mny)*msc}`).join(" ")} fill={T.pillBd} stroke={T.actBd} strokeWidth="1.5"/>
-      {roll&&(()=>{/* отрез: полосы полотна шириной ролика поверх чертежа */
-        const ac=T.accent,wPx=roll.wM*msc,mPx=mM*msc,lbl=roll.cm+" см";
-        const x0=mox-mPx,y0=moy-mPx,lenX=(rw+2*mM)*msc,lenY=(rh+2*mM)*msc;
-        const strips=[];
-        for(let i=0;i<roll.strips;i++){
-          if(roll.axis==="x"){/* ширина ролика ложится по горизонтали — полосы вертикальные */
+      {roll&&(()=>{/* отрез: полотно в заказном размере — с усадкой меньше помещения
+        (тянется при натяжке), с припуском больше. Числа расхода это не меняет. */
+        const ac=T.accent,k=roll.k||1,wPx=roll.wM*msc,mPx=mM*msc,lbl=roll.cm+" см";
+        const roomW=(rw+2*mM)*msc,roomH=(rh+2*mM)*msc;   /* габарит + припуск */
+        const strips=[];let x0,y0;
+        if(roll.axis==="x"){/* ширина ролика по горизонтали — полосы вертикальные */
+          const totalW=roll.strips*wPx,lenY=roomH*k;
+          x0=mox-mPx+(roomW-totalW)/2;y0=moy-mPx+(roomH-lenY)/2;
+          for(let i=0;i<roll.strips;i++){
             strips.push(<rect key={i} x={x0+i*wPx} y={y0} width={wPx} height={lenY} fill="rgba(79,70,229,0.10)" stroke={ac} strokeWidth="1" strokeDasharray="4 3"/>);
             if(i>0)strips.push(<line key={"s"+i} x1={x0+i*wPx} y1={y0} x2={x0+i*wPx} y2={y0+lenY} stroke={T.red} strokeWidth="1.4"/>);
-          }else{/* по вертикали — полосы горизонтальные */
+          }
+        }else{/* по вертикали — полосы горизонтальные */
+          const totalH=roll.strips*wPx,lenX=roomW*k;
+          x0=mox-mPx+(roomW-lenX)/2;y0=moy-mPx+(roomH-totalH)/2;
+          for(let i=0;i<roll.strips;i++){
             strips.push(<rect key={i} x={x0} y={y0+i*wPx} width={lenX} height={wPx} fill="rgba(79,70,229,0.10)" stroke={ac} strokeWidth="1" strokeDasharray="4 3"/>);
             if(i>0)strips.push(<line key={"s"+i} x1={x0} y1={y0+i*wPx} x2={x0+lenX} y2={y0+i*wPx} stroke={T.red} strokeWidth="1.4"/>);
           }

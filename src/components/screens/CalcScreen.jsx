@@ -396,7 +396,7 @@ function CalcScreen({initRooms,orderName,onBack,onRoomsChange,initPlanImage,init
             const best=bestCanvasWidth(rbox,sibs,cp.shrink,r.canvas?.wDir);
             /* полосы идут вдоль стороны use.dir; ширина ролика ложится поперёк неё */
             const axis=(use.dir==="a")===(rbox.ax==="x")?"y":"x";
-            return{cm:Math.round(cNom.w*100),wM:cNom.w,mM:cp.marginM,strips:use.strips,axis,
+            return{cm:Math.round(cNom.w*100),wM:cNom.w,mM:cp.marginM,k:1-(cp.shrink||0)/100,strips:use.strips,axis,
               onFlip:()=>u(r.id,rm=>{rm.canvas={...(rm.canvas||{}),wDir:use.dir==="a"?"b":"a"};return rm;}),
               widths:sibs.length>1?sibs.map(n=>({id:n.id,cm:Math.round(n.w*100),active:n.id===cNom.id,rec:best&&best.nom.id===n.id})):[],
               onPick:id=>u(r.id,rm=>{rm.canvas={...(rm.canvas||{}),wPick:id};return rm;})};
