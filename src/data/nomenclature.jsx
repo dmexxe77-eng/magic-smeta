@@ -75,6 +75,22 @@ export const ALL_NOM=(()=>{
 /* Активные позиции — то, что показываем в редакторах и списках выбора */
 export const activeNoms=()=>ALL_NOM.filter(n=>!n.arch);
 export const isArchived=id=>!!NB(id)?.arch;
+/* Восстановление удалённых позиций базы: их объекты живут в NOM_V2,
+   удаление лишь прячет их через DELETED_NOM_IDS — значит вернуть можно. */
+export const deletedBaseNoms=()=>NOM_V2.filter(n=>DELETED_NOM_IDS.includes(n.id));
+export function restoreNoms(ids){
+  const set=new Set(ids&&ids.length?ids:DELETED_NOM_IDS);
+  let restored=0;
+  NOM_V2.forEach(n=>{
+    if(!set.has(n.id))return;
+    const i=DELETED_NOM_IDS.indexOf(n.id);
+    if(i>=0)DELETED_NOM_IDS.splice(i,1);
+    if(!ALL_NOM.some(x=>x.id===n.id)){ALL_NOM.push(n);restored++;}
+  });
+  try{window.dispatchEvent(new CustomEvent("magicapp:nomChanged"));window.dispatchEvent(new Event("magicapp:saveNow"));}catch(e){}
+  return restored;
+}
+
 /* Свои разделы, созданные в редакторе номенклатур (переживают перезагрузку через снапшот) */
 export const RUNTIME_BRANDS=[];
 export function addBrand(name,color){

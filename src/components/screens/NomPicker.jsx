@@ -80,13 +80,13 @@ export default function NomPicker({ title = "Добавить позиции", e
 
     <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
       {/* рельса разделов */}
-      <div style={{ width: 92, flexShrink: 0, background: "#fff", borderRight: "1px solid " + LINE, overflowY: "auto", padding: "6px 5px" }}>
+      <div style={{ width: 66, flexShrink: 0, background: "#fff", borderRight: "1px solid " + LINE, overflowY: "auto", padding: "5px 4px" }}>
         {brands.map(b => { const n = all.filter(x => x.brand === b.id).length; const a = b.id === curBrand && !q;
           return (<button key={b.id} onClick={() => { setCurBrand(b.id); setFilterCat("all"); setQ(""); }}
-            style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, background: a ? "rgba(79,70,229,.08)" : "transparent", border: "none", borderRadius: 10, padding: "8px 2px", cursor: "pointer", fontFamily: "inherit", marginBottom: 2 }}>
-            <div style={{ width: 28, height: 28, borderRadius: 9, background: b.color || ACC, color: "#fff", fontSize: 9.5, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{initials(b.name)}</div>
-            <div style={{ fontSize: 9, fontWeight: a ? 800 : 600, color: a ? ACC : SUB, textAlign: "center", lineHeight: 1.15, overflow: "hidden", textOverflow: "ellipsis", width: "100%", whiteSpace: "nowrap" }}>{b.name}</div>
-            <div style={{ fontSize: 8.5, color: DIM, fontWeight: 700 }}>{n || "—"}</div>
+            style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, background: a ? "rgba(79,70,229,.08)" : "transparent", border: "none", borderRadius: 9, padding: "6px 1px", cursor: "pointer", fontFamily: "inherit", marginBottom: 1 }}>
+            <div style={{ width: 22, height: 22, borderRadius: 7, background: b.color || ACC, color: "#fff", fontSize: 8.5, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{initials(b.name)}</div>
+            <div style={{ fontSize: 8.5, fontWeight: a ? 800 : 600, color: a ? ACC : SUB, textAlign: "center", lineHeight: 1.1, overflow: "hidden", textOverflow: "ellipsis", width: "100%", whiteSpace: "nowrap" }}>{b.name}</div>
+            <div style={{ fontSize: 8, color: DIM, fontWeight: 700 }}>{n || "—"}</div>
           </button>); })}
       </div>
 

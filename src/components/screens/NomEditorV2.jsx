@@ -5,7 +5,7 @@
    Архивные позиции (старая база) здесь не показываются — они живут только в старых сметах. */
 import { useState, useEffect, useMemo, useRef } from "react";
 import { fmt, uid } from "../../utils/helpers.js";
-import { ALL_NOM, NB, addNewNom, deleteNom, RUNTIME_EDITED_NOMS, activeNoms, allBrandGroups, addBrand, deleteBrand } from "../../data/nomenclature.jsx";
+import { ALL_NOM, NB, addNewNom, deleteNom, RUNTIME_EDITED_NOMS, activeNoms, allBrandGroups, addBrand, deleteBrand, deletedBaseNoms, restoreNoms } from "../../data/nomenclature.jsx";
 import { persistNomPhotoToIdb, deleteNomPhotoFromIdb } from "../../utils/storage.js";
 
 const ACC = "#4F46E5", DARK = "#1e2530", DIM = "#a5a9b8", SUB = "#5a6070";
@@ -218,15 +218,30 @@ export default function NomEditorV2({ onClose, initialEditId }) {
       </div>
     </div>
 
+    {(() => {
+      const del = deletedBaseNoms();
+      if (!del.length) return null;
+      const here = del.filter(n => n.brand === curBrand);
+      return (<div style={{ background: "#fff7e6", borderBottom: "1px solid #f1e2bd", padding: "8px 12px", display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+        <div style={{ flex: 1, minWidth: 0, fontSize: 10.5, fontWeight: 700, color: "#8a6116", lineHeight: 1.4 }}>
+          {"Скрыто из базы: " + del.length + (here.length ? " · в этом разделе " + here.length : "")}
+        </div>
+        {here.length > 0 && <button onClick={() => { restoreNoms(here.map(n => n.id)); rerender(); }}
+          style={{ background: "#fff", border: "1px solid #e3cf9f", borderRadius: 8, padding: "5px 10px", fontSize: 10.5, fontWeight: 700, color: "#8a6116", cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>{"Вернуть раздел"}</button>}
+        <button onClick={() => { restoreNoms(); rerender(); }}
+          style={{ background: ACC, border: "none", borderRadius: 8, padding: "5px 10px", fontSize: 10.5, fontWeight: 800, color: "#fff", cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>{"Вернуть все"}</button>
+      </div>);
+    })()}
+
     <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
       {/* рельса разделов */}
-      <div style={{ width: 96, flexShrink: 0, background: "#fff", borderRight: "1px solid " + LINE, overflowY: "auto", padding: "6px 5px" }}>
+      <div style={{ width: 66, flexShrink: 0, background: "#fff", borderRight: "1px solid " + LINE, overflowY: "auto", padding: "5px 4px" }}>
         {brands.map(b => { const n = all.filter(x => x.brand === b.id).length; const a = b.id === curBrand && !q;
           return (<button key={b.id} onClick={() => { setCurBrand(b.id); setFilterCat("all"); setQ(""); }}
-            style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, background: a ? "rgba(79,70,229,.08)" : "transparent", border: "none", borderRadius: 10, padding: "8px 2px", cursor: "pointer", fontFamily: "inherit", marginBottom: 2 }}>
-            <div style={{ width: 30, height: 30, borderRadius: 9, background: b.color || ACC, color: "#fff", fontSize: 10, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{initials(b.name)}</div>
-            <div style={{ fontSize: 9.5, fontWeight: a ? 800 : 600, color: a ? ACC : SUB, textAlign: "center", lineHeight: 1.15, overflow: "hidden", textOverflow: "ellipsis", width: "100%", whiteSpace: "nowrap" }}>{b.name}</div>
-            <div style={{ fontSize: 9, color: DIM, fontWeight: 700 }}>{n || "—"}</div>
+            style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, background: a ? "rgba(79,70,229,.08)" : "transparent", border: "none", borderRadius: 9, padding: "6px 1px", cursor: "pointer", fontFamily: "inherit", marginBottom: 1 }}>
+            <div style={{ width: 22, height: 22, borderRadius: 7, background: b.color || ACC, color: "#fff", fontSize: 8.5, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{initials(b.name)}</div>
+            <div style={{ fontSize: 8.5, fontWeight: a ? 800 : 600, color: a ? ACC : SUB, textAlign: "center", lineHeight: 1.1, overflow: "hidden", textOverflow: "ellipsis", width: "100%", whiteSpace: "nowrap" }}>{b.name}</div>
+            <div style={{ fontSize: 8, color: DIM, fontWeight: 700 }}>{n || "—"}</div>
             {a && b.custom && (delBrandId === b.id
               ? <span onClick={e => { e.stopPropagation(); if (n === 0) { deleteBrand(b.id); const rest = allBrandGroups(); setBrands(rest); setCurBrand(rest[0]?.id || ""); } setDelBrandId(null); }}
                   style={{ fontSize: 8.5, fontWeight: 800, color: "#fff", background: n === 0 ? "#ff3b30" : "#c2c5d1", borderRadius: 5, padding: "2px 5px", marginTop: 2 }}>{n === 0 ? "удалить?" : "не пуст"}</span>
@@ -235,8 +250,8 @@ export default function NomEditorV2({ onClose, initialEditId }) {
           </button>); })}
         <button onClick={() => { setNewBrandName(""); setNewBrandColor("#4F46E5"); setBrandSheet(true); }}
           style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, background: "transparent", border: "1.5px dashed #d7d9e3", borderRadius: 10, padding: "8px 2px", cursor: "pointer", fontFamily: "inherit", marginTop: 2 }}>
-          <div style={{ width: 30, height: 30, borderRadius: 9, background: BG, color: ACC, fontSize: 15, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{"+"}</div>
-          <div style={{ fontSize: 9.5, fontWeight: 700, color: ACC }}>{"раздел"}</div>
+          <div style={{ width: 22, height: 22, borderRadius: 7, background: BG, color: ACC, fontSize: 13, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{"+"}</div>
+          <div style={{ fontSize: 8.5, fontWeight: 700, color: ACC }}>{"раздел"}</div>
         </button>
       </div>
 
