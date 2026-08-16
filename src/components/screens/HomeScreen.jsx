@@ -308,14 +308,6 @@ function HomeScreen({onMenu,orders,setOrders,onOpen,onNew,onStatusChange,theme,s
                     <div style={{fontSize:9,color:"rgba(255,255,255,0.65)"}}>смет</div>
                   </div>
                 </button>
-                {/* КП Освещение */}
-                <button disabled style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",
-                  justifyContent:"center",gap:2,background:T.faint,border:"1px dashed "+T.border,
-                  borderRadius:10,padding:"7px 4px",cursor:"default",fontFamily:"inherit",opacity:0.5}}>
-                  <span style={{fontSize:15}}>💡</span>
-                  <div style={{fontSize:9,color:T.sub,textAlign:"center"}}>КП свет</div>
-                  <span style={{fontSize:7,color:T.dim,background:T.border,borderRadius:3,padding:"1px 3px"}}>Soon</span>
-                </button>
                 {/* Договор */}
                 <button disabled style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",
                   justifyContent:"center",gap:2,background:T.faint,border:"1px dashed "+T.border,
@@ -324,12 +316,12 @@ function HomeScreen({onMenu,orders,setOrders,onOpen,onNew,onStatusChange,theme,s
                   <div style={{fontSize:9,color:T.sub,textAlign:"center"}}>Договор</div>
                   <span style={{fontSize:7,color:T.dim,background:T.border,borderRadius:3,padding:"1px 3px"}}>Soon</span>
                 </button>
-                {/* Чат */}
+                {/* ТЗ на монтаж */}
                 <button disabled style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",
                   justifyContent:"center",gap:2,background:T.faint,border:"1px dashed "+T.border,
                   borderRadius:10,padding:"7px 4px",cursor:"default",fontFamily:"inherit",opacity:0.5}}>
-                  <span style={{fontSize:15}}>💬</span>
-                  <div style={{fontSize:9,color:T.sub,textAlign:"center"}}>Чат</div>
+                  <span style={{fontSize:15}}>🛠️</span>
+                  <div style={{fontSize:9,color:T.sub,textAlign:"center"}}>ТЗ на монтаж</div>
                   <span style={{fontSize:7,color:T.dim,background:T.border,borderRadius:3,padding:"1px 3px"}}>Soon</span>
                 </button>
               </div>
