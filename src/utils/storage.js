@@ -94,10 +94,39 @@ export async function deleteNomPhotoFromIdb(nomId){
   try{await idbDel(IDB_STORE_NOM_PHOTOS, nomId);}catch{}
 }
 
+/* Похожая позиция новой базы с фото — по общим словам в названии
+   (например, «EuroKRAAB Strong. Профиль.» → «EUROKRAAB STRONG Теневой стеновой профиль»). */
+export function fallbackImgKey(nom){
+  if(!nom||nom.img)return nom?.img||null;
+  /* «2.0» и «1.5» сохраняем как слово; остальные знаки — разделители */
+  const words=String(nom.name||"").toLowerCase().replace(/(\d)\.(\d)/g,"$1§$2").replace(/[^a-zа-яё0-9§\s]/g," ").replace(/§/g,".").split(/\s+/).filter(w=>w.length>=3&&!/^(монтаж|профиль|угол|внешний|внутренний|работа|установка|шт|м\.?п\.?)$/.test(w));
+  if(!words.length)return null;
+  let best=null,bestScore=0;
+  for(const c of ALL_NOM){
+    if(!c.img||c.arch)continue;
+    const cn=String(c.name||"").toLowerCase();
+    let sc=0;words.forEach(w=>{if(cn.includes(w))sc++;});
+    /* брендовые слова (латиница) весят больше */
+    words.forEach(w=>{if(/^[a-z0-9.]+$/.test(w)&&cn.includes(w))sc+=1;});
+    if(sc>bestScore){bestScore=sc;best=c;}
+  }
+  /* нужна хотя бы пара совпавших слов, чтобы не подставить чужое фото */
+  return bestScore>=3?best.img:null;
+}
 export async function getNomPhotoDataUrl(nomId){
   const nom=ALL_NOM.find(n=>n.id===nomId);
   const p=nom?.photo;
   if(typeof p==="string"&&p.startsWith("data:"))return p;
+  /* позиции новой базы: фото лежат отдельным модулем по ключу img.
+     У своих/старых позиций без фото — берём картинку похожей позиции новой базы. */
+  const imgKey=nom?.img||(nom?fallbackImgKey(nom):null);
+  if(imgKey){
+    try{
+      const m=await import("../data/nomV2Images.js");
+      const d=m.NOM_V2_IMAGES?.[imgKey];
+      if(d)return d;
+    }catch(e){}
+  }
   // blob URLs are not portable to downloaded HTML; resolve to data: when exporting
   if(typeof p==="string"&&p.startsWith("blob:")){
     try{

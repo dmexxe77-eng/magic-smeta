@@ -6,7 +6,7 @@ import { T, setT, THEMES } from "../../theme.js";
 import { fmt, uid, deep, safeStr } from "../../utils/helpers.js";
 import { calcPoly, getAngles, countAngles, effectiveOq, getAutoOq } from "../../utils/geometry.js";
 import { compressImg, profSvgHtml } from "../../utils/imageUtils.js";
-import { AUTO_SAVE_KEY, AUTO_SAVE_META_KEY, idbPut, idbGet, idbDel, blobToObjectUrl, blobToDataUrl, revokeObjectUrl, persistNomPhotoToIdb, loadNomPhotoFromIdb, getNomPhotoDataUrl} from "../../utils/storage.js";
+import { AUTO_SAVE_KEY, AUTO_SAVE_META_KEY, idbPut, idbGet, idbDel, blobToObjectUrl, blobToDataUrl, revokeObjectUrl, persistNomPhotoToIdb, loadNomPhotoFromIdb, getNomPhotoDataUrl, fallbackImgKey} from "../../utils/storage.js";
 import { P, PF, Pmp, Pap, Pcu, Ptr, DEFAULT_MAT, KK, LIGHT, OPT, PIMG, DEFAULT_FAV } from "../../data/profiles.js";
 import { ALL_NOM, NB, addNewNom, deleteNom, DELETED_NOM_IDS, NOM_BRAND_GROUPS, activeNoms } from "../../data/nomenclature.jsx";
 import { PRESETS_GEN, PRbyId, USER_PRESETS_OVERRIDE, USER_FAVS_OVERRIDE, BLOCK_CFG, CALC_STATE_REF, snapNomPrices, newRoom, newR, gA, gP, buildEst, sanitizeOrdersForStorage, applyNomsSnapshot, resolveNomByEstimateLine, STATUSES} from "../../data/presets.js";
@@ -122,6 +122,10 @@ function CalcScreen({onMenu,initRooms,orderName,onBack,onRoomsChange,initPlanIma
   /* Пишем текущее состояние в глобальный ref для экспорта */
   useEffect(()=>{CALC_STATE_REF.presets=presets;CALC_STATE_REF.sharedFavs=sharedFavs;CALC_STATE_REF.globalOpts=globalOpts;CALC_STATE_REF.customBlocks=customBlocks;},[presets,sharedFavs,globalOpts,customBlocks]);
   const[pdfData,setPdfData]=useState(null);
+  /* фото позиций новой базы (ключ img) — для превью сметы */
+  const[v2Imgs,setV2Imgs]=useState(null);
+  useEffect(()=>{import("../../data/nomV2Images.js").then(m=>setV2Imgs(m.NOM_V2_IMAGES)).catch(()=>{});},[]);
+  const nomPic=nom=>{if(!nom)return null;if(nom.photo)return nom.photo;if(!v2Imgs)return null;const k=nom.img||fallbackImgKey(nom);return k?v2Imgs[k]:null;};
   const[estEd,setEstEd]=useState({});
   const[showGlobalEdit,setShowGlobalEdit]=useState(false);
   const[goNomPick,setGoNomPick]=useState(null); /* индекс пункта опций, для которого открыт выбор номенклатуры */
@@ -524,7 +528,7 @@ function CalcScreen({onMenu,initRooms,orderName,onBack,onRoomsChange,initPlanIma
             <div style={{fontSize:9,fontWeight:700,color:'#4F46E5',marginBottom:4,letterSpacing:'0.8px'}}>{'МАТЕРИАЛЫ'}</div>
             {activeMats.map(l=>{const eq=estEd[l.k]?.q??l.q;const ep=estEd[l.k]?.p??l.p;const nom=resolveNomByEstimateLine(l);return(<div key={l.k} style={{padding:'4px 0',borderBottom:'0.5px solid '+T.border}}>
               <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:2}}>
-                {nom?.photo&&<img src={nom.photo} style={{width:30,height:30,objectFit:'cover',borderRadius:5,flexShrink:0}}/>}
+                {nomPic(nom)&&<img src={nomPic(nom)} style={{width:30,height:30,objectFit:'cover',borderRadius:5,flexShrink:0}}/>}
                 <div style={{fontSize:10,color:T.sub,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',flex:1}}>{l.n}</div>
               </div>
               <div style={{display:'flex',alignItems:'center',gap:4}}>
@@ -539,7 +543,7 @@ function CalcScreen({onMenu,initRooms,orderName,onBack,onRoomsChange,initPlanIma
             <div style={{fontSize:9,fontWeight:700,color:'#16a34a',margin:'10px 0 4px',letterSpacing:'0.8px'}}>{'РАБОТЫ'}</div>
             {activeWorks.map(l=>{const eq=estEd[l.k]?.q??l.q;const ep=estEd[l.k]?.p??l.p;const nom=resolveNomByEstimateLine(l);return(<div key={l.k} style={{padding:'4px 0',borderBottom:'0.5px solid '+T.border}}>
               <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:2}}>
-                {nom?.photo&&<img src={nom.photo} style={{width:30,height:30,objectFit:'cover',borderRadius:5,flexShrink:0}}/>}
+                {nomPic(nom)&&<img src={nomPic(nom)} style={{width:30,height:30,objectFit:'cover',borderRadius:5,flexShrink:0}}/>}
                 <div style={{fontSize:10,color:T.sub,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',flex:1}}>{l.n}</div>
               </div>
               <div style={{display:'flex',alignItems:'center',gap:4}}>
