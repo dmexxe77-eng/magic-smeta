@@ -331,7 +331,13 @@ export function buildEst(rooms,allPresets,gOpts,priceSnap){
     return NB(id)?.type==="canvas"||NB(k)?.type==="canvas";
   };
   const allM=Object.entries(mm).map(([k,v])=>({...v,_k:k,_isCanvas:isCanvasKey(k)?1:0}));
-  const sortM=allM.sort((a,b)=>{if(b._isCanvas!==a._isCanvas)return b._isCanvas-a._isCanvas;return a.n.localeCompare(b.n);});
+  /* сначала полотна, затем материалы по убыванию количества (при равном — по алфавиту) */
+  const sortM=allM.sort((a,b)=>{
+    if(b._isCanvas!==a._isCanvas)return b._isCanvas-a._isCanvas;
+    const dq=(b.q||0)-(a.q||0);
+    if(dq)return dq;
+    return a.n.localeCompare(b.n);
+  });
   const sortW=Object.entries(ww).map(([k,v])=>({...v,_k:k})).sort((a,b)=>a.n.localeCompare(b.n));
   return{mats:sortM,works:sortW};
 }
