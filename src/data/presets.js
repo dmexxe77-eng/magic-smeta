@@ -322,8 +322,15 @@ export function buildEst(rooms,allPresets,gOpts,priceSnap){
     /* Обрезь убрана */
   });
 
-  /* Sort materials: canvases first, then profiles alphabetically */
-  const allM=Object.entries(mm).map(([k,v])=>({...v,_k:k,_isCanvas:k.startsWith("c_")?1:0}));
+  /* Сортировка материалов: сначала полотна, затем остальное по алфавиту.
+     Полотно узнаём по типу позиции (раньше — по префиксу c_ старой базы,
+     из-за чего полотна новой базы n… уезжали в общий список). */
+  const isCanvasKey=k=>{
+    if(k.startsWith("c_"))return true;
+    const id=k.includes("_")&&!NB(k)?k.split("_").slice(0,-1).join("_"):k; /* ключ полотна: id_roomId */
+    return NB(id)?.type==="canvas"||NB(k)?.type==="canvas";
+  };
+  const allM=Object.entries(mm).map(([k,v])=>({...v,_k:k,_isCanvas:isCanvasKey(k)?1:0}));
   const sortM=allM.sort((a,b)=>{if(b._isCanvas!==a._isCanvas)return b._isCanvas-a._isCanvas;return a.n.localeCompare(b.n);});
   const sortW=Object.entries(ww).map(([k,v])=>({...v,_k:k})).sort((a,b)=>a.n.localeCompare(b.n));
   return{mats:sortM,works:sortW};
