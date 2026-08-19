@@ -28,6 +28,10 @@ function editNom(id, patch) {
   const rec = { id, name: n.name, price: n.price, unit: n.unit, type: n.type };
   ["mult", "cost", "inst", "note", "ws"].forEach(k => { if (n[k] !== undefined) rec[k] = n[k]; });
   if (i >= 0) RUNTIME_EDITED_NOMS[i] = rec; else RUNTIME_EDITED_NOMS.push(rec);
+  /* цена изменилась — сообщаем калькулятору, чтобы он обновил снапшот цен открытого проекта */
+  if (patch && patch.price !== undefined) {
+    try { window.dispatchEvent(new CustomEvent("magicapp:nomPriceChanged", { detail: { id, price: n.price } })); } catch (e) {}
+  }
   try { window.dispatchEvent(new Event("magicapp:saveNow")); } catch (e) {}
 }
 

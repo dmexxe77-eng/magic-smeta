@@ -91,6 +91,22 @@ function CalcScreen({onMenu,initRooms,orderName,onBack,onRoomsChange,initPlanIma
     setNomSnapshot(snap);
     if(onSnapshotUpdate)onSnapshotUpdate(snap);
   },[onSnapshotUpdate]);
+  /* Цена позиции изменена в редакторе номенклатур из калькулятора — у открытого
+     проекта обновляем снапшот цен, иначе старая цена в нём перекроет новую. */
+  useEffect(()=>{
+    const h=e=>{
+      const {id,price}=e?.detail||{};
+      if(!id||typeof price!=="number")return;
+      const cur=nomSnapshotRef.current;
+      if(!cur||cur[id]===undefined||cur[id]===price)return; /* в снапшоте нет — возьмётся живая цена */
+      const next={...cur,[id]:price};
+      nomSnapshotRef.current=next;
+      setNomSnapshot(next);
+      if(onSnapshotUpdate)onSnapshotUpdate(next);
+    };
+    try{window.addEventListener("magicapp:nomPriceChanged",h);}catch(e){}
+    return ()=>{try{window.removeEventListener("magicapp:nomPriceChanged",h);}catch(e){}};
+  },[onSnapshotUpdate]);
   const[planImage,setPlanImage]=useState(initPlanImage||null);
   const[rooms,setRooms]=useState(initRooms||[]);
   const[tab,setTab]=useState(initRooms?.[0]?.id||null);
@@ -125,7 +141,7 @@ function CalcScreen({onMenu,initRooms,orderName,onBack,onRoomsChange,initPlanIma
   /* фото позиций новой базы (ключ img) — для превью сметы */
   const[v2Imgs,setV2Imgs]=useState(null);
   useEffect(()=>{import("../../data/nomV2Images.js").then(m=>setV2Imgs(m.NOM_V2_IMAGES)).catch(()=>{});},[]);
-  const nomPic=nom=>{if(!nom)return null;if(nom.photo)return nom.photo;if(!v2Imgs)return null;const k=nom.img||fallbackImgKey(nom);return k?v2Imgs[k]:null;};
+  const nomPic=nom=>{if(!nom)return null;if(nom.photo)return nom.photo;if(!v2Imgs)return null;if(nom.img&&v2Imgs[nom.img])return v2Imgs[nom.img];const k=fallbackImgKey(nom);return k?v2Imgs[k]:null;};
   const[estEd,setEstEd]=useState({});
   const[showGlobalEdit,setShowGlobalEdit]=useState(false);
   const[goNomPick,setGoNomPick]=useState(null); /* индекс пункта опций, для которого открыт выбор номенклатуры */

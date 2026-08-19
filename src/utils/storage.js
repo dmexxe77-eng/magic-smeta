@@ -116,24 +116,22 @@ export function fallbackImgKey(nom){
 export async function getNomPhotoDataUrl(nomId){
   const nom=ALL_NOM.find(n=>n.id===nomId);
   const p=nom?.photo;
+  /* 1. Своё фото позиции (загружено в редакторе) — всегда приоритет */
   if(typeof p==="string"&&p.startsWith("data:"))return p;
-  /* позиции новой базы: фото лежат отдельным модулем по ключу img.
-     У своих/старых позиций без фото — берём картинку похожей позиции новой базы. */
-  const imgKey=nom?.img||(nom?fallbackImgKey(nom):null);
-  if(imgKey){
-    try{
-      const m=await import("../data/nomV2Images.js");
-      const d=m.NOM_V2_IMAGES?.[imgKey];
-      if(d)return d;
-    }catch(e){}
-  }
-  // blob URLs are not portable to downloaded HTML; resolve to data: when exporting
   if(typeof p==="string"&&p.startsWith("blob:")){
-    try{
-      const b=await fetch(p).then(r=>r.blob());
-      return await blobToDataUrl(b);
-    }catch(e){}
+    try{const b=await fetch(p).then(r=>r.blob());return await blobToDataUrl(b);}catch(e){}
   }
-  return await loadNomPhotoDataUrlFromIdb(nomId);
+  const fromIdb=await loadNomPhotoDataUrlFromIdb(nomId);
+  if(fromIdb)return fromIdb;
+  /* 2. Фото новой базы по ключу img */
+  let imgs=null;
+  try{imgs=(await import("../data/nomV2Images.js")).NOM_V2_IMAGES;}catch(e){}
+  if(imgs&&nom?.img&&imgs[nom.img])return imgs[nom.img];
+  /* 3. Совсем ничего нет — картинка похожей позиции новой базы по названию */
+  if(imgs&&nom){
+    const k=fallbackImgKey(nom);
+    if(k&&imgs[k])return imgs[k];
+  }
+  return null;
 }
 
