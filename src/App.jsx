@@ -126,6 +126,7 @@ export default function App(){
       if(!alive)return;
       if(saving)return;
       saving=true;
+      try{
       const baseSnap={
         v:2,
         ts:Date.now(),
@@ -160,7 +161,6 @@ export default function App(){
         okIdb=false;
       }
       setSaveStatus({ts:Date.now(),ok:!!okIdb,ordersInDb});
-      saving=false;
 
       // localStorage (вторичный fallback) — БЕЗ planImage (base64 может переполнить квоту ~5MB)
       try{
@@ -170,6 +170,13 @@ export default function App(){
         window.localStorage.setItem(AUTO_SAVE_META_KEY, JSON.stringify({ok:true,ts:Date.now(),bytes:raw.length,okIdb}));
       }catch(e){
         try{window.localStorage.setItem(AUTO_SAVE_META_KEY, JSON.stringify({ok:false,ts:Date.now(),err:String(e?.message||e||"save_failed"),okIdb}));}catch{}
+      }
+      }catch(e){
+        /* исключение при сборке снапшота: фиксируем ошибку, но автосейв продолжает жить */
+        try{setSaveStatus({ts:Date.now(),ok:false,ordersInDb:null});}catch{}
+        try{window.localStorage.setItem(AUTO_SAVE_META_KEY, JSON.stringify({ok:false,ts:Date.now(),err:"snap: "+String(e?.message||e)}));}catch{}
+      }finally{
+        saving=false;
       }
     };
     // expose manual save

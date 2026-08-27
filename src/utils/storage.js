@@ -8,10 +8,10 @@ const IDB_VER = 2;
 const IDB_STORE_NOM_PHOTOS = "nomPhotos";
 const IDB_STORE_APP_STATE = "appState";
 
-export function idbOpen(){
+function idbOpenVer(ver){
   return new Promise((resolve,reject)=>{
     if(typeof indexedDB==="undefined")return reject(new Error("indexedDB unavailable"));
-    const req=indexedDB.open(IDB_DB, IDB_VER);
+    const req=ver?indexedDB.open(IDB_DB, ver):indexedDB.open(IDB_DB, IDB_VER);
     req.onupgradeneeded=()=>{
       const db=req.result;
       if(!db.objectStoreNames.contains(IDB_STORE_NOM_PHOTOS)){
@@ -23,7 +23,21 @@ export function idbOpen(){
     };
     req.onsuccess=()=>resolve(req.result);
     req.onerror=()=>reject(req.error||new Error("idb open failed"));
+    req.onblocked=()=>reject(new Error("idb open blocked"));
   });
+}
+export async function idbOpen(){
+  let db=await idbOpenVer();
+  /* Самовосстановление: база могла остаться без хранилищ (прерванный апгрейд,
+     частичная очистка браузером). Тогда версия уже актуальна, onupgradeneeded не
+     вызывается, и каждая запись падает NotFoundError — навсегда. Лечим подъёмом
+     версии: это форсирует onupgradeneeded, который досоздаёт недостающие сторы. */
+  if(!db.objectStoreNames.contains(IDB_STORE_APP_STATE)||!db.objectStoreNames.contains(IDB_STORE_NOM_PHOTOS)){
+    const bump=db.version+1;
+    try{db.close();}catch{}
+    db=await idbOpenVer(bump);
+  }
+  return db;
 }
 export async function idbPut(store,key,val){
   const db=await idbOpen();
