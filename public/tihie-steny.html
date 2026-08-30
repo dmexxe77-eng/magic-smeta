@@ -1,0 +1,2128 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Прототип «Тихие стены»</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<style>
+/* Прототип повторяет светлую тему ZAMER.PRO — сознательно одна тема */
+*{box-sizing:border-box}
+body{margin:0;background:#eef0f7;color:#1e2530;font-family:Inter,-apple-system,system-ui,sans-serif;font-size:14px;padding:0 12px 80px}
+.wrap{max-width:920px;margin:0 auto}
+.appbar{background:#fff;border-bottom:2px solid #4F46E5;margin:0 -12px 14px;padding:12px 18px;display:flex;align-items:center;gap:12px}
+.logo{background:#1e2530;color:#fff;font-weight:800;font-size:13px;border-radius:9px;padding:7px 10px;letter-spacing:.5px}
+.logo span{color:#8b85f0}
+.crumb{font-size:13px;color:#6b7280}
+.modeswitch{margin-left:auto;display:flex;background:#f2f3fa;border-radius:10px;padding:3px}
+.modeswitch button{border:none;background:transparent;font-family:inherit;font-size:12px;font-weight:600;color:#9aa0ae;padding:7px 14px;border-radius:8px;cursor:pointer}
+.modeswitch .on{background:#4F46E5;color:#fff}
+.card{background:#fff;border-radius:14px;padding:14px 16px;margin-bottom:10px}
+.hdr{font-size:12px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:#1e2530;margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.hdr .sum{margin-left:auto;color:#4F46E5;font-size:14px}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.lbl{font-size:11px;color:#6b7280}
+select{background:#f2f3fa;border:1px solid #e8e8f2;border-radius:9px;padding:8px 10px;font-family:inherit;font-size:12px;outline:none;color:#1e2530}
+input[type=number],input[type=text]{background:#f2f3fa;border:1px solid #e8e8f2;border-radius:9px;padding:8px 10px;font-family:inherit;font-size:13px;width:76px;outline:none;color:#1e2530}
+.chip{background:#f2f3fa;border:1.5px solid #e4e4ef;border-radius:10px;padding:6px 13px;font-size:12px;font-weight:500;color:#5a6070;cursor:pointer;font-family:inherit}
+.chip.on{background:rgba(79,70,229,.08);border-color:#4F46E5;color:#4F46E5;font-weight:700}
+.elbtns{display:flex;gap:6px;flex-wrap:wrap}
+.elbtns .chip{border-style:dashed}
+.stage{background:#f6f7fb;border:1px solid #e8e8f2;border-radius:12px;margin:10px 0 4px;position:relative;overflow:hidden}
+svg{display:block;width:100%;height:auto;user-select:none;-webkit-user-select:none;touch-action:none}
+.props{background:#f2f3fa;border-radius:10px;padding:10px 12px;margin-top:8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.props b{font-size:12px}
+.del{background:rgba(255,59,48,.08);border:none;color:#ff3b30;border-radius:8px;padding:7px 12px;font-weight:700;font-size:11.5px;cursor:pointer;font-family:inherit}
+.dimbtn{width:32px;height:32px;border-radius:8px;border:1.5px solid #e4e4ef;background:#fff;color:#5a6070;font-weight:800;cursor:pointer;font-family:inherit;font-size:14px}
+.dimbtn.on{border-color:#c77400;color:#c77400;background:rgba(255,149,0,.08)}
+.badge{font-size:10.5px;font-weight:700;border-radius:6px;padding:2px 8px}
+.b-ok{background:rgba(22,163,74,.1);color:#16a34a}
+.b-warn{background:rgba(255,149,0,.12);color:#c77400}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+td{padding:5px 6px;border-bottom:.5px solid #eef0f6;vertical-align:top}
+td.q{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;color:#6b7280}
+td.s{text-align:right;white-space:nowrap;font-weight:600;color:#4F46E5;font-variant-numeric:tabular-nums}
+.sec td{padding-top:10px;font-size:10.5px;font-weight:800;color:#9aa0ae;letter-spacing:.6px;border-bottom:1.5px solid #1e2530}
+.total{display:flex;justify-content:space-between;align-items:baseline;background:#1e2530;color:#fff;border-radius:12px;padding:13px 16px;margin-top:12px}
+.total b{font-size:21px}
+.hint{font-size:11px;color:#9aa0ae;margin-top:8px;line-height:1.5}
+.srcrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.src{background:#fff;border:1px solid #e8e8f2;border-radius:9px;padding:5px 10px;font-size:11px;color:#5a6070}
+.src b{color:#1e2530;font-variant-numeric:tabular-nums}
+.wallcards{display:flex;flex-direction:column;gap:10px;padding:2px 2px 10px}
+.roomgrp{background:#fff;border:1px solid #dfe3f0;border-radius:14px;padding:10px 12px}
+.roomhdr{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.roomhdr .rn{font-weight:800;font-size:14px}
+.roomhdr .lbl2{color:#6b7280;font-size:12px}
+.roomhdr label{display:flex;align-items:center;gap:5px;font-size:12px;color:#6b7280;font-weight:700;cursor:pointer;margin-left:auto}
+.wcrow{display:flex;gap:8px;overflow-x:auto}
+.addroom{width:100%;border:2px dashed #b9bfe0;background:none;border-radius:14px;padding:12px;font-size:14px;font-weight:800;color:#4F46E5;cursor:pointer}
+.wcard{flex:0 0 112px;background:#fff;border:1.5px solid #dfe3f0;border-radius:12px;padding:6px;cursor:pointer;position:relative}
+.wcard.on{border-color:#4F46E5;box-shadow:0 2px 10px rgba(79,70,229,.15)}
+.wcard .wcn{font-weight:800;font-size:11.5px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wcard .wcm{color:#6b7280;font-size:10.5px;white-space:nowrap}
+.wcard .wcx{position:absolute;top:3px;right:5px;display:flex;gap:6px;font-size:11px;color:#9aa0b5;background:rgba(255,255,255,.85);border-radius:6px;padding:0 3px}
+.wcard.plus{display:flex;align-items:center;justify-content:center;font-weight:800;color:#4F46E5;border-style:dashed;min-height:78px;font-size:13px;text-align:center}
+#card-obj input{font:inherit;padding:7px 10px;border:1.5px solid #dfe3f0;border-radius:10px;color:#1e2530}
+#card-obj input:focus{outline:none;border-color:#4F46E5}
+@media (max-width:640px){
+ body{padding:0 8px 90px;font-size:13.5px}
+ .card{padding:10px 10px;border-radius:12px}
+ .chip{padding:8px 12px;font-size:13px}          /* крупнее тап-зоны */
+ input,select{font-size:16px !important}         /* iOS не приближает поля при фокусе */
+ .hdr{flex-wrap:wrap;row-gap:6px}
+ .appbar{flex-wrap:wrap;row-gap:6px;padding:8px 10px}
+ .wcard{flex:0 0 104px}
+ .modeswitch button{padding:7px 10px;font-size:12px}
+ #isobox>div{width:100%}
+ #zoomctl button{width:42px;height:42px}
+ .props{gap:8px}
+ .total{font-size:14px}
+}
+</style>
+
+<div class="appbar"><div class="logo">ZAMER<span>.PRO</span></div><div class="crumb">Проект «Джамбула 3-12» · Помещение</div>
+<div class="modeswitch"><button>Потолок</button><button class="on">Тихие стены</button></div></div>
+
+<div class="wrap">
+
+<div class="wallcards" id="wallcards"></div>
+
+<div class="card">
+  <div class="hdr"><span id="curwname" contenteditable onblur="walls[curW].name=this.textContent.trim()||'Стена';renderProject()">Стена A</span>
+    <span class="modeswitch" style="margin-left:8px">
+      <button id="stageDraw">1 · Чертёж</button>
+      <button id="stageCalc">2 · Расчёт</button>
+    </span>
+    <span class="sum" id="wallsum"></span></div>
+  <div class="row" id="bar-draw">
+    <button class="chip" id="drawbtn">✏ Новый чертёж</button>
+    <button class="chip" id="walldims">Размеры стен</button>
+    <span class="lbl">Начертите контур, введите длины сторон — затем «2 · Расчёт»</span>
+  </div>
+  <div class="row" id="bar-calc">
+    <button class="chip" id="dimbtn2">📏 Размер</button>
+    <button class="chip" id="cutbtn">✂ Раскрой</button>
+    <button class="chip" id="themebtn" onclick="cycleTheme()">🎨 Вид: Мягкий</button>
+    <button class="chip" id="vizbtn" style="border-color:#4F46E5;color:#4F46E5;font-weight:700">▶ Визуализация</button>
+    <span class="lbl" style="margin-left:6px">Добавить на стену:</span>
+    <span class="elbtns">
+      <button class="chip" onclick="addEl('window')">+ Окно</button>
+      <button class="chip" onclick="addEl('door')">+ Дверь</button>
+      <button class="chip" onclick="addEl('opening')">+ Проём (контур)</button>
+      <button class="chip" onclick="addEl('outlet')">+ Розетка</button>
+      <button class="chip" onclick="addEl('sconce')">+ Бра</button>
+      <button class="chip" onclick="addEl('mount')">+ Техника</button>
+      <button class="chip" onclick="addEl('line')">+ Доп. профиль</button>
+    </span>
+  </div>
+  <div id="drawpanel" style="display:none;background:#fff;border:1.5px solid #4F46E5;border-radius:12px;padding:8px 12px;margin-bottom:8px;box-shadow:0 4px 14px rgba(30,37,48,.12);align-items:center;gap:8px;flex-wrap:wrap">
+    <span class="lbl" style="font-weight:700;color:#4F46E5">Длина стороны, см</span>
+    <input type="text" inputmode="numeric" id="drawlen" placeholder="300" style="width:80px">
+    <span class="lbl">Enter — точка</span>
+    <button class="chip" id="undoPt">↶ Отменить точку</button>
+    <button class="chip" id="closeShape" style="border-color:#16a34a;color:#16a34a;font-weight:700">Замкнуть</button>
+  </div>
+  <div id="isobox" style="display:flex;justify-content:flex-end;margin:2px 0 6px"></div>
+  <div class="stage"><svg id="svg" viewBox="0 0 900 520" style="touch-action:none"></svg>
+    <div id="zoomctl" style="position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:6px">
+      <button id="zin"  style="width:36px;height:36px;border-radius:10px;border:1.5px solid #c9cfe3;background:#fff;font-size:18px;font-weight:800;color:#4F46E5;cursor:pointer;box-shadow:0 2px 8px rgba(30,37,48,.10)">＋</button>
+      <button id="zout" style="width:36px;height:36px;border-radius:10px;border:1.5px solid #c9cfe3;background:#fff;font-size:18px;font-weight:800;color:#4F46E5;cursor:pointer;box-shadow:0 2px 8px rgba(30,37,48,.10)">−</button>
+      <button id="zfit" style="width:36px;height:36px;border-radius:10px;border:1.5px solid #c9cfe3;background:#fff;font-size:15px;color:#4F46E5;cursor:pointer;box-shadow:0 2px 8px rgba(30,37,48,.10)" title="Вписать чертёж">⌂</button>
+    </div></div>
+  <div class="props" id="props" style="display:none"></div>
+  <div class="srcrow" id="sources"></div>
+</div>
+
+<div class="card" id="card-sys">
+  <div class="hdr">Система <span class="sum" id="sys_sum"></span></div>
+  <div class="row" id="fabrics"></div>
+  <div class="row" style="margin-top:8px">
+    <span class="lbl">Подложка:</span>
+    <button class="chip" data-und="membrane">Мембрана 10 мм</button>
+    <button class="chip" data-und="felt">Войлок 10 мм</button>
+    <span class="lbl" style="margin-left:12px">Припуск ткани, см/сторона</span>
+    <input type="number" id="marginCm" value="10" min="0" max="50" style="width:60px">
+    <span class="lbl" style="margin-left:10px">Профили периметра — тапом по сторонам; их монтаж входит в монтаж системы.</span>
+  </div>
+</div>
+
+<div class="card" id="card-est">
+  <div class="hdr">Смета
+    <span class="modeswitch" style="margin-left:8px">
+      <button id="estWallBtn" class="on" onclick="estScope='wall';render()">Эта стена</button>
+      <button id="estRoomBtn" onclick="estScope='room';render()">Вся комната</button>
+    </span></div>
+  <table id="est"></table>
+  <div class="total"><span id="estcapt">Итого по стене · накладные и НДС — в итоге объекта</span><b id="total"></b></div>
+</div>
+
+<div class="card" id="card-obj">
+  <div class="hdr">Объект <span class="lbl" style="margin-left:8px;font-weight:400">цены 1кв2026 фиксируются в проекте</span></div>
+  <div class="row">
+    <input id="pj_client" placeholder="Клиент" style="width:160px" onchange="project.client=this.value">
+    <input id="pj_phone" placeholder="Телефон" style="width:140px" onchange="project.phone=this.value">
+    <input id="pj_addr" placeholder="Адрес объекта" style="flex:1;min-width:170px" onchange="project.address=this.value">
+  </div>
+  <div class="row" style="margin-top:8px;align-items:center;gap:16px;flex-wrap:wrap">
+    <span class="lbl">материалы <b id="obj_m"></b></span>
+    <span class="lbl">работы <b id="obj_w"></b></span>
+    <span class="lbl">накладные 6% (мин 6500) <b id="obj_nak"></b></span>
+    <span class="lbl" id="obj_corn" style="flex-basis:100%"></span>
+    <span style="margin-left:auto;font-weight:800">Итого объект (с НДС 5%): <b id="obj_t" style="color:#4F46E5;font-size:17px"></b></span>
+  </div>
+  <div class="row" style="margin-top:8px">
+    <button class="chip" onclick="orderMats()">📦 Заказ материалов</button>
+    <button class="chip" id="copybtn" onclick="copyProject()">⭳ Копировать проект (JSON)</button>
+  </div>
+</div>
+
+<div id="roommodal" style="display:none;position:fixed;inset:0;background:rgba(30,37,48,.5);z-index:70;align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)this.style.display='none'">
+  <div style="background:#fff;border-radius:14px;max-width:420px;width:100%;padding:20px">
+    <b style="font-size:16px">+ Комната</b>
+    <div style="color:#6b7280;font-size:12.5px;margin:6px 0 12px">На стыке соединённых стен считается один общий угловой профиль вместо двух боковых. Соединяет стены кнопка «+ стена» на краю чертежа; «+ Стена» в списке комнаты добавляет отдельную стену (например, противоположную).</div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <button class="chip" onclick="document.getElementById('room_name').value='Гостиная'">Гостиная</button>
+      <button class="chip" onclick="document.getElementById('room_name').value='Спальня'">Спальня</button>
+      <button class="chip" onclick="document.getElementById('room_name').value='Кухня'">Кухня</button>
+      <button class="chip" onclick="document.getElementById('room_name').value='Прихожая'">Прихожая</button>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <input id="room_name" placeholder="Название комнаты" value="Спальня" style="flex:1;font:inherit;padding:9px 12px;border:1.5px solid #dfe3f0;border-radius:10px"
+        onkeydown="if(event.key==='Enter')makeRoom()">
+    </div>
+    <div style="display:flex;gap:10px;margin-top:12px">
+      <button class="chip" style="flex:1;border-color:#16a34a;color:#16a34a;font-weight:800" onclick="openPlan()">▦ Комната в круг<br><span style="font-weight:400;font-size:11px">чертим по полу — стены и углы сами</span></button>
+      <button class="chip" style="flex:1;border-color:#0e7490;color:#0e7490;font-weight:800" onclick="makeRoom('row')">⇥ Стены в ряд<br><span style="font-weight:400;font-size:11px">соединяются углами, не замкнуты</span></button>
+      <button class="chip" style="flex:1;border-color:#4F46E5;color:#4F46E5;font-weight:800" onclick="makeRoom('free')">▫ Отдельные стены<br><span style="font-weight:400;font-size:11px">без привязки друг к другу</span></button>
+    </div>
+  </div>
+</div>
+
+<div id="planmodal" style="display:none;position:fixed;inset:0;background:rgba(30,37,48,.55);z-index:75;align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)this.style.display='none'">
+  <div style="background:#fff;border-radius:16px;max-width:700px;width:100%;padding:16px">
+    <b style="font-size:16px">План пола — вид сверху</b>
+    <span class="lbl" style="margin-left:10px">точки по кругу; выпуклый угол = внутренний, вогнутый = внешний (Отбойник)</span>
+    <div style="display:flex;gap:8px;align-items:center;margin:10px 0;flex-wrap:wrap">
+      <span class="lbl" style="font-weight:700;color:#4F46E5">Длина, см</span>
+      <input type="text" inputmode="numeric" id="plan_len" placeholder="300" style="width:76px;font:inherit;padding:7px 10px;border:1.5px solid #dfe3f0;border-radius:10px">
+      <span class="lbl">Enter — точка</span>
+      <button class="chip" onclick="planUndo()">↶ Точка</button>
+      <button class="chip" style="border-color:#16a34a;color:#16a34a;font-weight:700" onclick="planClose()">Замкнуть</button>
+      <span style="margin-left:auto" class="lbl">Высота, см</span>
+      <input type="number" id="plan_h" value="280" style="width:76px;font:inherit;padding:7px 10px;border:1.5px solid #dfe3f0;border-radius:10px">
+      <button class="chip" id="plan_make" style="border-color:#4F46E5;color:#4F46E5;font-weight:800;display:none" onclick="planMake()">Создать стены →</button>
+    </div>
+    <div style="border:1px solid #dfe3f0;border-radius:12px;background:#fafbff"><svg id="plansvg" viewBox="0 0 660 380" style="display:block;width:100%;touch-action:none"></svg></div>
+  </div>
+</div>
+
+<div id="wizmodal" style="display:none;position:fixed;inset:0;background:rgba(30,37,48,.55);z-index:76;align-items:center;justify-content:center;padding:16px" >
+  <div style="background:#fff;border-radius:16px;max-width:520px;width:100%;padding:20px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+      <b id="wiz_title" style="font-size:16px"></b>
+      <span id="wiz_step" class="lbl" style="margin-left:auto"></span>
+    </div>
+    <div id="wiz_body" style="display:flex;flex-direction:column;gap:8px;margin:12px 0"></div>
+    <div style="display:flex;gap:10px">
+      <button class="chip" onclick="wizSkip()">Пропустить</button>
+      <button class="chip" style="margin-left:auto;border-color:#4F46E5;color:#4F46E5;font-weight:800" onclick="wizNext()" id="wiz_next">Далее →</button>
+    </div>
+  </div>
+</div>
+
+<div id="ordermodal" style="display:none;position:fixed;inset:0;background:rgba(30,37,48,.5);z-index:70;align-items:flex-start;justify-content:center;overflow:auto;padding:24px 10px" onclick="if(event.target===this)this.style.display='none'">
+  <div style="background:#fff;border-radius:14px;max-width:640px;width:100%;padding:20px">
+    <b style="font-size:16px">Заказ материалов по объекту</b>
+    <div id="orderbody" style="margin-top:10px"></div>
+    <button class="chip" style="margin-top:12px" onclick="document.getElementById('ordermodal').style.display='none'">Закрыть</button>
+  </div>
+</div>
+
+</div>
+
+<div id="viz" style="display:none;position:fixed;inset:0;z-index:60;background:#14161d;flex-direction:column">
+  <div style="display:flex;align-items:center;gap:10px;padding:12px 16px">
+    <b style="color:#fff;font-size:14px">Визуализация · Стена А</b>
+    <span id="vizswatches" style="display:flex;gap:6px;margin-left:14px"></span>
+    <button id="vizclose" style="margin-left:auto;background:rgba(255,255,255,.12);border:none;color:#fff;border-radius:9px;padding:8px 16px;font-family:inherit;font-weight:700;cursor:pointer">✕ Закрыть</button>
+  </div>
+  <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:0 16px 16px;min-height:0">
+    <svg id="vizsvg" viewBox="0 0 1200 675" style="max-width:100%;max-height:100%;border-radius:14px;background:#000"></svg>
+  </div>
+</div>
+
+<script>
+/* ── данные из шаблона ООО «Тихие стены» (1 кв. 2026) ── */
+const FABRIC_TONES=[
+ ['#efe9dd','Белый лён'],['#e7dfd0','Слоновая кость'],['#d6d3cc','Светло-серый'],
+ ['#9b9691','Серый'],['#4a4a4e','Графит'],['#b4776a','Терракота'],['#8b9a84','Шалфей'],['#5d6b83','Деним']];
+/* расцветки и реальные цвета свотчей — извлечены из PDF-каталогов «Тихие стены» ч.1 и ч.2 */
+const FAB_COLORS={
+ comfort:[{n:'Черный 1',c:'#050505'},{n:'Бежевый 3',c:'#936b50'},{n:'Мокрый асфальт 5',c:'#191818'},{n:'Мокрый асфальт светлый 5.1',c:'#3a3a3c'},{n:'Серо-зеленый 6',c:'#646b71'},{n:'Серый металлик 7',c:'#7d7371'},{n:'Абрикосовый 9',c:'#b17457'},{n:'Серый 10',c:'#5d5459'},{n:'Белый 11',c:'#bab0ae'},{n:'Лаванда 112',c:'#846772'},{n:'Темно-синий 13',c:'#05060d'},{n:'Туман 19',c:'#87736d'},{n:'Незабудка 22',c:'#5d779b'},{n:'Серебристо-розовый 26',c:'#9b8888'},{n:'Зелёный 27',c:'#364833'},{n:'Слоновая кость 29',c:'#c0b4ae'},{n:'Бирюзовое утро 30',c:'#8e9998'},{n:'Кофейный мусс 31',c:'#a18c81'},{n:'Шоколадный пудинг 33',c:'#5c4745'},{n:'Трепетно зеленый 33',c:'#527f5f'},{n:'Белая ночь 54',c:'#a69c9a'}],
+ luna:[{n:'Песочный 1',c:'#a19082'},{n:'Песочный 2',c:'#7f736c'},{n:'Серый 3',c:'#73706c'},{n:'Темно-серый 4',c:'#504b48'},{n:'Серый 5',c:'#706866'},{n:'Коричневый 6',c:'#5b5350'},{n:'Темный-беж 7',c:'#6a6059'},{n:'Бежевый 8',c:'#796659'},{n:'Бирюзовый 9',c:'#404b4e'},{n:'Синий 10',c:'#222f39'},{n:'Коричневый 11',c:'#3f2f24'},{n:'Черный 12',c:'#1c1b1a'},{n:'Синий 13',c:'#455d6d'},{n:'Зелёный 14',c:'#3a402d'}],
+ mars:[{n:'Серый 1',c:'#666669'},{n:'Темный-бежевый 3',c:'#7c685c'},{n:'Песочный 7',c:'#716861'},{n:'Белый 10',c:'#a29e9b'},{n:'Серый 11',c:'#7c8083'},{n:'Серый 12',c:'#4f4e53'},{n:'Песочный 14',c:'#8b8079'},{n:'Розовый 15',c:'#8b7b7a'}],
+ shtuk:[{n:'195-02',c:'#9c8a89'},{n:'195-03',c:'#514847'},{n:'195-04',c:'#120d0b'},{n:'195-07',c:'#3c3d45'},{n:'195-09',c:'#a5938f'},{n:'195-10',c:'#938987'},{n:'195-14',c:'#b3a19e'},{n:'195-16',c:'#b3a19e'},{n:'195-19',c:'#432118'},{n:'195-21',c:'#8d6c60'},{n:'195-23',c:'#916e58'},{n:'195-24',c:'#4f3222'},{n:'195-25',c:'#93766b'},{n:'195-28',c:'#93766b'},{n:'195-30',c:'#93766b'},{n:'195-35',c:'#919fa6'},{n:'195-36',c:'#535e63'},{n:'195-38',c:'#61584b'},{n:'195-40',c:'#38302e'},{n:'195-42',c:'#9b8985'},{n:'195-47',c:'#635042'},{n:'195-48',c:'#877162'}],
+ uzor:[{n:'206-03',c:'#ac9a96'},{n:'206-04',c:'#a99793'},{n:'206-09',c:'#a8948a'},{n:'206-10',c:'#a99793'},{n:'206-15',c:'#af9a8e'},{n:'206-17',c:'#af9a8e'},{n:'206-20',c:'#b0a095'},{n:'206-23',c:'#b19d92'},{n:'206-27',c:'#a09694'},{n:'206-28',c:'#9d9391'},{n:'Голубой 206-30',c:'#9b918f'},{n:'206-32',c:'#ab9c98'},{n:'Платиновый 206-38',c:'#ab9894'},{n:'206-40',c:'#ab988e'},{n:'Платиновый 206-46',c:'#a29896'},{n:'206-47',c:'#a49a98'},{n:'206-50',c:'#b5a094'},{n:'206-05 (новинка)',c:null},{n:'206-11 (новинка)',c:null},{n:'206-18 (новинка)',c:null},{n:'206-25 (новинка)',c:null},{n:'206-31 (новинка)',c:null},{n:'206-42 (новинка)',c:null},{n:'206-51 (новинка)',c:null},{n:'206-53 (новинка)',c:null}],
+ akustik:[{n:'Синий 162',c:'#033f72'},{n:'Фуксия 235',c:'#4c0e2e'},{n:'Белый 303',c:'#a7a8ab'},{n:'Светло-серый 309',c:'#8a8785'},{n:'Серый 329',c:'#645c59'},{n:'Темно-серый 331',c:'#343031'},{n:'Темно-бежевый 541',c:'#837062'},{n:'Молочный шоколад 569',c:'#4d2c1d'},{n:'Бирюзовый 628',c:'#2e8688'},{n:'Зелёный 638',c:'#49552d'},{n:'Горчичный 727',c:'#97560a'},{n:'Жёлтый 731',c:'#ca8d10'}],
+};
+FAB_COLORS.shtuk29=FAB_COLORS.shtuk; /* обе ширины Штукатурки — одна палитра */
+function fabHex(){const c=(FAB_COLORS[state.fabric]||[]).find(x=>x.n===state.fabColor);return c&&c.c||null;}
+function mixHex(h,f){const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b2=parseInt(h.slice(5,7),16);const m=x=>Math.round(x+(255-x)*f);return '#'+[m(r),m(g),m(b2)].map(x=>x.toString(16).padStart(2,'0')).join('');}
+const FABRICS=[
+ {id:'comfort', n:'ТС КОМФОРТ',       roll:3.25, p:1750},
+ {id:'luna',    n:'ЛУНА',             roll:2.9,  p:1900},
+ {id:'mars',    n:'МАРС',             roll:3.0,  p:1900},
+ {id:'shtuk29', n:'Штукатурка 2,9 м', roll:2.9,  p:2100}, /* каталог ч.2: полотно 290 см */
+ {id:'shtuk',   n:'Штукатурка 3,2 м', roll:3.2,  p:2100},
+ {id:'akustik', n:'Акустик',          roll:3.2,  p:2100},
+ {id:'uzor',    n:'Узор',             roll:3.2,  p:2100}, /* каталог ч.1, новинка — цену уточнить */
+ {id:'celena',  n:'Celena (Германия)',roll:3.1,  p:2100},
+ {id:'orbita',  n:'Орбита',            roll:3.2,  p:1750}, /* дилерский прайс 01.02.2026 */
+ {id:'sil32',   n:'Silencio 3,2 м',    roll:3.2,  p:2500},
+ {id:'silencio',n:'Silencio 5,05 м',   roll:5.05, p:2500},
+ {id:'s07_32',  n:'S07 светопрозр. 3,2 м',roll:3.2,p:1900},
+ {id:'s07_50',  n:'S07 светопрозр. 5,0 м',roll:5.0,p:1900},
+];
+const SIDE_PROFILES=[
+ {id:'none',    n:'— без профиля',                 p:0,   c:'#c3c8da'},
+ {id:'base',    n:'ТС Базовый',                    p:400, c:'#4F46E5'},
+ {id:'baseC',   n:'ТС Базовый чёрн/бел',           p:450, c:'#1e2530'},
+ {id:'plinth',  n:'Плинтус Теневой Мини 15мм',     p:800, c:'#8A6A34'},
+ {id:'contour', n:'Плинтус Контур с подсветкой',   p:850, c:'#f0b429', light:true},
+ {id:'contourP',n:'Плинтус Контур Плюс (теневой)', p:900, c:'#f0b429', light:true},
+ {id:'otb',     n:'Отбойник ТС',                   p:650, c:'#6b7280'},
+ {id:'innerAng',n:'ТС Внутренний угол',            p:650, c:'#0e7490'},
+ {id:'wallCeil',n:'ТС Стена-Потолок',              p:850, c:'#7c5cbf'},
+ {id:'box',     n:'ТС Бокс (Стена-Потолок)',       p:900, c:'#7c5cbf'},
+ {id:'konstr',  n:'ТС Конструкционный',            p:550, c:'#374151'},
+ {id:'konstr5', n:'ТС Конструктор 5см',            p:550, c:'#4b5563'},
+ {id:'okno',    n:'ТС Окно-Откос + обход с откосом',p:700, c:'#0e7490', work:2500, workN:'Обход проёма с откосом из ткани'},
+ {id:'oknoBW',  n:'ТС Окно-Откос чёрн/бел + обход с откосом',p:800, c:'#1e2530', work:2500, workN:'Обход проёма с откосом из ткани'},
+ {id:'obhodNo', n:'Обход проёма без откоса',        p:0,   c:'#9aa0ae', work:1200, workN:'Обход проёма (без откоса)'},
+];
+const LINE_TYPES=[
+ {id:'light',  n:'Световая линия ТС',   mat:900, matN:'Световая Линия ТС 16мм',     mont:1600, montN:'Монтаж Световой линии ТС (2 полотна)',   torec:1000, torecN:'Обработка торцов световой линии', rass:true},
+ {id:'shadow', n:'Теневой разделитель', mat:800, matN:'Разделитель теневой ТС 2мм', mont:1600, montN:'Монтаж Теневого разделителя (2 полотна)', torec:500,  torecN:'Обработка углов/торцов разделителя'},
+ {id:'cascade',n:'Каскад',              mat:700, matN:'Профиль ТС КАСКАД',          mont:1200, montN:'Монтаж профиля ТС Каскад',                torec:1000, torecN:'Обработка углов/торца ТС Каскад', rass:true},
+ {id:'cascadeK',n:'Каскад + Конструктор 5см', mat:700, matN:'Профиль ТС КАСКАД', mat2:550, mat2N:'Профиль ТС Конструктор 5см, черный', mont:1600, montN:'Монтаж профиля ТС Каскад + ТС Конструктор 5см', torec:1000, torecN:'Обработка углов/торца ТС Каскад', rass:true},
+];
+const PR={membrane:600, felt:1100, sysMembrane:1300, sysFelt:1400, rassMat:300, rassMont:30,
+ oknoOtkos:700, obhodOtkos:2500, obhodDoor:6000,
+ rondo:[450,800,1200,1600,2000], zaklMont:600, rozMont:450,
+ otkosCorner:500, crossLight:2000,
+ braZakl:450, braZaklMont:1000, braMont:650, mountZakl:800, mountZaklMont:1100};
+
+/* ── состояние: контур точками (метры, y вниз от верха) ── */
+let state={
+ verts:[[0,0],[4.2,0],[4.2,2.8],[0,2.8]],
+ edgeProf:{0:'box',2:'contour',1:'base',3:'base'},   /* профиль по индексу стороны */
+ fabric:'comfort', fabColor:'Белый 11', underlay:'membrane', marginCm:10,
+ els:[
+  {id:'e1',t:'window',x:0.5,y:0.9,w:1.5,h:1.2,dims:['left']},
+  {id:'e2',t:'door',x:3.1,y:0.8,w:0.9,h:2.0,dims:[]},
+  {id:'e3',t:'outlet',x:2.55,y:2.45,posts:2,dims:['down']},
+ ],
+ sel:null, selEdge:null, seq:4, showWallDims:false,
+ stage:'calc',     /* draw — черчение · calc — наполнение и расчёт */
+ showCut:false,    /* показ отреза ткани пунктиром */
+ cutOrient:{},     /* ориентация ролика по зонам: auto | v | h */
+ mode:'edit',      /* edit | draw | dim */
+ drawPts:[],       /* точки в процессе черчения */
+ drawCursor:null,  /* позиция мыши в режиме черчения — резинка с размером */
+ edgeDirs:null,    /* направления сторон как начерчено — углы держатся при вводе длин */
+ edgeSet:{},       /* введённые пользователем длины сторон */
+};
+const NAMES={window:'Окно',door:'Дверь',opening:'Проём (контур)',outlet:'Розетка',sconce:'Бра',mount:'Навесная техника',line:'Доп. профиль'};
+const fmt=v=>v.toLocaleString('ru-RU',{maximumFractionDigits:2});
+const ABC='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const vlet=i=>ABC[i%ABC.length];
+
+const bbox=()=>{const xs=state.verts.map(p=>p[0]),ys=state.verts.map(p=>p[1]);
+ return{x0:Math.min(...xs),x1:Math.max(...xs),y0:Math.min(...ys),y1:Math.max(...ys)};};
+function polyArea(v){let a=0;for(let i=0;i<v.length;i++){const[x1,y1]=v[i],[x2,y2]=v[(i+1)%v.length];a+=x1*y2-x2*y1;}return Math.abs(a)/2;}
+/* проекция точки на стороны стены: липнет, если ближе ~14px */
+function snapToWallEdge(p2){
+ const n=state.verts.length;let best=null;
+ for(let i=0;i<n;i++){
+  const a=state.verts[i], b2=state.verts[(i+1)%n];
+  const abx=b2[0]-a[0], aby=b2[1]-a[1];
+  const L2=abx*abx+aby*aby; if(L2<1e-6)continue;
+  let t=((p2[0]-a[0])*abx+(p2[1]-a[1])*aby)/L2; t=Math.max(0,Math.min(1,t));
+  const q=[a[0]+abx*t, a[1]+aby*t];
+  const d=Math.hypot(p2[0]-q[0],p2[1]-q[1])*view.sc;
+  if(d<14&&(!best||d<best.d))best={p:[Math.round(q[0]*1000)/1000,Math.round(q[1]*1000)/1000],edge:i,d};
+ }
+ return best;
+}
+/* Проём «от пола» вливается в контур стены: фигура получает новые стороны,
+   куски исходной стороны наследуют её профиль, стороны проёма получают обход. */
+function mergeOpeningIntoWall(pts,ei){
+ const n=state.verts.length;
+ const a=state.verts[ei], b2=state.verts[(ei+1)%n];
+ const abx=b2[0]-a[0], aby=b2[1]-a[1], L2=abx*abx+aby*aby||1;
+ const t=q=>((q[0]-a[0])*abx+(q[1]-a[1])*aby)/L2;
+ if(t(pts[0])>t(pts[pts.length-1]))pts=[...pts].reverse();
+ const m=pts.length;
+ const newVerts=[...state.verts.slice(0,ei+1),...pts,...state.verts.slice(ei+1)];
+ const np={};
+ for(const[key,val]of Object.entries(state.edgeProf)){
+  const ki=+key;
+  if(ki<ei)np[ki]=val;
+  else if(ki===ei){np[ei]=val;np[ei+m]=val;}
+  else np[ki+m]=val;
+ }
+ /* стороны проёма — по умолчанию обход БЕЗ откоса, откос назначается тапом по стороне */
+ for(let j=1;j<m;j++)np[ei+j]='obhodNo';
+ state.verts=newVerts;
+ state.edgeProf=np;
+ captureDirs();state.edgeSet={};
+}
+function opoly(e){return e.verts.map(v=>[e.x+v[0],e.y+v[1]]);} /* контур проёма в координатах стены */
+function operim(e){
+ const v=e.verts;let p=0;
+ const segs=e.open?v.length-1:v.length; /* открытый (от пола): замыкающая идёт по стене — не обходится */
+ for(let i=0;i<segs;i++){const a=v[i],b2=v[(i+1)%v.length];p+=Math.hypot(b2[0]-a[0],b2[1]-a[1]);}
+ return p;
+}
+function captureDirs(){
+ const n=state.verts.length;
+ state.edgeDirs=state.verts.map((v,i)=>{
+  const w=state.verts[(i+1)%n];
+  const dx=w[0]-v[0],dy=w[1]-v[1],L=Math.hypot(dx,dy)||1;
+  return[dx/L,dy/L];
+ });
+}
+function setEdgeLen(i,L){
+ if(!(L>0))return;
+ if(!state.edgeDirs||state.edgeDirs.length!==state.verts.length)captureDirs();
+ state.edgeSet[i]=L;
+ rebuildFromDirs();
+}
+/* Перестройка контура: направления сторон сохраняются (углы не ломаются),
+   невязка замыкания распределяется по сторонам, длины которых ещё не вводили.
+   Если введены все и цепочка не сходится — последняя сторона просто
+   соединяет конец с началом (вот тогда угол «ломается»). */
+function rebuildFromDirs(){
+ const n=state.verts.length, dirs=state.edgeDirs;
+ const lens=[];
+ for(let i=0;i<n;i++)lens[i]=state.edgeSet[i]!=null?state.edgeSet[i]:edgeLen(i);
+ /* закрыть невязку по осям за счёт свободных сторон */
+ for(const ax of [0,1]){
+  let err=0;for(let i=0;i<n;i++)err+=dirs[i][ax]*lens[i];
+  const free=[];for(let i=0;i<n;i++)if(state.edgeSet[i]==null&&Math.abs(dirs[i][ax])>0.3)free.push(i);
+  const denom=free.reduce((s2,i)=>s2+dirs[i][ax]*dirs[i][ax],0);
+  if(denom>0.01)free.forEach(i=>{lens[i]=Math.max(0.05,lens[i]-err*dirs[i][ax]/denom);});
+ }
+ /* строим цепочку из первой вершины; последняя вершина — по построению */
+ const pts=[[...state.verts[0]]];
+ for(let i=0;i<n-1;i++)pts.push([pts[i][0]+dirs[i][0]*lens[i], pts[i][1]+dirs[i][1]*lens[i]]);
+ state.verts=pts.map(q=>[Math.round(q[0]*1000)/1000,Math.round(q[1]*1000)/1000]);
+}
+function edgeLen(i){const[a,b]=[state.verts[i],state.verts[(i+1)%state.verts.length]];return Math.hypot(b[0]-a[0],b[1]-a[1]);}
+
+function addEl(t){
+ const b=bbox();
+ const e={id:'e'+(++state.seq),t,x:(b.x0+b.x1)/2-0.4,y:(b.y0+b.y1)/2-0.4,dims:[]};
+ if(t==='window'){e.w=1.2;e.h=1.2;e.obhod='no';e.obhodProf='base'}
+ if(t==='door'){e.w=0.9;e.h=2.0;e.y=b.y1-2.0;e.obhod='std';e.obhodProf='base'}
+ if(t==='opening'){ /* проём чертится точками, как стена */
+  state.mode='drawOpening';state.drawPts=[];state.sel=null;state.selEdge=null;state.seq--;render();return;}
+ if(t==='outlet'){e.posts=1;e.y=b.y1-0.35}
+ if(t==='line'){e.len=1.5;e.lt='light';e.vert=true;e.y=b.y0+0.5}
+ state.els.push(e);state.sel=e.id;state.selEdge=null;render();
+}
+
+/* ── расчёт ── */
+function calc(){
+ const b=bbox(),W=b.x1-b.x0,Hmax=b.y1-b.y0;
+ const wallS=polyArea(state.verts);
+ const openS=state.els.filter(e=>e.t==='window'||e.t==='door').reduce((s,e)=>s+e.w*e.h,0)
+  +state.els.filter(e=>e.t==='opening').reduce((s,e)=>s+polyArea(e.verts),0);
+ const S=Math.max(0,wallS-openS);
+ const P=state.verts.reduce((s,_,i)=>s+edgeLen(i),0);
+ const winP=state.els.filter(e=>e.t==='window').reduce((s,e)=>s+2*(e.w+e.h),0)
+  +state.els.filter(e=>e.t==='opening').reduce((s,e)=>s+operim(e),0);
+ const doors=state.els.filter(e=>e.t==='door');
+ const lines=state.els.filter(e=>e.t==='line');
+ const fab=FABRICS.find(f=>f.id===state.fabric);
+ /* Ткань — раскроем рулона по зонам: вертикальный разделитель на всю высоту
+    делит стену на зоны, у каждой своя ориентация ролика (авто/верт/гориз).
+    Габарит зоны + припуск; проёмы из закупки НЕ вычитаются. */
+ const z=(state.marginCm??10)/100;
+ const splits=state.els
+  .filter(e=>e.t==='line'&&e.vert&&(e.len||0)>=Hmax*0.85)
+  .map(e=>e.x).filter(x=>x>b.x0+0.05&&x<b.x1-0.05).sort((q,w2)=>q-w2);
+ const zoneX=[b.x0,...splits,b.x1];
+ const zones=[];
+ for(let zi=0;zi<zoneX.length-1;zi++){
+  const zw=zoneX[zi+1]-zoneX[zi], Wg=zw+2*z, Hg=Hmax+2*z;
+  const ov=state.cutOrient[zi]||'auto';
+  /* припуск только вдоль полосы: поперёк размер подставляется под ширину ролика */
+  const vN=Math.ceil(zw/fab.roll), hN=Math.ceil(Hmax/fab.roll);
+  const vCut={o:'v',n:vN,area:vN*fab.roll*Hg,seams:vN-1};
+  const hCut={o:'h',n:hN,area:hN*fab.roll*Wg,seams:hN-1};
+  let pick;
+  if(ov==='v')pick=vCut;else if(ov==='h')pick=hCut;
+  else pick=[hCut,vCut].sort((a2,b3)=>a2.seams-b3.seams||a2.area-b3.area)[0];
+  zones.push({x1:zoneX[zi],x2:zoneX[zi+1],ov,...pick});
+ }
+ const cloth={area:zones.reduce((s2,zn)=>s2+zn.area,0)};
+ const seams=zones.reduce((s2,zn)=>s2+zn.seams,0);
+ const kH=Hmax>5?0.3:Hmax>3.5?0.2:0;
+ const r2=v=>Math.round(v*100)/100;
+ /* одинаковые позиции (имя+цена) объединяются, количества складываются */
+ const agg=new Map();
+ const push=(g,n,q,u,p)=>{const k=g+'|'+n+'|'+p;const ex=agg.get(k);if(ex)ex.q=r2(ex.q+q);else agg.set(k,{g,n,q:r2(q),u,p});};
+ const mat=(n,q,u,p)=>push('m',n,q,u,p);const wrk=(n,q,u,p)=>push('w',n,q,u,p);
+ const rows={get list(){return[...agg.values()];}};
+ mat(fab.n+(state.fabColor?' «'+state.fabColor+'»':'')+' ('+fab.roll+'м)',Math.round(cloth.area*100)/100,'м²',fab.p);
+ mat(state.underlay==='felt'?'Акустический войлок 10 мм':'Акустическая мембрана 10 мм',S,'м²',state.underlay==='felt'?PR.felt:PR.membrane);
+ wrk('Монтаж системы (каркас+'+(state.underlay==='felt'?'войлок':'мембрана')+'+ткань+профили периметра)',S,'м²',state.underlay==='felt'?PR.sysFelt:PR.sysMembrane);
+ /* участки сторон, занятые проёмами «от пола» и прямоугольными проёмами на стороне —
+    профиль там не идёт */
+ const occupied={};
+ state.els.filter(e=>e.t==='opening'&&e.open&&e.anchorEdge!=null).forEach(e=>{
+  const P5=opoly(e);const a=P5[0],b2=P5[P5.length-1];
+  occupied[e.anchorEdge]=(occupied[e.anchorEdge]||0)+Math.hypot(b2[0]-a[0],b2[1]-a[1]);
+ });
+ state.els.filter(e=>e.t==='window'||e.t==='door').forEach(e=>{
+  /* прямоугольник, стоящий кромкой на горизонтальной/вертикальной стороне */
+  state.verts.forEach((v,i)=>{
+   const w3=state.verts[(i+1)%state.verts.length];
+   const horiz=Math.abs(w3[1]-v[1])<0.02, vert2=Math.abs(w3[0]-v[0])<0.02;
+   if(horiz&&Math.abs((e.y+e.h)-v[1])<0.03){
+    const lo=Math.min(v[0],w3[0]),hi=Math.max(v[0],w3[0]);
+    const ov=Math.max(0,Math.min(hi,e.x+e.w)-Math.max(lo,e.x));
+    if(ov>0.05)occupied[i]=(occupied[i]||0)+ov;
+   }else if(horiz&&Math.abs(e.y-v[1])<0.03){
+    const lo=Math.min(v[0],w3[0]),hi=Math.max(v[0],w3[0]);
+    const ov=Math.max(0,Math.min(hi,e.x+e.w)-Math.max(lo,e.x));
+    if(ov>0.05)occupied[i]=(occupied[i]||0)+ov;
+   }else if(vert2&&(Math.abs(e.x-v[0])<0.03||Math.abs((e.x+e.w)-v[0])<0.03)){
+    const lo=Math.min(v[1],w3[1]),hi=Math.max(v[1],w3[1]);
+    const ov=Math.max(0,Math.min(hi,e.y+e.h)-Math.max(lo,e.y));
+    if(ov>0.05)occupied[i]=(occupied[i]||0)+ov;
+   }
+  });
+ });
+ /* профили по сторонам: только материал — монтаж входит в систему */
+ const grouped={};let rassLen=0;
+ state.verts.forEach((_,i)=>{
+  if(adjSide(i,b,calcCtx))return; /* общая грань с соседней стеной — там угловой профиль */
+  const pid=state.edgeProf[i]||'none';if(pid==='none')return;
+  const eff=Math.max(0,edgeLen(i)-(occupied[i]||0));
+  if(eff<0.02)return;
+  (grouped[pid]=grouped[pid]||0);grouped[pid]+=eff;
+ });
+ for(const[pid,len]of Object.entries(grouped)){
+  const pr=SIDE_PROFILES.find(x=>x.id===pid);
+  mat(pr.n,len,'м',pr.p);
+  if(pr.light)rassLen+=len;
+ }
+ /* обходы — по каждому окну/двери/проёму своим способом */
+ /* обход: работа по типу + материал выбранного профиля обхода */
+ const obhodPerim=(Pm,mode,profId)=>{
+  const pf=SIDE_PROFILES.find(x=>x.id===(profId||'base'));
+  if(pf&&pf.p)mat(pf.n.replace(/ \+ обход.*$/,''),Pm,'м',pf.p);
+  if(mode==='no')wrk('Обход проёма (без откоса)',Pm,'м',1200);
+  else if(mode==='nalich')wrk('Обход проёма с закладной под наличник (без откоса)',Pm,'м',1500);
+  else wrk('Обход проёма с откосом из ткани',Pm,'м',PR.obhodOtkos);
+ };
+ state.els.filter(e=>e.t==='window').forEach(e=>obhodPerim(2*(e.w+e.h),e.obhod||'no',e.obhodProf));
+ /* углы обходов с откосом: окно 4, дверь 2, проём — по вершинам; + вершины между откосными сторонами контура */
+ {let otkCor=0;
+  state.els.forEach(e=>{
+   const ob=e.obhod||(e.t==='door'?'std':'no');
+   if(ob!=='otkos')return;
+   if(e.t==='window')otkCor+=4;
+   else if(e.t==='door')otkCor+=2;
+   else if(e.t==='opening')otkCor+=e.open?Math.max(0,e.verts.length-2):e.verts.length;
+  });
+  const n3=state.verts.length;
+  for(let i3=0;i3<n3;i3++){const pa=state.edgeProf[(i3-1+n3)%n3],pb=state.edgeProf[i3];
+   if((pa==='okno'||pa==='oknoBW')&&(pb==='okno'||pb==='oknoBW'))otkCor++;}
+  if(otkCor)wrk('Обработка угла на откосе',otkCor,'шт',PR.otkosCorner);}
+ state.els.filter(e=>e.t==='opening').forEach(e=>obhodPerim(operim(e),e.obhod||'no',e.obhodProf));
+ doors.forEach(e=>{
+  const m2=e.obhod||'std';
+  const dP=e.w+2*e.h; /* дверь от пола: две вертикали и верх */
+  const overStd=e.w>0.905||e.h>2.005; /* больше стандартной 90×200 */
+  if(m2==='std'&&!overStd){wrk('Обход стандартной двери (90×200)',1,'шт',PR.obhodDoor);
+   const pf=SIDE_PROFILES.find(x=>x.id===(e.obhodProf||'base'));
+   if(pf&&pf.p)mat(pf.n.replace(/ \+ обход.*$/,''),dP,'м',pf.p);}
+  else if(m2==='hidden')wrk('Монтаж системы на полотно скрытой двери',1,'шт',8000);
+  else obhodPerim(dP,m2==='std'?'no':m2,e.obhodProf); /* нестандартная — обход без откоса по метражу */
+ });
+ state.els.filter(e=>e.t==='outlet').forEach(e=>{
+  mat('Закладная РОНДО под розетку/выключатель (пост'+e.posts+')',1,'шт',PR.rondo[e.posts-1]);
+  wrk('Монтаж закладной под розетку/выкл.',1,'шт',PR.zaklMont);
+  wrk('Монтаж розеток/выключателей',e.posts,'шт',PR.rozMont);});
+ state.els.filter(e=>e.t==='sconce').forEach(()=>{
+  mat('Закладная под настенный светильник (бра)',1,'шт',PR.braZakl);
+  wrk('Монтаж закладной для настенного светильника',1,'шт',PR.braZaklMont);
+  wrk('Монтаж настенного светильника (бра)',1,'шт',PR.braMont);});
+ state.els.filter(e=>e.t==='mount').forEach(()=>{
+  mat('Закладная для навесной техники',1,'шт',PR.mountZakl);
+  wrk('Монтаж закладной для навесной техники',1,'шт',PR.mountZaklMont);});
+ for(const lt of LINE_TYPES){
+  const ls=lines.filter(e=>(e.lt||'light')===lt.id);
+  if(!ls.length)continue;
+  const L=ls.reduce((s,e)=>s+(e.len||0),0);
+  mat(lt.matN,L,'м',lt.mat);
+  if(lt.mat2)mat(lt.mat2N,L,'м',lt.mat2);
+  wrk(lt.montN,L,'м',lt.mont);
+  wrk(lt.torecN,ls.length*2,'шт',lt.torec);
+  if(lt.rass)rassLen+=L;
+ }
+ if(rassLen>0){mat('Рассеиватель 16мм',rassLen,'м',PR.rassMat);wrk('Монтаж рассеивателя',rassLen,'м',PR.rassMont);}
+ /* перекрестия световых линий: вертикальная × горизонтальная */
+ {const lv=lines.filter(e=>(e.lt||'light')==='light'&&e.vert), lh=lines.filter(e=>(e.lt||'light')==='light'&&!e.vert);
+  let cross=0;
+  lv.forEach(v=>lh.forEach(h=>{if(v.x>=h.x-0.01&&v.x<=h.x+(h.len||1)+0.01&&h.y>=v.y-0.01&&h.y<=v.y+(v.len||1)+0.01)cross++;}));
+  if(cross)wrk('Монтаж перекрестий Световая линия ТС',cross,'шт',PR.crossLight);}
+ const rowList=rows.list;
+ let mSum=0,wSum=0;rowList.forEach(r=>{const s=r.q*r.p;if(r.g==='m')mSum+=s;else wSum+=s;});
+ const extra=[];
+ if(kH>0){const nb=wSum*kH;extra.push({n:'Надбавка за высоту '+(kH===0.2?'3,5–5 м':'5–8 м')+' (+'+(kH*100)+'% к работам)',s:nb});wSum+=nb;}
+ /* накладные и НДС считаются по объекту, не по стене */
+ return{rows:rowList,extra,total:mSum+wSum,mSum,wSum,S:r2(S),P:r2(P),winP:r2(winP),seams,fab,kH,b,W,Hmax,cloth:r2(cloth.area),zones,z,
+  sysSum:rowList.slice(0,3).reduce((s,r)=>s+r.q*r.p,0)};
+}
+
+/* ── проект: карточки стен, итог объекта, заказ материалов (задел под сетевую CRM) ── */
+const LAT='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+let project={name:'Джамбула 3-12',client:'',phone:'',address:'',priceVersion:'1кв2026'};
+let walls=[],curW=0;
+let estScope='wall'; /* смета: эта стена | вся комната */
+/* ── стили отображения чертежа — на сравнение ── */
+const DRAW_THEMES={
+ light:{n:'Мягкий',style:'soft',stage:'#f6f7fb',grid:'#e3e6f0',fabBg:'#e9ebf7',fabLn:'#dde0f0',wall:'#b9bdd6',dim:'#6b7280',letter:'#4F46E5',line:'#4F46E5',font:''},
+ tech:{n:'Технический',style:'tech',stage:'#ffffff',grid:'#eef1f8',fabBg:'#ffffff',fabLn:'#e9ecf4',wall:'#1e2530',dim:'#1e2530',letter:'#1e2530',line:'#1e2530',font:"'Courier New',monospace"},
+ blueprint:{n:'Чертёжный синий',style:'tech',stage:'#173a66',grid:'rgba(255,255,255,0.13)',fabBg:'#173a66',fabLn:'rgba(255,255,255,0.10)',wall:'#e8f1ff',dim:'#dbe9ff',letter:'#ffffff',line:'#e8f1ff',font:''},
+};
+const THEME_ORDER=['light','tech','blueprint'];
+let drawTheme='light';
+window.cycleTheme=()=>{
+ drawTheme=THEME_ORDER[(THEME_ORDER.indexOf(drawTheme)+1)%THEME_ORDER.length];
+ const bt=document.getElementById('themebtn');
+ if(bt)bt.textContent='🎨 Вид: '+DRAW_THEMES[drawTheme].n;
+ render();
+};
+function saveCur(){if(walls[curW])walls[curW].data={...state};}
+window.loadWall=i=>{if(i===curW)return;saveCur();curW=i;Object.assign(state,walls[i].data);zoomV=1;panXV=0;panYV=0;render();};
+function freshWallData(){return {...state,verts:[],edgeProf:{},edgeDirs:[],edgeSet:{},els:[],seq:0,sel:null,selEdge:null,mode:'draw',stage:'draw',drawPts:[],drawCursor:null,drawAnchor:null,showCut:false,cutOrient:{},showWallDims:false};}
+let roomsMeta={}; /* имя → {closed:bool} — замкнутая комната отделывается по всему кругу */
+window.addWallNew=(room)=>{saveCur();
+ /* из плашки — всегда ОТДЕЛЬНАЯ стена (chained=false): соединяет только «+ стена» на краю чертежа */
+ walls.push({name:'Стена '+LAT[walls.length%26],room:room||walls[curW]?.room||'Комната 1',chained:false,data:freshWallData(),cache:null});
+ curW=walls.length-1;Object.assign(state,walls[curW].data);zoomV=1;panXV=0;panYV=0;render();};
+window.addRoom=()=>{document.getElementById('roommodal').style.display='flex';
+ setTimeout(()=>{const f=document.getElementById('room_name');if(f){f.focus();f.select();}},30);};
+window.makeRoom=(mode)=>{
+ const nm=(document.getElementById('room_name').value||'Комната').trim();
+ document.getElementById('roommodal').style.display='none';
+ roomsMeta[nm]={closed:false,mode:mode||'row'};
+ addWallNew(nm);
+ openWiz([curW]);};
+/* соседняя стена «прилипает» к боковому краю текущей: тот же room, порядок = смежность, высота наследуется */
+window.addAdjacent=side=>{
+ saveCur();
+ const H=(walls[curW].cache&&walls[curW].cache.Hmax)||2.8;
+ const d=freshWallData();
+ d.verts=[[0,0],[3,0],[3,H],[0,H]];
+ d.edgeProf={0:'base',1:'base',2:'plinth',3:'base'};
+ d.stage='calc';d.mode='edit';d.selEdge=0;
+ const nw={name:'Стена '+LAT[walls.length%26],room:walls[curW].room||'Комната 1',data:d,cache:null};
+ const at=side==='l'?curW:curW+1;
+ /* стыковка: правая соседка chained; при вставке слева цепляется текущая */
+ if(side==='r')nw.chained=true;
+ else{nw.chained=!!walls[curW].chained;walls[curW].chained=true;}
+ walls.splice(at,0,nw);
+ curW=at;Object.assign(state,d);zoomV=1;panXV=0;panYV=0;render();
+ setTimeout(()=>{const f=document.getElementById('edgelen');if(f){f.focus();f.select();}},60);
+};
+window.toggleRoomClosed=nm=>{roomsMeta[nm]=roomsMeta[nm]||{};roomsMeta[nm].closed=!roomsMeta[nm].closed;renderProject();};
+window.renameRoom=(oldNm,newNm)=>{newNm=(newNm||'').trim();if(!newNm||newNm===oldNm){renderProject();return;}
+ walls.forEach(w=>{if(w.room===oldNm)w.room=newNm;});
+ roomsMeta[newNm]=roomsMeta[oldNm]||{closed:false};delete roomsMeta[oldNm];renderProject();};
+/* углы комнаты: пары соседних начерченных стен (по кругу при closed).
+   На угол: ТС Внутренний угол 650 ₽/м + монтаж угла 800 ₽/м, минус два боковых Базовых 2×400 ₽/м */
+function roomCornersFor(nm){
+ const acc={cnt:0,dM:0,dW:0,len:0,lenIn:0,lenOut:0};
+ const drawn=walls.filter(w=>(w.room||'Комната 1')===nm&&w.cache);
+ if(drawn.length<2)return acc;
+ const closed=roomsMeta[nm]&&roomsMeta[nm].closed;
+ const pairList=[];
+ for(let i=0;i<drawn.length;i++){
+  const j=(i+1)%drawn.length;
+  if(j===0){if(closed&&drawn[0].chained)pairList.push(i);}
+  else if(drawn[j].chained)pairList.push(i);
+ }
+ for(const i of pairList){
+  const h=Math.min(drawn[i].cache.Hmax,drawn[(i+1)%drawn.length].cache.Hmax);
+  acc.cnt++;acc.len+=h;
+  /* тип угла хранится на левой стене пары: 'in' — Внутренний угол, 'out' — Отбойник (внешний) */
+  if((drawn[i].cornerType||'in')==='out')acc.lenOut+=h;else acc.lenIn+=h;
+  acc.dM+=h*650; /* Внутренний угол и Отбойник — оба 650 ₽/м */
+  acc.dW+=h*800; /* монтаж системы — угол (внешний/внутренний) */
+ }
+ return acc;
+}
+function roomCorners(){
+ const acc={cnt:0,dM:0,dW:0,len:0,lenIn:0,lenOut:0};
+ [...new Set(walls.map(w=>w.room||'Комната 1'))].forEach(nm=>{
+  const c2=roomCornersFor(nm);
+  for(const k in acc)acc[k]+=c2[k];
+ });
+ return acc;
+}
+window.toggleCorner=i=>{walls[i].cornerType=(walls[i].cornerType||'in')==='in'?'out':'in';render();};
+/* камера переезжает на соседнюю стену: уезд в сторону угла, въезд с противоположной */
+window.goWall=(i,side)=>{
+ if(i===curW)return;
+ const sv=document.getElementById('svg');
+ sv.style.transition='transform .24s ease, opacity .24s ease';
+ sv.style.transform='translateX('+(side==='r'?'-9%':'9%')+')';
+ sv.style.opacity='0.2';
+ setTimeout(()=>{
+  loadWall(i);
+  const s2=document.getElementById('svg');
+  s2.style.transition='none';
+  s2.style.transform='translateX('+(side==='r'?'9%':'-9%')+')';
+  s2.style.opacity='0.2';
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+   s2.style.transition='transform .24s ease, opacity .24s ease';
+   s2.style.transform='';s2.style.opacity='1';
+   setTimeout(()=>{s2.style.transition='';},260);
+  }));
+ },240);
+};
+window.dupWallIdx=i=>{saveCur();const w=walls[i];
+ walls.splice(i+1,0,{name:w.name+' (копия)',data:JSON.parse(JSON.stringify(w.data)),cache:null});
+ curW=i+1;Object.assign(state,walls[curW].data);render();};
+window.delWallIdx=i=>{if(walls.length<2)return;
+ walls.splice(i,1);if(curW>=i&&curW>0)curW--;Object.assign(state,walls[curW].data);render();};
+function nbrsOf(idx){
+ const nmR=(walls[idx]&&walls[idx].room)||'Комната 1';
+ const idxs=walls.map((w,i)=>i).filter(i=>(walls[i].room||'Комната 1')===nmR);
+ const pos=idxs.indexOf(idx);
+ const closed=roomsMeta[nmR]&&roomsMeta[nmR].closed;
+ let left=null,right=null;
+ if(walls[idx].chained)left=pos>0?idxs[pos-1]:(closed&&idxs.length>1?idxs[idxs.length-1]:null);
+ const nxt=pos<idxs.length-1?idxs[pos+1]:(closed&&idxs.length>1?idxs[0]:null);
+ if(nxt!=null&&walls[nxt].chained)right=nxt;
+ return {left,right};
+}
+let calcCtx=null; /* соседство считаемой стены: общие грани исключаются из профилей */
+function calcOfData(d,idx){const bak={...state};Object.assign(state,d);
+ calcCtx=idx!=null?nbrsOf(idx):null;
+ let c=null;try{c=calc();}catch(e){}
+ calcCtx=null;Object.assign(state,bak);return c;}
+/* сторона i — общая грань? ('l'/'r'/null); bb — bbox стены */
+function adjSide(i,bb,ctx){
+ if(!ctx)return null;
+ const a=state.verts[i],w3=state.verts[(i+1)%state.verts.length];
+ if(Math.abs(a[0]-w3[0])>0.02)return null;
+ if(ctx.left!=null&&Math.abs(a[0]-bb.x0)<0.02)return 'l';
+ if(ctx.right!=null&&Math.abs(a[0]-bb.x1)<0.02)return 'r';
+ return null;
+}
+function miniWall(d){
+ if(!d.verts||d.verts.length<3)return '<svg viewBox="0 0 100 52" style="width:100%;height:52px"><rect x="1" y="1" width="98" height="50" rx="6" fill="#f6f7fc"/><text x="50" y="30" text-anchor="middle" font-size="10" fill="#9aa0b5">черчение…</text></svg>';
+ const xs=d.verts.map(v=>v[0]),ys=d.verts.map(v=>v[1]);
+ const x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
+ const sc=Math.min(88/((x1-x0)||1),40/((y1-y0)||1));
+ const ox=(100-(x1-x0)*sc)/2-x0*sc, oy=(52-(y1-y0)*sc)/2-y0*sc;
+ const X=x=>ox+x*sc,Y=y=>oy+y*sc;
+ let m=`<svg viewBox="0 0 100 52" style="width:100%;height:52px"><polygon points="${d.verts.map(v=>X(v[0])+','+Y(v[1])).join(' ')}" fill="#e9ebf7" stroke="#4F46E5" stroke-width="1.3"/>`;
+ (d.els||[]).forEach(e=>{
+  if(e.t==='window')m+=`<rect x="${X(e.x)}" y="${Y(e.y)}" width="${e.w*sc}" height="${e.h*sc}" fill="#cfe3f5" stroke="#7b96b3" stroke-width="0.8"/>`;
+  if(e.t==='door')m+=`<rect x="${X(e.x)}" y="${Y(e.y)}" width="${e.w*sc}" height="${e.h*sc}" fill="#f2ead9" stroke="#a08a5f" stroke-width="0.8"/>`;
+ });
+ return m+'</svg>';
+}
+function renderProject(){
+ const host=document.getElementById('wallcards');if(!host)return;
+ walls.forEach((w,i)=>{if(!w.cache&&w.data.verts&&w.data.verts.length>2)w.cache=calcOfData(w.data,i);});
+ const rooms=[];
+ walls.forEach(w=>{const nm=w.room||'Комната 1';if(!rooms.includes(nm))rooms.push(nm);});
+ host.innerHTML=rooms.map(nm=>{
+  const idxs=walls.map((w,i)=>[w,i]).filter(([w])=> (w.room||'Комната 1')===nm);
+  const meta9=roomsMeta[nm]||{};
+  const corners=roomCornersFor(nm).cnt;
+  const closed=meta9.closed;
+  return `<div class="roomgrp">
+   <div class="roomhdr">
+    <span class="rn" contenteditable onblur="renameRoom('${nm}',this.textContent)">${nm}</span>
+    <span class="lbl2">${idxs.length} стен${corners?` · углов: ${corners}`:''}${meta9.mode==='free'?' · отдельные':meta9.mode==='circle'?' · по кругу':''}</span>
+    ${meta9.mode==='row'?`<label><input type="checkbox" ${closed?'checked':''} onchange="toggleRoomClosed('${nm}')"> замкнуть в кольцо</label>`:''}
+   </div>
+   <div class="wcrow">`+
+   idxs.map(([w,i])=>{
+    const c=w.cache;
+    return `<div class="wcard ${i===curW?'on':''}" onclick="loadWall(${i})">
+     ${miniWall(w.data)}
+     <div class="wcn">${w.name}</div>
+     <div class="wcm">${c?Math.round(c.W*100)+'×'+Math.round(c.Hmax*100)+' · '+fmt(Math.round(c.total))+' ₽':'не начерчена'}</div>
+     <div class="wcx">${walls.length>1?`<span onclick="event.stopPropagation();delWallIdx(${i})">✕</span>`:''}<span onclick="event.stopPropagation();dupWallIdx(${i})">⧉</span></div>
+    </div>`;}).join('')+
+   `<div class="wcard plus" onclick="addWallNew('${nm}')">+ Стена</div></div></div>`;}).join('')+
+  `<button class="addroom" onclick="addRoom()">+ Комната</button>`;
+ let m=0,wk=0;walls.forEach(w=>{const c=w.cache;if(c){m+=c.mSum;wk+=c.wSum;}});
+ const co=roomCorners();
+ m+=co.dM;wk+=co.dW;
+ const nak=Math.max((m+wk)*0.06,6500);
+ const put=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=fmt(Math.round(v))+' ₽';};
+ put('obj_m',m);put('obj_w',wk);put('obj_nak',nak);put('obj_t',m+wk+nak);
+ const ce=document.getElementById('obj_corn');
+ if(ce)ce.innerHTML=co.cnt?`углы комнат: <b>${co.cnt} шт</b> — ${co.lenIn?`внутренние ${fmt(Math.round(co.lenIn*10)/10)} м (ТС Внутренний угол)`:''}${co.lenIn&&co.lenOut?' · ':''}${co.lenOut?`внешние ${fmt(Math.round(co.lenOut*10)/10)} м (Отбойник ТС)`:''} + монтаж угла 800 ₽/м; боковые профили общих граней не считаются (${fmt(Math.round(co.dM+co.dW))} ₽). Тап по грани угла на чертеже — сменить тип.`:'';
+ const nm=document.getElementById('curwname');
+ if(nm&&document.activeElement!==nm&&nm.textContent!==walls[curW].name)nm.textContent=walls[curW].name;
+ renderIso();
+}
+window.orderMats=()=>{
+ saveCur();
+ const agg=new Map();
+ walls.forEach((w,wi)=>{const c=w.data.verts&&w.data.verts.length>2?calcOfData(w.data,wi):null;if(!c)return;
+  c.rows.filter(r=>r.g==='m').forEach(r=>{const k=r.n+'|'+r.u+'|'+r.p;const e=agg.get(k)||{n:r.n,u:r.u,p:r.p,q:0};e.q=Math.round((e.q+r.q)*100)/100;agg.set(k,e);});});
+ const co=roomCorners();
+ if(co.cnt){
+  if(co.lenIn)agg.set('cornerIn',{n:'ТС Внутренний угол (стыки стен)',u:'м',p:650,q:Math.round(co.lenIn*100)/100});
+  if(co.lenOut)agg.set('cornerOut',{n:'Отбойник ТС (внешние углы)',u:'м',p:650,q:Math.round(co.lenOut*100)/100});
+ }
+ const rows=[...agg.values()].filter(r=>r.q>0);
+ let sum=0;rows.forEach(r=>sum+=r.q*r.p);
+ document.getElementById('orderbody').innerHTML=
+  `<table style="width:100%;border-collapse:collapse;font-size:13px">`+
+  rows.map(r=>`<tr><td style="padding:5px 6px;border-bottom:1px solid #eef0f6">${r.n}</td><td style="text-align:right;white-space:nowrap;padding:5px 6px;border-bottom:1px solid #eef0f6">${fmt(r.q)} ${r.u}</td><td style="text-align:right;white-space:nowrap;padding:5px 6px;border-bottom:1px solid #eef0f6">${fmt(Math.round(r.q*r.p))} ₽</td></tr>`).join('')+
+  `<tr><td style="padding:8px 6px;font-weight:800">Итого материалы (РРЦ, прайс ${project.priceVersion})</td><td></td><td style="text-align:right;font-weight:800;padding:8px 6px">${fmt(Math.round(sum))} ₽</td></tr></table>
+  <div style="color:#6b7280;font-size:12px;margin-top:8px">Задел под сетевую CRM: этот список — будущий заказ дилера представителю; в дилерском прайсе есть закупочные цены для маржи.</div>`;
+ document.getElementById('ordermodal').style.display='flex';
+};
+window.copyProject=()=>{
+ saveCur();
+ const dump=JSON.stringify({project,walls:walls.map(w=>({name:w.name,data:w.data}))});
+ const btn=document.getElementById('copybtn');
+ (navigator.clipboard?navigator.clipboard.writeText(dump):Promise.reject())
+  .then(()=>{if(btn){btn.textContent='✓ Скопировано в буфер';setTimeout(()=>btn.textContent='⭳ Копировать проект (JSON)',2000);}},
+        ()=>{if(btn){btn.textContent='буфер недоступен';setTimeout(()=>btn.textContent='⭳ Копировать проект (JSON)',2000);}});
+};
+/* ── план пола: черчение контура комнаты сверху ── */
+let plan={pts:[],cursor:null,closed:false};
+window.openPlan=()=>{
+ document.getElementById('roommodal').style.display='none';
+ plan={pts:[],cursor:null,closed:false};
+ document.getElementById('plan_make').style.display='none';
+ document.getElementById('planmodal').style.display='flex';
+ planRender();
+ setTimeout(()=>{const f=document.getElementById('plan_len');if(f)f.focus();},30);
+};
+function planView(){
+ const P=plan.pts.length?plan.pts:[[0,0],[4,3]];
+ const xs=P.map(q=>q[0]),ys=P.map(q=>q[1]);
+ const x0=Math.min(...xs,0)-0.8,x1=Math.max(...xs,3)+0.8,y0=Math.min(...ys,0)-0.8,y1=Math.max(...ys,2.4)+0.8;
+ const sc=Math.min(660/(x1-x0),380/(y1-y0));
+ return {sc,ox:-x0*sc+(660-(x1-x0)*sc)/2,oy:-y0*sc+(380-(y1-y0)*sc)/2};
+}
+function planRender(){
+ const sv=document.getElementById('plansvg');if(!sv)return;
+ const v=planView();
+ const X=x=>v.ox+x*v.sc, Y=y=>v.oy+y*v.sc;
+ let g=`<defs><pattern id="pgrid" width="24" height="24" patternUnits="userSpaceOnUse"><path d="M24 0H0V24" fill="none" stroke="#e3e6f0"/></pattern></defs><rect width="660" height="380" fill="url(#pgrid)"/>`;
+ if(plan.pts.length){
+  const ptsS=plan.pts.map(q=>X(q[0])+','+Y(q[1])).join(' ');
+  if(plan.closed)g+=`<polygon points="${ptsS}" fill="rgba(79,70,229,0.08)" stroke="#4F46E5" stroke-width="2.5"/>`;
+  else g+=`<polyline points="${ptsS}" fill="none" stroke="#4F46E5" stroke-width="2.5" stroke-dasharray="7 5"/>`;
+  plan.pts.forEach((q,i)=>{
+   g+=`<circle cx="${X(q[0])}" cy="${Y(q[1])}" r="${i===0?8:5}" fill="${i===0?'rgba(79,70,229,0.15)':'#fff'}" stroke="#4F46E5" stroke-width="2"/>`;
+   const w2=plan.pts[(i+1)%plan.pts.length];
+   if(i<plan.pts.length-1||plan.closed){
+    const L=Math.hypot(w2[0]-q[0],w2[1]-q[1]);
+    if(L>0.1)g+=`<text x="${(X(q[0])+X(w2[0]))/2}" y="${(Y(q[1])+Y(w2[1]))/2-7}" text-anchor="middle" fill="#6b7280" font-size="12" font-weight="700">${Math.round(L*100)}</text>`;
+   }
+  });
+  if(!plan.closed&&plan.cursor){
+   const lp=plan.pts[plan.pts.length-1];
+   g+=`<line x1="${X(lp[0])}" y1="${Y(lp[1])}" x2="${X(plan.cursor[0])}" y2="${Y(plan.cursor[1])}" stroke="#c77400" stroke-width="2" stroke-dasharray="4 4"/>`;
+   const L=Math.hypot(plan.cursor[0]-lp[0],plan.cursor[1]-lp[1]);
+   g+=`<text x="${X(plan.cursor[0])+12}" y="${Y(plan.cursor[1])-8}" fill="#c77400" font-size="13" font-weight="800">${Math.round(L*100)} см</text>`;
+  }
+  /* типы углов подписываем сразу */
+  if(plan.closed&&plan.pts.length>2){
+   const types=planCornerTypes();
+   plan.pts.forEach((q,j)=>{
+    const t=types[j];
+    g+=`<text x="${X(q[0])}" y="${Y(q[1])+22}" text-anchor="middle" fill="${t==='out'?'#6b7280':'#0e7490'}" font-size="10.5" font-weight="800">${t==='out'?'внешн.':'внутр.'}</text>`;
+   });
+  }
+ }else g+=`<text x="330" y="190" text-anchor="middle" fill="#9aa0b5" font-size="14" font-weight="700">Кликайте по полю — точки контура пола</text>`;
+ sv.innerHTML=g;
+}
+function planCornerTypes(){
+ const P=plan.pts,n=P.length;
+ let area2=0;for(let i=0;i<n;i++){const a=P[i],b2=P[(i+1)%n];area2+=a[0]*b2[1]-b2[0]*a[1];}
+ return P.map((_,j)=>{
+  const pv=P[(j-1+n)%n],cu=P[j],nx=P[(j+1)%n];
+  const c=(cu[0]-pv[0])*(nx[1]-cu[1])-(cu[1]-pv[1])*(nx[0]-cu[0]);
+  return (c>0)===(area2>0)?'in':'out';
+ });
+}
+function planXY(ev){
+ const sv=document.getElementById('plansvg');
+ const r=sv.getBoundingClientRect();
+ const v=planView();
+ const sx=(ev.clientX-r.left)*660/r.width, sy=(ev.clientY-r.top)*380/r.height;
+ return [Math.round((sx-v.ox)/v.sc*100)/100, Math.round((sy-v.oy)/v.sc*100)/100];
+}
+function planOrtho(p2){
+ if(!plan.pts.length)return p2;
+ const pv=plan.pts[plan.pts.length-1];
+ const adx=Math.abs(p2[0]-pv[0]),ady=Math.abs(p2[1]-pv[1]);
+ if(ady<adx*0.27)p2=[p2[0],pv[1]];else if(adx<ady*0.27)p2=[pv[0],p2[1]];
+ const f=plan.pts[0];
+ if(Math.abs(p2[0]-f[0])<0.12)p2=[f[0],p2[1]];
+ if(Math.abs(p2[1]-f[1])<0.12)p2=[p2[0],f[1]];
+ return p2;
+}
+window.planUndo=()=>{plan.pts.pop();plan.closed=false;document.getElementById('plan_make').style.display='none';planRender();};
+window.planClose=()=>{if(plan.pts.length>2){plan.closed=true;document.getElementById('plan_make').style.display='';planRender();}};
+document.addEventListener('pointerdown',ev=>{
+ const sv=ev.target.closest('#plansvg');if(!sv||plan.closed)return;
+ let p2=planOrtho(planXY(ev));
+ if(plan.pts.length>2){
+  const f=plan.pts[0],v=planView();
+  if(Math.hypot((p2[0]-f[0])*v.sc,(p2[1]-f[1])*v.sc)<20){planClose();return;}
+ }
+ plan.pts.push(p2);planRender();
+ const f=document.getElementById('plan_len');if(f){f.focus();f.select();}
+});
+document.addEventListener('pointermove',ev=>{
+ if(document.getElementById('planmodal').style.display!=='flex'||plan.closed||!plan.pts.length)return;
+ if(!ev.target.closest('#plansvg'))return;
+ plan.cursor=planOrtho(planXY(ev));
+ const f=document.getElementById('plan_len');
+ const lp=plan.pts[plan.pts.length-1];
+ const L=Math.hypot(plan.cursor[0]-lp[0],plan.cursor[1]-lp[1]);
+ if(f&&L>0.03){f.value=Math.round(L*100);if(document.activeElement===f)f.select();}
+ planRender();
+});
+document.getElementById('plan_len').addEventListener('keydown',ev=>{
+ if(ev.key!=='Enter')return;
+ const L=(parseFloat(ev.target.value)||0)/100;
+ if(!(L>0)||!plan.pts.length)return;
+ const lp=plan.pts[plan.pts.length-1];
+ let dir=[1,0];
+ if(plan.cursor){
+  const dx=plan.cursor[0]-lp[0],dy=plan.cursor[1]-lp[1],dl=Math.hypot(dx,dy);
+  if(dl>0.02)dir=[dx/dl,dy/dl];
+ }
+ if(Math.abs(dir[0])>=Math.abs(dir[1])){if(Math.abs(dir[1])<0.27)dir=[dir[0]>0?1:-1,0];}
+ else{if(Math.abs(dir[0])<0.27)dir=[0,dir[1]>0?1:-1];}
+ plan.pts.push([Math.round((lp[0]+dir[0]*L)*1000)/1000,Math.round((lp[1]+dir[1]*L)*1000)/1000]);
+ planRender();ev.target.select();
+});
+window.planMake=()=>{
+ if(!plan.closed||plan.pts.length<3)return;
+ const nm=(document.getElementById('room_name').value||'Комната').trim();
+ const H=(parseInt(document.getElementById('plan_h').value)||280)/100;
+ const types=planCornerTypes();
+ saveCur();
+ roomsMeta[nm]={closed:true,mode:'circle',plan:{pts:plan.pts.map(q=>[...q]),h:H*100}};
+ const n=plan.pts.length,first=walls.length;
+ for(let i=0;i<n;i++){
+  const a=plan.pts[i],b2=plan.pts[(i+1)%n];
+  const L=Math.round(Math.hypot(b2[0]-a[0],b2[1]-a[1])*100)/100;
+  const d=freshWallData();
+  d.verts=[[0,0],[L,0],[L,H],[0,H]];
+  d.edgeProf={0:'base',1:'base',2:'plinth',3:'base'};
+  d.stage='calc';d.mode='edit';
+  walls.push({name:'Стена '+LAT[walls.length%26],room:nm,planIdx:i,chained:true,
+   /* тип угла в вершине i+1 хранится на левой стене пары (стена i) */
+   cornerType:types[(i+1)%n],data:d,cache:null});
+ }
+ document.getElementById('planmodal').style.display='none';
+ curW=first;Object.assign(state,walls[curW].data);zoomV=1;panXV=0;panYV=0;render();
+ openWiz(walls.map((w,i)=>i).filter(i=>walls[i].room===nm)); /* профили и ткань — сразу на всю комнату */
+};
+/* ── изометрическая мини-комната: план либо синтез из ширин стен и типов углов ── */
+function roomSegments(nmR){
+ const meta=roomsMeta[nmR];
+ const idxs=walls.map((w,i)=>i).filter(i=>(walls[i].room||'Комната 1')===nmR);
+ if(meta&&meta.plan){
+  const P=meta.plan.pts,n=P.length;
+  return {H:meta.plan.h/100,floor:P,
+   segs:P.map((a,i)=>({a,b:P[(i+1)%n],wallIdx:idxs.find(wi=>walls[wi].planIdx===i)}))};
+ }
+ const drawn=idxs.filter(wi=>walls[wi].cache);
+ if(drawn.length<2)return null;
+ /* синтез: идём по кругу, поворачивая по типу угла */
+ let p=[0,0],dir=[1,0];
+ const segs=[];
+ drawn.forEach((wi,k)=>{
+  const L=walls[wi].cache.W;
+  const b2=[p[0]+dir[0]*L,p[1]+dir[1]*L];
+  segs.push({a:[...p],b:b2,wallIdx:wi});
+  p=b2;
+  const t=walls[wi].cornerType||'in';
+  dir=t==='in'?[-dir[1],dir[0]]:[dir[1],-dir[0]];
+ });
+ return {H:Math.max(...drawn.map(wi=>walls[wi].cache.Hmax)),floor:null,segs};
+}
+function isoRoom(){
+ const nmR=walls[curW]&&(walls[curW].room||'Комната 1');
+ const R=roomSegments(nmR);
+ if(!R)return '';
+ const iso=(x,y,z)=>[(x-y)*0.866,(x+y)*0.5-z];
+ const H=R.H;
+ let pts=[];
+ R.segs.forEach(sg=>{[sg.a,sg.b].forEach(q=>{pts.push(iso(q[0],q[1],0));pts.push(iso(q[0],q[1],H));});});
+ const xs=pts.map(q=>q[0]),ys=pts.map(q=>q[1]);
+ const bx0=Math.min(...xs),bx1=Math.max(...xs),by0=Math.min(...ys),by1=Math.max(...ys);
+ const sc=Math.min(168/(bx1-bx0||1),116/(by1-by0||1));
+ const T=q=>[(q[0]-bx0)*sc+14,(q[1]-by0)*sc+18];
+ const quads=R.segs.map(sg=>({
+  q:[T(iso(sg.a[0],sg.a[1],0)),T(iso(sg.b[0],sg.b[1],0)),T(iso(sg.b[0],sg.b[1],H)),T(iso(sg.a[0],sg.a[1],H))],
+  depth:(sg.a[0]+sg.a[1]+sg.b[0]+sg.b[1])/2,
+  wallIdx:sg.wallIdx,active:sg.wallIdx===curW}));
+ quads.sort((u,v2)=>u.depth-v2.depth);
+ let g='';
+ if(R.floor)g+=`<polygon points="${R.floor.map(q=>T(iso(q[0],q[1],0)).join(',')).join(' ')}" fill="#eef0fb" stroke="#c9cfe3"/>`;
+ quads.forEach(({q,wallIdx,active})=>{
+  g+=`<polygon ${wallIdx!=null?`data-gowall="${wallIdx}" style="cursor:pointer"`:''} points="${q.map(p2=>p2.join(',')).join(' ')}" fill="${active?'rgba(79,70,229,0.75)':'rgba(79,70,229,0.16)'}" stroke="${active?'#4F46E5':'#8a90ab'}" stroke-width="${active?2:1}"/>`;
+ });
+ return g;
+}
+function renderIso(){
+ const box=document.getElementById('isobox');if(!box)return;
+ const g=isoRoom();
+ box.innerHTML=g?`<div style="background:#fff;border:1px solid #dfe3f0;border-radius:12px;padding:4px 8px 2px;display:flex;align-items:center;gap:8px">
+  <svg viewBox="0 0 196 150" style="display:block;width:170px">${g}</svg>
+  <div style="color:#6b7280;font-size:10px;font-weight:700;max-width:92px">комната сверху<br><span style="font-weight:400">тап по стене — переход</span></div></div>`:'';
+}
+document.addEventListener('pointerdown',ev=>{
+ const box=ev.target.closest('#isobox');if(!box)return;
+ const gw=ev.target.closest('[data-gowall]');
+ if(gw)goWall(+gw.dataset.gowall,'r');
+});
+/* ── мастер настройки: верх → низ → ткань (интерактив после создания стены/комнаты) ── */
+const WIZ_TOPS=[['base','ТС Базовый · 400 ₽/м'],['baseC','ТС Базовый чёрн/бел · 450 ₽/м'],['wallCeil','ТС Стена-Потолок · 850 ₽/м'],['box','ТС Бокс (Стена-Потолок) · 900 ₽/м']];
+const WIZ_BOTTOMS=[['plinth','Плинтус Теневой Мини 15мм · 800 ₽/м'],['base','ТС Базовый (плинтус заказчика) · 400 ₽/м'],['contour','Плинтус Контур с подсветкой · 850 ₽/м'],['contourP','Плинтус Контур Плюс (теневой) · 900 ₽/м']];
+let wiz=null;
+function openWiz(targets){
+ wiz={targets,step:0,top:'base',bottom:'plinth',fabric:state.fabric||'comfort'};
+ document.getElementById('wizmodal').style.display='flex';
+ wizRender();
+}
+function wizRender(){
+ if(!wiz)return;
+ const steps=['Верхний профиль','Нижний профиль (плинтус)','Ткань'];
+ document.getElementById('wiz_title').textContent=steps[wiz.step];
+ document.getElementById('wiz_step').textContent='шаг '+(wiz.step+1)+' из 3 · углы считаются сами';
+ document.getElementById('wiz_next').textContent=wiz.step===2?'Готово ✓':'Далее →';
+ const body=document.getElementById('wiz_body');
+ const opt=(val,label,cur,key)=>`<button class="chip" style="justify-content:flex-start;text-align:left;${val===cur?'border-color:#4F46E5;color:#4F46E5;font-weight:800;background:#eef0ff':''}" onclick="wiz.${key}='${val}';wizRender()">${label}</button>`;
+ if(wiz.step===0)body.innerHTML=WIZ_TOPS.map(([v,l])=>opt(v,l,wiz.top,'top')).join('');
+ else if(wiz.step===1)body.innerHTML=WIZ_BOTTOMS.map(([v,l])=>opt(v,l,wiz.bottom,'bottom')).join('');
+ else body.innerHTML=FABRICS.map(f=>opt(f.id,`${f.n} · рулон ${(''+f.roll).replace('.',',')} м · ${f.p} ₽/м²`,wiz.fabric,'fabric')).join('');
+}
+window.wizSkip=()=>{document.getElementById('wizmodal').style.display='none';wiz=null;};
+window.wizNext=()=>{
+ if(!wiz)return;
+ if(wiz.step<2){wiz.step++;wizRender();return;}
+ /* применить к целевым стенам */
+ wiz.targets.forEach(wi=>{
+  const w=walls[wi];if(!w)return;
+  const d=wi===curW?state:w.data;
+  d.fabric=wiz.fabric;
+  const c0=(FAB_COLORS[wiz.fabric]||[])[0];d.fabColor=c0?c0.n:'';
+  if(d.verts&&d.verts.length>2){
+   /* верх/низ по геометрии: горизонтальные стороны с мин/макс y */
+   let iTop=null,iBot=null,yT=1e9,yB=-1e9;
+   d.verts.forEach((v,i)=>{
+    const w3=d.verts[(i+1)%d.verts.length];
+    if(Math.abs(w3[1]-v[1])>0.05)return;
+    const ym=(v[1]+w3[1])/2;
+    if(ym<yT){yT=ym;iTop=i;}
+    if(ym>yB){yB=ym;iBot=i;}
+   });
+   if(iTop!=null)d.edgeProf[iTop]=wiz.top;
+   if(iBot!=null)d.edgeProf[iBot]=wiz.bottom;
+  }else{
+   d.pendTop=wiz.top;d.pendBottom=wiz.bottom; /* применится при замыкании контура */
+  }
+  w.cache=null;
+ });
+ document.getElementById('wizmodal').style.display='none';wiz=null;render();
+};
+/* ── отрисовка ── */
+const svg=document.getElementById('svg');
+/* текст вдоль отрезка: поворот по направлению, offset — сдвиг по нормали */
+function alongText(x1,y1,x2,y2,txt,fill,off,size){
+ const mx=(x1+x2)/2,my=(y1+y2)/2;
+ let ang=Math.atan2(y2-y1,x2-x1)*180/Math.PI;
+ let o=off;
+ if(ang>90||ang<-90){ang+=180;o=-off;}
+ const rad=(ang-90)*Math.PI/180;
+ const tx=mx+Math.cos(rad)*o, ty=my+Math.sin(rad)*o;
+ return `<text x="${tx}" y="${ty}" text-anchor="middle" fill="${fill}" font-size="${size||10}" font-weight="600" transform="rotate(${ang} ${tx} ${ty})">${txt}</text>`;
+}
+let view={sc:1,ox:0,oy:0};
+let zoomV=1, panXV=0, panYV=0; /* пользовательский зум и сдвиг холста */
+function render(){
+ /* чистый лист: контура ещё нет — только сетка и точки черчения */
+ if(state.verts.length<3){
+  const vw=900,vh=520;
+  const defW=6,defH=3.6;
+  const TH0=DRAW_THEMES[drawTheme];
+  const stg0=document.querySelector('.stage');if(stg0)stg0.style.background=TH0.stage;
+  svg.style.fontFamily=TH0.font||'';
+  const sc0=Math.min((vw-112)/defW,(vh-112)/defH)*zoomV;
+  view={sc:sc0,ox:(vw-defW*sc0)/2+panXV,oy:(vh-defH*sc0)/2+panYV};
+  const X0=x=>view.ox+x*sc0, Y0=y=>view.oy+y*sc0;
+  let s0=`<defs><pattern id="grid0" width="24" height="24" patternUnits="userSpaceOnUse"><path d="M24 0H0V24" fill="none" stroke="${TH0.grid}" stroke-width="1"/></pattern></defs>`;
+  s0+=`<rect x="0" y="0" width="900" height="520" fill="url(#grid0)"/>`;
+  const dp=state.drawPts;
+  if(dp.length){
+   s0+=`<polyline points="${dp.map(p2=>X0(p2[0])+','+Y0(p2[1])).join(' ')}" fill="none" stroke="#4F46E5" stroke-width="2" stroke-dasharray="6 4"/>`;
+   dp.forEach((p2,i5)=>{
+    s0+=`<circle cx="${X0(p2[0])}" cy="${Y0(p2[1])}" r="${i5===0?9:6}" fill="${i5===0?'rgba(79,70,229,0.15)':'#fff'}" stroke="#4F46E5" stroke-width="2"/>`;
+    s0+=`<text x="${X0(p2[0])}" y="${Y0(p2[1])-13}" text-anchor="middle" fill="#4F46E5" font-size="13" font-weight="800">${vlet(i5)}</text>`;
+   });
+   if(state.drawCursor){
+    const lp=dp[dp.length-1], cu=state.drawCursor;
+    const L3=Math.hypot(cu[0]-lp[0],cu[1]-lp[1]);
+    if(L3>0.03){
+     s0+=`<line x1="${X0(lp[0])}" y1="${Y0(lp[1])}" x2="${X0(cu[0])}" y2="${Y0(cu[1])}" stroke="#c77400" stroke-width="2" stroke-dasharray="4 4"/>`;
+     s0+=`<circle cx="${X0(cu[0])}" cy="${Y0(cu[1])}" r="4" fill="#c77400"/>`;
+     s0+=alongText(X0(lp[0]),Y0(lp[1]),X0(cu[0]),Y0(cu[1]),Math.round(L3*100)+' см','#c77400',-10,12);
+    }
+   }
+  }
+  s0+=`<text x="450" y="26" text-anchor="middle" fill="#4F46E5" font-size="13" font-weight="700">${dp.length<3?'Ставьте точки контура стены':'Тап по точке А — замкнуть фигуру'}</text>`;
+  svg.innerHTML=s0;
+  document.getElementById('props').style.display='none';
+  document.getElementById('sources').innerHTML='';
+  document.getElementById('est').innerHTML='';
+  document.getElementById('total').textContent='0 ₽';
+  document.getElementById('wallsum').textContent='';
+  document.getElementById('drawbtn').classList.add('on');
+  document.getElementById('drawpanel').style.display='flex';
+  applyStage();
+  if(walls[curW]){walls[curW].data={...state};walls[curW].cache=null;}
+  renderProject();
+  return;
+ }
+ calcCtx=nbrsOf(curW);
+ const c=calc();calcCtx=null;const b=c.b;
+ const pad=56,vw=900,vh=520;
+ const sc=Math.min((vw-2*pad)/Math.max(c.W,0.5),(vh-2*pad)/Math.max(c.Hmax,0.5))*zoomV;
+ const ox=(vw-c.W*sc)/2-b.x0*sc+panXV, oy=(vh-c.Hmax*sc)/2-b.y0*sc+panYV;
+ view={sc,ox,oy};
+ const X=x=>ox+x*sc, Y=y=>oy+y*sc;
+ const TH=DRAW_THEMES[drawTheme];
+ const stg=document.querySelector('.stage');if(stg)stg.style.background=TH.stage;
+ svg.style.fontFamily=TH.font||'';
+ const tech=TH.style==='tech';
+ let s='';
+ s+=`<defs>
+  <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse">
+   <path d="M24 0H0V24" fill="none" stroke="${TH.grid}" stroke-width="1"/>
+  </pattern>
+  <pattern id="fabric" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+   <rect width="7" height="7" fill="${TH.fabBg}"/>
+   <line x1="0" y1="0" x2="0" y2="7" stroke="${TH.fabLn}" stroke-width="2.4"/>
+  </pattern>
+  <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
+   <stop offset="0" stop-color="#dceefb"/><stop offset="0.5" stop-color="#bcd9f0"/><stop offset="1" stop-color="#d4e9f7"/>
+  </linearGradient>
+  <linearGradient id="doorwood" x1="0" y1="0" x2="1" y2="0">
+   <stop offset="0" stop-color="#f7f4ee"/><stop offset="1" stop-color="#ece6da"/>
+  </linearGradient>
+  <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+   <feGaussianBlur stdDeviation="6"/>
+  </filter>
+  <filter id="soft" x="-30%" y="-30%" width="160%" height="160%">
+   <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#1e2530" flood-opacity="0.12"/>
+  </filter>
+ </defs>`;
+ s+=`<rect x="0" y="0" width="900" height="520" fill="url(#grid)"/>`;
+ const pts=state.verts.map(p=>X(p[0])+','+Y(p[1])).join(' ');
+ s+=`<polygon points="${pts}" fill="url(#fabric)" stroke="${TH.wall}" stroke-width="${drawTheme==='minimal'?2:1}" filter="url(#soft)"/>`;
+ /* стороны: цвет профиля, тап выбирает */
+ state.verts.forEach((v,i)=>{
+  const w=state.verts[(i+1)%state.verts.length];
+  const pid=state.edgeProf[i]||'none';
+  const pr=SIDE_PROFILES.find(x=>x.id===pid);
+  const selE=state.selEdge===i;
+  const edgeCol=tech?(selE?'#ff9500':TH.line):pr.c;
+  const edgeW=tech?(selE?3:(pid==='none'?1.2:2.4)):(selE?7:(pid==='none'?2:5));
+  s+=`<line data-edge="${i}" x1="${X(v[0])}" y1="${Y(v[1])}" x2="${X(w[0])}" y2="${Y(w[1])}" stroke="${edgeCol}" stroke-width="${edgeW}" ${selE?'stroke-dasharray="2 4"':''} stroke-linecap="round" style="cursor:pointer"/>`;
+  s+=`<line data-edge="${i}" x1="${X(v[0])}" y1="${Y(v[1])}" x2="${X(w[0])}" y2="${Y(w[1])}" stroke="transparent" stroke-width="18" style="cursor:pointer"/>`;
+  if(pid!=='none'){
+   if(adjSide(i,b,nbrsOf(curW)))return; /* общая грань — подписана угловой плашкой */
+   const short=pr.n.replace('Плинтус ','').replace('Профиль ','').replace(' 15мм','').replace(' (Стена-Потолок)','');
+   s+=alongText(X(v[0]),Y(v[1]),X(w[0]),Y(w[1]),short,tech?TH.dim:pr.c,-13,10);
+  }
+  /* размер стороны стены (переключается кнопкой «Размеры стен») */
+  if(state.showWallDims){
+   const L2=edgeLen(i);
+   if(L2>0.15)s+=alongText(X(v[0]),Y(v[1]),X(w[0]),Y(w[1]),String(Math.round(L2*100)),TH.dim,14,10.5);
+  }
+ });
+ /* вершины с буквами А, Б, В… */
+ state.verts.forEach((v,i)=>{
+  s+=`<circle data-vert="${i}" cx="${X(v[0])}" cy="${Y(v[1])}" r="7" fill="#fff" stroke="#4F46E5" stroke-width="2" style="cursor:move"/>`;
+  /* буква снаружи контура: по биссектрисе от центра фигуры */
+  const cxm=state.verts.reduce((a2,q)=>a2+q[0],0)/state.verts.length;
+  const cym=state.verts.reduce((a2,q)=>a2+q[1],0)/state.verts.length;
+  const dx2=v[0]-cxm, dy2=v[1]-cym, L2=Math.hypot(dx2,dy2)||1;
+  s+=`<text x="${X(v[0])+dx2/L2*17}" y="${Y(v[1])+dy2/L2*17+4}" text-anchor="middle" fill="${TH.letter}" font-size="12" font-weight="800">${vlet(i)}</text>`;
+ });
+ /* элементы */
+ for(const e of state.els){
+  const sel=state.sel===e.id;const st=`stroke="#4F46E5" stroke-width="${sel?2.4:1.5}"`;
+  if(e.t==='window'){
+   const x=X(e.x),y=Y(e.y),w2=e.w*sc,h2=e.h*sc,fr=Math.min(6,w2*0.06);
+   if(tech){
+    const c9=sel?'#ff9500':TH.line;
+    s+=`<g data-id="${e.id}" style="cursor:move">
+     <rect x="${x}" y="${y}" width="${w2}" height="${h2}" fill="${TH.stage}" stroke="${c9}" stroke-width="1.6"/>
+     <rect x="${x+4}" y="${y+4}" width="${Math.max(2,w2-8)}" height="${Math.max(2,h2-8)}" fill="none" stroke="${c9}" stroke-width="1"/>
+     <line x1="${x}" y1="${y}" x2="${x+w2}" y2="${y+h2}" stroke="${c9}" stroke-width="1"/>
+     <line x1="${x+w2}" y1="${y}" x2="${x}" y2="${y+h2}" stroke="${c9}" stroke-width="1"/>
+    </g>`;
+    continue;
+   }
+   s+=`<g data-id="${e.id}" style="cursor:move">
+    <rect x="${x}" y="${y}" width="${w2}" height="${h2}" fill="#fff" stroke="${sel?'#4F46E5':'#8f95ad'}" stroke-width="${sel?2.4:1.6}"/>
+    <rect x="${x+fr}" y="${y+fr}" width="${w2-2*fr}" height="${h2-2*fr}" fill="url(#glass)" stroke="#9db6cc" stroke-width="1"/>
+    <line x1="${x+w2/2}" y1="${y+fr}" x2="${x+w2/2}" y2="${y+h2-fr}" stroke="#fff" stroke-width="${fr*0.8}"/>
+    <line x1="${x+w2/2}" y1="${y+fr}" x2="${x+w2/2}" y2="${y+h2-fr}" stroke="#8f95ad" stroke-width="1"/>
+    <line x1="${x+fr*2}" y1="${y+fr*2}" x2="${x+w2*0.42}" y2="${y+h2*0.5}" stroke="#ffffff" stroke-width="2.5" opacity="0.7"/>
+    <rect x="${x-4}" y="${y+h2}" width="${w2+8}" height="5" rx="2" fill="#cfd4e6"/>
+   </g>`;
+  }else if(e.t==='opening'){
+   const P4=opoly(e);
+   const pp=P4.map(v=>X(v[0])+','+Y(v[1])).join(' ');
+   const openPath=P4.map((v,i6)=>(i6?'L':'M')+X(v[0])+' '+Y(v[1])).join(' ');
+   s+=`<g data-id="${e.id}" style="cursor:move">
+    <polygon points="${pp}" fill="${tech?TH.stage:'#fff'}" ${e.open?'':'stroke="'+(sel?(tech?'#ff9500':'#4F46E5'):(tech?TH.line:'#8f95ad'))+'" stroke-width="'+(sel?2.6:2)+'"'}/>
+    ${tech?'':`<polygon points="${pp}" fill="url(#glass)" opacity="0.55"/>`}
+    ${e.open?`<path d="${openPath}" fill="none" stroke="${sel?(tech?'#ff9500':'#4F46E5'):(tech?TH.line:'#8f95ad')}" stroke-width="${sel?2.6:2}"/>`:''}
+   </g>`;
+   if(sel)opoly(e).forEach((v,vi)=>{s+=`<circle data-oid="${e.id}" data-ov="${vi}" cx="${X(v[0])}" cy="${Y(v[1])}" r="6.5" fill="#fff" stroke="#ff9500" stroke-width="2" style="cursor:move"/>`;});
+  }else if(e.t==='door'){
+   const x=X(e.x),y=Y(e.y),w2=e.w*sc,h2=e.h*sc,fr=Math.min(5,w2*0.07);
+   if(tech){
+    const c9=sel?'#ff9500':TH.line;
+    s+=`<g data-id="${e.id}" style="cursor:move">
+     <rect x="${x}" y="${y}" width="${w2}" height="${h2}" fill="${TH.stage}" stroke="${c9}" stroke-width="1.6"/>
+     <line x1="${x}" y1="${y+h2}" x2="${x+w2}" y2="${y}" stroke="${c9}" stroke-width="1"/>
+     <circle cx="${x+w2-6}" cy="${y+h2*0.52}" r="2" fill="${c9}"/>
+    </g>`;
+    continue;
+   }
+   s+=`<g data-id="${e.id}" style="cursor:move">
+    <rect x="${x}" y="${y}" width="${w2}" height="${h2}" fill="#e5e0d5" stroke="${sel?'#4F46E5':'#8f95ad'}" stroke-width="${sel?2.4:1.6}"/>
+    <rect x="${x+fr}" y="${y+fr}" width="${w2-2*fr}" height="${h2-2*fr}" fill="url(#doorwood)" stroke="#c9c2b2" stroke-width="1"/>
+    <rect x="${x+fr*2.4}" y="${y+fr*2.4}" width="${w2-fr*4.8}" height="${h2*0.42}" fill="none" stroke="#d5cfc0" stroke-width="1.4" rx="2"/>
+    <rect x="${x+fr*2.4}" y="${y+h2*0.5}" width="${w2-fr*4.8}" height="${h2*0.42}" fill="none" stroke="#d5cfc0" stroke-width="1.4" rx="2"/>
+    <circle cx="${x+w2-fr*2.6}" cy="${y+h2*0.52}" r="3.2" fill="#8a8577"/>
+   </g>`;
+  }else if(e.t==='outlet'){
+   let g=`<g data-id="${e.id}" style="cursor:move">`;
+   for(let i=0;i<e.posts;i++){
+    const cx=X(e.x)+i*17,cy=Y(e.y);
+    g+=`<rect x="${cx-8.5}" y="${cy-8.5}" width="17" height="17" rx="3.5" fill="#fff" stroke="${sel?'#4F46E5':'#8f95ad'}" stroke-width="${sel?2:1.4}"/>`;
+    g+=`<circle cx="${cx}" cy="${cy}" r="5" fill="#eef0f7" stroke="#a7adc2" stroke-width="1"/>`;
+    g+=`<circle cx="${cx-2}" cy="${cy}" r="0.9" fill="#5a6070"/><circle cx="${cx+2}" cy="${cy}" r="0.9" fill="#5a6070"/>`;
+   }
+   s+=g+`</g>`;
+  }else if(e.t==='sconce'){
+   const cx=X(e.x),cy=Y(e.y);
+   s+=`<g data-id="${e.id}" style="cursor:move">
+    <path d="M${cx-16} ${cy-8} L${cx-34} ${cy-46} L${cx+34} ${cy-46} L${cx+16} ${cy-8} Z" fill="#f6d98a" opacity="0.28"/>
+    <path d="M${cx-13} ${cy-8} A13 13 0 0 1 ${cx+13} ${cy-8} Z" fill="#f0b429" stroke="${sel?'#4F46E5':'#c99a1e'}" stroke-width="${sel?2:1.3}"/>
+    <rect x="${cx-3}" y="${cy-2}" width="6" height="8" rx="2" fill="#8f95ad"/>
+   </g>`;
+  }else if(e.t==='mount'){
+   const cx=X(e.x),cy=Y(e.y);
+   s+=`<g data-id="${e.id}" style="cursor:move">
+    <rect x="${cx-20}" y="${cy-13}" width="40" height="26" rx="2.5" fill="#2a2f3d" stroke="${sel?'#4F46E5':'#8f95ad'}" stroke-width="${sel?2:1.3}"/>
+    <rect x="${cx-17}" y="${cy-10}" width="34" height="20" rx="1.5" fill="#3d4557"/>
+    <line x1="${cx-14}" y1="${cy-7}" x2="${cx-2}" y2="${cy+2}" stroke="#565f75" stroke-width="1.6"/>
+   </g>`;
+  }else if(e.t==='line'){
+   const lt=e.lt||'light';
+   const ltc={light:'#f0b429',shadow:'#1e2530',cascade:'#0e7490'}[lt];
+   const x2=e.vert?X(e.x):X(e.x+(e.len||1)), y2=e.vert?Y(e.y+(e.len||1)):Y(e.y);
+   let g=`<g data-id="${e.id}" style="cursor:move">`;
+   if(lt==='light')g+=`<line x1="${X(e.x)}" y1="${Y(e.y)}" x2="${x2}" y2="${y2}" stroke="#f6d98a" stroke-width="14" stroke-linecap="round" filter="url(#glow)"/>`;
+   if(lt==='cascade')g+=`<line x1="${X(e.x)+3}" y1="${Y(e.y)+3}" x2="${x2+3}" y2="${y2+3}" stroke="#0e7490" stroke-width="5" stroke-linecap="round" opacity="0.3"/>`;
+   g+=`<line x1="${X(e.x)}" y1="${Y(e.y)}" x2="${x2}" y2="${y2}" stroke="${sel?'#4F46E5':ltc}" stroke-width="${lt==='shadow'?3:5}" stroke-linecap="round"/>`;
+   s+=g+`</g>`;
+  }
+  /* габариты элемента: у выделенного или включённые кнопкой «габариты» */
+  if(sel||e.showDim){
+   if(e.t==='window'||e.t==='door'){
+    s+=`<line x1="${X(e.x)}" y1="${Y(e.y)-10}" x2="${X(e.x+e.w)}" y2="${Y(e.y)-10}" stroke="#4F46E5" stroke-width="1"/>`;
+    s+=alongText(X(e.x),Y(e.y)-10,X(e.x+e.w),Y(e.y)-10,String(Math.round(e.w*100)),'#4F46E5',5,10.5);
+    s+=`<line x1="${X(e.x)-10}" y1="${Y(e.y)}" x2="${X(e.x)-10}" y2="${Y(e.y+e.h)}" stroke="#4F46E5" stroke-width="1"/>`;
+    s+=alongText(X(e.x)-10,Y(e.y),X(e.x)-10,Y(e.y+e.h),String(Math.round(e.h*100)),'#4F46E5',5,10.5);
+   }
+   if(e.t==='opening'){
+    const P3=opoly(e);
+    P3.forEach((v,i2)=>{
+     const w2=P3[(i2+1)%P3.length];
+     const L=Math.hypot(w2[0]-v[0],w2[1]-v[1]);if(L<0.12)return;
+     s+=alongText(X(v[0]),Y(v[1]),X(w2[0]),Y(w2[1]),String(Math.round(L*100)),'#4F46E5',11,10);
+    });
+   }
+   if(e.t==='line'){
+    const x2=e.vert?X(e.x):X(e.x+(e.len||1)), y2=e.vert?Y(e.y+(e.len||1)):Y(e.y);
+    s+=alongText(X(e.x),Y(e.y),x2,y2,String(Math.round((e.len||1)*100)),'#4F46E5',10,10.5);
+   }
+  }
+  /* пользовательские размеры-привязки: рисуются только те, что добавлены стрелками */
+  (e.dims||[]).forEach(dir=>{
+   const box=e.t==='window'||e.t==='door';
+   let ax,ax2,ay,ay2;
+   if(e.t==='opening'){const P2=opoly(e);ax=Math.min(...P2.map(v=>v[0]));ax2=Math.max(...P2.map(v=>v[0]));ay=Math.min(...P2.map(v=>v[1]));ay2=Math.max(...P2.map(v=>v[1]));}
+   else{ax=box?e.x:(e.t==='line'&&!e.vert?e.x:e.x);
+   ax2=box?e.x+e.w:(e.t==='line'&&!e.vert?e.x+(e.len||1):e.x);
+   ay=box?e.y:(e.t==='line'&&e.vert?e.y:e.y);
+   ay2=box?e.y+e.h:(e.t==='line'&&e.vert?e.y+(e.len||1):e.y);}
+   const cx=(ax+ax2)/2, cy=(ay+ay2)/2;
+   let x1,y1,x2,y2,val;
+   if(dir==='left'){x1=b.x0;y1=cy;x2=ax;y2=cy;val=ax-b.x0;}
+   if(dir==='right'){x1=ax2;y1=cy;x2=b.x1;y2=cy;val=b.x1-ax2;}
+   if(dir==='up'){x1=cx;y1=b.y0;x2=cx;y2=ay;val=ay-b.y0;}
+   if(dir==='down'){x1=cx;y1=ay2;x2=cx;y2=b.y1;val=b.y1-ay2;}
+   if(val<=0.001)return;
+   s+=`<line x1="${X(x1)}" y1="${Y(y1)}" x2="${X(x2)}" y2="${Y(y2)}" stroke="#c77400" stroke-width="1.2" stroke-dasharray="4 3"/>`;
+   if(dir==='left'||dir==='right')s+=`<path d="M${X(x1)} ${Y(y1)-4} v8 M${X(x2)} ${Y(y2)-4} v8" stroke="#c77400" stroke-width="1.2"/>`;
+   else s+=`<path d="M${X(x1)-4} ${Y(y1)} h8 M${X(x2)-4} ${Y(y2)} h8" stroke="#c77400" stroke-width="1.2"/>`;
+   const tx=(X(x1)+X(x2))/2,ty=(Y(y1)+Y(y2))/2;
+   s+=`<text x="${tx}" y="${ty-6}" text-anchor="middle" fill="#c77400" font-size="11" font-weight="700">${Math.round(val*100)}</text>`;
+  });
+ }
+ /* «+» на середине выделенной стороны — добавить вершину; двойной тап по вершине — удалить */
+ if(state.selEdge!=null&&state.mode==='edit'){
+  const i9=state.selEdge, a9=state.verts[i9], b9=state.verts[(i9+1)%state.verts.length];
+  const mx9=(X(a9[0])+X(b9[0]))/2, my9=(Y(a9[1])+Y(b9[1]))/2;
+  s+=`<g data-addmid="${i9}" style="cursor:pointer"><circle cx="${mx9}" cy="${my9}" r="11" fill="#4F46E5" stroke="#fff" stroke-width="2"/><text x="${mx9}" y="${my9+4.5}" text-anchor="middle" fill="#fff" font-size="15" font-weight="800">+</text></g>`;
+ }
+ /* отрез ткани пунктиром: зоны по разделителям, припуски, стыки полос;
+    тап по зоне циклит ориентацию ролика авто → вертикально → горизонтально */
+ if(state.showCut&&state.mode!=='draw'&&state.mode!=='drawOpening'){
+  c.zones.forEach((zn,zi)=>{
+   /* габарит отреза: вдоль полосы — зона + припуски, поперёк — n × ширина ролика */
+   const mAx=zn.o==='h'?c.z*sc:0, mAy=zn.o==='v'?c.z*sc:0;
+   let zx1,zx2,zy1,zy2;
+   if(zn.o==='h'){
+    zx1=X(zn.x1)-mAx; zx2=X(zn.x2)+mAx;
+    zy2=Y(b.y1); zy1=zy2-zn.n*c.fab.roll*sc;   /* низ по стене, излишек ролика — вверх */
+   }else{
+    zy1=Y(b.y0)-mAy; zy2=Y(b.y1)+mAy;
+    zx1=X(zn.x1); zx2=zx1+zn.n*c.fab.roll*sc;  /* левый край по зоне, излишек — вправо */
+   }
+   s+=`<rect data-zone="${zi}" x="${zx1}" y="${zy1}" width="${zx2-zx1}" height="${zy2-zy1}" fill="rgba(255,149,0,0.05)" stroke="#ff9500" stroke-width="1.6" stroke-dasharray="7 5" style="cursor:pointer"/>`;
+   for(let k2=1;k2<zn.n;k2++){
+    if(zn.o==='v'){const px=zx1+k2*c.fab.roll*sc;if(px<zx2)s+=`<line x1="${px}" y1="${zy1}" x2="${px}" y2="${zy2}" stroke="#ff9500" stroke-width="1.2" stroke-dasharray="4 4"/>`;}
+    else{const py=zy2-k2*c.fab.roll*sc;if(py>zy1)s+=`<line x1="${zx1}" y1="${py}" x2="${zx2}" y2="${py}" stroke="#ff9500" stroke-width="1.2" stroke-dasharray="4 4"/>`;}
+   }
+   /* карточка отреза: внутри зоны, соседние — лесенкой, тап по карточке меняет ориентацию */
+   const zcx=(zx1+zx2)/2;
+   const ori=(zn.o==='v'?'вертикально':'горизонтально')+(zn.ov==='auto'?' (авто)':'');
+   const arrow=zn.o==='v'?'↕':'↔';
+   const l1='отрез '+(zi+1)+' — тап сменить';
+   const l2=arrow+' ролик '+ori;
+   const l3=zn.n+(zn.n===1?' полоса':zn.n<5?' полосы':' полос')+' · '+fmt(Math.round(zn.area*100)/100)+' м² ткани';
+   const cardY=Y(b.y0)+8+(zi%2)*64;
+   s+=`<g data-zone="${zi}" style="cursor:pointer">
+    <rect x="${zcx-78}" y="${cardY}" width="156" height="56" rx="9" fill="rgba(255,255,255,0.94)" stroke="#ff9500" stroke-width="1.4"/>
+    <text x="${zcx}" y="${cardY+16}" text-anchor="middle" fill="#9a5b00" font-size="10.5" font-weight="800">${l1}</text>
+    <text x="${zcx}" y="${cardY+32}" text-anchor="middle" fill="#ff9500" font-size="11.5" font-weight="700">${l2}</text>
+    <text x="${zcx}" y="${cardY+48}" text-anchor="middle" fill="#1e2530" font-size="11" font-weight="600">${l3}</text>
+   </g>`;
+  });
+ }
+ /* режим черчения: набранные точки и резинка */
+ if(state.mode==='draw'||state.mode==='drawOpening'){
+  const dp=state.drawPts;
+  if(dp.length){
+   const dpts=dp.map(p2=>X(p2[0])+','+Y(p2[1])).join(' ');
+   s+=`<polyline points="${dpts}" fill="none" stroke="#4F46E5" stroke-width="2" stroke-dasharray="6 4"/>`;
+   dp.forEach((p2,i5)=>{
+    s+=`<circle cx="${X(p2[0])}" cy="${Y(p2[1])}" r="${i5===0?9:6}" fill="${i5===0?'rgba(79,70,229,0.15)':'#fff'}" stroke="#4F46E5" stroke-width="2"/>`;
+    s+=`<text x="${X(p2[0])}" y="${Y(p2[1])-13}" text-anchor="middle" fill="#4F46E5" font-size="13" font-weight="800">${vlet(i5)}</text>`;
+   });
+   /* резинка к курсору с живым размером */
+   if(state.drawCursor){
+    const lp=dp[dp.length-1], cu=state.drawCursor;
+    const L3=Math.hypot(cu[0]-lp[0],cu[1]-lp[1]);
+    if(L3>0.03){
+     s+=`<line x1="${X(lp[0])}" y1="${Y(lp[1])}" x2="${X(cu[0])}" y2="${Y(cu[1])}" stroke="#c77400" stroke-width="2" stroke-dasharray="4 4"/>`;
+     s+=`<circle cx="${X(cu[0])}" cy="${Y(cu[1])}" r="4" fill="#c77400"/>`;
+     s+=alongText(X(lp[0]),Y(lp[1]),X(cu[0]),Y(cu[1]),Math.round(L3*100)+' см','#c77400',-10,12);
+    }
+   }
+  }
+  s+=`<text x="450" y="26" text-anchor="middle" fill="#4F46E5" font-size="13" font-weight="700">${state.mode==='drawOpening'?'Контур проёма: точки липнут к сторонам стены · старт и финиш на одной стороне = проём от пола · тап по первой точке — замкнутый проём':'Ставьте точки контура · тап по первой точке — замкнуть'}</text>`;
+ }
+ if(state.mode==='dim'){
+  s+=`<text x="450" y="26" text-anchor="middle" fill="#c77400" font-size="13" font-weight="700">Режим размера: нажмите на объект и потяните в сторону — размер прилипнет</text>`;
+ }
+ /* соседние стены: «+ стена» у свободного края, бирюзовая грань-угол у занятого */
+ if(walls.length&&state.mode==='edit'){
+  const nmR=walls[curW].room||'Комната 1';
+  const nb9=nbrsOf(curW);
+  const leftIdx=nb9.left,rightIdx=nb9.right;
+  const freeRoom=roomsMeta[nmR]&&roomsMeta[nmR].mode==='free';
+  const midY=(Y(b.y0)+Y(b.y1))/2;
+  const mk=(x,side,nbr)=>{
+   if(nbr!=null){
+    const pairLeft=side==='l'?nbr:curW; /* тип угла хранится на левой стене пары */
+    const outC=(walls[pairLeft].cornerType||'in')==='out';
+    const col=outC?'#6b7280':'#0e7490';
+    const y0=Y(b.y0),y1=Y(b.y1),hh=y1-y0;
+    const gw=92, fx=side==='l'?x-gw:x+gw; /* дальний край призрака */
+    /* скос: внутренний угол — сосед поворачивает К зрителю (край крупнее), внешний — уходит за угол (край мельче) */
+    const k=outC?0.13:-0.09;
+    /* содержимое соседа проецируется в призрак с тем же скосом */
+    let inner='';
+    const nd=walls[nbr].data;
+    if(nd&&nd.verts&&nd.verts.length>2){
+     const xs9=nd.verts.map(v=>v[0]),ys9=nd.verts.map(v=>v[1]);
+     const nx0=Math.min(...xs9),nx1=Math.max(...xs9),ny0=Math.min(...ys9),ny1=Math.max(...ys9);
+     const proj=(px,py)=>{
+      let u=(px-nx0)/((nx1-nx0)||1); if(side==='l')u=1-u;
+      const xq=x+(fx-x)*u;
+      const t=Math.abs(xq-x)/gw;
+      const tp=y0+hh*k*t, bt=y1-hh*k*t;
+      const vv=(py-ny0)/((ny1-ny0)||1);
+      return xq+','+(tp+(bt-tp)*vv);
+     };
+     (nd.els||[]).forEach(e=>{
+      if(e.t==='window'||e.t==='door')
+       inner+=`<polygon points="${proj(e.x,e.y)} ${proj(e.x+e.w,e.y)} ${proj(e.x+e.w,e.y+e.h)} ${proj(e.x,e.y+e.h)}" fill="${e.t==='window'?'#cfe3f5':'#f2ead9'}" stroke="${e.t==='window'?'#7b96b3':'#a08a5f'}" stroke-width="0.9" opacity="0.85"/>`;
+      else if(e.t==='line'&&e.vert)
+       inner+=`<polygon points="${proj(e.x-0.01,e.y)} ${proj(e.x+0.01,e.y)} ${proj(e.x+0.01,e.y+(e.len||1))} ${proj(e.x-0.01,e.y+(e.len||1))}" fill="#1e2530" opacity="0.5"/>`;
+     });
+    }
+    const ghost=`<g data-gowall="${nbr}" data-goside="${side}" style="cursor:pointer">
+      <polygon points="${x},${y0} ${fx},${y0+hh*k} ${fx},${y1-hh*k} ${x},${y1}" fill="${col}" opacity="0.13"/>
+      ${inner}
+      <polygon points="${x},${y0} ${fx},${y0+hh*k} ${fx},${y1-hh*k} ${x},${y1}" fill="none" stroke="${col}" stroke-width="1.4" opacity="0.55"/>
+      <text x="${(x+fx)/2}" y="${midY}" text-anchor="middle" fill="${col}" font-size="10.5" font-weight="800" opacity="0.9" transform="rotate(-90 ${(x+fx)/2} ${midY})">${walls[nbr].name} ›</text>
+     </g>`;
+    const fromPlan=roomsMeta[nmR]&&roomsMeta[nmR].plan; /* комната из плана: тип угла задан геометрией, не переключается */
+    const bx=side==='l'?x+13:x-13;
+    return ghost+`<g>
+     <line data-gowall="${nbr}" data-goside="${side}" style="cursor:pointer" x1="${x}" y1="${y0}" x2="${x}" y2="${y1}" stroke="${col}" stroke-width="7" opacity="0.5"/>
+     ${fromPlan?'':`<g data-corner="${pairLeft}" style="cursor:pointer" transform="rotate(-90 ${bx} ${midY})">
+      <rect x="${bx-72}" y="${midY-11}" width="144" height="22" rx="10" fill="#fff" stroke="${col}" stroke-width="1.3"/>
+      <text x="${bx}" y="${midY+4}" text-anchor="middle" fill="${col}" font-size="10.5" font-weight="800">${outC?'внешний · Отбойник ⟳':'внутренний угол ⟳'}</text>
+     </g>`}</g>`;
+   }
+   if(freeRoom)return ''; /* отдельные стены — без стыковки */
+   const cx=side==='l'?x-26:x+26;
+   return `<g data-addside="${side}" style="cursor:pointer">
+    <circle cx="${cx}" cy="${midY}" r="13" fill="#fff" stroke="#4F46E5" stroke-width="1.6"/>
+    <text x="${cx}" y="${midY+5}" text-anchor="middle" fill="#4F46E5" font-size="16" font-weight="800">+</text>
+    <text x="${cx}" y="${midY+27}" text-anchor="middle" fill="#8a90ab" font-size="9.5" font-weight="700">стена</text></g>`;
+  };
+  s+=mk(X(b.x0),'l',leftIdx);
+  s+=mk(X(b.x1),'r',rightIdx);
+ }
+ svg.innerHTML=s;
+ /* источники */
+ document.getElementById('sources').innerHTML=
+  `<span class="src">S ткани <b>${fmt(c.S)} м²</b></span><span class="src">P контура <b>${fmt(c.P)} м</b></span>`+
+  (c.winP?`<span class="src">P окон <b>${fmt(c.winP)} м</b></span>`:'')+
+  `<span class="src">ткань <b>${fmt(c.cloth)} м²</b> · рулон ${c.fab.roll} м ${c.seams===0?'<span class="badge b-ok">без стыков</span>':`<span class="badge b-warn">${c.seams+1} полосы · стыки</span>`}</span>`+
+  (c.kH?`<span class="src"><span class="badge b-warn">высота: работы +${c.kH*100}%</span></span>`:'');
+ /* панель свойств */
+ const pr=document.getElementById('props');
+ if(state.selEdge!=null){
+  const i=state.selEdge;
+  const adj9=adjSide(i,bbox(),nbrsOf(curW));
+  if(adj9){
+   pr.innerHTML=`<b>Сторона ${vlet(i)}${vlet((i+1)%state.verts.length)}</b>
+    <span class="lbl" style="color:#0e7490;font-weight:700">Это общая грань с соседней стеной — здесь стоит угловой профиль (внутренний/внешний переключается плашкой на чертеже), боковой профиль не считается.</span>`;
+   pr.style.display='flex';
+  }else
+  pr.innerHTML=`<b>Сторона ${vlet(i)}${vlet((i+1)%state.verts.length)}</b>
+   <span class="lbl">длина, см${state.edgeSet[i]!=null?' ✓':''}</span><input id="edgelen" type="number" step="1" value="${Math.round((state.edgeSet[i]!=null?state.edgeSet[i]:edgeLen(i))*100)}"
+    onkeydown="if(event.key==='Enter'){setEdgeLen(${i},(parseFloat(this.value)||10)/100);nextEdge();}"
+    onchange="setEdgeLen(${i},(parseFloat(this.value)||10)/100);render()">
+   <button class="chip" style="border-color:#4F46E5;color:#4F46E5;font-weight:700" onclick="setEdgeLen(${i},(parseFloat(document.getElementById('edgelen').value)||10)/100);nextEdge()">След. сторона →</button>
+   ${state.stage==='draw'?'':'<span class="lbl">профиль</span>'}<select style="${state.stage==='draw'?'display:none':''}" onchange="state.edgeProf[${i}]=this.value;render()">`+
+   SIDE_PROFILES.map(p=>`<option value="${p.id}" ${(state.edgeProf[i]||'none')===p.id?'selected':''}>${p.n}${p.p?' · '+p.p+' ₽/м':''}</option>`).join('')+
+   `</select>`;
+  pr.style.display='flex';
+ }else{
+  const e=state.els.find(x=>x.id===state.sel);
+  if(e){
+   let inner=`<b>${NAMES[e.t]}</b>`;
+   if(e.t==='window'||e.t==='door')inner+=` <span class="lbl">Ш, см</span><input type="number" step="1" value="${Math.round(e.w*100)}" onchange="updEl('${e.id}','w',this.value)"> <span class="lbl">В, см</span><input type="number" step="1" value="${Math.round(e.h*100)}" onchange="updEl('${e.id}','h',this.value)">`;
+   if(e.t==='window'||e.t==='opening'){
+    inner+=` <select style="width:auto" onchange="updEl('${e.id}','obhod',this.value)">
+     <option value="no" ${(e.obhod||'no')==='no'?'selected':''}>Обход без откоса · 1200 ₽/м</option>
+     <option value="otkos" ${e.obhod==='otkos'?'selected':''}>Обход с откосом из ткани · 2500 ₽/м</option>
+     <option value="nalich" ${e.obhod==='nalich'?'selected':''}>С закладной под наличник · 1500 ₽/м</option>
+    </select> <span class="lbl">профиль обхода</span><select style="width:auto" onchange="updEl('${e.id}','obhodProf',this.value)">
+    ${['base','baseC','okno','oknoBW','konstr','konstr5'].map(pid=>{const pf=SIDE_PROFILES.find(x=>x.id===pid);return `<option value="${pid}" ${(e.obhodProf||'base')===pid?'selected':''}>${pf.n.replace(/ \+ обход.*$/,'')} · ${pf.p} ₽/м</option>`;}).join('')}
+    </select>`;
+   }
+   if(e.t==='door'){
+    inner+=` <select style="width:auto" onchange="updEl('${e.id}','obhod',this.value)">
+     <option value="std" ${(e.obhod||'std')==='std'?'selected':''} ${(e.w>0.905||e.h>2.005)?'disabled':''}>Обход стандартной двери · 6000 ₽ (до 90×200)</option>
+     <option value="otkos" ${e.obhod==='otkos'?'selected':''}>Обход с откосом из ткани · 2500 ₽/м</option>
+     <option value="no" ${e.obhod==='no'?'selected':''}>Обход без откоса · 1200 ₽/м</option>
+     <option value="hidden" ${e.obhod==='hidden'?'selected':''}>Скрытая дверь · 8000 ₽</option>
+    </select>${(e.w>0.905||e.h>2.005)&&(e.obhod||'std')==='std'?'<span class="lbl" style="color:#c77400;font-weight:700">дверь больше 90×200 — считается обход без откоса, '+fmt(Math.round((e.w+2*e.h)*100)/100)+' м</span>':''} <span class="lbl">профиль обхода</span><select style="width:auto" onchange="updEl('${e.id}','obhodProf',this.value)">
+    ${['base','baseC','okno','oknoBW','konstr','konstr5'].map(pid=>{const pf=SIDE_PROFILES.find(x=>x.id===pid);return `<option value="${pid}" ${(e.obhodProf||'base')===pid?'selected':''}>${pf.n.replace(/ \+ обход.*$/,'')} · ${pf.p} ₽/м</option>`;}).join('')}
+    </select>`;
+   }
+   if(e.t==='opening')inner+=` <button class="chip" onclick="addOpeningPt('${e.id}')">+ точка</button> <span class="lbl">${fmt(Math.round(polyArea(e.verts)*100)/100)} м² · обход ${fmt(Math.round(operim(e)*100)/100)} м</span>`;
+   if(e.t==='outlet')inner+=` <span class="lbl">постов</span><input type="number" min="1" max="5" value="${e.posts}" onchange="updEl('${e.id}','posts',this.value)">`;
+   if(e.t==='line'){
+    inner+=` <select style="width:auto" onchange="updEl('${e.id}','lt',this.value)">`+LINE_TYPES.map(l=>`<option value="${l.id}" ${((e.lt||'light')===l.id)?'selected':''}>${l.n}</option>`).join('')+`</select>`;
+    inner+=` <span class="lbl">длина, см</span><input type="number" step="1" value="${Math.round((e.len||1)*100)}" onchange="updEl('${e.id}','len',this.value)">`;
+    inner+=` <button class="chip ${e.vert?'on':''}" onclick="updEl('${e.id}','vert',${e.vert?0:1})">вертикально</button>`;
+   }
+   if(['window','door','opening','line'].includes(e.t))
+    inner+=` <button class="chip ${e.showDim?'on':''}" onclick="updEl('${e.id}','showDim',${e.showDim?0:1})">габариты</button>`;
+   inner+=` <button class="del" onclick="delEl('${e.id}')">Удалить</button>`;
+   pr.innerHTML=inner;pr.style.display='flex';
+  }else pr.style.display='none';
+ }
+ document.getElementById('drawbtn').classList.toggle('on',state.mode==='draw');
+ document.getElementById('drawpanel').style.display=(state.mode==='draw'||state.mode==='drawOpening')?'flex':'none';
+ applyStage();
+ document.getElementById('dimbtn2').classList.toggle('on',state.mode==='dim');
+ {const fabC=FABRICS.find(f=>f.id===state.fabric);
+  const cols=FAB_COLORS[state.fabric]||[];
+  document.getElementById('fabrics').innerHTML=
+   `<span class="lbl" style="font-weight:700">Ткань:</span>`+
+   `<select onchange="pickFab(this.value)" style="max-width:250px">`+
+    FABRICS.map(f=>`<option value="${f.id}" ${state.fabric===f.id?'selected':''}>${f.n} · ${f.roll} м${f.p?' · '+f.p+' ₽/м²':''}</option>`).join('')+
+   `</select>`+
+   (cols.length?` <span class="lbl">цвет:</span>`+
+   (fabHex()?`<span style="display:inline-block;width:24px;height:24px;border-radius:6px;border:1.5px solid #c9cfe3;vertical-align:middle;background:${fabHex()}"></span>`:'')+
+   `<select onchange="state.fabColor=this.value;render()" style="max-width:230px">`+
+    cols.map(co=>`<option value="${co.n}" ${state.fabColor===co.n?'selected':''}>${co.n}</option>`).join('')+
+   `</select> <span class="lbl">${cols.length} расцветок в каталоге</span>`:'');}
+ document.querySelectorAll('[data-und]').forEach(bt=>bt.classList.toggle('on',bt.dataset.und===state.underlay));
+ /* смета */
+ const t=document.getElementById('est');
+ let rowsE=c.rows, extraE=c.extra, totalE=c.total, captE='Итого по стене · накладные и НДС — в итоге объекта';
+ if(estScope==='room'&&walls.length){
+  const nmR=walls[curW].room||'Комната 1';
+  const idxs=walls.map((w2,i)=>i).filter(i=>(walls[i].room||'Комната 1')===nmR);
+  const agg=new Map();const extraL=[];let tot=0;
+  idxs.forEach(wi=>{
+   const cw=wi===curW?c:(walls[wi].data.verts&&walls[wi].data.verts.length>2?calcOfData(walls[wi].data,wi):null);
+   if(!cw)return;
+   cw.rows.forEach(r2=>{const k2=r2.g+'|'+r2.n+'|'+r2.p;const e2=agg.get(k2)||{g:r2.g,n:r2.n,u:r2.u,p:r2.p,q:0};e2.q=Math.round((e2.q+r2.q)*100)/100;agg.set(k2,e2);});
+   cw.extra.forEach(x=>extraL.push(x));
+   tot+=cw.total;
+  });
+  const co2=roomCornersFor(nmR);
+  if(co2.lenIn)agg.set('m|ci',{g:'m',n:'ТС Внутренний угол (углы комнаты)',u:'м',p:650,q:Math.round(co2.lenIn*100)/100});
+  if(co2.lenOut)agg.set('m|co',{g:'m',n:'Отбойник ТС (внешние углы)',u:'м',p:650,q:Math.round(co2.lenOut*100)/100});
+  if(co2.len)agg.set('w|c',{g:'w',n:'Монтаж системы — угол (внутренний/внешний)',u:'м',p:800,q:Math.round(co2.len*100)/100});
+  rowsE=[...agg.values()];extraE=extraL;totalE=tot+co2.dM+co2.dW;
+  captE='Итого по комнате «'+nmR+'» ('+idxs.length+' стен) · накладные и НДС — в итоге объекта';
+ }
+ document.getElementById('estWallBtn').className=estScope==='wall'?'on':'';
+ document.getElementById('estRoomBtn').className=estScope==='room'?'on':'';
+ document.getElementById('estcapt').textContent=captE;
+ let h='<tr class="sec"><td colspan="3">Материалы</td></tr>';
+ rowsE.filter(r=>r.g==='m').forEach(r=>h+=`<tr><td>${r.n}</td><td class="q">${fmt(r.q)} × ${fmt(r.p)}</td><td class="s">${fmt(Math.round(r.q*r.p))} ₽</td></tr>`);
+ h+='<tr class="sec"><td colspan="3">Работы</td></tr>';
+ rowsE.filter(r=>r.g==='w').forEach(r=>h+=`<tr><td>${r.n}</td><td class="q">${fmt(r.q)} × ${fmt(r.p)}</td><td class="s">${fmt(Math.round(r.q*r.p))} ₽</td></tr>`);
+ extraE.forEach(x=>h+=`<tr><td>${x.n}</td><td class="q"></td><td class="s">${fmt(Math.round(x.s))} ₽</td></tr>`);
+ t.innerHTML=h;
+ document.getElementById('total').textContent=fmt(Math.round(totalE))+' ₽';
+ document.getElementById('wallsum').textContent=fmt(Math.round(c.total))+' ₽';
+ document.getElementById('sys_sum').textContent=fmt(Math.round(c.sysSum))+' ₽';
+ if(walls[curW]){walls[curW].data={...state};walls[curW].cache={mSum:c.mSum,wSum:c.wSum,total:c.total,W:c.W,Hmax:c.Hmax};}
+ renderProject();
+}
+function applyStage(){
+ const d=state.stage==='draw';
+ document.getElementById('bar-draw').style.display=d?'flex':'none';
+ document.getElementById('bar-calc').style.display=d?'none':'flex';
+ document.getElementById('card-sys').style.display=d?'none':'block';
+ document.getElementById('card-est').style.display=d?'none':'block';
+ document.getElementById('stageDraw').className=d?'on':'';
+ document.getElementById('stageCalc').className=d?'':'on';
+}
+window.nextEdge=()=>{
+ if(state.selEdge==null)state.selEdge=0;
+ else state.selEdge=(state.selEdge+1)%state.verts.length;
+ render();
+ setTimeout(()=>{const f=document.getElementById('edgelen');if(f){f.focus();f.select();}},30);
+};
+window.pickFab=id=>{state.fabric=id;const c0=(FAB_COLORS[id]||[])[0];state.fabColor=c0?c0.n:'';render();};
+window.updEl=(id,k,v)=>{const e=state.els.find(x=>x.id===id);if(!e)return;
+ if(k==='lt')e.lt=v; else if(k==='vert')e.vert=!!+v; else if(k==='showDim')e.showDim=!!+v; else if(k==='obhod')e.obhod=v; else if(k==='obhodProf')e.obhodProf=v;
+ else if(k==='h'&&(e.t==='window'||e.t==='door')){
+  /* высота растёт вверх: нижняя кромка остаётся на месте */
+  const nh=Math.max(0.1,(parseFloat(v)||10)/100);
+  e.y=e.y+e.h-nh; e.h=nh;
+ }
+ else e[k]=k==='posts'?Math.max(1,Math.min(5,parseInt(v)||1)):Math.max(0.1,(parseFloat(v)||10)/100);
+ render();};
+window.addOpeningPt=id=>{const e=state.els.find(x=>x.id===id);if(!e)return;
+ let best=0,bl=0;e.verts.forEach((_,j)=>{const a=e.verts[j],b2=e.verts[(j+1)%e.verts.length];const l=Math.hypot(b2[0]-a[0],b2[1]-a[1]);if(l>bl){bl=l;best=j;}});
+ const a=e.verts[best],b2=e.verts[(best+1)%e.verts.length];
+ e.verts.splice(best+1,0,[(a[0]+b2[0])/2,(a[1]+b2[1])/2]);render();};
+window.delEl=id=>{state.els=state.els.filter(x=>x.id!==id);state.sel=null;render();};
+window.toggleDim=(id,d)=>{const e=state.els.find(x=>x.id===id);if(!e)return;
+ e.dims=e.dims||[];
+ e.dims=e.dims.includes(d)?e.dims.filter(x=>x!==d):[...e.dims,d];
+ render();};
+
+/* «+ Точка контура»: вставить вершину в середину выбранной стороны (или самой длинной) */
+window.addMidPt=i=>{
+ const a=state.verts[i],b2=state.verts[(i+1)%state.verts.length];
+ state.verts.splice(i+1,0,[(a[0]+b2[0])/2,(a[1]+b2[1])/2]);
+ /* профили сторон сдвигаются */
+ const np={};Object.entries(state.edgeProf).forEach(([k,v])=>{const ki=+k;np[ki>i?ki+1:ki]=v;});
+ np[i+1]=state.edgeProf[i]||'none';
+ state.edgeProf=np;
+ state.selEdge=null;render();
+};
+
+/* ── указатель: drag вершин и элементов, тапы по сторонам ── */
+let drag=null,lastTapVert=null,lastTapTime=0,dimStart=null;
+function orthoSnap(p2){
+ if(!state.drawPts.length)return p2;
+ const pv=state.drawPts[state.drawPts.length-1];
+ const adx=Math.abs(p2[0]-pv[0]), ady=Math.abs(p2[1]-pv[1]);
+ if(ady<adx*0.27)p2=[p2[0],pv[1]];
+ else if(adx<ady*0.27)p2=[pv[0],p2[1]];
+ const f=state.drawPts[0];
+ if(Math.abs(p2[0]-f[0])<0.13)p2=[f[0],p2[1]];
+ if(Math.abs(p2[1]-f[1])<0.13)p2=[p2[0],f[1]];
+ return p2;
+}
+function svgToWall(ev){
+ const r=svg.getBoundingClientRect();
+ const sx=(ev.clientX-r.left)*900/r.width, sy=(ev.clientY-r.top)*520/r.height;
+ return [Math.round((sx-view.ox)/view.sc*100)/100, Math.round((sy-view.oy)/view.sc*100)/100];
+}
+/* зум к точке (sx,sy в svg-координатах 900×520): мировая точка под курсором остаётся на месте */
+function zoomAt(sx,sy,f){
+ const wx=(sx-view.ox)/view.sc, wy=(sy-view.oy)/view.sc;
+ zoomV=Math.min(5,Math.max(0.35,zoomV*f));
+ render();
+ panXV+=sx-(view.ox+wx*view.sc);
+ panYV+=sy-(view.oy+wy*view.sc);
+ render();
+}
+function svgXY(ev){const r=svg.getBoundingClientRect();return[(ev.clientX-r.left)*900/r.width,(ev.clientY-r.top)*520/r.height];}
+svg.addEventListener('wheel',ev=>{ev.preventDefault();const[sx,sy]=svgXY(ev);zoomAt(sx,sy,ev.deltaY<0?1.15:1/1.15);},{passive:false});
+document.getElementById('zin').onclick=()=>zoomAt(450,260,1.3);
+document.getElementById('zout').onclick=()=>zoomAt(450,260,1/1.3);
+document.getElementById('zfit').onclick=()=>{zoomV=1;panXV=0;panYV=0;render();};
+/* пан: перетаскивание пустого места; pinch: два пальца — зум+сдвиг */
+let panDrag=null, pinch=null;
+const pointers=new Map();
+document.addEventListener('pointerup',ev=>{pointers.delete(ev.pointerId);if(pointers.size<2)pinch=null;});
+document.addEventListener('pointercancel',ev=>{pointers.delete(ev.pointerId);if(pointers.size<2)pinch=null;});
+svg.addEventListener('pointerdown',ev=>{
+ if(ev.pointerType!=='touch')pointers.clear(); /* мышь/перо не участвуют в pinch — чистим залипшие */
+ pointers.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
+ if(ev.pointerType==='touch'&&pointers.size===2){
+  drag=null;panDrag=null;dimStart=null;
+  const pts=[...pointers.values()];
+  pinch={d:Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y),cx:(pts[0].x+pts[1].x)/2,cy:(pts[0].y+pts[1].y)/2};
+  svg.setPointerCapture(ev.pointerId);return;
+ }
+ const r=svg.getBoundingClientRect();const px2u=900/r.width;
+ /* режим черчения контура */
+ if(state.mode==='draw'){
+  const p2=svgToWall(ev);
+  /* ЗАМЫКАНИЕ проверяем первым делом по сырому клику — до всех привязок,
+     иначе привязка утаскивает клик от точки А и фигура не закрывается */
+  if(state.drawPts.length>=3){
+   const f=state.drawPts[0];
+   const dpx=Math.hypot((p2[0]-f[0])*view.sc,(p2[1]-f[1])*view.sc);
+   if(dpx<22){ /* замкнули (радиус ловли — чуть больше кружка точки) */
+    /* последнюю сторону выравниваем к 90°, если она почти ортогональна */
+    const lastI=state.drawPts.length-1, lp=state.drawPts[lastI];
+    if(Math.abs(lp[0]-f[0])<Math.abs(lp[1]-f[1])*0.27)state.drawPts[lastI]=[f[0],lp[1]];
+    else if(Math.abs(lp[1]-f[1])<Math.abs(lp[0]-f[0])*0.27)state.drawPts[lastI]=[lp[0],f[1]];
+    state.verts=state.drawPts.map(q=>[...q]);
+    state.edgeProf={};state.els=[];
+    /* мастер выбрал верх/низ заранее — применяем по геометрии */
+    if(state.pendTop||state.pendBottom){
+     let iTop=null,iBot=null,yT=1e9,yB=-1e9;
+     state.verts.forEach((v,i)=>{
+      const w3=state.verts[(i+1)%state.verts.length];
+      if(Math.abs(w3[1]-v[1])>0.05)return;
+      const ym=(v[1]+w3[1])/2;
+      if(ym<yT){yT=ym;iTop=i;}
+      if(ym>yB){yB=ym;iBot=i;}
+     });
+     if(iTop!=null&&state.pendTop)state.edgeProf[iTop]=state.pendTop;
+     if(iBot!=null&&state.pendBottom)state.edgeProf[iBot]=state.pendBottom;
+     state.pendTop=null;state.pendBottom=null;
+    }
+    captureDirs();state.edgeSet={};      /* углы фигуры зафиксированы как начерчены */
+    state.showWallDims=true;             /* длины сторон сразу видны и обновляются */
+    document.getElementById('walldims').classList.add('on');
+    state.drawPts=[];state.mode='edit';state.sel=null;state.selEdge=0;render();
+    setTimeout(()=>{const f2=document.getElementById('edgelen');if(f2){f2.focus();f2.select();}},30);
+    return;
+   }
+  }
+  /* ортопривязка: почти горизонтальная/вертикальная сторона выпрямляется до 90° */
+  if(state.drawPts.length){
+   const pv=state.drawPts[state.drawPts.length-1];
+   const adx=Math.abs(p2[0]-pv[0]), ady=Math.abs(p2[1]-pv[1]);
+   if(ady<adx*0.27)p2[1]=pv[1];
+   else if(adx<ady*0.27)p2[0]=pv[0];
+   const f=state.drawPts[0];
+   if(Math.abs(p2[0]-f[0])<0.13)p2[0]=f[0];
+   if(Math.abs(p2[1]-f[1])<0.13)p2[1]=f[1];
+  }
+  state.drawPts.push(p2);render();focusLen();return;
+ }
+ /* черчение проёма: точки по стене, замыкание по первой */
+ if(state.mode==='drawOpening'){
+  let p2=svgToWall(ev);
+  const snap=snapToWallEdge(p2);
+  if(snap)p2=snap.p;
+  /* первая точка на стороне запоминает её; финиш на той же стороне = проём «от пола» */
+  if(state.drawPts.length===0)state.drawAnchor=snap?snap.edge:null;
+  else if(state.drawPts.length>=2&&snap&&state.drawAnchor!=null&&snap.edge===state.drawAnchor){
+   mergeOpeningIntoWall([...state.drawPts,p2],state.drawAnchor);
+   state.drawPts=[];state.drawAnchor=null;state.mode='edit';state.sel=null;state.selEdge=null;
+   render();return;
+  }
+  if(state.drawPts.length>=3){
+   const f=state.drawPts[0];
+   const dpx=Math.hypot((p2[0]-f[0])*view.sc,(p2[1]-f[1])*view.sc);
+   if(dpx<22){
+    const lastI=state.drawPts.length-1, lp=state.drawPts[lastI];
+    if(Math.abs(lp[0]-f[0])<Math.abs(lp[1]-f[1])*0.27)state.drawPts[lastI]=[f[0],lp[1]];
+    else if(Math.abs(lp[1]-f[1])<Math.abs(lp[0]-f[0])*0.27)state.drawPts[lastI]=[lp[0],f[1]];
+    const xs=state.drawPts.map(q=>q[0]),ys=state.drawPts.map(q=>q[1]);
+    const mx=Math.min(...xs),my=Math.min(...ys);
+    const e2={id:'e'+(++state.seq),t:'opening',x:mx,y:my,obhod:'no',obhodProf:'base',
+     verts:state.drawPts.map(q=>[Math.round((q[0]-mx)*100)/100,Math.round((q[1]-my)*100)/100]),dims:[]};
+    state.els.push(e2);state.sel=e2.id;
+    state.drawPts=[];state.mode='edit';render();return;
+   }
+  }
+  if(state.drawPts.length){
+   const pv=state.drawPts[state.drawPts.length-1];
+   const adx=Math.abs(p2[0]-pv[0]), ady=Math.abs(p2[1]-pv[1]);
+   if(ady<adx*0.27)p2[1]=pv[1];
+   else if(adx<ady*0.27)p2[0]=pv[0];
+   const f=state.drawPts[0];
+   if(Math.abs(p2[0]-f[0])<0.13)p2[0]=f[0];
+   if(Math.abs(p2[1]-f[1])<0.13)p2[1]=f[1];
+  }
+  state.drawPts.push(p2);render();focusLen();return;
+ }
+ /* режим ручного размера: старт на объекте */
+ if(state.mode==='dim'){
+  const g2=ev.target.closest('[data-id]');
+  if(g2){dimStart={id:g2.dataset.id,px:ev.clientX,py:ev.clientY};svg.setPointerCapture(ev.pointerId);}
+  return;
+ }
+ const vt=ev.target.closest('[data-vert]');
+ if(vt){
+  const i=+vt.dataset.vert;
+  const now=Date.now();
+  if(lastTapVert===i&&now-lastTapTime<420&&state.verts.length>3){ /* двойной тап — удалить */
+   state.verts.splice(i,1);
+   const np={};Object.entries(state.edgeProf).forEach(([k,v])=>{const ki=+k;if(ki===i)return;np[ki>i?ki-1:ki]=v;});
+   state.edgeProf=np;state.selEdge=null;lastTapVert=null;render();return;
+  }
+  lastTapVert=i;lastTapTime=now;
+  drag={vert:i,px:ev.clientX,py:ev.clientY,x:state.verts[i][0],y:state.verts[i][1],px2u};
+  svg.setPointerCapture(ev.pointerId);return;
+ }
+ const crn=ev.target.closest('[data-corner]');
+ if(crn){toggleCorner(+crn.dataset.corner);return;}
+ const asd=ev.target.closest('[data-addside]');
+ if(asd){addAdjacent(asd.dataset.addside);return;}
+ const gw=ev.target.closest('[data-gowall]');
+ if(gw){goWall(+gw.dataset.gowall,gw.dataset.goside||'r');return;}
+ const am=ev.target.closest('[data-addmid]');
+ if(am){addMidPt(+am.dataset.addmid);return;}
+ const zn2=ev.target.closest('[data-zone]');
+ if(zn2&&state.showCut){
+  const zi=+zn2.dataset.zone;
+  const cur=state.cutOrient[zi]||'auto';
+  state.cutOrient[zi]=cur==='auto'?'v':cur==='v'?'h':'auto';
+  render();return;
+ }
+ const ov=ev.target.closest('[data-oid]');
+ if(ov){
+  const e=state.els.find(x=>x.id===ov.dataset.oid);const vi=+ov.dataset.ov;
+  drag={oe:e,ov:vi,px:ev.clientX,py:ev.clientY,x:e.verts[vi][0],y:e.verts[vi][1],px2u};
+  svg.setPointerCapture(ev.pointerId);return;
+ }
+ const g=ev.target.closest('[data-id]');
+ if(g){
+  const e=state.els.find(x=>x.id===g.dataset.id);
+  state.sel=e.id;state.selEdge=null;
+  drag={e,px:ev.clientX,py:ev.clientY,x:e.x,y:e.y,px2u};
+  svg.setPointerCapture(ev.pointerId);render();return;
+ }
+ const ed=ev.target.closest('[data-edge]');
+ if(ed){state.selEdge=+ed.dataset.edge;state.sel=null;render();return;}
+ state.sel=null;state.selEdge=null;render();
+ if(state.mode!=='dim'){
+  panDrag={px:ev.clientX,py:ev.clientY,px2u};
+  svg.setPointerCapture(ev.pointerId);
+ }
+});
+svg.addEventListener('pointermove',ev=>{
+ if(pointers.has(ev.pointerId))pointers.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
+ if(pinch&&pointers.size===2){
+  const pts=[...pointers.values()];
+  const d=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y);
+  const cx=(pts[0].x+pts[1].x)/2, cy=(pts[0].y+pts[1].y)/2;
+  const r=svg.getBoundingClientRect(), k=900/r.width;
+  panXV+=(cx-pinch.cx)*k; panYV+=(cy-pinch.cy)*k;
+  if(pinch.d>10)zoomAt((cx-r.left)*k,(cy-r.top)*520/r.height,d/pinch.d);else render();
+  pinch={d,cx,cy};return;
+ }
+ if(panDrag){
+  panXV+=(ev.clientX-panDrag.px)*panDrag.px2u;
+  panYV+=(ev.clientY-panDrag.py)*panDrag.px2u;
+  panDrag={...panDrag,px:ev.clientX,py:ev.clientY};
+  render();return;
+ }
+ if(state.mode==='draw'||state.mode==='drawOpening'){
+  state.drawCursor=orthoSnap(svgToWall(ev));
+  if(!drawLenTouched&&state.drawPts.length){
+   const lp=state.drawPts[state.drawPts.length-1];
+   const L3=Math.hypot(state.drawCursor[0]-lp[0],state.drawCursor[1]-lp[1]);
+   if(L3>0.03){const f9=document.getElementById('drawlen');f9.value=Math.round(L3*100);
+    if(document.activeElement===f9)f9.select(); /* значение выделено — ввод сразу перетирает */}
+  }
+  render();return;
+ }
+ if(!drag)return;
+ const du=drag.px2u/view.sc;
+ const dx=(ev.clientX-drag.px)*du, dy=(ev.clientY-drag.py)*du;
+ if(drag.vert!=null){
+  state.verts[drag.vert]=[Math.round((drag.x+dx)*100)/100,Math.round((drag.y+dy)*100)/100];
+  captureDirs();state.edgeSet={}; /* ручная правка контура — прежние вводы длин неактуальны */
+  render();return;
+ }
+ if(drag.ov!=null){
+  drag.oe.verts[drag.ov]=[Math.round((drag.x+dx)*100)/100,Math.round((drag.y+dy)*100)/100];
+  render();return;
+ }
+ const e=drag.e,b=bbox();
+ let ew,eh;
+ if(e.t==='opening'){ew=Math.max(...e.verts.map(v=>v[0]));eh=Math.max(...e.verts.map(v=>v[1]));}
+ else{ew=e.t==='window'||e.t==='door'?e.w:(e.t==='line'&&!e.vert)?(e.len||1):0.1;
+ eh=e.t==='window'||e.t==='door'?e.h:(e.t==='line'&&e.vert)?(e.len||1):0.1;}
+ e.x=Math.max(b.x0,Math.min(b.x1-ew,drag.x+dx));
+ e.y=Math.max(b.y0+0.02,Math.min(b.y1-eh,drag.y+dy));
+ /* прилипание к сторонам, когда край близко (~10px) */
+ const snap=10/view.sc;
+ if(e.t==='window'||e.t==='door'||e.t==='opening'){
+  if(Math.abs(e.x-b.x0)<snap)e.x=b.x0;
+  if(Math.abs((e.x+ew)-b.x1)<snap)e.x=b.x1-ew;
+  if(Math.abs((e.y+eh)-b.y1)<snap)e.y=b.y1-eh;
+  if(Math.abs(e.y-b.y0)<snap)e.y=b.y0;
+ }
+ render();
+});
+svg.addEventListener('pointercancel',ev=>{pointers.delete(ev.pointerId);if(pointers.size<2)pinch=null;panDrag=null;drag=null;});
+svg.addEventListener('pointerup',ev=>{
+ if(dimStart){
+  const dx=ev.clientX-dimStart.px, dy=ev.clientY-dimStart.py;
+  if(Math.hypot(dx,dy)>8){
+   const dir=Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up');
+   const e=state.els.find(x=>x.id===dimStart.id);
+   if(e){e.dims=e.dims||[];e.dims=e.dims.includes(dir)?e.dims.filter(x=>x!==dir):[...e.dims,dir];}
+   render();
+  }
+  dimStart=null;return;
+ }
+ pointers.delete(ev.pointerId);
+ if(pointers.size<2)pinch=null;
+ panDrag=null;
+ drag=null;});
+document.querySelectorAll('[data-und]').forEach(bt=>bt.onclick=()=>{state.underlay=bt.dataset.und;render();});
+function placeByLen(){
+ const L=(parseFloat(document.getElementById('drawlen').value)||0)/100; /* ввод в см */
+ if(!(L>0)||!state.drawPts.length)return;
+ const lp=state.drawPts[state.drawPts.length-1];
+ let dir=[1,0];
+ if(state.drawCursor){
+  const dx=state.drawCursor[0]-lp[0], dy=state.drawCursor[1]-lp[1];
+  const dl=Math.hypot(dx,dy);
+  if(dl>0.02)dir=[dx/dl,dy/dl];
+ }
+ /* почти осевое направление выпрямляем: путь мыши к панели не должен косить сторону */
+ if(Math.abs(dir[0])>=Math.abs(dir[1])){if(Math.abs(dir[1])<0.27)dir=[dir[0]>0?1:-1,0];}
+ else{if(Math.abs(dir[0])<0.27)dir=[0,dir[1]>0?1:-1];}
+ const p2=[Math.round((lp[0]+dir[0]*L)*1000)/1000, Math.round((lp[1]+dir[1]*L)*1000)/1000];
+ state.drawPts.push(p2);
+ render();
+ focusLen();
+}
+document.getElementById('drawlen').addEventListener('keydown',ev=>{if(ev.key==='Enter')placeByLen();});
+/* поле длины живёт вместе с резинкой: пока пользователь не печатает сам — показывает её размер */
+let drawLenTouched=false;
+document.getElementById('drawlen').addEventListener('input',()=>{drawLenTouched=true;});
+function focusLen(){drawLenTouched=false;setTimeout(()=>{const f=document.getElementById('drawlen');if(f){f.focus();f.select();}},10);}
+document.getElementById('closeShape').onclick=()=>{
+ if(state.drawPts.length<3)return;
+ const dp=state.drawPts, f=dp[0], lastI=dp.length-1, lp=dp[lastI];
+ /* последняя сторона выравнивается к 90°, если почти ортогональна */
+ if(Math.abs(lp[0]-f[0])<Math.abs(lp[1]-f[1])*0.27)dp[lastI]=[f[0],lp[1]];
+ else if(Math.abs(lp[1]-f[1])<Math.abs(lp[0]-f[0])*0.27)dp[lastI]=[lp[0],f[1]];
+ if(state.mode==='draw'){
+  state.verts=dp.map(q=>[...q]);
+  state.edgeProf={};state.els=[];
+  captureDirs();state.edgeSet={};
+  state.showWallDims=true;document.getElementById('walldims').classList.add('on');
+  state.drawPts=[];state.drawCursor=null;state.mode='edit';state.sel=null;state.selEdge=0;render();
+  setTimeout(()=>{const f2=document.getElementById('edgelen');if(f2){f2.focus();f2.select();}},30);
+ }else if(state.mode==='drawOpening'){
+  const xs=dp.map(q=>q[0]),ys=dp.map(q=>q[1]);
+  const mx=Math.min(...xs),my=Math.min(...ys);
+  const e2={id:'e'+(++state.seq),t:'opening',x:mx,y:my,obhod:'no',obhodProf:'base',
+   verts:dp.map(q=>[Math.round((q[0]-mx)*100)/100,Math.round((q[1]-my)*100)/100]),dims:[]};
+  state.els.push(e2);state.sel=e2.id;
+  state.drawPts=[];state.drawCursor=null;state.mode='edit';render();
+ }
+};
+document.getElementById('marginCm').addEventListener('input',e=>{state.marginCm=Math.max(0,parseInt(e.target.value)||0);render();});
+document.getElementById('walldims').onclick=()=>{state.showWallDims=!state.showWallDims;document.getElementById('walldims').classList.toggle('on',state.showWallDims);render();};
+document.getElementById('drawbtn').onclick=()=>{
+ zoomV=1;panXV=0;panYV=0;
+ /* новый чертёж: чистый лист и сразу режим черчения */
+ state.verts=[];state.edgeProf={};state.els=[];state.dims=[];
+ state.sel=null;state.selEdge=null;state.drawPts=[];state.mode='draw';state.stage='draw';
+ render();};
+document.getElementById('undoPt').onclick=()=>{
+ if(state.drawPts.length){state.drawPts.pop();render();}
+};
+document.getElementById('stageDraw').onclick=()=>{state.stage='draw';state.sel=null;state.mode='edit';render();};
+document.getElementById('stageCalc').onclick=()=>{state.stage='calc';state.mode='edit';state.drawPts=[];state.drawCursor=null;render();};
+document.getElementById('cutbtn').onclick=()=>{state.showCut=!state.showCut;document.getElementById('cutbtn').classList.toggle('on',state.showCut);render();};
+document.getElementById('dimbtn2').onclick=()=>{state.mode=state.mode==='dim'?'edit':'dim';state.sel=null;state.selEdge=null;render();};
+walls=[{name:'Стена A',room:'Гостиная',data:{...state},cache:null}];
+roomsMeta['Гостиная']={closed:false};
+render();
+
+/* ═══ Визуализация: фронтальная стена в перспективе комнаты ═══ */
+let vizTone='#efe9dd';
+function shade(hex,f){ /* затемнить/осветлить цвет */
+ const n=parseInt(hex.slice(1),16);let r=(n>>16)&255,g=(n>>8)&255,b2=n&255;
+ r=Math.min(255,Math.max(0,Math.round(r*f)));g=Math.min(255,Math.max(0,Math.round(g*f)));b2=Math.min(255,Math.max(0,Math.round(b2*f)));
+ return '#'+((r<<16)|(g<<8)|b2).toString(16).padStart(6,'0');
+}
+function buildViz(){
+ const b=bbox(),W=b.x1-b.x0,H=b.y1-b.y0;
+ const vw=1200,vh=675;
+ const margX=215,margY=125;
+ const sc=Math.min((vw-2*margX)/W,(vh-2*margY)/H);
+ const ww=W*sc,wh=H*sc;
+ const x0=(vw-ww)/2,y0=(vh-wh)/2;
+ const X=x=>x0+(x-b.x0)*sc, Y=y=>y0+(y-b.y0)*sc;
+ const T=vizTone, Tl=shade(T,1.08), Td=shade(T,0.8), Tdd=shade(T,0.55);
+ const fab=FABRICS.find(f=>f.id===state.fabric);
+ const floorY=y0+wh;
+ let s2=`<defs>
+  <linearGradient id="vwall" x1="0" y1="0" x2="0" y2="1">
+   <stop offset="0" stop-color="${Tl}"/><stop offset="0.55" stop-color="${T}"/><stop offset="1" stop-color="${Td}"/>
+  </linearGradient>
+  <filter id="vgrain" x="0" y="0" width="100%" height="100%">
+   <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7" result="n"/>
+   <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.5  0 0 0 0 0.48  0 0 0 0 0.45  0 0 0 0.10 0"/>
+   <feComposite operator="over" in2="SourceGraphic"/>
+  </filter>
+  <pattern id="vweave" width="4" height="4" patternUnits="userSpaceOnUse">
+   <rect width="4" height="4" fill="transparent"/>
+   <line x1="0" y1="0" x2="0" y2="4" stroke="${shade(T,0.95)}" stroke-width="1.1"/>
+   <line x1="0" y1="2" x2="4" y2="2" stroke="${shade(T,1.04)}" stroke-width="0.7" opacity="0.6"/>
+  </pattern>
+  <linearGradient id="vfloorg" x1="0" y1="0" x2="0" y2="1">
+   <stop offset="0" stop-color="#7a6549"/><stop offset="0.35" stop-color="#5d4c38"/><stop offset="1" stop-color="#2e2620"/>
+  </linearGradient>
+  <linearGradient id="vceil" x1="0" y1="1" x2="0" y2="0">
+   <stop offset="0" stop-color="#f2efe9"/><stop offset="1" stop-color="#b9b6b0"/>
+  </linearGradient>
+  <linearGradient id="vsideL" x1="1" y1="0" x2="0" y2="0">
+   <stop offset="0" stop-color="${shade(T,0.72)}"/><stop offset="1" stop-color="${shade(T,0.38)}"/>
+  </linearGradient>
+  <linearGradient id="vsideR" x1="0" y1="0" x2="1" y2="0">
+   <stop offset="0" stop-color="${shade(T,0.72)}"/><stop offset="1" stop-color="${shade(T,0.38)}"/>
+  </linearGradient>
+  <linearGradient id="vsky" x1="0" y1="0" x2="0" y2="1">
+   <stop offset="0" stop-color="#aed4f0"/><stop offset="0.65" stop-color="#e4f2fb"/><stop offset="1" stop-color="#f8ecd9"/>
+  </linearGradient>
+  <linearGradient id="vwinlight" x1="0" y1="0" x2="0" y2="1">
+   <stop offset="0" stop-color="rgba(255,248,225,0.30)"/><stop offset="1" stop-color="rgba(255,248,225,0)"/>
+  </linearGradient>
+  <linearGradient id="vplinth" x1="0" y1="1" x2="0" y2="0">
+   <stop offset="0" stop-color="rgba(255,214,130,0.55)"/><stop offset="1" stop-color="rgba(255,214,130,0)"/>
+  </linearGradient>
+  <linearGradient id="vrefl" x1="0" y1="0" x2="0" y2="1">
+   <stop offset="0" stop-color="${T}" stop-opacity="0.22"/><stop offset="1" stop-color="${T}" stop-opacity="0"/>
+  </linearGradient>
+  <linearGradient id="vcontact" x1="0" y1="0" x2="0" y2="1">
+   <stop offset="0" stop-color="rgba(0,0,0,0.38)"/><stop offset="1" stop-color="rgba(0,0,0,0)"/>
+  </linearGradient>
+  <radialGradient id="vamb" cx="0.5" cy="0.4" r="0.9">
+   <stop offset="0.5" stop-color="rgba(0,0,0,0)"/><stop offset="1" stop-color="rgba(8,8,14,0.5)"/>
+  </radialGradient>
+  <radialGradient id="vbra" cx="0.5" cy="0.5" r="0.5">
+   <stop offset="0" stop-color="rgba(255,226,150,0.55)"/><stop offset="1" stop-color="rgba(255,226,150,0)"/>
+  </radialGradient>
+  <filter id="vglow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="10"/></filter>
+  <filter id="vglow2" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="4"/></filter>
+  <filter id="vblurL" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="14"/></filter>
+ </defs>`;
+ /* ── комната ── */
+ s2+=`<polygon points="0,0 ${vw},0 ${x0+ww},${y0} ${x0},${y0}" fill="url(#vceil)"/>`;
+ s2+=`<ellipse cx="${vw/2}" cy="${y0*0.35}" rx="${vw*0.32}" ry="${y0*0.5}" fill="#fffdf6" opacity="0.5" filter="url(#vblurL)"/>`;
+ s2+=`<polygon points="0,${vh} ${vw},${vh} ${x0+ww},${floorY} ${x0},${floorY}" fill="url(#vfloorg)"/>`;
+ s2+=`<polygon points="0,0 ${x0},${y0} ${x0},${floorY} 0,${vh}" fill="url(#vsideL)"/>`;
+ s2+=`<polygon points="${vw},0 ${x0+ww},${y0} ${x0+ww},${floorY} ${vw},${vh}" fill="url(#vsideR)"/>`;
+ /* паркет: доски с вариацией тона и поперечными швами */
+ for(let i=0;i<10;i++){
+  const t1=i/10,t2=(i+1)/10;
+  const a1=x0+ww*t1,a2=x0+ww*t2, b1=vw*t1,b2v=vw*t2;
+  const tone=[0.95,1.05,0.9,1.02,0.97][i%5];
+  s2+=`<polygon points="${a1},${floorY} ${a2},${floorY} ${b2v},${vh} ${b1},${vh}" fill="#5d4c38" opacity="${(tone-0.85)/0.4}"/>`;
+  s2+=`<line x1="${a1}" y1="${floorY}" x2="${b1}" y2="${vh}" stroke="rgba(20,14,8,0.35)" stroke-width="1.4"/>`;
+ }
+ for(let j=1;j<5;j++){ /* поперечные швы, сгущаются к стене */
+  const t=Math.pow(j/5,1.7);
+  const yy=floorY+(vh-floorY)*t;
+  const xx1=x0-(x0)*t, xx2=x0+ww+(vw-x0-ww)*t;
+  s2+=`<line x1="${xx1}" y1="${yy}" x2="${xx2}" y2="${yy}" stroke="rgba(20,14,8,0.22)" stroke-width="1"/>`;
+ }
+ /* ── стена: ткань ── */
+ const pts2=state.verts.map(p=>X(p[0])+','+Y(p[1])).join(' ');
+ s2+=`<g filter="url(#vgrain)"><polygon points="${pts2}" fill="url(#vwall)"/></g>`;
+ s2+=`<polygon points="${pts2}" fill="url(#vweave)" opacity="0.5"/>`;
+ /* стыки полос */
+ const nSeams=H<=fab.roll?0:Math.ceil(W/fab.roll)-1;
+ for(let i2=1;i2<=nSeams;i2++){
+  const sx=X(b.x0+i2*fab.roll);if(i2*fab.roll<W){
+   s2+=`<line x1="${sx}" y1="${y0}" x2="${sx}" y2="${floorY}" stroke="${shade(T,0.78)}" stroke-width="1.4"/>`;
+   s2+=`<line x1="${sx+1.2}" y1="${y0}" x2="${sx+1.2}" y2="${floorY}" stroke="${shade(T,1.1)}" stroke-width="0.8" opacity="0.7"/>`;
+  }
+ }
+ /* контактные тени: стена↔пол и углы */
+ s2+=`<rect x="${x0}" y="${floorY}" width="${ww}" height="26" fill="url(#vcontact)" opacity="0.8"/>`;
+ s2+=`<polygon points="${x0},${y0} ${x0+22},${y0+10} ${x0+22},${floorY-6} ${x0},${floorY}" fill="rgba(0,0,0,0.14)"/>`;
+ s2+=`<polygon points="${x0+ww},${y0} ${x0+ww-22},${y0+10} ${x0+ww-22},${floorY-6} ${x0+ww},${floorY}" fill="rgba(0,0,0,0.14)"/>`;
+ /* отражение стены в полу */
+ s2+=`<rect x="${x0}" y="${floorY}" width="${ww}" height="${Math.min(90,(vh-floorY)*0.8)}" fill="url(#vrefl)"/>`;
+ /* ── профили сторон ── */
+ state.verts.forEach((v,i3)=>{
+  const w3=state.verts[(i3+1)%state.verts.length];
+  const pid=state.edgeProf[i3]||'none';if(pid==='none')return;
+  const pr2=SIDE_PROFILES.find(x=>x.id===pid);
+  const dark=['base','baseC','plinth','contour','contourP','box','wallCeil'].includes(pid);
+  const col=dark?'#23262e':pr2.c;
+  s2+=`<line x1="${X(v[0])}" y1="${Y(v[1])}" x2="${X(w3[0])}" y2="${Y(w3[1])}" stroke="${col}" stroke-width="7" stroke-linecap="round"/>`;
+  s2+=`<line x1="${X(v[0])}" y1="${Y(v[1])-2}" x2="${X(w3[0])}" y2="${Y(w3[1])-2}" stroke="rgba(255,255,255,0.18)" stroke-width="1.4"/>`;
+  if(pr2.light){
+   /* заливка света вверх по стене от плинтуса */
+   const midY2=(Y(v[1])+Y(w3[1]))/2;
+   s2+=`<rect x="${Math.min(X(v[0]),X(w3[0]))}" y="${midY2-86}" width="${Math.abs(X(w3[0])-X(v[0]))}" height="82" fill="url(#vplinth)"/>`;
+   s2+=`<line x1="${X(v[0])}" y1="${Y(v[1])-5}" x2="${X(w3[0])}" y2="${Y(w3[1])-5}" stroke="#ffdf9e" stroke-width="7" filter="url(#vglow)"/>`;
+   s2+=`<line x1="${X(v[0])}" y1="${Y(v[1])-4}" x2="${X(w3[0])}" y2="${Y(w3[1])-4}" stroke="#fff3d6" stroke-width="2" filter="url(#vglow2)"/>`;
+   /* отражение свечения в полу */
+   s2+=`<line x1="${X(v[0])}" y1="${floorY+16}" x2="${X(w3[0])}" y2="${floorY+16}" stroke="#ffdf9e" stroke-width="12" filter="url(#vblurL)" opacity="0.28"/>`;
+  }
+ });
+ /* ── элементы ── */
+ for(const e of state.els){
+  if(e.t==='window'){
+   const x=X(e.x),y=Y(e.y),w2=e.w*sc,h2=e.h*sc,fr=Math.min(7,w2*0.06);
+   /* луч света на пол */
+   s2+=`<polygon points="${x},${floorY} ${x+w2},${floorY} ${x+w2+90},${vh} ${x-90},${vh}" fill="url(#vwinlight)" filter="url(#vglow2)"/>`;
+   s2+=`<rect x="${x-4}" y="${y-4}" width="${w2+8}" height="${h2+8}" fill="${Tdd}"/>`;
+   s2+=`<rect x="${x-1}" y="${y-1}" width="${w2+2}" height="${h2+2}" fill="#f6f4ef"/>`;
+   s2+=`<rect x="${x+fr}" y="${y+fr}" width="${w2-2*fr}" height="${h2-2*fr}" fill="url(#vsky)"/>`;
+   s2+=`<line x1="${x+fr*1.5}" y1="${y+fr*1.6}" x2="${x+w2*0.4}" y2="${y+h2*0.55}" stroke="#ffffff" stroke-width="3" opacity="0.55"/>`;
+   s2+=`<line x1="${x+w2/2}" y1="${y+fr}" x2="${x+w2/2}" y2="${y+h2-fr}" stroke="#f6f4ef" stroke-width="${fr}"/>`;
+   s2+=`<line x1="${x+w2/2}" y1="${y+fr}" x2="${x+w2/2}" y2="${y+h2-fr}" stroke="rgba(0,0,0,0.12)" stroke-width="1"/>`;
+   s2+=`<rect x="${x-7}" y="${y+h2+4}" width="${w2+14}" height="8" rx="2.5" fill="#e9e5db"/>`;
+   s2+=`<rect x="${x-7}" y="${y+h2+11}" width="${w2+14}" height="3" rx="1.5" fill="rgba(0,0,0,0.18)"/>`;
+  }else if(e.t==='door'){
+   const x=X(e.x),y=Y(e.y),w2=e.w*sc,h2=e.h*sc,fr=Math.min(6,w2*0.07);
+   s2+=`<rect x="${x-6}" y="${y-6}" width="${w2+12}" height="${h2+6}" fill="#efe9dd"/>`;
+   s2+=`<rect x="${x-6}" y="${y-6}" width="${w2+12}" height="${h2+6}" fill="none" stroke="rgba(0,0,0,0.15)" stroke-width="1"/>`;
+   s2+=`<rect x="${x}" y="${y}" width="${w2}" height="${h2}" fill="#f3eee3"/>`;
+   s2+=`<rect x="${x}" y="${y}" width="${w2}" height="${h2}" fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="2"/>`;
+   s2+=`<rect x="${x+fr}" y="${y+fr}" width="${w2-2*fr}" height="${h2*0.42}" fill="rgba(0,0,0,0.045)" stroke="#ddd5c4" stroke-width="2" rx="2"/>`;
+   s2+=`<rect x="${x+fr}" y="${y+h2*0.52}" width="${w2-2*fr}" height="${h2*0.4}" fill="rgba(0,0,0,0.045)" stroke="#ddd5c4" stroke-width="2" rx="2"/>`;
+   s2+=`<circle cx="${x+w2-fr*1.7}" cy="${y+h2*0.52}" r="4.2" fill="#7d7869"/>`;
+   s2+=`<ellipse cx="${x+w2/2}" cy="${floorY+8}" rx="${w2*0.6}" ry="7" fill="rgba(0,0,0,0.25)" filter="url(#vglow2)"/>`;
+  }else if(e.t==='opening'){
+   const pp2=opoly(e).map(v=>X(v[0])+','+Y(v[1])).join(' ');
+   s2+=`<polygon points="${pp2}" fill="url(#vsky)" stroke="#f6f4ef" stroke-width="7"/>`;
+   s2+=`<polygon points="${pp2}" fill="none" stroke="rgba(0,0,0,0.14)" stroke-width="1.5"/>`;
+  }else if(e.t==='outlet'){
+   for(let i4=0;i4<e.posts;i4++){
+    const cx=X(e.x)+i4*15,cy=Y(e.y);
+    s2+=`<rect x="${cx-7.5}" y="${cy-7.5}" width="15" height="15" rx="3" fill="#f2f0ea" stroke="rgba(0,0,0,0.18)" stroke-width="1"/>`;
+    s2+=`<rect x="${cx-7.5}" y="${cy+5}" width="15" height="2.5" rx="1" fill="rgba(0,0,0,0.12)"/>`;
+    s2+=`<circle cx="${cx}" cy="${cy}" r="4" fill="#dedbd3"/>`;
+    s2+=`<circle cx="${cx-1.6}" cy="${cy}" r="0.8" fill="#4a4a44"/><circle cx="${cx+1.6}" cy="${cy}" r="0.8" fill="#4a4a44"/>`;
+   }
+  }else if(e.t==='sconce'){
+   const cx=X(e.x),cy=Y(e.y);
+   s2+=`<ellipse cx="${cx}" cy="${cy-34}" rx="86" ry="96" fill="url(#vbra)"/>`;
+   s2+=`<path d="M${cx-15} ${cy-30} L${cx-40} ${cy-95} L${cx+40} ${cy-95} L${cx+15} ${cy-30}Z" fill="rgba(255,232,170,0.16)" filter="url(#vglow2)"/>`;
+   s2+=`<path d="M${cx-14} ${cy-8} A14 14 0 0 1 ${cx+14} ${cy-8} Z" fill="#23262e"/>`;
+   s2+=`<path d="M${cx-14} ${cy-8} A14 14 0 0 1 ${cx+14} ${cy-8}" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.2"/>`;
+   s2+=`<ellipse cx="${cx}" cy="${cy-9}" rx="11" ry="4" fill="#ffedbf" filter="url(#vglow2)"/>`;
+  }else if(e.t==='mount'){
+   const cx=X(e.x),cy=Y(e.y);
+   s2+=`<rect x="${cx-27}" y="${cy-17}" width="54" height="34" rx="3" fill="#0c0f14"/>`;
+   s2+=`<rect x="${cx-25}" y="${cy-15}" width="50" height="30" rx="2" fill="#16202e"/>`;
+   s2+=`<line x1="${cx-21}" y1="${cy-11}" x2="${cx-2}" y2="${cy+6}" stroke="#2b3b52" stroke-width="3"/>`;
+   s2+=`<rect x="${cx-27}" y="${cy+18}" width="54" height="3" rx="1.5" fill="rgba(0,0,0,0.22)"/>`;
+  }else if(e.t==='line'){
+   const lt=e.lt||'light';
+   const x2=e.vert?X(e.x):X(e.x+(e.len||1)), y2=e.vert?Y(e.y+(e.len||1)):Y(e.y);
+   if(lt==='light'){
+    s2+=`<line x1="${X(e.x)}" y1="${Y(e.y)}" x2="${x2}" y2="${y2}" stroke="#ffd987" stroke-width="26" stroke-linecap="round" filter="url(#vglow)" opacity="0.85"/>`;
+    s2+=`<line x1="${X(e.x)}" y1="${Y(e.y)}" x2="${x2}" y2="${y2}" stroke="#fff8e4" stroke-width="4.5" stroke-linecap="round"/>`;
+    if(!e.vert)s2+=`<line x1="${X(e.x)}" y1="${floorY+14}" x2="${x2}" y2="${floorY+14}" stroke="#ffd987" stroke-width="10" filter="url(#vblurL)" opacity="0.22"/>`;
+   }else if(lt==='shadow'){
+    s2+=`<line x1="${X(e.x)}" y1="${Y(e.y)}" x2="${x2}" y2="${y2}" stroke="#101318" stroke-width="4" stroke-linecap="round"/>`;
+    s2+=`<line x1="${X(e.x)}" y1="${Y(e.y)+2.5}" x2="${x2}" y2="${y2+2.5}" stroke="rgba(255,255,255,0.14)" stroke-width="1.2"/>`;
+   }else{
+    s2+=`<line x1="${X(e.x)+4}" y1="${Y(e.y)+5}" x2="${x2+4}" y2="${y2+5}" stroke="rgba(0,0,0,0.32)" stroke-width="9" filter="url(#vglow2)"/>`;
+    s2+=`<line x1="${X(e.x)}" y1="${Y(e.y)}" x2="${x2}" y2="${y2}" stroke="#2a2d36" stroke-width="6" stroke-linecap="round"/>`;
+    s2+=`<line x1="${X(e.x)}" y1="${Y(e.y)-2}" x2="${x2}" y2="${y2-2}" stroke="rgba(255,255,255,0.2)" stroke-width="1.2"/>`;
+   }
+  }
+ }
+ /* атмосфера */
+ s2+=`<rect x="0" y="0" width="${vw}" height="${vh}" fill="url(#vamb)"/>`;
+ return s2;
+}
+function openViz(){
+ document.getElementById('viz').style.display='flex';
+ document.getElementById('vizsvg').innerHTML=buildViz();
+ document.getElementById('vizswatches').innerHTML=FABRIC_TONES.map(([c,n])=>
+  `<button title="${n}" onclick="vizTone='${c}';document.getElementById('vizsvg').innerHTML=buildViz()" style="width:26px;height:26px;border-radius:50%;border:2px solid ${vizTone===c?'#fff':'rgba(255,255,255,0.25)'};background:${c};cursor:pointer"></button>`).join('');
+}
+document.getElementById('vizbtn').onclick=openViz;
+document.getElementById('vizclose').onclick=()=>{document.getElementById('viz').style.display='none';};
+</script>

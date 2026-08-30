@@ -318,6 +318,14 @@ function HomeScreen({onMenu,contractTpl,setContractTpl,orders,setOrders,onOpen,o
                   <div style={{fontSize:9,color:ACC,fontWeight:700,textAlign:"center"}}>Договор</div>
                   {ord.contract&&<span style={{fontSize:7,color:"#16a34a",background:"rgba(22,163,74,0.1)",borderRadius:3,padding:"1px 3px"}}>{"№ "+ord.contract.number}</span>}
                 </button>
+                {/* Тихие стены — прототип калькулятора стен (отдельная страница) */}
+                <button onClick={()=>{try{window.open("/tihie-steny.html","_blank");}catch(e){window.location.href="/tihie-steny.html";}}}
+                  style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",
+                  justifyContent:"center",gap:2,background:ABGC,border:"1px solid "+ACC+"33",
+                  borderRadius:10,padding:"7px 4px",cursor:"pointer",fontFamily:"inherit"}}>
+                  <span style={{fontSize:15}}>🧵</span>
+                  <div style={{fontSize:9,color:ACC,fontWeight:700,textAlign:"center"}}>Тихие стены</div>
+                </button>
                 {/* ТЗ на монтаж */}
                 <button disabled style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",
                   justifyContent:"center",gap:2,background:T.faint,border:"1px dashed "+T.border,
