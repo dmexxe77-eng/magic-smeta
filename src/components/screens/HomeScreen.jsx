@@ -319,7 +319,7 @@ function HomeScreen({onMenu,contractTpl,setContractTpl,orders,setOrders,onOpen,o
                   {ord.contract&&<span style={{fontSize:7,color:"#16a34a",background:"rgba(22,163,74,0.1)",borderRadius:3,padding:"1px 3px"}}>{"№ "+ord.contract.number}</span>}
                 </button>
                 {/* Тихие стены — прототип калькулятора стен (отдельная страница) */}
-                <button onClick={()=>{try{window.open("/tihie-steny.html","_blank");}catch(e){window.location.href="/tihie-steny.html";}}}
+                <button onClick={()=>{const w=window.open("/tihie-steny.html","_blank");if(!w)window.location.href="/tihie-steny.html";}}
                   style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",
                   justifyContent:"center",gap:2,background:ABGC,border:"1px solid "+ACC+"33",
                   borderRadius:10,padding:"7px 4px",cursor:"pointer",fontFamily:"inherit"}}>
