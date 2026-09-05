@@ -59,6 +59,12 @@ td.s{text-align:right;white-space:nowrap;font-weight:600;color:#4F46E5;font-vari
 .wcard .wcn{font-weight:800;font-size:11.5px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .wcard .wcm{color:#6b7280;font-size:10.5px;white-space:nowrap}
 .wcard .wcx{position:absolute;top:3px;right:5px;display:flex;gap:6px;font-size:11px;color:#9aa0b5;background:rgba(255,255,255,.85);border-radius:6px;padding:0 3px}
+.wcard .wchk{position:absolute;top:2px;left:4px;background:rgba(255,255,255,.9);border-radius:6px;padding:1px 3px;display:flex;align-items:center;cursor:pointer}
+.wcard .wchk input{width:16px;height:16px;margin:0;accent-color:#4F46E5;cursor:pointer}
+.wcard.off{opacity:.45}
+.wcard.off .wcm::after{content:' · не в расчёте';color:#c04545}
+.wcard .wcn[contenteditable]{cursor:text;border-bottom:1px dashed #c9cfe3}
+.wcard .wcn[contenteditable]:focus{outline:none;border-bottom-color:#4F46E5;background:#eef0ff}
 .wcard.plus{display:flex;align-items:center;justify-content:center;font-weight:800;color:#4F46E5;border-style:dashed;min-height:78px;font-size:13px;text-align:center}
 #card-obj input{font:inherit;padding:7px 10px;border:1.5px solid #dfe3f0;border-radius:10px;color:#1e2530}
 #card-obj input:focus{outline:none;border-color:#4F46E5}
@@ -639,6 +645,8 @@ window.addAdjacent=side=>{
  curW=at;Object.assign(state,d);zoomV=1;panXV=0;panYV=0;render();
  setTimeout(()=>{const f=document.getElementById('edgelen');if(f){f.focus();f.select();}},60);
 };
+window.toggleWallOff=i=>{walls[i].off=!walls[i].off;render();};
+window.renameWall=(i,txt)=>{const nm=(txt||'').trim();if(nm&&nm!==walls[i].name){walls[i].name=nm;render();}else renderProject();};
 window.toggleRoomClosed=nm=>{roomsMeta[nm]=roomsMeta[nm]||{};roomsMeta[nm].closed=!roomsMeta[nm].closed;renderProject();};
 window.renameRoom=(oldNm,newNm)=>{newNm=(newNm||'').trim();if(!newNm||newNm===oldNm){renderProject();return;}
  walls.forEach(w=>{if(w.room===oldNm)w.room=newNm;});
@@ -647,7 +655,7 @@ window.renameRoom=(oldNm,newNm)=>{newNm=(newNm||'').trim();if(!newNm||newNm===ol
    На угол: ТС Внутренний угол 650 ₽/м + монтаж угла 800 ₽/м, минус два боковых Базовых 2×400 ₽/м */
 function roomCornersFor(nm){
  const acc={cnt:0,dM:0,dW:0,len:0,lenIn:0,lenOut:0};
- const drawn=walls.filter(w=>(w.room||'Комната 1')===nm&&w.cache);
+ const drawn=walls.filter(w=>(w.room||'Комната 1')===nm&&w.cache&&!w.off);
  if(drawn.length<2)return acc;
  const closed=roomsMeta[nm]&&roomsMeta[nm].closed;
  const pairList=[];
@@ -758,15 +766,16 @@ function renderProject(){
    <div class="wcrow">`+
    idxs.map(([w,i])=>{
     const c=w.cache;
-    return `<div class="wcard ${i===curW?'on':''}" onclick="loadWall(${i})">
+    return `<div class="wcard ${i===curW?'on':''} ${w.off?'off':''}" onclick="loadWall(${i})">
      ${miniWall(w.data)}
-     <div class="wcn">${w.name}</div>
+     <label class="wchk" onclick="event.stopPropagation()" title="учитывать в расчёте"><input type="checkbox" ${w.off?'':'checked'} onchange="toggleWallOff(${i})"></label>
+     <div class="wcn" contenteditable spellcheck="false" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}" onblur="renameWall(${i},this.textContent)">${w.name}</div>
      <div class="wcm">${c?Math.round(c.W*100)+'×'+Math.round(c.Hmax*100)+' · '+fmt(Math.round(c.total))+' ₽':'не начерчена'}</div>
      <div class="wcx">${walls.length>1?`<span onclick="event.stopPropagation();delWallIdx(${i})">✕</span>`:''}<span onclick="event.stopPropagation();dupWallIdx(${i})">⧉</span></div>
     </div>`;}).join('')+
    `<div class="wcard plus" onclick="addWallNew('${nm}')">+ Стена</div></div></div>`;}).join('')+
   `<button class="addroom" onclick="addRoom()">+ Комната</button>`;
- let m=0,wk=0;walls.forEach(w=>{const c=w.cache;if(c){m+=c.mSum;wk+=c.wSum;}});
+ let m=0,wk=0;walls.forEach(w=>{const c=w.cache;if(c&&!w.off){m+=c.mSum;wk+=c.wSum;}});
  const co=roomCorners();
  m+=co.dM;wk+=co.dW;
  const nak=Math.max((m+wk)*0.06,6500);
@@ -781,7 +790,7 @@ function renderProject(){
 window.orderMats=()=>{
  saveCur();
  const agg=new Map();
- walls.forEach((w,wi)=>{const c=w.data.verts&&w.data.verts.length>2?calcOfData(w.data,wi):null;if(!c)return;
+ walls.forEach((w,wi)=>{if(w.off)return;const c=w.data.verts&&w.data.verts.length>2?calcOfData(w.data,wi):null;if(!c)return;
   c.rows.filter(r=>r.g==='m').forEach(r=>{const k=r.n+'|'+r.u+'|'+r.p;const e=agg.get(k)||{n:r.n,u:r.u,p:r.p,q:0};e.q=Math.round((e.q+r.q)*100)/100;agg.set(k,e);});});
  const co=roomCorners();
  if(co.cnt){
@@ -1521,6 +1530,7 @@ function render(){
   const idxs=walls.map((w2,i)=>i).filter(i=>(walls[i].room||'Комната 1')===nmR);
   const agg=new Map();const extraL=[];let tot=0;
   idxs.forEach(wi=>{
+   if(walls[wi].off)return;
    const cw=wi===curW?c:(walls[wi].data.verts&&walls[wi].data.verts.length>2?calcOfData(walls[wi].data,wi):null);
    if(!cw)return;
    cw.rows.forEach(r2=>{const k2=r2.g+'|'+r2.n+'|'+r2.p;const e2=agg.get(k2)||{g:r2.g,n:r2.n,u:r2.u,p:r2.p,q:0};e2.q=Math.round((e2.q+r2.q)*100)/100;agg.set(k2,e2);});
