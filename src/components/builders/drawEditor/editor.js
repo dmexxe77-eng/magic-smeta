@@ -176,10 +176,11 @@ function sheet2() { const m = S.m, n = m.n; let h = `<div class="status" id="st2
     <div class="note">${vertexNote(vt)}</div>
     <div class="btns"><button class="btn ghost" data-act="deselect">Закрыть</button></div></div>`; return h; }
   h += '<div class="sec">Стены</div><div class="rows">';
-  for (let i = 0; i < n; i++) h += `<div class="row"><span class="lbl">${L(i)}${L((i + 1) % n)}</span>${numIn('side', `data-i="${i}"`, m.sides[i] ?? '', '')}</div>`;
+  const kbBtns = `<button class="next" data-act="nextField" type="button">Далее ▸</button><button class="done" data-act="blur" type="button" title="Готово">✓</button>`;
+  for (let i = 0; i < n; i++) h += `<div class="row"><span class="lbl">${L(i)}${L((i + 1) % n)}</span>${numIn('side', `data-i="${i}"`, m.sides[i] ?? '', '')}${kbBtns}</div>`;
   h += '</div>';
   if (m.diags.length) { h += '<div class="sec">Диагонали</div><div class="rows">';
-    m.diags.forEach((d, k) => { h += `<div class="row"><span class="lbl">${L(d.i)}–${L(d.j)}</span>${numIn('diag', `data-k="${k}"`, d.cm ?? '', '')}<button class="x" data-act="rmDiag" data-i="${k}">✕</button></div>`; }); h += '</div>'; }
+    m.diags.forEach((d, k) => { h += `<div class="row"><span class="lbl">${L(d.i)}–${L(d.j)}</span>${numIn('diag', `data-k="${k}"`, d.cm ?? '', '')}<button class="x" data-act="rmDiag" data-i="${k}">✕</button>${kbBtns}</div>`; }); h += '</div>'; }
   h += `<div class="btns"><button class="btn sm" data-act="pickDiag">+ Диагональ</button><button class="btn sm" data-act="pickAng">+ Угол</button><button class="btn sm ghost" data-act="back1">← Контур</button></div>
   <div class="btns"><button class="btn pri" id="doneBtn" data-act="done">${S.ops.length ? 'Перестроить ✓' : 'Построить ✓'}</button></div>`;
   if (S.ops.length) h += `<div class="note">После перестроения заново применятся правки этапа 3: ${S.ops.map(opLabel).join(', ')}</div>`;
@@ -214,9 +215,19 @@ function onEnter(el) { flushApply(); if (el.dataset.in === 'q') { const all = [.
   const all = [...sheet.querySelectorAll('input.in')], k = all.indexOf(el); if (k >= 0 && k < all.length - 1) { all[k + 1].focus(); all[k + 1].select(); } else el.blur(); }
 sheet.addEventListener('input', e => { if (e.target.matches && e.target.matches('input.in')) onInput(e.target); });
 sheet.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches && e.target.matches('input.in')) { e.preventDefault(); onEnter(e.target); } });
+// На телефоне при открытой клавиатуре панель схлопывается до одной строки с активной стеной, чертёж занимает остальное
+const COARSE = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+let kbT = null;
+function setKb(on) { sheet.classList.toggle('kb', on); $('#app').classList.toggle('kb', on); requestAnimationFrame(() => renderCanvas()); }
 sheet.addEventListener('focusin', e => { const el = e.target; if (!el.matches || !el.matches('input.in')) return; el.dataset.sess = ++S.sess; setTimeout(() => el.select(), 0);
-  S.hot = el.dataset.in === 'side' ? { t: 's', i: +el.dataset.i } : el.dataset.in === 'diag' ? { t: 'd', k: +el.dataset.k } : null; renderCanvas(); });
-sheet.addEventListener('focusout', e => { const el = e.target; if (!el.matches || !el.matches('input.in')) return; flushApply(); S.hot = null; renderCanvas(); });
+  S.hot = el.dataset.in === 'side' ? { t: 's', i: +el.dataset.i } : el.dataset.in === 'diag' ? { t: 'd', k: +el.dataset.k } : null;
+  const row = el.closest('.row'); clearTimeout(kbT); sheet.querySelectorAll('.row.active').forEach(r => r.classList.remove('active'));
+  if (row && COARSE) { row.classList.add('active'); setKb(true); } else renderCanvas(); });
+sheet.addEventListener('focusout', e => { const el = e.target; if (!el.matches || !el.matches('input.in')) return; flushApply(); S.hot = null;
+  clearTimeout(kbT); kbT = setTimeout(() => { const a = document.activeElement; if (a && a.matches && a.matches('input.in') && a.closest('.row')) return; sheet.querySelectorAll('.row.active').forEach(r => r.classList.remove('active')); setKb(false); }, 60); });
+// кнопки «Далее» и «✓» не должны забирать фокус у поля, иначе клавиатура на телефоне закроется
+const keepFocus = e => { const b = e.target.closest && e.target.closest('[data-act="nextField"],[data-act="blur"]'); if (b) e.preventDefault(); };
+sheet.addEventListener('pointerdown', keepFocus); sheet.addEventListener('mousedown', keepFocus); sheet.addEventListener('touchstart', keepFocus, { passive: false });
 const blurActive = () => { const a = document.activeElement; if (a && a.blur && a !== document.body) a.blur(); };
 function addDiag(i, j) { if (i > j) [i, j] = [j, i]; const n = S.m.n; if (i === j || (i + 1) % n === j || (j + 1) % n === i) return toast('Это соседние вершины, тут сторона', true);
   let k = S.m.diags.findIndex(d => d.i === i && d.j === j); if (k < 0) { withSnap(() => S.m.diags.push({ i, j, cm: null })); k = S.m.diags.length - 1; }
@@ -302,6 +313,8 @@ function modelFromPoly(poly) { const P = ptsOf(poly), n = P.length, wind = windO
   m.vert = P.map((p, i) => { const d = interiorDeg(P, i, wind); if (Math.abs(d - 90) < 0.5) return { kind: 'ortho', deg: 90 }; if (Math.abs(d - 270) < 0.5) return { kind: 'ortho', deg: 270 }; return { kind: 'deg', deg: Math.round(d * 10) / 10 }; });
   m.sides = P.map((p, i) => Math.round(hyp(p, P[(i + 1) % n]) * 1000) / 10); return solveModel(m); }
 function act(a, d) {
+  if (a === 'nextField') { const el = document.activeElement; if (el && el.matches && el.matches('input.in')) onEnter(el); return; }
+  if (a === 'blur') return blurActive();
   if (a === 'finish') return finish();
   if (a === 'q-rect') { S.quick = { kind: 'rect', f: { a: '', b: '' } }; S.focusReq = 'input[data-in="q"]'; return render(); }
   if (a === 'q-oval') { S.quick = { kind: 'oval', mode: 'circle', f: { r: '', rx: '', ry: '' } }; S.focusReq = 'input[data-in="q"]'; return render(); }

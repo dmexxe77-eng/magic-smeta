@@ -131,3 +131,17 @@
 .zd .inName{flex:1;min-width:0;font:500 15px var(--sans);padding:0 12px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);outline:none;-webkit-user-select:text;user-select:text}
 .zd .inName:focus{border-color:var(--pri)}
 .zd .btns.fin .btn.pri{flex:none;padding:0 16px}
+
+/* режим ввода на телефоне: клавиатура открыта, в панели только активная стена */
+.zd .sheet.kb{padding-top:6px;gap:0;max-height:none}
+.zd .sheet.kb::before,.zd .sheet.kb .status,.zd .sheet.kb .sec,.zd .sheet.kb .btns,.zd .sheet.kb .note{display:none}
+.zd .sheet.kb .rows{display:block}
+.zd .sheet.kb .row{display:none}
+.zd .sheet.kb .row.active{display:flex;gap:8px;min-height:44px;padding:3px 4px 3px 12px;background:var(--surface2)}
+.zd .sheet.kb .row.active .lbl{flex:none;font-size:15px}
+.zd .sheet.kb .row.active .in{flex:1;width:auto;font-size:18px;padding:6px 10px}
+.zd .row .next,.zd .row .done{display:none}
+.zd .sheet.kb .row.active .next{display:flex;align-items:center;justify-content:center;min-height:38px;padding:0 14px;border-radius:10px;background:var(--pri);color:#fff;font-weight:600;font-size:14px;flex:none}
+.zd .sheet.kb .row.active .done{display:flex;align-items:center;justify-content:center;width:38px;min-height:38px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink2);font-size:16px;flex:none}
+.zd .sheet.kb .row.active .x{display:none}
+.zd .app.kb .stages,.zd .app.kb .hint,.zd .app.kb .zoom{display:none}
