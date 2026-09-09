@@ -210,9 +210,11 @@ function onInput(el) { const kind = el.dataset.in, v = parseNum(el.value), sess 
     else if (kind === 'ang') { const vt = S.m.vert[+el.dataset.i]; vt.kind = 'deg'; vt.deg = (v && v > 3 && v < 357 && Math.abs(v - 180) > 1) ? v : null; } }, sess);
   clearTimeout(applyT); applyT = setTimeout(flushApply, 500); }
 function flushApply() { if (!applyT) return; clearTimeout(applyT); applyT = null; if (!S.m || S.stage !== 2) return; solveModel(S.m); renderCanvas(); updateSheet(); save(); }
-function onEnter(el) { flushApply(); if (el.dataset.in === 'q') { const all = [...sheet.querySelectorAll('input[data-in="q"]')], k = all.indexOf(el); if (k < all.length - 1) { all[k + 1].focus(); all[k + 1].select(); } else quickBuild(); return; }
-  if (el.dataset.in === 'op') { const all = [...sheet.querySelectorAll('input[data-in="op"]')], k = all.indexOf(el); if (k < all.length - 1) { all[k + 1].focus(); all[k + 1].select(); } else applyOp(); return; }
-  const all = [...sheet.querySelectorAll('input.in')], k = all.indexOf(el); if (k >= 0 && k < all.length - 1) { all[k + 1].focus(); all[k + 1].select(); } else el.blur(); }
+// В режиме клавиатуры видна только активная строка: перед фокусом показываем строку нужного поля, иначе focus() не сработает
+function focusIn(el) { if (!el) return; const row = el.closest('.row'); if (row && sheet.classList.contains('kb')) { sheet.querySelectorAll('.row.active').forEach(r => r.classList.remove('active')); row.classList.add('active'); } el.focus(); if (el.select) el.select(); }
+function onEnter(el) { flushApply(); if (el.dataset.in === 'q') { const all = [...sheet.querySelectorAll('input[data-in="q"]')], k = all.indexOf(el); if (k < all.length - 1) focusIn(all[k + 1]); else quickBuild(); return; }
+  if (el.dataset.in === 'op') { const all = [...sheet.querySelectorAll('input[data-in="op"]')], k = all.indexOf(el); if (k < all.length - 1) focusIn(all[k + 1]); else applyOp(); return; }
+  const all = [...sheet.querySelectorAll('input.in')], k = all.indexOf(el); if (k >= 0 && k < all.length - 1) focusIn(all[k + 1]); else el.blur(); }
 sheet.addEventListener('input', e => { if (e.target.matches && e.target.matches('input.in')) onInput(e.target); });
 sheet.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches && e.target.matches('input.in')) { e.preventDefault(); onEnter(e.target); } });
 // На телефоне при открытой клавиатуре панель схлопывается до одной строки с активной стеной, чертёж занимает остальное
@@ -394,7 +396,7 @@ function renderChrome() { const names = ['Контур', 'Размеры', 'Пр
   $('#bNew').style.visibility = S.stage === 0 && !S.quick ? 'hidden' : ''; $('.zoom').style.display = S.stage === 0 ? 'none' : ''; }
 function save() { }
 function render() { if (S.stage !== lastStage) { Z = { k: 1, dx: 0, dy: 0 }; lastStage = S.stage; sheetKey = ''; } renderChrome(); renderCanvas(); renderSheet(); save();
-  if (S.focusReq) { const el = sheet.querySelector(S.focusReq); S.focusReq = null; if (el) { el.focus(); el.scrollIntoView({ block: 'nearest' });
+  if (S.focusReq) { const el = sheet.querySelector(S.focusReq); S.focusReq = null; if (el) { focusIn(el); el.scrollIntoView({ block: 'nearest' });
     S.hot = el.dataset.in === 'side' ? { t: 's', i: +el.dataset.i } : el.dataset.in === 'diag' ? { t: 'd', k: +el.dataset.k } : null; renderCanvas(); } } }
 function commit() { render(); }
 const onResize = () => renderCanvas(); window.addEventListener('resize', onResize);
