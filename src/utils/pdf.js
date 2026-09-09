@@ -25,7 +25,8 @@ const ensureLibs = async () => {
     await load("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js", "jsPDF не загрузился");
 };
 
-export async function htmlToPdf(html, fileName) {
+/* opts.blob = true — вернуть Blob вместо скачивания (для «Поделиться» на телефоне) */
+export async function htmlToPdf(html, fileName, opts = {}) {
   let wrap = null;
   try {
     if (!html) return false;
@@ -81,6 +82,7 @@ export async function htmlToPdf(html, fileName) {
       pdf.addImage(part, "JPEG", margin, margin, imgW, h / pxPerMm, undefined, "FAST");
       y += h;
     }
+    if (opts.blob) return pdf.output("blob");
     pdf.save(String(fileName || "документ").replace(/[\\/:*?"<>|]+/g, "_") + ".pdf");
     return true;
   } catch (e) {

@@ -16,6 +16,10 @@ await build({ entryPoints: ['src/design-bridge/trace-entry.jsx'], bundle: true, 
   outfile: OUT + '/trace.js', minify: true, charset: 'utf8', jsx: 'automatic', loader: { '.js': 'jsx' }, logLevel: 'error',
   alias: { react: shim('react.js'), 'react-dom/client': shim('react-dom.js'), 'react-dom': shim('react-dom.js'), 'react/jsx-runtime': shim('jsx-runtime.js') } });
 
+await build({ entryPoints: ['src/design-bridge/contract-entry.jsx'], bundle: true, format: 'iife', globalName: 'MagicContract',
+  outfile: OUT + '/contract.js', minify: true, charset: 'utf8', jsx: 'automatic', loader: { '.js': 'jsx' }, logLevel: 'error',
+  alias: { react: shim('react.js'), 'react-dom/client': shim('react-dom.js'), 'react-dom': shim('react-dom.js'), 'react/jsx-runtime': shim('jsx-runtime.js') } });
+
 const src = fs.readFileSync('design-src/prototype.html', 'utf8');
 const grab = type => src.match(new RegExp('<script type="__bundler/' + type + '">([\\s\\S]*?)</script>'))[1];
 const manifest = JSON.parse(grab('manifest'));
@@ -38,7 +42,7 @@ const rep = (a, b, label) => { const n = tpl.split(a).length - 1; if (n !== 1) t
 rep('<meta name="viewport" content="width=device-width, initial-scale=1">',
   '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n<title>ZAMER.PRO · дизайн</title>\n' +
   '<link rel="stylesheet" href="/design/draw.css">\n<script src="/design/vendor/react.js"></script>\n<script src="/design/vendor/react-dom.js"></script>\n' +
-  '<script src="/design/draw.js"></script>\n<script src="/design/trace.js"></script>\n' + MOBILE_CSS, 'head');
+  '<script src="/design/draw.js"></script>\n<script src="/design/trace.js"></script>\n<script src="/design/contract.js"></script>\n' + MOBILE_CSS, 'head');
 
 /* Вводное описание прототипа (карточка над рамкой телефона) на сайт не идёт */
 {
@@ -70,9 +74,16 @@ const METHODS = [
   "      onRoom:res=>{const rm=mk(res.name,res.verts);last=rm.id;self.upd(p.id,x=>({...x,rooms:x.rooms.concat([rm]),status:x.status==='order'?'estimate':x.status}));self.toast(res.name+' · '+F(res.area)+' м² добавлено');},",
   "      onDone:()=>{h.close();if(last)self.go('calc',{tab:last});}});};",
   "    inp.click();}",
+  "  openContract(){const p=this.cur();if(!p||!window.MagicContract){this.toast('Договор не загрузился');return;}const self=this;const e=est(p.rooms,this.ed(p.id));const ins=this.installStart(p);const fmtD=iso=>iso?String(iso).split('-').reverse().join('.'):'';",
+  "    const h=window.MagicContract.open({project:{id:p.id,name:p.name,client:p.client,phone:p.phone,address:p.address},total:e.total,area:this.pArea(p),est:e,contract:p.contract||null,installDate:fmtD(ins),",
+  "      onProjectPatch:patch=>self.upd(p.id,x=>Object.assign({},x,patch)),",
+  "      onSaveContract:c=>{self.upd(p.id,x=>Object.assign({},x,{contract:c}));self.toast('Договор № '+c.number+' сохранён в проект');},",
+  "      onSigned:()=>{self.upd(p.id,x=>Object.assign({},x,{status:['order','estimate'].includes(x.status)?'contract':x.status}));self.toast('Статус → Договор подписан');},",
+  "      onClose:()=>{h.close();}});}",
   '',
 ].join('\n');
 rep('  arVals(){\n', METHODS + '  arVals(){\n', 'methods');
+rep("pContract:()=>this.toast('Договор — не входит в этот прототип'),", 'pContract:()=>this.openContract(),', 'contract tab');
 
 /* Низ расчёта: слева сумма текущего помещения (итог проекта уже в шапке), сама панель компактнее */
 rep("cTotalTxt:RUB(e.total),", "cTotalTxt:RUB(e.total),cRoomTotalTxt:RUB(est([r],ed).total),cRoomLabel:r.name,", 'room total');
@@ -116,4 +127,4 @@ const out = src
   .replace('<title>Bundled Page</title>', '<title>ZAMER.PRO · дизайн</title>');
 fs.writeFileSync(OUT + '/index.html', out);
 const kb = f => Math.round(fs.statSync(f).size / 1024) + ' КБ';
-console.log('design page:', kb(OUT + '/index.html'), '· draw.js', kb(OUT + '/draw.js'), '· trace.js', kb(OUT + '/trace.js'));
+console.log('design page:', kb(OUT + '/index.html'), '· draw.js', kb(OUT + '/draw.js'), '· trace.js', kb(OUT + '/trace.js'), '· contract.js', kb(OUT + '/contract.js'));
