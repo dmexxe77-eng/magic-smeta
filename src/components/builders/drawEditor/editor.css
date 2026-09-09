@@ -151,3 +151,28 @@
 .zd .acts .btn svg.g{width:40px;height:28px;flex:none}
 .zd .card.op h3{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:40px}
 .zd .card.op h3 svg.g{width:66px;height:44px;flex:none}
+
+/* формы дизайна ZAMER.PRO: радиусы, шапка, шторка, чипы */
+.zd .top{height:56px;padding:0 12px 0 12px;gap:10px}
+.zd .ib#bBack{width:40px;height:40px;border-radius:12px;background:var(--surface2);font-size:22px}
+.zd .top h1{font-size:15px;font-weight:800}
+.zd .top .sub{font:600 11.5px var(--sans);color:var(--ink2);margin-left:6px}
+.zd .ib.text{font-weight:700;color:var(--pri)}
+.zd .pill{height:34px;padding:0 12px;display:inline-flex;align-items:center;border-radius:10px;font-weight:700}
+.zd .sheet{border-radius:24px 24px 0 0;border-top:0;box-shadow:0 -8px 30px rgba(30,37,48,.08)}
+.zd .sheet::before{background:#E1E1EA}
+.zd .status{border-radius:14px}
+.zd .sec{font-weight:700;letter-spacing:.5px}
+.zd .row{border-radius:12px}
+.zd .in{border-radius:12px;font-weight:600}
+.zd .btn{border-radius:14px}
+.zd .btn.pri,.zd .btn.laser{min-height:50px;border-radius:16px;font-weight:800;background:var(--pri);color:#fff}
+.zd .btn.sm{min-height:36px;border-radius:12px}
+.zd .seg{border-radius:14px}
+.zd .seg button{border-radius:11px;font-weight:700}
+.zd .card{border-radius:18px}
+.zd .card.op h3{color:var(--ink2);font-weight:800;letter-spacing:.5px}
+.zd .opt{border-radius:20px}
+.zd .zoom button{border-radius:12px}
+.zd .sheet.kb .row.active .next{border-radius:12px;font-weight:700}
+.zd svg text{font-weight:700}

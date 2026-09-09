@@ -10,6 +10,9 @@ import { newR } from "../../utils/roomUtils.js";
 import PolyEditorFull from "./PolyEditorFull.jsx";
 import PolyMini from "./PolyMini.jsx";
 function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChange }) {
+  /* Стиль страницы дизайна (design-src/README.md): чипы 34px, поля 14px, primary индиго */
+  const chipS = (c, on) => ({ background: on ? "#EEEDFC" : "#fff", border: "1px solid " + (on ? "#4F46E5" : "#E4E4EE"), borderRadius: 10, padding: "0 12px", height: 34, color: c || "#1E2530", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" });
+  const fieldS = { background: "#F7F7FC", border: "1px solid #E4E4EE", borderRadius: 14, padding: "10px 12px", color: "#1E2530", fontSize: 16, fontWeight: 600, fontFamily: "inherit", outline: "none" };
   const [pts, setPts] = useState([]);
   const [closed, setClosed] = useState(false);
   const [zoom, setZoom] = useState(1);
@@ -92,15 +95,15 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
     const dh = sh * (sz / (viewR * 2));
     ctx.drawImage(imgElRef.current, sx, sy, sw, sh, dx, dy, dw, dh);
     /* Перекрестие */
-    ctx.strokeStyle = "rgba(200,168,75,0.4)";
+    ctx.strokeStyle = "rgba(79,70,229,0.7)";
     ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(sz / 2, 0); ctx.lineTo(sz / 2, sz); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(0, sz / 2); ctx.lineTo(sz, sz / 2); ctx.stroke();
     /* Зелёная точка snap-позиции в центре */
-    ctx.strokeStyle = "rgba(70,180,120,0.9)";
+    ctx.strokeStyle = "rgba(79,70,229,0.9)";
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(sz / 2, sz / 2, 5, 0, Math.PI * 2); ctx.stroke();
-    ctx.fillStyle = "rgba(70,180,120,0.8)";
+    ctx.fillStyle = "rgba(79,70,229,0.85)";
     ctx.beginPath(); ctx.arc(sz / 2, sz / 2, 1.5, 0, Math.PI * 2); ctx.fill();
   }, [loupe, zoom]);
   const snapToCorner = useCallback((ix, iy, mode) => {
@@ -385,24 +388,24 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
     setRoomName("Помещение " + (completedRooms.length + 2));
   };
   return (
-    <div style={{ background: T.bg, height: "100vh", display: "flex", flexDirection: "column" }}>
+    <div style={{ background: "#F7F7FC", height: "100%", minHeight: "100%", display: "flex", flexDirection: "column" }}>
       {/* Верхняя панель */}
-      <div style={{ padding: "5px 10px", background: "#1a1710", borderBottom: "1px solid "+T.pillBd, display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0, zIndex: 5 }}>
-        <div style={{ fontSize: 11, fontWeight: 600, color: T.text }}>
+      <div style={{ padding: "10px 14px", background: "#fff", borderBottom: "1px solid #ECECF4", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexShrink: 0, zIndex: 5 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: "#6F7688", lineHeight: 1.25 }}>
           {loupe ? "Удержание — лупа, отпустите для точки" :
            closed ? "Укажите размер и название" :
            pts.length === 0 ? "Нажимайте по углам (удержание = лупа)" :
            String(pts.length + " точек")}
         </div>
-        <div style={{ display: "flex", gap: 3 }}>
-          {pts.length > 0 && <button onClick={undo} style={btnS(T.red)}>{"Отмена"}</button>}
-          <button onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }} style={btnS("#9a8860")}>{"1:1"}</button>
+        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+          {pts.length > 0 && <button onClick={undo} style={chipS("#FF3B30")}>{"Отмена"}</button>}
+          <button onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }} style={chipS()}>{"1:1"}</button>
           <button onClick={() => {
             const cw = window.innerWidth, ch = window.innerHeight - 200;
             const fz = Math.min(cw / imgSize.w, ch / imgSize.h, 1);
             setZoom(fz);
             setPan({ x: (cw - imgSize.w * fz) / 2, y: Math.max(0, (ch - imgSize.h * fz) / 2) });
-          }} style={btnS("#9a8860")}>{"Вписать"}</button>
+          }} style={chipS()}>{"Вписать"}</button>
         </div>
       </div>
       {/* Канвас */}
@@ -439,7 +442,7 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
                   const tw = label.length * 6 + 8;
                   return (<g key={"sl" + i}>
                     <rect x={mx - tw / 2} y={my - 8} width={tw} height={14} rx="3" fill="rgba(0,0,0,0.65)" />
-                    <text x={mx} y={my + 2} textAnchor="middle" fill={col} fontSize="9" fontWeight="600" fontFamily="sans-serif">{label}</text>
+                    <text x={mx} y={my + 2} textAnchor="middle" fill={col} fontSize="9" fontWeight="600" fontFamily="Manrope, Inter, sans-serif">{label}</text>
                   </g>);
                 })}
                 {/* Название */}
@@ -451,7 +454,7 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
                   const tw2 = label.length * 5.5 + 12;
                   return (<g>
                     <rect x={sx2 - tw2 / 2} y={sy2 - 9} width={tw2} height={18} rx="4" fill="rgba(0,0,0,0.7)" />
-                    <text x={sx2} y={sy2 + 4} textAnchor="middle" fill="#fff" fontSize={Math.max(10, 12 * zoom)} fontWeight="bold" fontFamily="sans-serif">{label}</text>
+                    <text x={sx2} y={sy2 + 4} textAnchor="middle" fill="#fff" fontSize={Math.max(10, 12 * zoom)} fontWeight="bold" fontFamily="Manrope, Inter, sans-serif">{label}</text>
                   </g>);
                 })()}
               </g>
@@ -460,7 +463,7 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
           {/* Текущий контур */}
           {pts.length >= 2 && <polyline
             points={[...pts, ...(closed ? [pts[0]] : [])].map(p => { const [sx, sy] = img2screen(p[0], p[1]); return sx + "," + sy; }).join(" ")}
-            fill={closed ? "rgba(70,180,120,0.12)" : "none"} stroke="rgba(70,180,120,0.8)" strokeWidth="2.5"
+            fill={closed ? "rgba(79,70,229,0.10)" : "none"} stroke="rgba(79,70,229,0.9)" strokeWidth="2.5"
             strokeDasharray={closed ? "none" : "8,4"} />}
           {/* Размеры сторон (после замыкания) */}
           {closed && pts.map((p, i) => {
@@ -471,8 +474,8 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
             const rLen = realSides[i];
             const isSel = scaleSide === i;
             return (<text key={"s" + i} x={mx} y={my - 8} textAnchor="middle"
-              fill={isSel ? T.green : "rgba(120,200,150,0.7)"} fontSize={isSel ? "12" : "10"}
-              fontWeight={isSel ? "bold" : "normal"} fontFamily="sans-serif">
+              fill={isSel ? "#4F46E5" : "#1E2530"} fontSize={isSel ? "12" : "10"}
+              fontWeight={isSel ? "bold" : "normal"} fontFamily="Manrope, Inter, sans-serif">
               {L[i]}{L[j % 26]}{rLen !== undefined ? ": " + rLen.toFixed(2) + " м" : ""}</text>);
           })}
         </svg>
@@ -481,10 +484,10 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
           const [sx, sy] = img2screen(p[0], p[1]);
           return (<div key={"v" + i} style={{
             position: "absolute", left: sx - 6, top: sy - 6, width: 12, height: 12, borderRadius: "50%",
-            background: i === 0 && !closed ? "rgba(255,200,50,0.9)" : "rgba(70,180,120,0.9)",
+            background: i === 0 && !closed ? "#FF9F0A" : "#4F46E5",
             border: "1.5px solid #fff", display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: 7, fontWeight: 700, color: "#fff", pointerEvents: "none",
-            boxShadow: "0 1px 4px rgba(0,0,0,0.5)"
+            boxShadow: "0 1px 4px rgba(30,37,48,0.35)"
           }}>{L[i]}</div>);
         })}
         {/* Метка "Замкнуть" */}
@@ -492,8 +495,8 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
           const [sx, sy] = img2screen(pts[0][0], pts[0][1]);
           return (<div style={{
             position: "absolute", left: sx - 22, top: sy - 22,
-            background: "rgba(255,200,50,.85)", borderRadius: 3, padding: "1px 5px",
-            fontSize: 8, color: "#000", fontWeight: 600, pointerEvents: "none", whiteSpace: "nowrap"
+            background: "#FF9F0A", borderRadius: 8, padding: "3px 8px",
+            fontSize: 10, color: "#fff", fontWeight: 700, pointerEvents: "none", whiteSpace: "nowrap"
           }}>{"Замкнуть"}</div>);
         })()}
         {/* ═══ ЛУПА (canvas) ═══ */}
@@ -512,8 +515,8 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
             <div style={{
               position: "absolute", left: lLeft, top: lTop, width: sz, height: sz,
               borderRadius: "50%", overflow: "hidden",
-              border: "3px solid rgba(200,168,75,0.85)",
-              boxShadow: "0 4px 24px rgba(0,0,0,0.7), inset 0 0 0 1px rgba(200,168,75,0.3)",
+              border: "3px solid rgba(79,70,229,0.9)",
+              boxShadow: "0 8px 24px rgba(30,37,48,0.35)",
               pointerEvents: "none", zIndex: 50, background: T.bg
             }}>
               {/* Canvas — рисуем фрагмент изображения напрямую */}
@@ -522,7 +525,7 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
               {/* Метка увеличения */}
               <div style={{
                 position: "absolute", top: 6, left: 0, width: "100%", textAlign: "center",
-                fontSize: 8, color: "rgba(200,168,75,0.6)", fontWeight: 600, pointerEvents: "none",
+                fontSize: 9, color: "#fff", fontWeight: 700, pointerEvents: "none",
                 textShadow: "0 1px 3px rgba(0,0,0,0.9)"
               }}>{"x" + Math.round(Math.max(zoom * 2, 2))}</div>
             </div>
@@ -530,9 +533,9 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
         })()}
       </div>
       {/* Нижняя панель */}
-      <div style={{ padding: "8px 10px", background: "#1a1710", borderTop: "1px solid "+T.pillBd, flexShrink: 0 }}>
+      <div style={{ padding: "12px 16px", background: "#fff", borderTop: "1px solid #ECECF4", flexShrink: 0 }}>
         {!closed ? (
-          <div style={{ fontSize: 11, color: "#9a8860" }}>
+          <div style={{ fontSize: 12, color: "#6F7688", fontWeight: 600 }}>
             {pts.length === 0 ? "Тап = точка, удержание = лупа для точной постановки" :
              pts.length < 3 ? String("Минимум 3 точки (сейчас " + pts.length + ")") :
              "Нажмите на A для замыкания"}
@@ -540,64 +543,57 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
         ) : !scale ? (
           <div>
             {namePrompt && <div style={{ display: "flex", gap: 4, alignItems: "center", marginBottom: 6 }}>
-              <span style={{ color: T.accent, fontSize: 11, fontWeight: 600 }}>{"Название:"}</span>
+              <span style={{ color: "#6F7688", fontSize: 12, fontWeight: 700 }}>{"Название:"}</span>
               <input value={roomName} onChange={e => setRoomName(e.target.value)} autoFocus
-                style={{ flex: 1, background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 6, padding: "6px 10px", color: "#fff", fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+                style={{ ...fieldS, flex: 1, minWidth: 0 }} />
             </div>}
-            <div style={{ fontSize: 10, color: T.accent, fontWeight: 600, marginBottom: 4 }}>{"Выберите сторону и введите длину (см):"}</div>
-            <div style={{ display: "flex", gap: 3, flexWrap: "wrap", marginBottom: 5 }}>
+            <div style={{ fontSize: 12, color: "#6F7688", fontWeight: 700, marginBottom: 6 }}>{"Выберите сторону и введите её длину:"}</div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
               {pts.map((_, i) => {
                 const j = (i + 1) % pts.length;
                 const sel = scaleSide === i;
                 return (<button key={i} onClick={() => { setScaleSide(i); setScaleConfirmed(false); }}
-                  style={{ background: sel ? T.actBd : T.pillBg,
-                    border: "1px solid " + (sel ? T.actBd : T.pillBd),
-                    borderRadius: 3, padding: "3px 8px", cursor: "pointer",
-                    color: sel ? T.green : "#9a8860", fontSize: 10, fontWeight: sel ? 700 : 400, fontFamily: "inherit"
-                  }}>{L[i]}{L[j % 26]}</button>);
+                  style={chipS(sel ? "#4F46E5" : "#1E2530", sel)}>{L[i]}{L[j % 26]}</button>);
               })}
             </div>
-            {scaleSide !== null && <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-              <span style={{ color: "#9a8860", fontSize: 11 }}>{L[scaleSide]}{L[(scaleSide + 1) % pts.length]}:</span>
+            {scaleSide !== null && <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <span style={{ color: "#1E2530", fontSize: 14, fontWeight: 800 }}>{L[scaleSide]}{L[(scaleSide + 1) % pts.length]}:</span>
               <input type="number" value={scaleCm}
                 onChange={e => { setScaleCm(e.target.value); setScaleConfirmed(false); }}
                 onKeyDown={e => { if (e.key === "Enter" && scaleCm) setScaleConfirmed(true); }}
                 placeholder={"длина в см"} autoFocus
-                style={{ width: 100, background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 6, padding: "6px 10px", color: "#fff", fontSize: 14, fontFamily: "inherit", textAlign: "center", outline: "none" }} />
-              <span style={{ color: "#6a5c40", fontSize: 10 }}>{"см"}</span>
+                style={{ ...fieldS, width: 120, textAlign: "center", fontWeight: 700 }} />
+              <span style={{ color: "#A5A9B8", fontSize: 12, fontWeight: 600 }}>{"см"}</span>
               <button onClick={() => { if (scaleCm) setScaleConfirmed(true); }}
-                style={{ background: scaleCm ? T.actBd : T.pillBg,
-                  border: "1px solid " + (scaleCm ? T.actBd : T.pillBd),
-                  borderRadius: 5, padding: "6px 14px", cursor: scaleCm ? "pointer" : "default",
-                  color: scaleCm ? T.green : "#6a5c40", fontSize: 12, fontWeight: 600, fontFamily: "inherit" }}>{"OK"}</button>
+                style={{ background: scaleCm ? "#4F46E5" : "#F3F3FA", border: "none", borderRadius: 14, padding: "0 18px", height: 44, cursor: scaleCm ? "pointer" : "default", color: scaleCm ? "#fff" : "#A5A9B8", fontSize: 14, fontWeight: 700, fontFamily: "inherit" }}>{"OK"}</button>
             </div>}
           </div>
         ) : (
           <div>
             {/* Название — редактируемое */}
             <div style={{ display: "flex", gap: 4, alignItems: "center", marginBottom: 6 }}>
-              <span style={{ color: T.accent, fontSize: 11, fontWeight: 600 }}>{"Название:"}</span>
+              <span style={{ color: "#6F7688", fontSize: 12, fontWeight: 700 }}>{"Название:"}</span>
               <input value={roomName} onChange={e => setRoomName(e.target.value)} autoFocus
-                style={{ flex: 1, background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 6, padding: "6px 10px", color: "#fff", fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+                style={{ ...fieldS, flex: 1, minWidth: 0 }} />
             </div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: T.green, marginBottom: 4 }}>
+            <div style={{ fontSize: 15, fontWeight: 800, color: "#1E2530", marginBottom: 6 }}>
               {"S=" + fmt(realArea) + " м" + String.fromCharCode(178) + " P=" + fmt(realPerim) + " м"}
             </div>
-            <div style={{ display: "flex", gap: 3, flexWrap: "wrap", marginBottom: 5 }}>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
               {realSides.map((s, i) => (
-                <span key={i} style={{ background: "rgba(70,180,120,.08)", border: "1px solid "+T.actBg, borderRadius: 3, padding: "1px 5px", fontSize: 9, color: T.green }}>
+                <span key={i} style={{ background: "#EEEDFC", borderRadius: 8, padding: "3px 8px", fontSize: 11, fontWeight: 700, color: "#4F46E5" }}>
                   {L[i]}{L[(i + 1) % pts.length]}:{s.toFixed(2)}{"м"}</span>))}
             </div>
             {savedScale && (
-              <div style={{ fontSize: 9, color: "#6a5c40", marginBottom: 4 }}>
+              <div style={{ fontSize: 11, color: "#6F7688", marginBottom: 6 }}>
                 {"Масштаб сохранён с 1-й комнаты · "}
                 <span onClick={() => { setSavedScale(null); setScaleConfirmed(false); }}
                   style={{ color: T.accent, cursor: "pointer", textDecoration: "underline" }}>{"Ввести заново"}</span>
               </div>
             )}
-            {!savedScale && <button onClick={() => setScaleConfirmed(false)} style={{ ...btnS("#9a8860"), marginBottom: 4 }}>{"Изменить размер"}</button>}
+            {!savedScale && <button onClick={() => setScaleConfirmed(false)} style={{ ...chipS(), marginBottom: 8 }}>{"Изменить размер"}</button>}
             <button onClick={doFinish}
-              style={{ background: T.actBd, border: "1px solid "+T.actBd, borderRadius: 5, padding: "7px 20px", cursor: "pointer", width: "100%", color: T.green, fontSize: 13, fontWeight: 700, fontFamily: "inherit" }}>
+              style={{ background: "#4F46E5", border: "none", borderRadius: 16, padding: "0 20px", height: 50, cursor: "pointer", width: "100%", color: "#fff", fontSize: 15, fontWeight: 800, fontFamily: "inherit" }}>
               {"Добавить " + roomName}</button>
           </div>
         )}

@@ -5,7 +5,8 @@ import '../components/builders/drawEditor/editor.css';
 const DESIGN_VARS = {
   '--ground': '#F3F3FA', '--paper': '#F7F7FC', '--surface': '#FFFFFF', '--surface2': '#F3F3FA',
   '--ink': '#1E2530', '--ink2': '#6F7688', '--ink3': '#A5A9B8', '--line': '#E4E4EE', '--grid': '#ECECF4',
-  '--fill': 'rgba(79,70,229,.10)', '--pri': '#4F46E5', '--sans': "'Manrope','Inter',system-ui,sans-serif",
+  '--fill': 'rgba(79,70,229,.10)', '--pri': '#4F46E5', '--laser': '#4F46E5', '--laser-soft': '#EEEDFC',
+  '--sans': "'Manrope','Inter',system-ui,sans-serif", '--mono': "'Manrope','Inter',system-ui,sans-serif",
 };
 
 /* Оверлей построителя для страницы дизайна.

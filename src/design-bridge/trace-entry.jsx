@@ -35,6 +35,15 @@ function TraceApp({ file, roomCount, onRoom, onDone }) {
   };
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ background: '#fff', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+        <button onClick={onDone} style={{ background: '#F3F3FA', border: 'none', borderRadius: 12, width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
+          <svg width="16" height="16" fill="none" stroke="#1E2530" strokeWidth="2" strokeLinecap="round"><path d="M10 4L6 8l4 4"/></svg>
+        </button>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 15, fontWeight: 800, color: '#1E2530' }}>Обводка чертежа</div>
+          <div style={{ fontSize: 11.5, fontWeight: 600, color: '#6F7688', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{rooms.length ? 'Обведено: ' + rooms.length : (file.name || 'план')}</div>
+        </div>
+      </div>
       <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
         <TracingCanvas image={image} completedRooms={rooms} initScale={scale} onScaleChange={setScale} onFinish={finish} />
       </div>

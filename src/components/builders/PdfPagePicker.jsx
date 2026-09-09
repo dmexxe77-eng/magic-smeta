@@ -89,33 +89,17 @@ function PdfPagePicker({pdfData,onSelect,onBack}){
     groups.push({from:i,to:Math.min(i+9,numPages)});
 
   return(
-    <div style={{minHeight:"100vh",background:"#f2f3fa",color:"#1e2530",
-      fontFamily:"'Inter',-apple-system,sans-serif",display:"flex",flexDirection:"column"}}>
+    <div style={{minHeight:"100vh",background:"#F3F3FA",color:"#1E2530",
+      fontFamily:"'Manrope','Inter',-apple-system,sans-serif",display:"flex",flexDirection:"column"}}>
 
-      {/* Header */}
-      <div style={{background:"#fff",borderBottom:"2.5px solid #4F46E5",padding:"13px 14px 0"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",paddingBottom:11}}>
-          <div style={{display:"flex",alignItems:"center",gap:9}}>
-            <div style={{width:32,height:32,borderRadius:8,background:"#1e2530",display:"flex",alignItems:"center",justifyContent:"center"}}>
-              <svg width="17" height="17" viewBox="0 0 20 20" fill="none">
-                <rect x="3" y="10" width="14" height="2" rx="1" fill="#4F46E5"/>
-                <rect x="5" y="6" width="10" height="2" rx="1" fill="#4F46E5" opacity="0.5"/>
-                <rect x="7" y="14" width="6" height="2" rx="1" fill="#4F46E5" opacity="0.25"/>
-              </svg>
-            </div>
-            <div>
-              <div style={{fontSize:15,fontWeight:700,color:"#1e2530",letterSpacing:"1px",lineHeight:1}}>{"MAGIC"}</div>
-              <div style={{fontSize:8,color:"#4F46E5",letterSpacing:"2px",marginTop:1}}>{"ВЫБОР ЛИСТА"}</div>
-            </div>
-          </div>
-          <div style={{display:"flex",alignItems:"center",gap:8}}>
-            {numPages>0&&<span style={{fontSize:12,color:"#888"}}>{numPages+" стр."}</span>}
-            <button onClick={onBack}
-              style={{background:"#f2f3fa",border:"none",borderRadius:8,width:32,height:32,
-                display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
-              <svg width="14" height="14" fill="none" stroke="#1e2530" strokeWidth="2" strokeLinecap="round"><path d="M9 3L5 7l4 4"/></svg>
-            </button>
-          </div>
+      {/* Header — как в дизайне: назад 40×40, заголовок 15/800, подпись */}
+      <div style={{background:"#fff",borderBottom:"1px solid #ECECF4",padding:"8px 16px",display:"flex",alignItems:"center",gap:12}}>
+        <button onClick={onBack} style={{background:"#F3F3FA",border:"none",borderRadius:12,width:40,height:40,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0}}>
+          <svg width="16" height="16" fill="none" stroke="#1E2530" strokeWidth="2" strokeLinecap="round"><path d="M10 4L6 8l4 4"/></svg>
+        </button>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:15,fontWeight:800,color:"#1E2530"}}>{"Выбор листа"}</div>
+          <div style={{fontSize:11.5,fontWeight:600,color:"#6F7688"}}>{numPages>0?numPages+" стр. в PDF":"Читаем PDF…"}</div>
         </div>
       </div>
 
@@ -194,8 +178,8 @@ function PdfPagePicker({pdfData,onSelect,onBack}){
         <div style={{position:"fixed",bottom:0,left:0,right:0,padding:"12px 14px",
           background:"#fff",borderTop:"0.5px solid #eeeef8"}}>
           <button onClick={doConfirm}
-            style={{width:"100%",background:"#4F46E5",border:"none",borderRadius:13,
-              padding:"15px",color:"#fff",fontSize:15,fontWeight:700,
+            style={{width:"100%",background:"#4F46E5",border:"none",borderRadius:16,
+              padding:"15px",color:"#fff",fontSize:15,fontWeight:800,
               cursor:"pointer",fontFamily:"inherit",
               boxShadow:"0 6px 24px rgba(79,70,229,0.4)"}}>
             {"Выбрать лист "+selPage+" →"}
