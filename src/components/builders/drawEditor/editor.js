@@ -67,6 +67,11 @@ function renderCanvas() { while (svg.firstChild) svg.removeChild(svg.firstChild)
   const poly = S.stage === 3 ? S.poly : S.stage === 2 ? { v: S.m.sol.map(p => ({ x: p.x, y: p.y, fillet: null, arc: null })) } : quickPoly(); if (!poly) return;
   const P = ptsOf(poly), n = P.length, F = flatten(poly); fitView(F);
   g.appendChild(el('path', { d: pathOf(F.map(toS), true), style: 'fill:var(--fill);stroke:var(--ink);stroke-width:2;stroke-linejoin:round' }));
+  // мелкий пунктир: исходная сторона у дуги, срезанный угол у скругления, прежнее положение стены после сдвига
+  if (S.stage === 3) { const dot = 'fill:none;stroke:var(--ink3);stroke-width:1;stroke-dasharray:1.5 3;stroke-linecap:round';
+    if (S.ghost) g.appendChild(el('path', { d: pathOf(flatten(S.ghost).map(toS), true), style: dot }));
+    for (let i = 0; i < n; i++) { const ai = arcInfo(poly, i); if (ai) { const a = toS(P[i]), b = toS(P[(i + 1) % n]); g.appendChild(el('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, style: dot })); }
+      const fi = filletInfo(poly, i); if (fi) g.appendChild(el('path', { d: pathOf([fi.T1, P[i], fi.T2].map(toS), false), style: dot })); } }
   const st = S.m && S.m.status;
   // diagonals (stage 2)
   if (S.stage === 2 && st) {
@@ -320,10 +325,12 @@ const opLabel = op => OP_NAMES[op.kind] + ' ' + L(op.i);
 function replay(base, ops) { let poly = clone(base), failedAt = null, err = '';
   for (let k = 0; k < ops.length; k++) { try { poly = runOp(poly, ops[k]).q; } catch (e) { failedAt = k; err = e.message; break; } }
   return { poly, failedAt, err }; }
+// после сдвига или изменения длины помним прежний контур, чтобы показать его пунктиром
+function updateGhost() { const last = S.ops[S.ops.length - 1]; S.ghost = (last && (last.kind === 'shift' || last.kind === 'len') && S.base) ? replay(S.base, S.ops.slice(0, -1)).poly : null; }
 function rebuild() { const r = replay(S.base, S.ops);
   if (r.failedAt != null) { const bad = S.ops[r.failedAt]; S.ops = S.ops.slice(0, r.failedAt); S.redoOps = []; toast(`Правка «${opLabel(bad)}» больше не подходит и снята: ${r.err}`, true); }
-  S.poly = r.poly; }
-function commitOp(op) { try { const { q, dropped } = runOp(S.poly, op); S.ops.push(op); S.redoOps = []; S.poly = q; S.op = null; S.sel = null; blurActive(); render();
+  S.poly = r.poly; updateGhost(); }
+function commitOp(op) { try { const { q, dropped } = runOp(S.poly, op); S.ops.push(op); S.redoOps = []; S.ghost = (op.kind === 'shift' || op.kind === 'len') ? S.poly : null; S.poly = q; S.op = null; S.sel = null; blurActive(); render();
   if (dropped.length) toast('Скругление снято у ' + dropped.join(', ') + ': не помещается'); } catch (e) { toast(e.message, true); } }
 function applyOp() { const o = S.op; if (!o) return; const num = k => { const v = parseNum(o.f[k]); return v == null ? NaN : v / 100; };
   for (const [k, lbl] of o.spec.fields) if (!isFinite(num(k))) return toast('Введите: ' + lbl.toLowerCase(), true);
