@@ -226,8 +226,12 @@ sheet.addEventListener('focusin', e => { const el = e.target; if (!el.matches ||
 sheet.addEventListener('focusout', e => { const el = e.target; if (!el.matches || !el.matches('input.in')) return; flushApply(); S.hot = null;
   clearTimeout(kbT); kbT = setTimeout(() => { const a = document.activeElement; if (a && a.matches && a.matches('input.in') && a.closest('.row')) return; sheet.querySelectorAll('.row.active').forEach(r => r.classList.remove('active')); setKb(false); }, 60); });
 // кнопки «Далее» и «✓» не должны забирать фокус у поля, иначе клавиатура на телефоне закроется
-const keepFocus = e => { const b = e.target.closest && e.target.closest('[data-act="nextField"],[data-act="blur"]'); if (b) e.preventDefault(); };
-sheet.addEventListener('pointerdown', keepFocus); sheet.addEventListener('mousedown', keepFocus); sheet.addEventListener('touchstart', keepFocus, { passive: false });
+// На iOS preventDefault на касании отменяет и click, поэтому действие выполняется прямо на pointerdown
+let kbActAt = 0;
+const kbBtn = e => e.target.closest && e.target.closest('[data-act="nextField"],[data-act="blur"]');
+sheet.addEventListener('pointerdown', e => { const b = kbBtn(e); if (!b) return; e.preventDefault(); kbActAt = Date.now(); act(b.dataset.act, b.dataset); });
+sheet.addEventListener('mousedown', e => { if (kbBtn(e)) e.preventDefault(); });
+sheet.addEventListener('touchstart', e => { if (kbBtn(e)) e.preventDefault(); }, { passive: false });
 const blurActive = () => { const a = document.activeElement; if (a && a.blur && a !== document.body) a.blur(); };
 function addDiag(i, j) { if (i > j) [i, j] = [j, i]; const n = S.m.n; if (i === j || (i + 1) % n === j || (j + 1) % n === i) return toast('Это соседние вершины, тут сторона', true);
   let k = S.m.diags.findIndex(d => d.i === i && d.j === j); if (k < 0) { withSnap(() => S.m.diags.push({ i, j, cm: null })); k = S.m.diags.length - 1; }
@@ -343,7 +347,7 @@ function act(a, d) {
   if (a === 'unfillet') return commitOp({ kind: 'fillet', i: S.sel.i, r: null });
   if (a === 'unarc') return commitOp({ kind: 'arc', i: S.sel.i, mode: 'h', val: 0, dir: 'out' }); }
 sheet.addEventListener('input', e => { if (e.target && e.target.id === 'roomName') S.roomName = e.target.value; });
-sheet.addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (!b || !sheet.contains(b)) return; act(b.dataset.act, b.dataset); });
+sheet.addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (!b || !sheet.contains(b)) return; if ((b.dataset.act === 'nextField' || b.dataset.act === 'blur') && Date.now() - kbActAt < 600) return; act(b.dataset.act, b.dataset); });
 $('#bBack').addEventListener('click', () => { if (opts.onBack) opts.onBack(); });
 $('#bUndo').addEventListener('click', () => { if (S.stage === 1) { S.sk.pts.pop(); render(); } else if (S.stage === 2) undo2(); else if (S.stage === 3 && S.ops.length) { S.redoOps.push(S.ops.pop()); rebuild(); S.sel = null; S.op = null; render(); } });
 $('#bRedo').addEventListener('click', () => { if (S.stage === 2) redo2(); else if (S.stage === 3 && S.redoOps.length) { S.ops.push(S.redoOps.pop()); rebuild(); S.sel = null; S.op = null; render(); } });
