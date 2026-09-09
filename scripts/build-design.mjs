@@ -79,6 +79,30 @@ rep("cTotalTxt:RUB(e.total),", "cTotalTxt:RUB(e.total),cRoomTotalTxt:RUB(est([r]
 rep('<div style="flex:none;background:#fff;border-top:1px solid #ECECF4;padding:10px {{ sidePad }}px 8px">\n            <div style="display:flex;align-items:center;gap:8px">\n              <div style="flex:1;min-width:0"><div style="font-size:10.5px;color:#6F7688;font-weight:700;letter-spacing:.4px;text-transform:uppercase">Итого</div><div style="font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.4px">{{ cTotalTxt }}</div></div>\n              <button sc-camel-on-click="{{ openEstimate }}" style="height:48px;padding:0 18px;border-radius:14px;border:1.5px solid #E4E4EE;background:#fff;color:#1E2530;font-size:14px;font-weight:800;cursor:pointer">Смета</button>\n              <button sc-camel-on-click="{{ openExport }}" style="height:48px;padding:0 20px;border-radius:14px;border:none;background:#4F46E5;color:#fff;font-size:14px;font-weight:800;cursor:pointer">Экспорт</button>',
   '<div style="flex:none;background:#fff;border-top:1px solid #ECECF4;padding:6px {{ sidePad }}px 4px">\n            <div style="display:flex;align-items:center;gap:6px">\n              <div style="flex:1;min-width:0"><div style="font-size:9.5px;color:#6F7688;font-weight:700;letter-spacing:.4px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ cRoomLabel }}</div><div style="font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.3px;line-height:1.15">{{ cRoomTotalTxt }}</div></div>\n              <button sc-camel-on-click="{{ openEstimate }}" style="height:36px;padding:0 14px;border-radius:12px;border:1.5px solid #E4E4EE;background:#fff;color:#1E2530;font-size:13px;font-weight:800;cursor:pointer">Смета</button>\n              <button sc-camel-on-click="{{ openExport }}" style="height:36px;padding:0 16px;border-radius:12px;border:none;background:#4F46E5;color:#fff;font-size:13px;font-weight:800;cursor:pointer">Экспорт</button>', 'calc bottom bar');
 
+/* Редактор кнопок: размеры как в расчёте (чипы 30px, поле 36px, карточки 18px) */
+{
+  const a = tpl.indexOf('{{ isBtnEd }}'); const b = tpl.indexOf('</sc-if>', a);
+  if (a < 0 || b < 0) throw new Error('template: экран «Редактор кнопок» не найден');
+  let blk = tpl.slice(a, b);
+  const subs = [
+    ['height:36px;padding:0 13px;border-radius:999px', 'height:30px;padding:0 11px;border-radius:999px'],
+    ['height:36px;padding:0 12px;border-radius:10px', 'height:30px;padding:0 10px;border-radius:9px'],
+    ['height:36px;width:40px;border-radius:10px', 'height:30px;width:34px;border-radius:9px'],
+    ['flex:1;height:36px;border-radius:10px', 'flex:1;height:30px;border-radius:9px'],
+    ['height:48px;border-radius:13px;border:1.5px solid #E4E4EE;background:#F7F7FC;padding:0 14px;font-size:15px;font-weight:700;color:#1E2530;margin-bottom:12px',
+     'height:36px;border-radius:10px;border:1.5px solid #E4E4EE;background:#F7F7FC;padding:0 12px;font-size:13px;font-weight:700;color:#1E2530;margin-bottom:10px'],
+    ['color:#4F46E5;font-size:18px;cursor:pointer">+', 'color:#4F46E5;font-size:16px;cursor:pointer">+'],
+    ['height:28px', 'height:26px'],
+    ['border-radius:20px;padding:14px', 'border-radius:18px;padding:12px'],
+    ['border-radius:20px;padding:12px 14px 4px', 'border-radius:18px;padding:10px 14px 4px'],
+    ['font-size:13px;font-weight:700">Показывать', 'font-size:12px;font-weight:700">Показывать'],
+    ['padding:10px {{ sidePad }}px 4px', 'padding:8px {{ sidePad }}px 2px'],
+    ['gap:8px', 'gap:6px'],
+  ];
+  for (const [x, y] of subs) { if (!blk.includes(x)) throw new Error('btnEd: не найдено «' + x.slice(0, 50) + '»'); blk = blk.split(x).join(y); }
+  tpl = tpl.slice(0, a) + blk + tpl.slice(b);
+}
+
 const json = JSON.stringify(tpl).replace(/<\//g, '<\\/');
 const out = src
   .replace(/<script type="__bundler\/template">[\s\S]*?<\/script>/, () => '<script type="__bundler/template">' + json + '</script>')
