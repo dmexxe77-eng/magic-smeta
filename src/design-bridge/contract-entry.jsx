@@ -1,4 +1,4 @@
-import React, { useState, useRef, useLayoutEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { DEFAULT_CONTRACT_TPL, CONTRACT_STYLES, contractFields, contractHtml, nextContractNumber } from '../data/contract.js';
 import { htmlToPdf } from '../utils/pdf.js';
@@ -46,7 +46,7 @@ function Paper({ html }) {
   );
 }
 
-function ContractApp({ project, total, area, est, contract, installDate: ins0, onSaveContract, onProjectPatch, onSigned, onClose }) {
+function ContractApp({ project, total, area, est, contract, installDate: ins0, onSaveContract, onProjectPatch, onClose }) {
   const [tpl, setTplState] = useState(loadTpl);
   const [mode, setMode] = useState('preview');
   const saved = contract || null;
@@ -55,8 +55,8 @@ function ContractApp({ project, total, area, est, contract, installDate: ins0, o
   const [installDate, setInstallDate] = useState(saved?.installDate || ins0 || '');
   const [party, setParty] = useState({ client: project.client || '', phone: project.phone || '', address: project.address || '' });
   const [busy, setBusy] = useState('');
-  const [savedNow, setSavedNow] = useState(saved);
   const [resetArm, setResetArm] = useState(false);
+  const numTaken = useRef(!!saved);
   const focusArea = useRef(null);
   const logoRef = useRef(null), signRef = useRef(null);
 
@@ -83,11 +83,15 @@ function ContractApp({ project, total, area, est, contract, installDate: ins0, o
     } catch (e) { if (e && e.name !== 'AbortError') alert('Не удалось поделиться: ' + (e.message || e)); }
     finally { setBusy(''); }
   };
-  const doSave = () => {
-    pushParty();
-    const c = { number: num, prepay, installDate, date: fields['дата'], total, html, client: party.client, address: party.address, phone: party.phone };
-    setSavedNow(c); onSaveContract(c); patch({ numSeq: (tpl.numSeq || 1) + 1 });
-  };
+  /* Автосохранение: договор в проекте всегда соответствует тому, что на экране; номер занимается при первом сохранении */
+  const snapshot = () => ({ number: num, prepay, installDate, date: saved?.date || fields['дата'], total, html, client: party.client, address: party.address, phone: party.phone });
+  const saveRef = useRef(null);
+  useEffect(() => {
+    clearTimeout(saveRef.current);
+    saveRef.current = setTimeout(() => { onSaveContract(snapshot()); if (!numTaken.current) { numTaken.current = true; patch({ numSeq: (tpl.numSeq || 1) + 1 }); } }, 400);
+    return () => clearTimeout(saveRef.current);
+  }, [num, prepay, installDate, party.client, party.phone, party.address, tpl]);
+  const closeAll = () => { clearTimeout(saveRef.current); pushParty(); onSaveContract(snapshot()); onClose(); };
   const pickImg = (ref, key) => {
     const f = ref.current?.files?.[0]; if (!f) return;
     const r = new FileReader();
@@ -107,7 +111,7 @@ function ContractApp({ project, total, area, est, contract, installDate: ins0, o
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 9000, background: D.bg, overflowY: 'auto', fontFamily: "'Manrope','Inter',system-ui,sans-serif", color: D.ink, WebkitFontSmoothing: 'antialiased' }}>
       <div style={{ position: 'sticky', top: 0, zIndex: 5, background: D.card, borderBottom: '1px solid ' + D.line, padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
-        <button onClick={onClose} style={{ background: D.bg, border: 'none', borderRadius: 12, width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
+        <button onClick={closeAll} style={{ background: D.bg, border: 'none', borderRadius: 12, width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
           <svg width="16" height="16" fill="none" stroke={D.ink} strokeWidth="2" strokeLinecap="round"><path d="M10 4L6 8l4 4" /></svg>
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -152,11 +156,6 @@ function ContractApp({ project, total, area, est, contract, installDate: ins0, o
             <button onClick={doPdf} disabled={!!busy} style={{ ...S.primary, opacity: busy ? .6 : 1 }}>{busy === 'pdf' ? 'Готовлю PDF…' : 'Скачать PDF'}</button>
             <button onClick={doShare} disabled={!!busy} style={{ ...S.outline, opacity: busy ? .6 : 1 }}>{busy === 'share' ? 'Готовлю…' : 'Поделиться'}</button>
           </div>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-            <button onClick={doSave} style={{ ...S.outline, color: D.success, borderColor: '#B7E4C7', background: D.successSoft }}>{savedNow ? 'Сохранить заново' : 'Сохранить в проект'}</button>
-            <button onClick={() => { doSave(); if (onSigned) onSigned(); }} style={{ ...S.outline }}>Подписан</button>
-          </div>
-          {savedNow && <div style={{ fontSize: 12, color: D.success, fontWeight: 700, margin: '0 4px 10px' }}>Сохранён договор № {savedNow.number} от {savedNow.date}</div>}
           <div style={{ ...S.sec, margin: '4px 4px 8px' }}>Предпросмотр</div>
           <Paper html={html} />
         </>)}
@@ -212,7 +211,7 @@ function ContractApp({ project, total, area, est, contract, installDate: ins0, o
   );
 }
 
-/* MagicContract.open({ project, total, area, est, contract, installDate, onSaveContract, onProjectPatch, onSigned, onClose }) → { close } */
+/* MagicContract.open({ project, total, area, est, contract, installDate, onSaveContract, onProjectPatch, onClose }) → { close }; договор сохраняется в проект автоматически */
 export function open(opts) {
   const host = document.createElement('div');
   document.body.appendChild(host);

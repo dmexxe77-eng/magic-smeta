@@ -77,8 +77,7 @@ const METHODS = [
   "  openContract(){const p=this.cur();if(!p||!window.MagicContract){this.toast('Договор не загрузился');return;}const self=this;const e=est(p.rooms,this.ed(p.id));const ins=this.installStart(p);const fmtD=iso=>iso?String(iso).split('-').reverse().join('.'):'';",
   "    const h=window.MagicContract.open({project:{id:p.id,name:p.name,client:p.client,phone:p.phone,address:p.address},total:e.total,area:this.pArea(p),est:e,contract:p.contract||null,installDate:fmtD(ins),",
   "      onProjectPatch:patch=>self.upd(p.id,x=>Object.assign({},x,patch)),",
-  "      onSaveContract:c=>{self.upd(p.id,x=>Object.assign({},x,{contract:c}));self.toast('Договор № '+c.number+' сохранён в проект');},",
-  "      onSigned:()=>{self.upd(p.id,x=>Object.assign({},x,{status:['order','estimate'].includes(x.status)?'contract':x.status}));self.toast('Статус → Договор подписан');},",
+  "      onSaveContract:c=>self.upd(p.id,x=>Object.assign({},x,{contract:c})),",
   "      onClose:()=>{h.close();}});}",
   '',
 ].join('\n');
