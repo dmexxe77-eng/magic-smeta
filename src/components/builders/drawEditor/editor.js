@@ -397,6 +397,8 @@ const onResize = () => renderCanvas(); window.addEventListener('resize', onResiz
 let vvFit = null;
 if (window.visualViewport) { const vv = window.visualViewport, app = $('#app'); vvFit = () => { if (window.innerWidth < 640) { app.style.height = vv.height + 'px'; app.style.transform = vv.offsetTop ? `translateY(${vv.offsetTop}px)` : ''; } else { app.style.height = ''; app.style.transform = ''; } renderCanvas(); }; vv.addEventListener('resize', vvFit); vv.addEventListener('scroll', vvFit); }
 document.fonts && document.fonts.ready.then(() => { if (alive) renderCanvas(); });
+// правка готового контура: сразу этап «Правка» с переданными вершинами (метры)
+if (opts.initial && Array.isArray(opts.initial.verts) && opts.initial.verts.length >= 3) { S.base = { v: opts.initial.verts.map(([x, y]) => ({ x, y, fillet: null, arc: null })) }; S.origin = { kind: 'poly' }; S.stage = 3; S.ops = []; rebuild(); }
 render();
 return { destroy() { alive = false; window.removeEventListener('resize', onResize); if (vvFit && window.visualViewport) { window.visualViewport.removeEventListener('resize', vvFit); window.visualViewport.removeEventListener('scroll', vvFit); } clearTimeout(applyT); root.innerHTML = ''; } };
 }
