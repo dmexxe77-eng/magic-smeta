@@ -108,7 +108,7 @@ function renderCanvas() { while (svg.firstChild) svg.removeChild(svg.firstChild)
 let ptr = null, pinch = null; const pointers = new Map();
 function xy(e) { const r = svg.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
 const midOf = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
-svg.addEventListener('pointerdown', e => { const p = xy(e); pointers.set(e.pointerId, p); svg.setPointerCapture(e.pointerId); e.preventDefault();
+svg.addEventListener('pointerdown', e => { const p = xy(e); pointers.set(e.pointerId, p); try { svg.setPointerCapture(e.pointerId); } catch (err) { /* синтетические события без активного указателя */ } e.preventDefault();
   if (pointers.size === 2) { const [a, b] = [...pointers.values()]; pinch = { d0: Math.max(10, hyp(a, b)), m0: midOf(a, b), Z0: { ...Z } }; ptr = null; return; }
   if (pointers.size > 2 || pinch) return;
   const h = e.target.closest ? e.target.closest('[data-hit]') : null;
@@ -246,6 +246,26 @@ function setVKind(k) { const i = S.sel.i, vt = S.m.vert[i];
   if (k === 'deg') S.focusReq = 'input[data-in="ang"]'; solveModel(S.m); render(); }
 
 // ───────── stage 3: operations, journal, persistence ─────────
+
+// ───────── схемы операций: стена по горизонтали, комната под ней (заливка) ─────────
+const G_INK = 'fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
+const G_PRI = 'fill="none" stroke="var(--pri)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"';
+const G_OLD = 'fill="none" stroke="var(--ink3)" stroke-width="1.6" stroke-dasharray="3 2.5" stroke-linecap="round"';
+const G_ROOM = '<rect x="3" y="14" width="34" height="12" rx="1" fill="var(--fill)"/>';
+const gsvg = body => `<svg class="g" viewBox="0 0 40 28" aria-hidden="true">${body}</svg>`;
+const GL = {
+  len: end => gsvg(G_ROOM + (end === 'start'
+    ? `<path d="M12 14 L35 14" ${G_INK}/><path d="M12 14 L5 14" ${G_PRI}/><path d="M9 10 L5 14 L9 18" ${G_PRI}/><circle cx="35" cy="14" r="2.5" fill="var(--ink)"/>`
+    : `<path d="M5 14 L28 14" ${G_INK}/><path d="M28 14 L35 14" ${G_PRI}/><path d="M31 10 L35 14 L31 18" ${G_PRI}/><circle cx="5" cy="14" r="2.5" fill="var(--ink)"/>`)),
+  add: from => gsvg(G_ROOM + `<path d="M5 14 L35 14" ${G_INK}/><circle cx="5" cy="14" r="2.5" fill="var(--ink)"/><circle cx="35" cy="14" r="2.5" fill="var(--ink)"/><circle cx="${from === 'end' ? 26 : 14}" cy="14" r="3.5" fill="var(--pri)"/>`),
+  shift: dir => gsvg(G_ROOM + `<path d="M5 14 L35 14" ${G_OLD}/><path d="M5 ${dir === 'in' ? 22 : 6} L35 ${dir === 'in' ? 22 : 6}" ${G_PRI}/><path d="M20 14 L20 ${dir === 'in' ? 21 : 7}" ${G_PRI}/><path d="${dir === 'in' ? 'M16 18 L20 22 L24 18' : 'M16 10 L20 6 L24 10'}" ${G_PRI}/>`),
+  arc: dir => gsvg(G_ROOM + `<path d="M5 14 L35 14" ${G_OLD}/><path d="M5 14 Q20 ${dir === 'in' ? 27 : 1} 35 14" ${G_PRI}/><circle cx="5" cy="14" r="2.5" fill="var(--ink)"/><circle cx="35" cy="14" r="2.5" fill="var(--ink)"/>`),
+  bump: dir => gsvg(G_ROOM + `<path d="M14 14 L26 14" ${G_OLD}/><path d="M5 14 L14 14 L14 ${dir === 'niche' ? 6 : 22} L26 ${dir === 'niche' ? 6 : 22} L26 14 L35 14" ${G_PRI}/>`),
+  fillet: () => gsvg(`<rect x="8" y="8" width="29" height="18" rx="1" fill="var(--fill)"/><path d="M8 26 L8 8 L36 8" ${G_OLD}/><path d="M8 26 L8 17 Q8 8 17 8 L36 8" ${G_PRI}/>`),
+  del: () => gsvg(`<path d="M6 24 L20 8 L34 24" ${G_OLD}/><path d="M6 24 L34 24" ${G_PRI}/><circle cx="6" cy="24" r="2.5" fill="var(--ink)"/><circle cx="34" cy="24" r="2.5" fill="var(--ink)"/><path d="M17 5 L23 11 M23 5 L17 11" fill="none" stroke="var(--bad)" stroke-width="1.8" stroke-linecap="round"/>`),
+};
+function opPic(o) { const k = o.kind, sg = o.seg;
+  return k === 'len' ? GL.len(sg.end) : k === 'add' ? GL.add(sg.from) : k === 'shift' ? GL.shift(sg.dir) : k === 'arc' ? GL.arc(sg.dir) : k === 'bump' ? GL.bump(sg.dir) : k === 'fillet' ? GL.fillet() : ''; }
 function makeOp(kind, i) { const n = S.poly.v.length, A = L(i), B = L((i + 1) % n), seg = {}, spec = { fields: [], segs: [] };
   if (kind === 'len') { spec.title = 'Длина стены ' + A + B; spec.segLabel = 'Какой угол сместить'; spec.fields = [['len', 'Новая длина', 'см']]; spec.segs = [['end', [['end', 'Угол ' + B], ['start', 'Угол ' + A]]]]; seg.end = 'end'; }
   if (kind === 'add') { spec.title = 'Точка на стене ' + A + B; spec.fields = [['d', 'Расстояние', 'см']]; spec.segs = [['from', [['start', 'от ' + A], ['end', 'от ' + B]]]]; seg.from = 'start'; }
@@ -270,17 +290,17 @@ function opNote() { const o = S.op, num = k => parseNum(o.f[k]) / 100;
   if (o.kind === 'add' || o.kind === 'bump') return `Длина стены ${cm(sideLen(S.poly, o.i))} см`;
   if (o.kind === 'shift') return 'Соседние стены удлинятся или укоротятся'; return ''; }
 function sheet3() { const poly = S.poly, n = poly.v.length, st = polyStats(poly);
-  if (S.op) { const o = S.op; let h = `<div class="card op"><h3>${esc(o.spec.title)}</h3>`;
+  if (S.op) { const o = S.op; let h = `<div class="card op"><h3><span>${esc(o.spec.title)}</span>${opPic(o)}</h3>`;
     if (o.spec.segLabel) h += `<div class="sec">${esc(o.spec.segLabel)}</div>`;
     o.spec.segs.forEach(([name, opts]) => { h += '<div class="seg">' + opts.map(([v, lbl]) => `<button class="${o.seg[name] === v ? 'on' : ''}" data-act="seg" data-n="${name}" data-v="${v}">${esc(lbl)}</button>`).join('') + '</div>'; });
     h += '<div class="fields">' + o.spec.fields.map(([k, lbl, u]) => `<div class="fld"><span class="k">${esc(lbl)}</span>${numIn('op', `data-k="${k}"`, o.f[k] ?? '', '')}<span class="u">${u}</span></div>`).join('') + '</div>';
     h += `<div class="note" id="opnote"></div><div class="btns"><button class="btn ghost" data-act="cancel">Отмена</button><button class="btn laser" data-act="apply">Применить</button></div></div>`; return h; }
   if (S.sel && S.sel.t === 'v') { const i = S.sel.i, P = ptsOf(poly), d = interiorDeg(P, i, windOf(P)), fl = poly.v[i].fillet;
     return `<div class="card"><h3><span class="m">${L(i)}</span> угол <small>${Math.round(d)}°${fl ? ' · скруглён R ' + cm(fl) : ''}</small></h3>
-    <div class="acts"><button class="btn" data-act="op" data-k="fillet">${fl ? 'Изменить радиус' : 'Скруглить'}</button>${fl ? '<button class="btn" data-act="unfillet">Убрать скругление</button>' : ''}<button class="btn danger" data-act="del">Удалить угол</button><button class="btn ghost" data-act="deselect">Закрыть</button></div></div>`; }
+    <div class="acts"><button class="btn" data-act="op" data-k="fillet">${GL.fillet()}<span>${fl ? 'Изменить радиус' : 'Скруглить'}</span></button>${fl ? '<button class="btn" data-act="unfillet">Убрать скругление</button>' : ''}<button class="btn danger" data-act="del">${GL.del()}<span>Удалить угол</span></button><button class="btn ghost" data-act="deselect">Закрыть</button></div></div>`; }
   if (S.sel && S.sel.t === 's') { const i = S.sel.i, ai = arcInfo(poly, i);
     return `<div class="card"><h3><span class="m">${L(i)}${L((i + 1) % n)}</span> стена <small>${cm(sideLen(poly, i))} см${ai ? ' · дуга ' + cm(ai.len) : ''}</small></h3>
-    <div class="acts"><button class="btn" data-act="op" data-k="len">Длина</button><button class="btn" data-act="op" data-k="shift">Сдвинуть</button><button class="btn" data-act="op" data-k="add">Точка на стене</button><button class="btn" data-act="op" data-k="bump">Выступ / ниша</button><button class="btn" data-act="op" data-k="arc">${ai ? 'Изменить дугу' : 'Дуга'}</button>${ai ? '<button class="btn" data-act="unarc">Убрать дугу</button>' : '<button class="btn ghost" data-act="deselect">Закрыть</button>'}</div></div>`; }
+    <div class="acts"><button class="btn" data-act="op" data-k="len">${GL.len('end')}<span>Длина</span></button><button class="btn" data-act="op" data-k="shift">${GL.shift('out')}<span>Сдвинуть</span></button><button class="btn" data-act="op" data-k="add">${GL.add('start')}<span>Точка на стене</span></button><button class="btn" data-act="op" data-k="bump">${GL.bump('in')}<span>Выступ / ниша</span></button><button class="btn" data-act="op" data-k="arc">${GL.arc('out')}<span>${ai ? 'Изменить дугу' : 'Дуга'}</span></button>${ai ? '<button class="btn" data-act="unarc">Убрать дугу</button>' : '<button class="btn ghost" data-act="deselect">Закрыть</button>'}</div></div>`; }
   const oval = S.origin && S.origin.kind === 'oval', back = oval ? '<button class="btn sm ghost" data-act="editQuick">← Радиусы</button>' : '<button class="btn sm ghost" data-act="back2" title="Длины, углы, диагонали">← Размеры</button>';
   const shape = oval ? (S.origin.mode === 'circle' ? `Окружность R <b>${S.origin.f.r}</b> см` : `Эллипс <b>${S.origin.f.rx}</b> × <b>${S.origin.f.ry}</b> см`) : `Углов <b>${n}</b>: внутр. <b>${st.inner}</b>, наруж. <b>${st.outer}</b>${st.fillets ? `, скруглений <b>${st.fillets}</b>` : ''}${st.arcs ? `, дуг <b>${st.arcs}</b>` : ''}`;
   return `<div class="res"><div class="t"><div class="k">Площадь</div><div class="v">${fmt2(st.area)}<small>м²</small></div></div><div class="t"><div class="k">Периметр</div><div class="v">${fmt2(st.perim)}<small>м</small></div></div>${back}</div>

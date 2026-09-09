@@ -145,3 +145,9 @@
 .zd .sheet.kb .row.active .done{display:flex;align-items:center;justify-content:center;width:38px;min-height:38px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink2);font-size:16px;flex:none}
 .zd .sheet.kb .row.active .x{display:none}
 .zd .app.kb .stages,.zd .app.kb .hint,.zd .app.kb .zoom{display:none}
+
+/* схемы операций в кнопках и в шапке формы */
+.zd .acts .btn{justify-content:flex-start;gap:8px;padding:0 10px;text-align:left;line-height:1.15}
+.zd .acts .btn svg.g{width:40px;height:28px;flex:none}
+.zd .card.op h3{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:40px}
+.zd .card.op h3 svg.g{width:66px;height:44px;flex:none}
