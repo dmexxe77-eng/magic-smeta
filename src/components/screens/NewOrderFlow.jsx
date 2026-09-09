@@ -141,10 +141,8 @@ function NewOrderFlow({onBack,onCreate,clients:extClients,designers:extDesigners
       <div style={{fontSize:12,color:T.sub,marginBottom:18}}>{"Выберите способ построения чертежа"}</div>
       <div style={{display:"flex",flexDirection:"column",gap:10}}>
         {[
+          {id:"manual",l:"Ручное построение",sub:"Прямоугольник, овал или контур с размерами",c:DARK2,ic:"✎"},
           {id:"trace",l:"Обводка",sub:"PDF или фото плана",c:"#16a34a",ic:"⊞"},
-          {id:"recognize",l:"Распознать",sub:"Фото чертежа — ИИ",c:ACC2,ic:"✦"},
-          {id:"manual",l:"Вручную",sub:"Ввести размеры",c:DARK2,ic:"+"},
-          {id:"compass",l:"Компас",sub:"Замер на объекте",c:"#ff9500",ic:"◎"},
         ].map(m=>(
           <button key={m.id}
             onClick={()=>onCreate({name,client:selCl?.name||clientTxt,clientId,phone,address,designer:selDes?.name||desTxt,designerId,notes},m.id)}
