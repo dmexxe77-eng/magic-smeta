@@ -79,10 +79,12 @@ const METHODS = [
   "      onProjectPatch:patch=>self.upd(p.id,x=>Object.assign({},x,patch)),",
   "      onSaveContract:c=>self.upd(p.id,x=>Object.assign({},x,{contract:c})),",
   "      onClose:()=>{h.close();}});}",
+  "  openContractTpl(){if(!window.MagicContract){this.toast('Шаблон не загрузился');return;}const h=window.MagicContract.openTemplate({onClose:()=>h.close()});}",
   '',
 ].join('\n');
 rep('  arVals(){\n', METHODS + '  arVals(){\n', 'methods');
 rep("pContract:()=>this.toast('Договор — не входит в этот прототип'),", 'pContract:()=>this.openContract(),', 'contract tab');
+rep("it('Д',AS,A,'Шаблон договора','Автозаполнение из проекта')", "it('Д',AS,A,'Шаблон договора','Реквизиты, разделы, оформление',null,()=>this.openContractTpl())", 'account template item');
 
 /* Низ расчёта: слева сумма текущего помещения (итог проекта уже в шапке), сама панель компактнее */
 rep("cTotalTxt:RUB(e.total),", "cTotalTxt:RUB(e.total),cRoomTotalTxt:RUB(est([r],ed).total),cRoomLabel:r.name,", 'room total');
@@ -96,13 +98,17 @@ rep('<button sc-camel-on-click="{{ optOpenEd }}" title="Настроить оп�
 rep('<button sc-camel-on-click="{{ openRoomMenu }}" style="width:34px;height:34px;border-radius:10px;border:none;background:#F3F3FA;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none"><svg width="16" height="16" sc-camel-view-box="0 0 18 18"><circle cx="4" cy="9" r="1.8" fill="#1E2530"></circle><circle cx="9" cy="9" r="1.8" fill="#1E2530"></circle><circle cx="14" cy="9" r="1.8" fill="#1E2530"></circle></svg></button>',
   '<button sc-camel-on-click="{{ openRoomMenu }}" title="Действия с помещением" style="' + CHIP + '"><svg width="11" height="11" sc-camel-view-box="0 0 18 18"><circle cx="4" cy="9" r="2" fill="#4F46E5"></circle><circle cx="9" cy="9" r="2" fill="#4F46E5"></circle><circle cx="14" cy="9" r="2" fill="#4F46E5"></circle></svg>Действия</button>', 'room menu chip');
 
+/* Пилюли фильтров в номенклатурах — того же размера, что пилюли блоков в редакторе кнопок */
+{ const a = 'style="height:34px;padding:0 12px;border-radius:999px;border:1.5px solid {{ k.border }};background:{{ k.bg }};color:{{ k.color }};font-size:12.5px;font-weight:700;cursor:pointer">{{ k.label }}</button>';
+  if (!tpl.includes(a)) throw new Error('template: пилюли фильтров номенклатур не найдены'); tpl = tpl.split(a).join(a.replace('height:34px', 'height:32px')); }
+
 /* Редактор кнопок: размеры как в расчёте (чипы 30px, поле 36px, карточки 18px) */
 {
   const a = tpl.indexOf('{{ isBtnEd }}'); const b = tpl.indexOf('</sc-if>', a);
   if (a < 0 || b < 0) throw new Error('template: экран «Редактор кнопок» не найден');
   let blk = tpl.slice(a, b);
   const subs = [
-    ['height:36px;padding:0 13px;border-radius:999px', 'height:30px;padding:0 11px;border-radius:999px'],
+    ['height:36px;padding:0 13px;border-radius:999px', 'height:32px;padding:0 12px;border-radius:999px'],
     ['height:36px;padding:0 12px;border-radius:10px', 'height:30px;padding:0 10px;border-radius:9px'],
     ['height:36px;width:40px;border-radius:10px', 'height:30px;width:34px;border-radius:9px'],
     ['flex:1;height:36px;border-radius:10px', 'flex:1;height:30px;border-radius:9px'],
