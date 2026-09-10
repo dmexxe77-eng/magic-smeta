@@ -76,7 +76,7 @@ function renderCanvas() { while (svg.firstChild) svg.removeChild(svg.firstChild)
   const st = S.m && S.m.status;
   // diagonals (stage 2)
   if (S.stage === 2 && st) {
-    st.sug.diags.forEach(([i, j]) => { const a = toS(P[i]), b = toS(P[j]);
+    if (!st.empty.length) st.sug.diags.forEach(([i, j]) => { const a = toS(P[i]), b = toS(P[j]); // пунктир подсказки — только когда все стены введены
       g.appendChild(el('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, style: 'stroke:var(--laser);stroke-width:1.5;stroke-dasharray:3 5;opacity:.7' }));
       g.appendChild(text(mul(add(a, b), .5), L(i) + L(j) + ' ?', { size: 11, color: 'var(--laser)' }));
       g.appendChild(el('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, stroke: 'transparent', 'stroke-width': 26, 'data-hit': 'sug', 'data-i': i, 'data-j': j })); });
