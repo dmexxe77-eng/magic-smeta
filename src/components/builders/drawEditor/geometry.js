@@ -107,7 +107,7 @@ export function alignPts(P, vert) { const n = P.length; let best = -1, bl = -1, 
   const c = Math.cos(d), sn = Math.sin(d), cx = P.reduce((q, p) => q + p.x, 0) / n, cy = P.reduce((q, p) => q + p.y, 0) / n;
   return P.map(p => ({ x: cx + (p.x - cx) * c - (p.y - cy) * sn, y: cy + (p.x - cx) * sn + (p.y - cy) * c })); }
 export function makeModel(pts) { const n = pts.length, wind = windOf(pts);
-  const vert = pts.map((p, i) => { const d = interiorDeg(pts, i, wind); if (Math.abs(d - 90) <= 4) return { kind: 'ortho', deg: 90 }; if (Math.abs(d - 270) <= 4) return { kind: 'ortho', deg: 270 }; return { kind: 'free', deg: null }; });
+  const vert = pts.map((p, i) => { const d = interiorDeg(pts, i, wind); if (Math.abs(d - 90) <= 4) return { kind: 'ortho', deg: 90 }; if (Math.abs(d - 270) <= 4) return { kind: 'ortho', deg: 270 }; if (Math.abs(d - 180) <= 4) return { kind: 'deg', deg: 180 }; return { kind: 'free', deg: null }; });
   return { n, wind, prior: pts.map(p => ({ x: p.x, y: p.y })), vert, sides: Array(n).fill(null), diags: [], sol: null, scale: null, status: null }; }
 // Стартовая фигура: идём по контуру с введёнными длинами (недостающие — из наброска в масштабе)
 // и поворотами: у прямых углов ровно ±90°, у заданных градусов — по ним, у свободных — как в наброске.

@@ -130,15 +130,19 @@ svg.addEventListener('pointerup', pointerEnd); svg.addEventListener('pointercanc
 $('#zIn').addEventListener('click', () => zoomAt(1.3, { x: svg.clientWidth / 2, y: svg.clientHeight / 2 }));
 $('#zOut').addEventListener('click', () => zoomAt(1 / 1.3, { x: svg.clientWidth / 2, y: svg.clientHeight / 2 }));
 $('#zFit').addEventListener('click', () => { Z = { k: 1, dx: 0, dy: 0 }; renderCanvas(); });
-// Стена по сетке: строго перпендикулярна предыдущей (прямоугольный контур чередует горизонталь и вертикаль),
-// для первой стены или после косой — по большему смещению. prev2 — точка перед prev.
+// Куда ложится новая стена — по тому, как её нарисовали:
+//  · явно косая (длиннее ~44 px на экране и дальше 22° от обеих осей) — остаётся как есть, близко к 45° прилипает к 45°;
+//  · иначе по сетке: короткая стена всегда перпендикулярна предыдущей (мелкий выступ пальцем точно не нарисовать),
+//    длинная — по ближайшей оси, продолжение прямой допускается.
 function snapPt(p, prev, others, free, prev2) { const q = { x: p.x, y: p.y };
   others.forEach(o => { if (o === prev) return; if (Math.abs(q.x - o.x) < 10 / Z.k) q.x = o.x; if (Math.abs(q.y - o.y) < 10 / Z.k) q.y = o.y; }); // выравнивание по другим углам
-  if (prev && !free) { const pv = prev2 && Math.abs(prev.x - prev2.x) < 1e-6, ph = prev2 && Math.abs(prev.y - prev2.y) < 1e-6;
-    if (pv) q.y = prev.y; else if (ph) q.x = prev.x; else if (Math.abs(q.x - prev.x) >= Math.abs(q.y - prev.y)) q.y = prev.y; else q.x = prev.x; }
-  else if (prev) { const ang = Math.atan2(q.y - prev.y, q.x - prev.x) * DEG, near = a => Math.abs(wrap((ang - a) / DEG) * DEG) < 6;
-    if (near(0) || near(180)) q.y = prev.y; else if (near(90) || near(-90)) q.x = prev.x; }
-  return q; }
+  if (!prev) return q;
+  const dx = q.x - prev.x, dy = q.y - prev.y, len = Math.hypot(dx, dy) * Z.k, devH = Math.atan2(Math.abs(dy), Math.abs(dx)) * DEG, devV = 90 - devH;
+  if (len >= 44 && devH >= 22 && devV >= 22) { const ang = Math.atan2(dy, dx) * DEG, n45 = Math.round(ang / 45) * 45;
+    if (Math.abs(wrap((ang - n45) / DEG) * DEG) < 5) { const L = Math.hypot(dx, dy); q.x = prev.x + Math.cos(n45 / DEG) * L; q.y = prev.y + Math.sin(n45 / DEG) * L; } return q; }
+  const pv = prev2 && Math.abs(prev.x - prev2.x) < 1e-6, ph = prev2 && Math.abs(prev.y - prev2.y) < 1e-6;
+  let horiz; if (pv) horiz = len < 44 ? true : devH <= 45; else if (ph) horiz = len < 44 ? false : devH <= 45; else horiz = Math.abs(dx) >= Math.abs(dy);
+  if (horiz) q.y = prev.y; else q.x = prev.x; return q; }
 function onTap(p) { const P = S.sk.pts; if (S.stage === 0) return;
   if (S.stage === 1) {
     if (p.hit) { const i = p.hit.i; if (p.moved) { const n = P.length; P[i] = snapPt(P[i], P[(i - 1 + n) % n], P.filter((_, k) => k !== i)); commit(); }
@@ -183,8 +187,7 @@ function statusInfo() { const st = S.m.status, n = S.m.n;
   const sug = st.sug.diags.map(([i, j]) => 'диагональ ' + L(i) + '–' + L(j)); if (st.sug.angs.length) sug.push('угол ' + st.sug.angs.map(L).join(' / '));
   return { cls: 'warn', h: `Нужно ещё ${st.missing} ${plural(st.missing, 'измерение', 'измерения', 'измерений')}`, s: sug.length ? 'Например: ' + sug.join(' или ') : 'Добавьте диагональ или угол' }; }
 function sheet1() { const n = S.sk.pts.length;
-  return `<div class="status info"><span class="dot"></span><div>${n < 3 ? 'Ставьте точки по углам комнаты по порядку обхода' : 'Замкните фигуру: тап по точке A или кнопка ниже'}<small>${S.sk.free ? 'Следующая стена пойдёт под углом, как нарисуете' : 'Стены ложатся по сетке: ровно вбок или вверх-вниз от прошлой точки. Для диагонали нажмите «Косая стена»'}</small></div></div>
-  <div class="btns"><button class="btn ${S.sk.free ? 'laser' : 'ghost'}" data-act="freeWall">${S.sk.free ? '✓ Следующая стена косая — ставьте точку' : 'Косая стена: следующая точка под углом'}</button></div>
+  return `<div class="status info"><span class="dot"></span><div>${n < 3 ? 'Ставьте точки по углам комнаты по порядку обхода' : 'Замкните фигуру: тап по точке A или кнопка ниже'}<small>Стены ложатся по сетке, косую стену просто рисуйте под углом. Мелкие выступы ставьте при увеличении</small></div></div>
   <div class="btns"><button class="btn sm ghost" data-act="home">← Назад</button><button class="btn ghost" data-act="undoPt" ${n ? '' : 'disabled'}>← Точку</button><button class="btn pri" data-act="close" ${n >= 3 ? '' : 'disabled'}>Замкнуть</button></div>`; }
 const vertexNote = vt => vt.kind === 'ortho' ? 'Держится ровно 90° или 270°. Снимите, если стена косая.' : vt.kind === 'free' ? 'Угол не задан: его определят длины, диагонали или градусы.' : 'Угол задан вручную, заменяет одну диагональ.';
 function sheet2() { const m = S.m, n = m.n; let h = `<div class="status" id="st2"><span class="dot"></span><div id="st2t"></div></div>`;
