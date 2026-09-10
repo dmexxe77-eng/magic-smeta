@@ -37,7 +37,7 @@ const svg = $('#cv'), NS = 'http://www.w3.org/2000/svg';
 function el(tag, attrs, text) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; return e; }
 const toS = p => ({ x: (p.x * VT.s + VT.tx) * Z.k + Z.dx, y: (p.y * VT.s + VT.ty) * Z.k + Z.dy });
 const fromS = q => ({ x: ((q.x - Z.dx) / Z.k - VT.tx) / VT.s, y: ((q.y - Z.dy) / Z.k - VT.ty) / VT.s });
-const clampK = k => Math.min(6, Math.max(0.5, k));
+const clampK = k => Math.min(24, Math.max(0.5, k));
 function zoomAt(f, c) { const k = clampK(Z.k * f), r = k / Z.k; Z = { k, dx: c.x - (c.x - Z.dx) * r, dy: c.y - (c.y - Z.dy) * r }; renderCanvas(); }
 function fitView(pts) { const W = svg.clientWidth, H = svg.clientHeight, pad = 62; let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
   pts.forEach(p => { x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y); });
@@ -56,12 +56,13 @@ function sidePts(poly, i) { const n = poly.v.length, P = ptsOf(poly), ai = arcIn
   const f0 = filletInfo(poly, i), f1 = filletInfo(poly, (i + 1) % n); return [f0 ? f0.T2 : P[i], f1 ? f1.T1 : P[(i + 1) % n]]; }
 
 function renderCanvas() { while (svg.firstChild) svg.removeChild(svg.firstChild); const g = el('g', {}); svg.appendChild(g);
+  const LS = Z.k >= 8 ? 0.7 : Z.k >= 3 ? 0.85 : 1; // при увеличении буквы и подписи мельче, чтобы не закрывать мелкие выступы
   if (S.stage === 1) { const P = S.sk.pts; VT = { s: 1, tx: 0, ty: 0 }; const Q = P.map(toS);
     if (P.length > 1) g.appendChild(el('path', { d: pathOf(Q, false), fill: 'none', stroke: 'var(--ink)', 'stroke-width': 2, 'stroke-linejoin': 'round' }));
     if (P.length > 2) g.appendChild(el('path', { d: pathOf([Q[Q.length - 1], Q[0]], false), fill: 'none', stroke: 'var(--ink3)', 'stroke-width': 1.5, 'stroke-dasharray': '4 5' }));
     Q.forEach((p, i) => { if (i === 0 && P.length > 2) g.appendChild(el('circle', { cx: p.x, cy: p.y, r: 16, style: 'fill:var(--laser-soft)' }));
       g.appendChild(el('circle', { cx: p.x, cy: p.y, r: 6, style: 'fill:var(--paper);stroke:' + (i === 0 && P.length > 2 ? 'var(--laser)' : 'var(--ink)') + ';stroke-width:2' }));
-      const o = P.length > 2 ? dirOut(P, i) : { x: 0, y: -1 }; g.appendChild(text(add(p, mul(o, 17)), L(i), { size: 13, w: 600 }));
+      const o = P.length > 2 ? dirOut(P, i) : { x: 0, y: -1 }; g.appendChild(text(add(p, mul(o, 17 * LS)), L(i), { size: 13 * LS, w: 600 }));
       g.appendChild(el('circle', { cx: p.x, cy: p.y, r: 24, fill: 'transparent', 'data-hit': 'v', 'data-i': i })); });
     return; }
   const poly = S.stage === 3 ? S.poly : S.stage === 2 ? { v: S.m.sol.map(p => ({ x: p.x, y: p.y, fillet: null, arc: null })) } : quickPoly(); if (!poly) return;
@@ -87,26 +88,27 @@ function renderCanvas() { while (svg.firstChild) svg.removeChild(svg.firstChild)
   for (let i = 0; i < n; i++) { const sp = sidePts(poly, i).map(toS), j = (i + 1) % n;
     const on = (S.stage === 2 && S.hot && S.hot.t === 's' && S.hot.i === i) || (S.stage === 3 && S.sel && S.sel.t === 's' && S.sel.i === i);
     if (on) g.appendChild(el('path', { d: pathOf(sp, false), style: 'fill:none;stroke:var(--laser);stroke-width:5;stroke-linecap:round' }));
-    const mid = toS(mul(add(P[i], P[j]), .5)), nO = outNormal(P, i), lp = add(mid, mul(nO, 14));
+    const mid = toS(mul(add(P[i], P[j]), .5)), nO = outNormal(P, i), lp = add(mid, mul(nO, 14 * LS)), sl = hyp(sp[0], sp[sp.length - 1]);
     let str, color = 'var(--ink)', italic = false;
     if (S.stage === 2) { const v = S.m.sides[i]; if (v != null) str = String(v); else { str = String(cm(hyp(P[i], P[j]))); color = 'var(--ink3)'; italic = true; } if (on) color = 'var(--laser)'; }
     else { str = String(cm(hyp(P[i], P[j]))); if (on) color = 'var(--laser)'; }
-    g.appendChild(text(lp, str, { size: 12, w: 600, color, italic }));
-    const ai = arcInfo(poly, i); if (ai) g.appendChild(text(add(toS(ai.apex), mul(nO, ai.dir === 'out' ? 14 : -14)), '⌒ ' + cm(ai.len), { size: 11, color: 'var(--ink2)' }));
+    if (on || sl >= 26) g.appendChild(text(lp, str, { size: 12 * LS, w: 600, color, italic })); // подпись короткой стены появится при увеличении
+    const ai = arcInfo(poly, i); if (ai) g.appendChild(text(add(toS(ai.apex), mul(nO, ai.dir === 'out' ? 14 : -14)), '⌒ ' + cm(ai.len), { size: 11 * LS, color: 'var(--ink2)' }));
     g.appendChild(el('path', { d: pathOf(sp, false), fill: 'none', stroke: 'transparent', 'stroke-width': 30, 'data-hit': 's', 'data-i': i })); }
   // vertices
   const wind = windOf(P);
   for (let i = 0; i < n; i++) { const p = toS(P[i]), fi = filletInfo(poly, i), o = dirOut(P, i);
     const on = S.sel && S.sel.t === 'v' && S.sel.i === i, isPick = S.pick && S.pick.a === i;
-    if (S.stage === 2 && S.m.vert[i].kind === 'ortho') { const n_ = P.length, u1 = norm(sub(P[(i - 1 + n_) % n_], P[i])), u2 = norm(sub(P[(i + 1) % n_], P[i])), s = 9;
+    const nb = P.length, slA = hyp(toS(P[(i - 1 + nb) % nb]), p), slB = hyp(toS(P[(i + 1) % nb]), p), roomy = Math.min(slA, slB) >= 30;
+    if (S.stage === 2 && S.m.vert[i].kind === 'ortho' && roomy) { const n_ = P.length, u1 = norm(sub(P[(i - 1 + n_) % n_], P[i])), u2 = norm(sub(P[(i + 1) % n_], P[i])), s = 9 * LS;
       const a = add(p, mul(u1, s)), b = add(p, mul(add(u1, u2), s)), c = add(p, mul(u2, s));
       g.appendChild(el('path', { d: pathOf([a, b, c], false), style: 'fill:none;stroke:var(--ink2);stroke-width:1.2' })); }
-    if (S.stage === 2 && S.m.vert[i].kind !== 'ortho') { const d = interiorDeg(P, i, wind), inn = mul(o, -1);
-      g.appendChild(text(add(p, mul(inn, 24)), Math.round(d) + '°', { size: 10, color: S.m.vert[i].kind === 'deg' ? 'var(--ink)' : 'var(--ink3)', italic: S.m.vert[i].kind === 'free' })); }
+    if (S.stage === 2 && S.m.vert[i].kind !== 'ortho' && roomy) { const d = interiorDeg(P, i, wind), inn = mul(o, -1);
+      g.appendChild(text(add(p, mul(inn, 24 * LS)), Math.round(d) + '°', { size: 10 * LS, color: S.m.vert[i].kind === 'deg' ? 'var(--ink)' : 'var(--ink3)', italic: S.m.vert[i].kind === 'free' })); }
     if (fi) { g.appendChild(el('circle', { cx: p.x, cy: p.y, r: 4, style: 'fill:none;stroke:var(--ink3);stroke-width:1.2;stroke-dasharray:2 2' }));
-      g.appendChild(text(add(toS(fi.C), mul(o, -2)), 'R' + cm(fi.R), { size: 10, color: 'var(--ink2)' })); }
+      g.appendChild(text(add(toS(fi.C), mul(o, -2)), 'R' + cm(fi.R), { size: 10 * LS, color: 'var(--ink2)' })); }
     else g.appendChild(el('circle', { cx: p.x, cy: p.y, r: on || isPick ? 7 : 5, style: `fill:${on || isPick ? 'var(--laser)' : 'var(--paper)'};stroke:${on || isPick ? 'var(--laser)' : 'var(--ink)'};stroke-width:2` }));
-    g.appendChild(text(add(p, mul(o, 18)), L(i), { size: 13, w: 600, color: on || isPick ? 'var(--laser)' : 'var(--ink)' }));
+    g.appendChild(text(add(p, mul(o, 18 * LS)), L(i), { size: 13 * LS, w: 600, color: on || isPick ? 'var(--laser)' : 'var(--ink)' }));
     g.appendChild(el('circle', { cx: p.x, cy: p.y, r: 24, fill: 'transparent', 'data-hit': 'v', 'data-i': i })); } }
 
 // ───────── pointer ─────────
@@ -127,8 +129,8 @@ svg.addEventListener('pointermove', e => { if (!pointers.has(e.pointerId)) retur
 function pointerEnd(e) { pointers.delete(e.pointerId); if (!pointers.size) pinch = null; if (pinch) return;
   if (ptr && e.pointerId === ptr.id) { const p = ptr; ptr = null; if (!(p.pan && p.moved)) onTap(p); } }
 svg.addEventListener('pointerup', pointerEnd); svg.addEventListener('pointercancel', pointerEnd);
-$('#zIn').addEventListener('click', () => zoomAt(1.3, { x: svg.clientWidth / 2, y: svg.clientHeight / 2 }));
-$('#zOut').addEventListener('click', () => zoomAt(1 / 1.3, { x: svg.clientWidth / 2, y: svg.clientHeight / 2 }));
+$('#zIn').addEventListener('click', () => zoomAt(1.5, { x: svg.clientWidth / 2, y: svg.clientHeight / 2 }));
+$('#zOut').addEventListener('click', () => zoomAt(1 / 1.5, { x: svg.clientWidth / 2, y: svg.clientHeight / 2 }));
 $('#zFit').addEventListener('click', () => { Z = { k: 1, dx: 0, dy: 0 }; renderCanvas(); });
 // Куда ложится новая стена — по тому, как её нарисовали:
 //  · явно косая (длиннее ~44 px на экране и дальше 22° от обеих осей) — остаётся как есть, близко к 45° прилипает к 45°;
