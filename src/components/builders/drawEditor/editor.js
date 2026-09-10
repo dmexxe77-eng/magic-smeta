@@ -61,7 +61,7 @@ function renderCanvas() { while (svg.firstChild) svg.removeChild(svg.firstChild)
     if (P.length > 1) g.appendChild(el('path', { d: pathOf(Q, false), fill: 'none', stroke: 'var(--ink)', 'stroke-width': 2, 'stroke-linejoin': 'round' }));
     if (P.length > 2) g.appendChild(el('path', { d: pathOf([Q[Q.length - 1], Q[0]], false), fill: 'none', stroke: 'var(--ink3)', 'stroke-width': 1.5, 'stroke-dasharray': '4 5' }));
     Q.forEach((p, i) => { if (i === 0 && P.length > 2) g.appendChild(el('circle', { cx: p.x, cy: p.y, r: 16, style: 'fill:var(--laser-soft)' }));
-      g.appendChild(el('circle', { cx: p.x, cy: p.y, r: 6, style: 'fill:var(--paper);stroke:' + (i === 0 && P.length > 2 ? 'var(--laser)' : 'var(--ink)') + ';stroke-width:2' }));
+      g.appendChild(el('circle', { cx: p.x, cy: p.y, r: 4, style: 'fill:var(--paper);stroke:' + (i === 0 && P.length > 2 ? 'var(--laser)' : 'var(--ink)') + ';stroke-width:1.5' }));
       const o = P.length > 2 ? dirOut(P, i) : { x: 0, y: -1 }; g.appendChild(text(add(p, mul(o, 17 * LS)), L(i), { size: 13 * LS, w: 600 }));
       g.appendChild(el('circle', { cx: p.x, cy: p.y, r: 24, fill: 'transparent', 'data-hit': 'v', 'data-i': i })); });
     return; }
@@ -105,9 +105,9 @@ function renderCanvas() { while (svg.firstChild) svg.removeChild(svg.firstChild)
       g.appendChild(el('path', { d: pathOf([a, b, c], false), style: 'fill:none;stroke:var(--ink2);stroke-width:1.2' })); }
     if (S.stage === 2 && S.m.vert[i].kind !== 'ortho' && roomy) { const d = interiorDeg(P, i, wind), inn = mul(o, -1);
       g.appendChild(text(add(p, mul(inn, 24 * LS)), Math.round(d) + '°', { size: 10 * LS, color: S.m.vert[i].kind === 'deg' ? 'var(--ink)' : 'var(--ink3)', italic: S.m.vert[i].kind === 'free' })); }
-    if (fi) { g.appendChild(el('circle', { cx: p.x, cy: p.y, r: 4, style: 'fill:none;stroke:var(--ink3);stroke-width:1.2;stroke-dasharray:2 2' }));
+    if (fi) { g.appendChild(el('circle', { cx: p.x, cy: p.y, r: 3, style: 'fill:none;stroke:var(--ink3);stroke-width:1.2;stroke-dasharray:2 2' }));
       g.appendChild(text(add(toS(fi.C), mul(o, -2)), 'R' + cm(fi.R), { size: 10 * LS, color: 'var(--ink2)' })); }
-    else g.appendChild(el('circle', { cx: p.x, cy: p.y, r: on || isPick ? 7 : 5, style: `fill:${on || isPick ? 'var(--laser)' : 'var(--paper)'};stroke:${on || isPick ? 'var(--laser)' : 'var(--ink)'};stroke-width:2` }));
+    else g.appendChild(el('circle', { cx: p.x, cy: p.y, r: on || isPick ? 6 : 3.5 * LS, style: `fill:${on || isPick ? 'var(--laser)' : 'var(--paper)'};stroke:${on || isPick ? 'var(--laser)' : 'var(--ink)'};stroke-width:1.5` }));
     g.appendChild(text(add(p, mul(o, 18 * LS)), L(i), { size: 13 * LS, w: 600, color: on || isPick ? 'var(--laser)' : 'var(--ink)' }));
     g.appendChild(el('circle', { cx: p.x, cy: p.y, r: 24, fill: 'transparent', 'data-hit': 'v', 'data-i': i })); } }
 
