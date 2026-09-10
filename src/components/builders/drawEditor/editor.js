@@ -169,8 +169,8 @@ function closeSketch() { const P = S.sk.pts; if (P.length < 3) return;
     else if (lastH && abH) last.x = A.x;
     else if (lastV && abH) { if (eq(last.x, A.x)) P.pop(); else if (eq(last.y, A.y)) P.shift(); else if (n < 26) P.push({ x: A.x, y: last.y }); }
     else if (lastH && abV) { if (eq(last.y, A.y)) P.pop(); else if (eq(last.x, A.x)) P.shift(); else if (n < 26) P.push({ x: last.x, y: A.y }); } }
-  S.m = solveModel(makeModel(P)); S.stage = 2; S.sel = null; S.hist2 = []; S.redo2 = []; S.tab2 = 'walls'; S.dpick = null; render();
-  if (S.m.vert.every(v => v.kind === 'ortho')) toast('Все углы прямые. Введите длины стен'); else toast('Углы без маркера — свободные. Их можно уточнить'); }
+  S.m = solveModel(makeModel(P, S.sk.mode)); S.stage = 2; S.sel = null; S.hist2 = []; S.redo2 = []; S.tab2 = 'walls'; S.dpick = null; render();
+  if (S.sk.mode === 'free') toast('Углы не заданы: после длин понадобятся диагонали. Прямые можно отметить во вкладке «Углы»'); else if (S.m.vert.every(v => v.kind === 'ortho')) toast('Все углы прямые. Введите длины стен'); else toast('Углы без маркера — свободные. Их можно уточнить'); }
 let toastT = null;
 function toast(msg, bad) { const t = $('#toast'); t.textContent = msg; t.className = 'toast show' + (bad ? ' bad' : ''); clearTimeout(toastT); toastT = setTimeout(() => t.className = 'toast', 2600); }
 
