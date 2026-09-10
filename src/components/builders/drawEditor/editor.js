@@ -130,16 +130,21 @@ svg.addEventListener('pointerup', pointerEnd); svg.addEventListener('pointercanc
 $('#zIn').addEventListener('click', () => zoomAt(1.3, { x: svg.clientWidth / 2, y: svg.clientHeight / 2 }));
 $('#zOut').addEventListener('click', () => zoomAt(1 / 1.3, { x: svg.clientWidth / 2, y: svg.clientHeight / 2 }));
 $('#zFit').addEventListener('click', () => { Z = { k: 1, dx: 0, dy: 0 }; renderCanvas(); });
-function snapPt(p, prev, others) { const q = { x: p.x, y: p.y };
-  if (prev) { const ang = Math.atan2(q.y - prev.y, q.x - prev.x) * DEG, near = a => Math.abs(wrap((ang - a) / DEG) * DEG) < 12;
+// Стена по сетке: строго перпендикулярна предыдущей (прямоугольный контур чередует горизонталь и вертикаль),
+// для первой стены или после косой — по большему смещению. prev2 — точка перед prev.
+function snapPt(p, prev, others, free, prev2) { const q = { x: p.x, y: p.y };
+  others.forEach(o => { if (o === prev) return; if (Math.abs(q.x - o.x) < 10 / Z.k) q.x = o.x; if (Math.abs(q.y - o.y) < 10 / Z.k) q.y = o.y; }); // выравнивание по другим углам
+  if (prev && !free) { const pv = prev2 && Math.abs(prev.x - prev2.x) < 1e-6, ph = prev2 && Math.abs(prev.y - prev2.y) < 1e-6;
+    if (pv) q.y = prev.y; else if (ph) q.x = prev.x; else if (Math.abs(q.x - prev.x) >= Math.abs(q.y - prev.y)) q.y = prev.y; else q.x = prev.x; }
+  else if (prev) { const ang = Math.atan2(q.y - prev.y, q.x - prev.x) * DEG, near = a => Math.abs(wrap((ang - a) / DEG) * DEG) < 6;
     if (near(0) || near(180)) q.y = prev.y; else if (near(90) || near(-90)) q.x = prev.x; }
-  others.forEach(o => { if (o === prev) return; if (Math.abs(q.x - o.x) < 10) q.x = o.x; if (Math.abs(q.y - o.y) < 10) q.y = o.y; }); return q; }
+  return q; }
 function onTap(p) { const P = S.sk.pts; if (S.stage === 0) return;
   if (S.stage === 1) {
     if (p.hit) { const i = p.hit.i; if (p.moved) { const n = P.length; P[i] = snapPt(P[i], P[(i - 1 + n) % n], P.filter((_, k) => k !== i)); commit(); }
       else if (i === 0 && P.length >= 3) closeSketch(); return; }
     if (p.moved) return; if (P.length >= 26) return toast('Больше 26 вершин пока нельзя', true);
-    const q = snapPt(fromS({ x: p.x, y: p.y }), P[P.length - 1], P); if (P.some(o => hyp(o, q) < 22)) return; P.push(q); commit(); return; }
+    const q = snapPt(fromS({ x: p.x, y: p.y }), P[P.length - 1], P, S.sk.free, P[P.length - 2]); if (P.some(o => hyp(o, q) < 14 / Z.k)) return; P.push(q); S.sk.free = false; commit(); return; }
   if (S.stage === 2) { const h = p.hit;
     if (S.pick) { if (h && h.t === 'v') pickVertex(h.i); return; }
     if (!h) { S.sel = null; blurActive(); render(); return; }
@@ -148,7 +153,17 @@ function onTap(p) { const P = S.sk.pts; if (S.stage === 0) return;
     else if (h.t === 'd') { S.sel = null; S.focusReq = `input[data-in="diag"][data-k="${h.i}"]`; render(); }
     else if (h.t === 'sug') addDiag(h.i, h.j); return; }
   if (S.stage === 3) { const h = p.hit; S.op = null; S.sel = h && (h.t === 'v' || h.t === 's') ? { t: h.t, i: h.i } : null; blurActive(); render(); } }
-function closeSketch() { const P = S.sk.pts; if (P.length < 3) return; S.m = solveModel(makeModel(P)); S.stage = 2; S.sel = null; S.hist2 = []; S.redo2 = []; render();
+function closeSketch() { const P = S.sk.pts; if (P.length < 3) return;
+  // Замыкание по сетке: у прямоугольного контура стены чередуются (горизонталь/вертикаль), число стен чётное.
+  // Последняя стена и стена A→B на разных осях → замыкающая стена перпендикулярна обеим: ставим последнюю точку на ряд/колонку A.
+  // На одной оси → нужен ещё один угол, добавляем точку X сами; если точка оказалась лишней (на прямой) — убираем её.
+  if (!S.sk.free) { const n = P.length, last = P[n - 1], prev = P[n - 2], A = P[0], B = P[1], eq = (a, b) => Math.abs(a - b) < 1e-6;
+    const lastV = eq(last.x, prev.x), lastH = eq(last.y, prev.y), abH = eq(B.y, A.y), abV = eq(B.x, A.x);
+    if (lastV && abV) last.y = A.y;
+    else if (lastH && abH) last.x = A.x;
+    else if (lastV && abH) { if (eq(last.x, A.x)) P.pop(); else if (eq(last.y, A.y)) P.shift(); else if (n < 26) P.push({ x: A.x, y: last.y }); }
+    else if (lastH && abV) { if (eq(last.y, A.y)) P.pop(); else if (eq(last.x, A.x)) P.shift(); else if (n < 26) P.push({ x: last.x, y: A.y }); } }
+  S.sk.free = false; S.m = solveModel(makeModel(P)); S.stage = 2; S.sel = null; S.hist2 = []; S.redo2 = []; render();
   if (S.m.vert.every(v => v.kind === 'ortho')) toast('Все углы прямые. Введите длины стен'); else toast('Углы без маркера — свободные. Их можно уточнить'); }
 let toastT = null;
 function toast(msg, bad) { const t = $('#toast'); t.textContent = msg; t.className = 'toast show' + (bad ? ' bad' : ''); clearTimeout(toastT); toastT = setTimeout(() => t.className = 'toast', 2600); }
@@ -168,8 +183,8 @@ function statusInfo() { const st = S.m.status, n = S.m.n;
   const sug = st.sug.diags.map(([i, j]) => 'диагональ ' + L(i) + '–' + L(j)); if (st.sug.angs.length) sug.push('угол ' + st.sug.angs.map(L).join(' / '));
   return { cls: 'warn', h: `Нужно ещё ${st.missing} ${plural(st.missing, 'измерение', 'измерения', 'измерений')}`, s: sug.length ? 'Например: ' + sug.join(' или ') : 'Добавьте диагональ или угол' }; }
 function sheet1() { const n = S.sk.pts.length;
-  return `<div class="status info"><span class="dot"></span><div>${n < 3 ? 'Ставьте точки по углам комнаты по порядку обхода' : 'Замкните фигуру: тап по точке A или кнопка ниже'}<small>Точек: ${n}. Точки можно перетаскивать</small></div></div>
-  <div class="btns"><button class="btn sm ghost" data-act="home">← Назад</button><button class="btn ghost" data-act="undoPt" ${n ? '' : 'disabled'}>← Убрать точку</button><button class="btn pri" data-act="close" ${n >= 3 ? '' : 'disabled'}>Замкнуть</button></div>`; }
+  return `<div class="status info"><span class="dot"></span><div>${n < 3 ? 'Ставьте точки по углам комнаты по порядку обхода' : 'Замкните фигуру: тап по точке A или кнопка ниже'}<small>${S.sk.free ? 'Следующая стена пойдёт под углом, как нарисуете' : 'Стены ложатся по сетке: ровно вбок или вверх-вниз от прошлой точки. Для диагонали нажмите «Косая стена»'}</small></div></div>
+  <div class="btns"><button class="btn sm ghost" data-act="home">← Назад</button><button class="btn sm ${S.sk.free ? 'laser' : ''}" data-act="freeWall" ${n ? '' : 'disabled'}>${S.sk.free ? 'Косая стена ✓' : 'Косая стена'}</button><button class="btn ghost" data-act="undoPt" ${n ? '' : 'disabled'}>← Точку</button><button class="btn pri" data-act="close" ${n >= 3 ? '' : 'disabled'}>Замкнуть</button></div>`; }
 const vertexNote = vt => vt.kind === 'ortho' ? 'Держится ровно 90° или 270°. Снимите, если стена косая.' : vt.kind === 'free' ? 'Угол не задан: его определят длины, диагонали или градусы.' : 'Угол задан вручную, заменяет одну диагональ.';
 function sheet2() { const m = S.m, n = m.n; let h = `<div class="status" id="st2"><span class="dot"></span><div id="st2t"></div></div>`;
   if (S.pick) { h += `<div class="card"><h3>${S.pick.mode === 'diag' ? (S.pick.a == null ? 'Первая вершина диагонали' : 'Вторая вершина, после ' + L(S.pick.a)) : 'Какой угол известен?'}<small>тап по чертежу</small></h3>
@@ -357,6 +372,7 @@ function act(a, d) {
   if (a === 'quickBuild') return quickBuild();
   if (a === 'editQuick') { const o = S.origin; S.quick = { kind: 'oval', mode: o.mode, f: { ...o.f }, edit: true }; S.stage = 0; S.sel = null; S.op = null; S.focusReq = 'input[data-in="q"]'; return render(); }
   if (a === 'home') { const had = S.sk.pts.length; Object.assign(S, FRESH()); render(); if (had) toast('Контур сброшен'); return; }
+  if (a === 'freeWall') { S.sk.free = !S.sk.free; return render(); }
   if (a === 'undoPt') { S.sk.pts.pop(); return render(); }
   if (a === 'close') return closeSketch();
   if (a === 'rmDiag') { withSnap(() => S.m.diags.splice(+d.i, 1)); solveModel(S.m); return render(); }
@@ -386,7 +402,7 @@ $('#bNew').addEventListener('click', () => { if (S.stage === 0) { S.quick = null
   if (!newArm) { const b = $('#bNew'); b.textContent = 'Стереть?'; b.style.color = 'var(--laser)'; newArm = setTimeout(disarmNew, 3000); toast('Ещё раз, чтобы начать новый чертёж'); return; }
   disarmNew(); Object.assign(S, FRESH()); render(); });
 function viewKey() { const m = S.m; return [S.stage, S.quick ? S.quick.kind + S.quick.mode + (S.quick.edit ? 'e' : '') : '', S.origin ? S.origin.kind : '', S.sel ? S.sel.t + S.sel.i : '', S.pick ? S.pick.mode + (S.pick.a ?? '') : '', S.op ? S.op.kind + S.op.i + JSON.stringify(S.op.seg) : '',
-  m ? m.n + ':' + m.diags.length + ':' + (S.sel && S.sel.t === 'v' ? m.vert[S.sel.i].kind : '') : '', S.ops.length, S.poly ? S.poly.v.length : 0, S.sk.pts.length].join('|'); }
+  m ? m.n + ':' + m.diags.length + ':' + (S.sel && S.sel.t === 'v' ? m.vert[S.sel.i].kind : '') : '', S.ops.length, S.poly ? S.poly.v.length : 0, S.sk.pts.length, S.sk.free ? 'f' : ''].join('|'); }
 function renderSheet() { const key = viewKey(); if (key === sheetKey) { updateSheet(); return; }
   const top = sheet.scrollTop; sheetKey = key; sheet.innerHTML = S.stage === 0 ? sheet0() : S.stage === 1 ? sheet1() : S.stage === 2 ? sheet2() : sheet3(); updateSheet(); sheet.scrollTop = top; }
 // ───────── stage 0: quick commands (rectangle, circle/ellipse, polygon) ─────────
@@ -416,7 +432,7 @@ function quickBuild() { const poly = quickPoly(); if (!poly) return toast('Вв�
   S.base = poly; if (!q.edit) { S.ops = []; S.redoOps = []; S.m = null; S.hist2 = []; S.redo2 = []; } S.quick = null; S.stage = 3; S.sel = null; S.op = null; blurActive(); rebuild(); render(); }
 function renderChrome() { const names = ['Контур', 'Размеры', 'Правка'], quickShape = S.origin && S.origin.kind !== 'poly';
   $('#stages').innerHTML = S.stage === 0 ? '' : S.stage === 3 && quickShape ? '<span class="pill on"><b>✓</b>Правка</span>' : names.map((nm, k) => `<span class="pill ${k + 1 === S.stage ? 'on' : k + 1 < S.stage ? 'done' : ''}"><b>${k + 1}</b>${nm}</span>`).join('');
-  $('#hint').textContent = S.stage === 0 ? (S.quick ? 'Чертёж появится по мере ввода размеров' : 'Выберите способ построения') : S.stage === 1 ? (S.sk.pts.length ? 'Следующий угол по порядку обхода. Замкнуть — тап по A' : 'Тап по экрану ставит первый угол A') : S.stage === 2 ? 'Тап по стене — ввести длину. Тап по углу — прямой, свободный или градусы' : 'Тап по углу или стене — редактировать';
+  $('#hint').textContent = S.stage === 0 ? (S.quick ? 'Чертёж появится по мере ввода размеров' : 'Выберите способ построения') : S.stage === 1 ? (S.sk.pts.length ? 'Следующий угол по порядку обхода, стены по сетке. Замкнуть — тап по A' : 'Тап по экрану ставит первый угол A') : S.stage === 2 ? 'Тап по стене — ввести длину. Тап по углу — прямой, свободный или градусы' : 'Тап по углу или стене — редактировать';
   $('#hint').style.display = S.stage === 1 && S.sk.pts.length > 5 ? 'none' : '';
   $('#sub').textContent = S.stage === 0 || S.stage === 1 ? '' : `${S.stage === 2 ? S.m.n : S.poly.v.length} углов`;
   $('#bUndo').disabled = S.stage === 0 ? true : S.stage === 1 ? !S.sk.pts.length : S.stage === 2 ? !S.hist2.length : !S.ops.length; $('#bRedo').disabled = S.stage === 2 ? !S.redo2.length : !(S.stage === 3 && S.redoOps.length);

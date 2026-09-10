@@ -107,10 +107,20 @@ export function alignPts(P, vert) { const n = P.length; let best = -1, bl = -1, 
   const c = Math.cos(d), sn = Math.sin(d), cx = P.reduce((q, p) => q + p.x, 0) / n, cy = P.reduce((q, p) => q + p.y, 0) / n;
   return P.map(p => ({ x: cx + (p.x - cx) * c - (p.y - cy) * sn, y: cy + (p.x - cx) * sn + (p.y - cy) * c })); }
 export function makeModel(pts) { const n = pts.length, wind = windOf(pts);
-  const vert = pts.map((p, i) => { const d = interiorDeg(pts, i, wind); if (Math.abs(d - 90) <= 15) return { kind: 'ortho', deg: 90 }; if (Math.abs(d - 270) <= 15) return { kind: 'ortho', deg: 270 }; return { kind: 'free', deg: null }; });
+  const vert = pts.map((p, i) => { const d = interiorDeg(pts, i, wind); if (Math.abs(d - 90) <= 4) return { kind: 'ortho', deg: 90 }; if (Math.abs(d - 270) <= 4) return { kind: 'ortho', deg: 270 }; return { kind: 'free', deg: null }; });
   return { n, wind, prior: pts.map(p => ({ x: p.x, y: p.y })), vert, sides: Array(n).fill(null), diags: [], sol: null, scale: null, status: null }; }
-export function solveModel(m) { const scale = estScale(m), prior = m.prior.map(p => ({ x: p.x * scale, y: p.y * scale }));
-  let X = flat(prior); // always start from the sketch so the solution keeps the drawn shape, never a folded twin
+// Стартовая фигура: идём по контуру с введёнными длинами (недостающие — из наброска в масштабе)
+// и поворотами: у прямых углов ровно ±90°, у заданных градусов — по ним, у свободных — как в наброске.
+export function turtleGuess(m, scale) { const n = m.n, pr = m.prior, wind = m.wind;
+  const turn = i => { const vt = m.vert[i]; if (vt.kind !== 'free' && vt.deg != null) return wind * (Math.PI - vt.deg / DEG); return turnAt(pr, i); };
+  const len = i => m.sides[i] != null ? m.sides[i] / 100 : hyp(pr[i], pr[(i + 1) % n]) * scale;
+  let h = Math.atan2(pr[1 % n].y - pr[0].y, pr[1 % n].x - pr[0].x);
+  if (m.vert[0].kind === 'ortho' || m.vert[1 % n].kind === 'ortho') { const q = Math.round(h / (Math.PI / 2)) * (Math.PI / 2); if (Math.abs(wrap(h - q)) < Math.PI / 4) h = q; }
+  const P = [{ x: 0, y: 0 }];
+  for (let i = 0; i < n - 1; i++) { const L = len(i); P.push({ x: P[i].x + Math.cos(h) * L, y: P[i].y + Math.sin(h) * L }); h += turn(i + 1); }
+  return P; }
+export function solveModel(m) { const scale = estScale(m), prior = turtleGuess(m, scale);
+  let X = flat(prior); // старт от фигуры по длинам и поворотам: по мере ввода она не кривится и не складывается
   const cons = buildCons(m); X = lm(X, XX => resid(XX, cons, prior, m.wind));
   m.sol = alignPts(toPts(X), m.vert); m.scale = scale; m.status = analyze(m, X); return m; }
 
