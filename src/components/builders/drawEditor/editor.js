@@ -30,14 +30,14 @@ function finish() { if (!S.poly) return; const st = polyStats(S.poly), F = flatt
   const draw = clone({ base: S.base, ops: S.ops, origin: S.origin, m: S.m ? { n: S.m.n, wind: S.m.wind, prior: S.m.prior, vert: S.m.vert, sides: S.m.sides, diags: S.m.diags } : null });
   if (opts.onFinish) opts.onFinish({ name: (S.roomName || '').trim() || opts.roomName || 'Помещение', verts: F.map(p => [r2(p.x - x0), r2(p.y - y0)]), area: Math.round(st.area * 100) / 100, perim: Math.round(st.perim * 100) / 100, draw }); }
 // ───────── state & canvas ─────────
-const FRESH = () => ({ stage: 0, sk: { pts: [] }, m: null, base: null, ops: [], redoOps: [], poly: null, sel: null, op: null, pick: null, hist2: [], redo2: [], hot: null, focusReq: null, sess: 0, quick: null, origin: null, roomName: opts.roomName || 'Помещение' });
+const FRESH = () => ({ stage: 0, sk: { pts: [], mode: 'grid' }, m: null, base: null, ops: [], redoOps: [], poly: null, sel: null, op: null, pick: null, hist2: [], redo2: [], hot: null, focusReq: null, sess: 0, quick: null, origin: null, roomName: opts.roomName || 'Помещение', tab2: 'walls', dpick: null });
 const S = FRESH();
 let VT = { s: 1, tx: 0, ty: 0 }, Z = { k: 1, dx: 0, dy: 0 }, lastStage = 0;
 const svg = $('#cv'), NS = 'http://www.w3.org/2000/svg';
 function el(tag, attrs, text) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; return e; }
 const toS = p => ({ x: (p.x * VT.s + VT.tx) * Z.k + Z.dx, y: (p.y * VT.s + VT.ty) * Z.k + Z.dy });
 const fromS = q => ({ x: ((q.x - Z.dx) / Z.k - VT.tx) / VT.s, y: ((q.y - Z.dy) / Z.k - VT.ty) / VT.s });
-const clampK = k => Math.min(24, Math.max(0.5, k));
+const clampK = k => Math.min(64, Math.max(0.5, k));
 function zoomAt(f, c) { const k = clampK(Z.k * f), r = k / Z.k; Z = { k, dx: c.x - (c.x - Z.dx) * r, dy: c.y - (c.y - Z.dy) * r }; renderCanvas(); }
 function fitView(pts) { const W = svg.clientWidth, H = svg.clientHeight, pad = 62; let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
   pts.forEach(p => { x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y); });
@@ -56,7 +56,7 @@ function sidePts(poly, i) { const n = poly.v.length, P = ptsOf(poly), ai = arcIn
   const f0 = filletInfo(poly, i), f1 = filletInfo(poly, (i + 1) % n); return [f0 ? f0.T2 : P[i], f1 ? f1.T1 : P[(i + 1) % n]]; }
 
 function renderCanvas() { while (svg.firstChild) svg.removeChild(svg.firstChild); const g = el('g', {}); svg.appendChild(g);
-  const LS = Z.k >= 8 ? 0.7 : Z.k >= 3 ? 0.85 : 1; // при увеличении буквы и подписи мельче, чтобы не закрывать мелкие выступы
+  const LS = Z.k >= 20 ? 0.6 : Z.k >= 8 ? 0.7 : Z.k >= 3 ? 0.85 : 1; // при увеличении буквы и подписи мельче, чтобы не закрывать мелкие выступы
   if (S.stage === 1) { const P = S.sk.pts; VT = { s: 1, tx: 0, ty: 0 }; const Q = P.map(toS);
     if (P.length > 1) g.appendChild(el('path', { d: pathOf(Q, false), fill: 'none', stroke: 'var(--ink)', 'stroke-width': 2, 'stroke-linejoin': 'round' }));
     if (P.length > 2) g.appendChild(el('path', { d: pathOf([Q[Q.length - 1], Q[0]], false), fill: 'none', stroke: 'var(--ink3)', 'stroke-width': 1.5, 'stroke-dasharray': '4 5' }));
@@ -98,7 +98,7 @@ function renderCanvas() { while (svg.firstChild) svg.removeChild(svg.firstChild)
   // vertices
   const wind = windOf(P);
   for (let i = 0; i < n; i++) { const p = toS(P[i]), fi = filletInfo(poly, i), o = dirOut(P, i);
-    const on = S.sel && S.sel.t === 'v' && S.sel.i === i, isPick = S.pick && S.pick.a === i;
+    const on = S.sel && S.sel.t === 'v' && S.sel.i === i, isPick = (S.pick && S.pick.a === i) || (S.dpick && S.dpick.a === i);
     const nb = P.length, slA = hyp(toS(P[(i - 1 + nb) % nb]), p), slB = hyp(toS(P[(i + 1) % nb]), p), roomy = Math.min(slA, slB) >= 30;
     if (S.stage === 2 && S.m.vert[i].kind === 'ortho' && roomy) { const n_ = P.length, u1 = norm(sub(P[(i - 1 + n_) % n_], P[i])), u2 = norm(sub(P[(i + 1) % n_], P[i])), s = 9 * LS;
       const a = add(p, mul(u1, s)), b = add(p, mul(add(u1, u2), s)), c = add(p, mul(u2, s));
@@ -140,7 +140,7 @@ function snapPt(p, prev, others, free, prev2) { const q = { x: p.x, y: p.y };
   others.forEach(o => { if (o === prev) return; if (Math.abs(q.x - o.x) < 10 / Z.k) q.x = o.x; if (Math.abs(q.y - o.y) < 10 / Z.k) q.y = o.y; }); // выравнивание по другим углам
   if (!prev) return q;
   const dx = q.x - prev.x, dy = q.y - prev.y, len = Math.hypot(dx, dy) * Z.k, devH = Math.atan2(Math.abs(dy), Math.abs(dx)) * DEG, devV = 90 - devH;
-  if (len >= 44 && devH >= 22 && devV >= 22) { const ang = Math.atan2(dy, dx) * DEG, n45 = Math.round(ang / 45) * 45;
+  if (free || (len >= 44 && devH >= 22 && devV >= 22)) { const ang = Math.atan2(dy, dx) * DEG, n45 = Math.round(ang / 45) * 45;
     if (Math.abs(wrap((ang - n45) / DEG) * DEG) < 5) { const L = Math.hypot(dx, dy); q.x = prev.x + Math.cos(n45 / DEG) * L; q.y = prev.y + Math.sin(n45 / DEG) * L; } return q; }
   const pv = prev2 && Math.abs(prev.x - prev2.x) < 1e-6, ph = prev2 && Math.abs(prev.y - prev2.y) < 1e-6;
   let horiz; if (pv) horiz = len < 44 ? true : devH <= 45; else if (ph) horiz = len < 44 ? false : devH <= 45; else horiz = Math.abs(dx) >= Math.abs(dy);
@@ -150,26 +150,26 @@ function onTap(p) { const P = S.sk.pts; if (S.stage === 0) return;
     if (p.hit) { const i = p.hit.i; if (p.moved) { const n = P.length; P[i] = snapPt(P[i], P[(i - 1 + n) % n], P.filter((_, k) => k !== i)); commit(); }
       else if (i === 0 && P.length >= 3) closeSketch(); return; }
     if (p.moved) return; if (P.length >= 26) return toast('Больше 26 вершин пока нельзя', true);
-    const q = snapPt(fromS({ x: p.x, y: p.y }), P[P.length - 1], P, S.sk.free, P[P.length - 2]); if (P.some(o => hyp(o, q) < 14 / Z.k)) return; P.push(q); S.sk.free = false; commit(); return; }
+    const q = snapPt(fromS({ x: p.x, y: p.y }), P[P.length - 1], P, S.sk.mode === 'free', P[P.length - 2]); if (P.some(o => hyp(o, q) < 14 / Z.k)) return; P.push(q); commit(); return; }
   if (S.stage === 2) { const h = p.hit;
     if (S.pick) { if (h && h.t === 'v') pickVertex(h.i); return; }
     if (!h) { S.sel = null; blurActive(); render(); return; }
     if (h.t === 'v') { S.sel = { t: 'v', i: h.i }; blurActive(); render(); }
-    else if (h.t === 's') { S.sel = null; S.focusReq = `input[data-in="side"][data-i="${h.i}"]`; render(); }
-    else if (h.t === 'd') { S.sel = null; S.focusReq = `input[data-in="diag"][data-k="${h.i}"]`; render(); }
+    else if (h.t === 's') { S.sel = null; S.tab2 = 'walls'; S.dpick = null; S.focusReq = `input[data-in="side"][data-i="${h.i}"]`; render(); }
+    else if (h.t === 'd') { S.sel = null; S.tab2 = 'diags'; S.dpick = null; S.focusReq = `input[data-in="diag"][data-k="${h.i}"]`; render(); }
     else if (h.t === 'sug') addDiag(h.i, h.j); return; }
   if (S.stage === 3) { const h = p.hit; S.op = null; S.sel = h && (h.t === 'v' || h.t === 's') ? { t: h.t, i: h.i } : null; blurActive(); render(); } }
 function closeSketch() { const P = S.sk.pts; if (P.length < 3) return;
   // Замыкание по сетке: у прямоугольного контура стены чередуются (горизонталь/вертикаль), число стен чётное.
   // Последняя стена и стена A→B на разных осях → замыкающая стена перпендикулярна обеим: ставим последнюю точку на ряд/колонку A.
   // На одной оси → нужен ещё один угол, добавляем точку X сами; если точка оказалась лишней (на прямой) — убираем её.
-  if (!S.sk.free) { const n = P.length, last = P[n - 1], prev = P[n - 2], A = P[0], B = P[1], eq = (a, b) => Math.abs(a - b) < 1e-6;
+  if (S.sk.mode !== 'free') { const n = P.length, last = P[n - 1], prev = P[n - 2], A = P[0], B = P[1], eq = (a, b) => Math.abs(a - b) < 1e-6;
     const lastV = eq(last.x, prev.x), lastH = eq(last.y, prev.y), abH = eq(B.y, A.y), abV = eq(B.x, A.x);
     if (lastV && abV) last.y = A.y;
     else if (lastH && abH) last.x = A.x;
     else if (lastV && abH) { if (eq(last.x, A.x)) P.pop(); else if (eq(last.y, A.y)) P.shift(); else if (n < 26) P.push({ x: A.x, y: last.y }); }
     else if (lastH && abV) { if (eq(last.y, A.y)) P.pop(); else if (eq(last.x, A.x)) P.shift(); else if (n < 26) P.push({ x: last.x, y: A.y }); } }
-  S.sk.free = false; S.m = solveModel(makeModel(P)); S.stage = 2; S.sel = null; S.hist2 = []; S.redo2 = []; render();
+  S.m = solveModel(makeModel(P)); S.stage = 2; S.sel = null; S.hist2 = []; S.redo2 = []; S.tab2 = 'walls'; S.dpick = null; render();
   if (S.m.vert.every(v => v.kind === 'ortho')) toast('Все углы прямые. Введите длины стен'); else toast('Углы без маркера — свободные. Их можно уточнить'); }
 let toastT = null;
 function toast(msg, bad) { const t = $('#toast'); t.textContent = msg; t.className = 'toast show' + (bad ? ' bad' : ''); clearTimeout(toastT); toastT = setTimeout(() => t.className = 'toast', 2600); }
@@ -189,26 +189,34 @@ function statusInfo() { const st = S.m.status, n = S.m.n;
   const sug = st.sug.diags.map(([i, j]) => 'диагональ ' + L(i) + '–' + L(j)); if (st.sug.angs.length) sug.push('угол ' + st.sug.angs.map(L).join(' / '));
   return { cls: 'warn', h: `Нужно ещё ${st.missing} ${plural(st.missing, 'измерение', 'измерения', 'измерений')}`, s: sug.length ? 'Например: ' + sug.join(' или ') : 'Добавьте диагональ или угол' }; }
 function sheet1() { const n = S.sk.pts.length;
-  return `<div class="status info"><span class="dot"></span><div>${n < 3 ? 'Ставьте точки по углам комнаты по порядку обхода' : 'Замкните фигуру: тап по точке A или кнопка ниже'}<small>Стены ложатся по сетке, косую стену просто рисуйте под углом. Мелкие выступы ставьте при увеличении</small></div></div>
+  return `<div class="status info"><span class="dot"></span><div>${n < 3 ? 'Ставьте точки по углам комнаты по порядку обхода' : 'Замкните фигуру: тап по точке A или кнопка ниже'}<small>${S.sk.mode === 'free' ? 'Углы любые, как нарисуете. Потом длины, диагонали или градусы' : 'Стены ложатся по сетке, косую стену просто рисуйте под углом. Мелкие выступы ставьте при увеличении'}</small></div></div>
   <div class="btns"><button class="btn sm ghost" data-act="home">← Назад</button><button class="btn ghost" data-act="undoPt" ${n ? '' : 'disabled'}>← Точку</button><button class="btn pri" data-act="close" ${n >= 3 ? '' : 'disabled'}>Замкнуть</button></div>`; }
 const vertexNote = vt => vt.kind === 'ortho' ? 'Держится ровно 90° или 270°. Снимите, если стена косая.' : vt.kind === 'free' ? 'Угол не задан: его определят длины, диагонали или градусы.' : 'Угол задан вручную, заменяет одну диагональ.';
-function sheet2() { const m = S.m, n = m.n; let h = `<div class="status" id="st2"><span class="dot"></span><div id="st2t"></div></div>`;
-  if (S.pick) { h += `<div class="card"><h3>${S.pick.mode === 'diag' ? (S.pick.a == null ? 'Первая вершина диагонали' : 'Вторая вершина, после ' + L(S.pick.a)) : 'Какой угол известен?'}<small>тап по чертежу</small></h3>
-    <div class="btns"><button class="btn ghost" data-act="pickCancel">Отмена</button></div></div>`; return h; }
+function sheet2() { const m = S.m, n = m.n, tab = S.tab2 || 'walls';
+  let h = `<div class="status" id="st2"><span class="dot"></span><div id="st2t"></div></div>`;
   if (S.sel && S.sel.t === 'v') { const i = S.sel.i, vt = m.vert[i];
     h += `<div class="card"><h3><span class="m">${L(i)}</span> угол <small id="vcur"></small></h3>
     <div class="seg"><button class="${vt.kind === 'ortho' ? 'on' : ''}" data-act="vkind" data-k="ortho">Прямой</button><button class="${vt.kind === 'free' ? 'on' : ''}" data-act="vkind" data-k="free">Свободный</button><button class="${vt.kind === 'deg' ? 'on' : ''}" data-act="vkind" data-k="deg">Градусы</button></div>
     ${vt.kind === 'deg' ? `<div class="fld"><span class="k">Внутренний угол</span>${numIn('ang', `data-i="${i}"`, vt.deg ?? '', '')}<span class="u">°</span></div>` : ''}
     <div class="note">${vertexNote(vt)}</div>
     <div class="btns"><button class="btn ghost" data-act="deselect">Закрыть</button></div></div>`; return h; }
-  h += '<div class="sec">Стены</div><div class="rows">';
+  h += `<div class="seg tabs"><button class="${tab === 'walls' ? 'on' : ''}" data-act="tab2" data-v="walls">Стены</button><button class="${tab === 'diags' ? 'on' : ''}" data-act="tab2" data-v="diags">Диагонали${m.diags.length ? ' · ' + m.diags.length : ''}</button><button class="${tab === 'angles' ? 'on' : ''}" data-act="tab2" data-v="angles">Углы</button></div>`;
   const kbBtns = `<button class="next" data-act="nextField" type="button">Далее ▸</button><button class="done" data-act="blur" type="button" title="Готово">✓</button>`;
-  for (let i = 0; i < n; i++) h += `<div class="row"><span class="lbl">${L(i)}${L((i + 1) % n)}</span>${numIn('side', `data-i="${i}"`, m.sides[i] ?? '', '')}${kbBtns}</div>`;
-  h += '</div>';
-  if (m.diags.length) { h += '<div class="sec">Диагонали</div><div class="rows">';
-    m.diags.forEach((d, k) => { h += `<div class="row"><span class="lbl">${L(d.i)}–${L(d.j)}</span>${numIn('diag', `data-k="${k}"`, d.cm ?? '', '')}<button class="x" data-act="rmDiag" data-i="${k}">✕</button>${kbBtns}</div>`; }); h += '</div>'; }
-  h += `<div class="btns"><button class="btn sm" data-act="pickDiag">+ Диагональ</button><button class="btn sm" data-act="pickAng">+ Угол</button><button class="btn sm ghost" data-act="back1">← Контур</button></div>
-  <div class="btns"><button class="btn pri" id="doneBtn" data-act="done">${S.ops.length ? 'Перестроить ✓' : 'Построить ✓'}</button></div>`;
+  if (tab === 'walls') { h += '<div class="rows">';
+    for (let i = 0; i < n; i++) h += `<div class="row"><span class="lbl">${L(i)}${L((i + 1) % n)}</span>${numIn('side', `data-i="${i}"`, m.sides[i] ?? '', '')}${kbBtns}</div>`;
+    h += '</div>'; }
+  else if (tab === 'diags') { h += `<div class="note" id="dnote"></div>`;
+    if (m.diags.length) { h += '<div class="sec">Введённые</div><div class="rows">';
+      m.diags.forEach((d, k) => { h += `<div class="row"><span class="lbl">${L(d.i)}–${L(d.j)}</span>${numIn('diag', `data-k="${k}"`, d.cm ?? '', '')}<button class="x" data-act="rmDiag" data-i="${k}">✕</button>${kbBtns}</div>`; }); h += '</div>'; }
+    h += `<div class="sec">Подсказка</div><div id="sugList" class="rows one"></div>`;
+    h += `<div class="sec">Другая диагональ</div><div class="note">${S.dpick ? 'Первая вершина ' + L(S.dpick.a) + ' — теперь вторая' : 'Нажмите две вершины по буквам'}</div><div class="letters">`;
+    for (let i = 0; i < n; i++) h += `<button class="lt ${S.dpick && S.dpick.a === i ? 'on' : ''}" data-act="dpk" data-i="${i}">${L(i)}</button>`;
+    h += '</div>'; }
+  else { h += '<div class="rows one">';
+    for (let i = 0; i < n; i++) { const vt = m.vert[i];
+      h += `<div class="row vrow"><span class="lbl">${L(i)}</span><span class="cur" data-cur="${i}"></span><div class="seg mini"><button class="${vt.kind === 'ortho' ? 'on' : ''}" data-act="vk" data-i="${i}" data-k="ortho">прямой</button><button class="${vt.kind === 'free' ? 'on' : ''}" data-act="vk" data-i="${i}" data-k="free">свободный</button><button class="${vt.kind === 'deg' ? 'on' : ''}" data-act="vk" data-i="${i}" data-k="deg">°</button></div>${vt.kind === 'deg' ? numIn('ang', `data-i="${i}"`, vt.deg ?? '', '') + kbBtns : ''}</div>`; }
+    h += '</div>'; }
+  h += `<div class="btns"><button class="btn sm ghost" data-act="back1">← Контур</button><button class="btn pri" id="doneBtn" data-act="done">${S.ops.length ? 'Перестроить ✓' : 'Построить ✓'}</button></div>`;
   if (S.ops.length) h += `<div class="note">После перестроения заново применятся правки этапа 3: ${S.ops.map(opLabel).join(', ')}</div>`;
   return h; }
 function updateSheet2() { const m = S.m, n = m.n, st = m.status, si = statusInfo(), box = $('#st2');
@@ -219,6 +227,11 @@ function updateSheet2() { const m = S.m, n = m.n, st = m.status, si = statusInfo
     el.placeholder = auto ? '≈ ' + cm(hyp(m.sol[i], m.sol[(i + 1) % n])) : '—'; el.classList.toggle('auto', auto); });
   sheet.querySelectorAll('input[data-in="diag"]').forEach(el => { const d = m.diags[+el.dataset.k]; if (!d) return; if (ac !== el) el.value = d.cm ?? '';
     const auto = d.cm == null && st.missing === 0; el.placeholder = auto ? '≈ ' + cm(hyp(m.sol[d.i], m.sol[d.j])) : '—'; el.classList.toggle('auto', auto); });
+  sheet.querySelectorAll('[data-cur]').forEach(el => { el.textContent = Math.round(interiorDeg(m.sol, +el.dataset.cur, m.wind)) + '°'; });
+  const dn = $('#dnote'); if (dn) dn.textContent = st.afterSides > 0 ? `Не хватает ${st.afterSides} ${plural(st.afterSides, 'измерения', 'измерений', 'измерений')}: диагонали или углы` : st.empty.length ? 'Сначала длины стен, потом станет ясно, нужны ли диагонали' : 'Данных достаточно. Диагонали можно добавить для проверки';
+  const sl = $('#sugList'); if (sl) { const have = new Set(m.diags.map(d => d.i + '-' + d.j)), rows = st.sug.diags.filter(([i, j]) => !have.has(i + '-' + j));
+    sl.innerHTML = (rows.length ? rows.map(([i, j]) => `<div class="row sug" data-act="addSug" data-i="${i}" data-j="${j}"><span class="lbl">${L(i)}–${L(j)}</span><span class="sughint">измерьте лазером и добавьте</span><span class="plus">+</span></div>`).join('') : '') +
+      (st.sug.angs.length ? `<div class="note">или задайте угол ${st.sug.angs.map(L).join(' / ')} во вкладке «Углы»</div>` : '') + (!rows.length && !st.sug.angs.length ? '<div class="note">Подсказок нет</div>' : ''); }
   const db = $('#doneBtn'); if (db) db.disabled = st.missing > 0; }
 // stage-2 history: snapshot before each change; keystrokes within one focus session merge into one step
 const state2 = () => JSON.stringify({ sides: S.m.sides, diags: S.m.diags, vert: S.m.vert });
@@ -263,13 +276,14 @@ sheet.addEventListener('touchstart', e => { if (kbBtn(e)) e.preventDefault(); },
 const blurActive = () => { const a = document.activeElement; if (a && a.blur && a !== document.body) a.blur(); };
 function addDiag(i, j) { if (i > j) [i, j] = [j, i]; const n = S.m.n; if (i === j || (i + 1) % n === j || (j + 1) % n === i) return toast('Это соседние вершины, тут сторона', true);
   let k = S.m.diags.findIndex(d => d.i === i && d.j === j); if (k < 0) { withSnap(() => S.m.diags.push({ i, j, cm: null })); k = S.m.diags.length - 1; }
-  S.pick = null; S.sel = null; S.focusReq = `input[data-in="diag"][data-k="${k}"]`; render(); }
+  S.pick = null; S.sel = null; S.tab2 = 'diags'; S.dpick = null; S.focusReq = `input[data-in="diag"][data-k="${k}"]`; render(); }
 function pickVertex(i) { const p = S.pick; if (p.mode === 'ang') { S.pick = null; S.sel = { t: 'v', i }; setVKind('deg'); return; }
   if (p.a == null) { p.a = i; render(); return; } if (p.a === i) return toast('Выберите другую вершину', true); const a = p.a; S.pick = null; addDiag(a, i); }
-function setVKind(k) { const i = S.sel.i, vt = S.m.vert[i];
+function setVKind(k) { return setVKindAt(S.sel.i, k); }
+function setVKindAt(i, k) { const vt = S.m.vert[i];
   withSnap(() => { if (k === 'ortho') { const d = interiorDeg(S.m.sol, i, S.m.wind); vt.kind = 'ortho'; vt.deg = Math.abs(d - 270) < Math.abs(d - 90) ? 270 : 90; }
     else if (k === 'free') { vt.kind = 'free'; vt.deg = null; } else if (vt.kind !== 'deg') { vt.kind = 'deg'; vt.deg = null; } });
-  if (k === 'deg') S.focusReq = 'input[data-in="ang"]'; solveModel(S.m); render(); }
+  if (k === 'deg') S.focusReq = `input[data-in="ang"][data-i="${i}"]`; solveModel(S.m); render(); }
 
 // ───────── stage 3: operations, journal, persistence ─────────
 
@@ -372,13 +386,19 @@ function act(a, d) {
   if (a === 'finish') return finish();
   if (a === 'q-rect') { S.quick = { kind: 'rect', f: { a: '', b: '' } }; S.focusReq = 'input[data-in="q"]'; return render(); }
   if (a === 'q-oval') { S.quick = { kind: 'oval', mode: 'circle', f: { r: '', rx: '', ry: '' } }; S.focusReq = 'input[data-in="q"]'; return render(); }
-  if (a === 'q-poly') { S.stage = 1; S.origin = { kind: 'poly' }; return render(); }
+  if (a === 'q-poly') { S.stage = 1; S.sk.mode = 'grid'; S.origin = { kind: 'poly' }; return render(); }
+  if (a === 'q-polyfree') { S.stage = 1; S.sk.mode = 'free'; S.origin = { kind: 'poly' }; return render(); }
   if (a === 'qmode') { S.quick.mode = d.v; S.focusReq = 'input[data-in="q"]'; return render(); }
   if (a === 'quickCancel') { if (S.quick.edit) { S.quick = null; S.stage = 3; } else S.quick = null; return render(); }
   if (a === 'quickBuild') return quickBuild();
   if (a === 'editQuick') { const o = S.origin; S.quick = { kind: 'oval', mode: o.mode, f: { ...o.f }, edit: true }; S.stage = 0; S.sel = null; S.op = null; S.focusReq = 'input[data-in="q"]'; return render(); }
   if (a === 'home') { const had = S.sk.pts.length; Object.assign(S, FRESH()); render(); if (had) toast('Контур сброшен'); return; }
   if (a === 'freeWall') { S.sk.free = !S.sk.free; return render(); }
+  if (a === 'tab2') { S.tab2 = d.v; S.dpick = null; S.sel = null; blurActive(); return render(); }
+  if (a === 'dpk') { const i = +d.i; if (!S.dpick) { S.dpick = { a: i }; return render(); } const a0 = S.dpick.a; S.dpick = null; if (a0 === i) return render();
+    const lo = Math.min(a0, i), hi = Math.max(a0, i), n = S.m.n; if (!((lo + 1) % n === hi || (hi + 1) % n === lo) && !isInteriorDiag(S.m.sol, lo, hi)) { render(); return toast('Эта линия выходит за стены комнаты', true); } return addDiag(a0, i); }
+  if (a === 'addSug') return addDiag(+d.i, +d.j);
+  if (a === 'vk') return setVKindAt(+d.i, d.k);
   if (a === 'undoPt') { S.sk.pts.pop(); return render(); }
   if (a === 'close') return closeSketch();
   if (a === 'rmDiag') { withSnap(() => S.m.diags.splice(+d.i, 1)); solveModel(S.m); return render(); }
@@ -408,7 +428,7 @@ $('#bNew').addEventListener('click', () => { if (S.stage === 0) { S.quick = null
   if (!newArm) { const b = $('#bNew'); b.textContent = 'Стереть?'; b.style.color = 'var(--laser)'; newArm = setTimeout(disarmNew, 3000); toast('Ещё раз, чтобы начать новый чертёж'); return; }
   disarmNew(); Object.assign(S, FRESH()); render(); });
 function viewKey() { const m = S.m; return [S.stage, S.quick ? S.quick.kind + S.quick.mode + (S.quick.edit ? 'e' : '') : '', S.origin ? S.origin.kind : '', S.sel ? S.sel.t + S.sel.i : '', S.pick ? S.pick.mode + (S.pick.a ?? '') : '', S.op ? S.op.kind + S.op.i + JSON.stringify(S.op.seg) : '',
-  m ? m.n + ':' + m.diags.length + ':' + (S.sel && S.sel.t === 'v' ? m.vert[S.sel.i].kind : '') : '', S.ops.length, S.poly ? S.poly.v.length : 0, S.sk.pts.length, S.sk.free ? 'f' : ''].join('|'); }
+  m ? m.n + ':' + m.diags.length + ':' + m.vert.map(v => v.kind[0]).join('') + ':' + (S.sel && S.sel.t === 'v' ? m.vert[S.sel.i].kind : '') : '', S.tab2, S.dpick ? S.dpick.a : '', S.ops.length, S.poly ? S.poly.v.length : 0, S.sk.pts.length, S.sk.free ? 'f' : ''].join('|'); }
 function renderSheet() { const key = viewKey(); if (key === sheetKey) { updateSheet(); return; }
   const top = sheet.scrollTop; sheetKey = key; sheet.innerHTML = S.stage === 0 ? sheet0() : S.stage === 1 ? sheet1() : S.stage === 2 ? sheet2() : sheet3(); updateSheet(); sheet.scrollTop = top; }
 // ───────── stage 0: quick commands (rectangle, circle/ellipse, polygon) ─────────
@@ -420,12 +440,14 @@ function quickSpec() { const q = S.quick; if (q.kind === 'rect') return { title:
   return q.mode === 'circle' ? { title: 'Окружность', fields: [['r', 'Радиус', 'см']] } : { title: 'Эллипс', fields: [['rx', 'Радиус по ширине', 'см'], ['ry', 'Радиус по высоте', 'см']] }; }
 const glyph = k => k === 'rect' ? '<svg viewBox="0 0 36 36"><rect x="4" y="8" width="28" height="20" rx="1.5" fill="var(--fill)" stroke="var(--ink)" stroke-width="2"/></svg>'
   : k === 'oval' ? '<svg viewBox="0 0 36 36"><ellipse cx="18" cy="18" rx="14" ry="10" fill="var(--fill)" stroke="var(--ink)" stroke-width="2"/></svg>'
+  : k === 'free' ? '<svg viewBox="0 0 36 36"><path d="M5 30L9 6H27L32 20L26 30Z" fill="var(--fill)" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round"/><path d="M9 6L26 30" stroke="var(--ink3)" stroke-width="1.5" stroke-dasharray="3 2"/></svg>'
   : '<svg viewBox="0 0 36 36"><path d="M4 6H22V16H32V30H4Z" fill="var(--fill)" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round"/></svg>';
 function sheet0() { const q = S.quick;
   if (!q) return `<div class="sec">Как строить</div><div class="opts">
     <button class="opt" data-act="q-rect">${glyph('rect')}<div><b>Прямоугольник</b><span>Две стороны, готовый чертёж сразу</span></div></button>
     <button class="opt" data-act="q-oval">${glyph('oval')}<div><b>Окружность / эллипс</b><span>Радиус или два радиуса</span></div></button>
-    <button class="opt" data-act="q-poly">${glyph('poly')}<div><b>Многоугольник</b><span>Обвести комнату по углам, ввести длины</span></div></button></div>`;
+    <button class="opt" data-act="q-poly">${glyph('poly')}<div><b>Многоугольник · прямые углы</b><span>Обвести по сетке, ввести длины стен</span></div></button>
+    <button class="opt" data-act="q-polyfree">${glyph('free')}<div><b>Многоугольник · косые стены</b><span>Углы любые: длины, диагонали или градусы</span></div></button></div>`;
   const sp = quickSpec(); let h = `<div class="card op"><h3>${esc(sp.title)}${q.edit ? ' · изменить' : ''}</h3>`;
   if (q.kind === 'oval') h += `<div class="seg"><button class="${q.mode === 'circle' ? 'on' : ''}" data-act="qmode" data-v="circle">Окружность</button><button class="${q.mode === 'ellipse' ? 'on' : ''}" data-act="qmode" data-v="ellipse">Эллипс</button></div>`;
   h += '<div class="fields">' + sp.fields.map(([k, lbl, u]) => `<div class="fld"><span class="k">${esc(lbl)}</span>${numIn('q', `data-k="${k}"`, q.f[k] ?? '', '')}<span class="u">${u}</span></div>`).join('') + '</div>';
