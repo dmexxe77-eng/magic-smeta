@@ -132,6 +132,9 @@ svg.addEventListener('pointerup', pointerEnd); svg.addEventListener('pointercanc
 $('#zIn').addEventListener('click', () => zoomAt(1.5, { x: svg.clientWidth / 2, y: svg.clientHeight / 2 }));
 $('#zOut').addEventListener('click', () => zoomAt(1 / 1.5, { x: svg.clientWidth / 2, y: svg.clientHeight / 2 }));
 $('#zFit').addEventListener('click', () => { Z = { k: 1, dx: 0, dy: 0 }; renderCanvas(); });
+$('#stages').addEventListener('click', e => { const b = e.target.closest('[data-stage]'); if (!b) return; const t = +b.dataset.stage; if (t === S.stage) return;
+  if (t === 1) return act('back1', {}); if (t === 2 && S.stage === 3) return act('back2', {});
+  if (t === 3 && S.stage === 2) { if (S.m.status.missing) return toast('Сначала введите размеры: ' + statusInfo().h, true); return act('done', {}); } });
 // Куда ложится новая стена — по тому, как её нарисовали:
 //  · явно косая (длиннее ~44 px на экране и дальше 22° от обеих осей) — остаётся как есть, близко к 45° прилипает к 45°;
 //  · иначе по сетке: короткая стена всегда перпендикулярна предыдущей (мелкий выступ пальцем точно не нарисовать),
@@ -216,7 +219,7 @@ function sheet2() { const m = S.m, n = m.n, tab = S.tab2 || 'walls';
     for (let i = 0; i < n; i++) { const vt = m.vert[i];
       h += `<div class="row vrow"><span class="lbl">${L(i)}</span><span class="cur" data-cur="${i}"></span><div class="seg mini"><button class="${vt.kind === 'ortho' ? 'on' : ''}" data-act="vk" data-i="${i}" data-k="ortho">прямой</button><button class="${vt.kind === 'free' ? 'on' : ''}" data-act="vk" data-i="${i}" data-k="free">свободный</button><button class="${vt.kind === 'deg' ? 'on' : ''}" data-act="vk" data-i="${i}" data-k="deg">°</button></div>${vt.kind === 'deg' ? numIn('ang', `data-i="${i}"`, vt.deg ?? '', '') + kbBtns : ''}</div>`; }
     h += '</div>'; }
-  h += `<div class="btns"><button class="btn sm ghost" data-act="back1">← Контур</button><button class="btn pri" id="doneBtn" data-act="done">${S.ops.length ? 'Перестроить ✓' : 'Построить ✓'}</button></div>`;
+  h += `<div class="btns"><button class="btn pri" id="doneBtn" data-act="done">${S.ops.length ? 'Перестроить ✓' : 'Построить ✓'}</button></div>`;
   if (S.ops.length) h += `<div class="note">После перестроения заново применятся правки этапа 3: ${S.ops.map(opLabel).join(', ')}</div>`;
   return h; }
 function updateSheet2() { const m = S.m, n = m.n, st = m.status, si = statusInfo(), box = $('#st2');
@@ -341,7 +344,7 @@ function sheet3() { const poly = S.poly, n = poly.v.length, st = polyStats(poly)
   if (S.sel && S.sel.t === 's') { const i = S.sel.i, ai = arcInfo(poly, i);
     return `<div class="card"><h3><span class="m">${L(i)}${L((i + 1) % n)}</span> стена <small>${cm(sideLen(poly, i))} см${ai ? ' · дуга ' + cm(ai.len) : ''}</small></h3>
     <div class="acts"><button class="btn" data-act="op" data-k="len">${GL.len('end')}<span>Длина</span></button><button class="btn" data-act="op" data-k="shift">${GL.shift('out')}<span>Сдвинуть</span></button><button class="btn" data-act="op" data-k="add">${GL.add('start')}<span>Точка на стене</span></button><button class="btn" data-act="op" data-k="bump">${GL.bump('in')}<span>Выступ / ниша</span></button><button class="btn" data-act="op" data-k="arc">${GL.arc('out')}<span>${ai ? 'Изменить дугу' : 'Дуга'}</span></button>${ai ? '<button class="btn" data-act="unarc">Убрать дугу</button>' : '<button class="btn ghost" data-act="deselect">Закрыть</button>'}</div></div>`; }
-  const oval = S.origin && S.origin.kind === 'oval', back = oval ? '<button class="btn sm ghost" data-act="editQuick">← Радиусы</button>' : '<button class="btn sm ghost" data-act="back2" title="Длины, углы, диагонали">← Размеры</button>';
+  const oval = S.origin && S.origin.kind === 'oval', back = oval ? '<button class="btn sm ghost" data-act="editQuick">← Радиусы</button>' : '';
   const shape = oval ? (S.origin.mode === 'circle' ? `Окружность R <b>${S.origin.f.r}</b> см` : `Эллипс <b>${S.origin.f.rx}</b> × <b>${S.origin.f.ry}</b> см`) : `Углов <b>${n}</b>: внутр. <b>${st.inner}</b>, наруж. <b>${st.outer}</b>${st.fillets ? `, скруглений <b>${st.fillets}</b>` : ''}${st.arcs ? `, дуг <b>${st.arcs}</b>` : ''}`;
   return `<div class="res"><div class="t"><div class="k">Площадь</div><div class="v">${fmt2(st.area)}<small>м²</small></div></div><div class="t"><div class="k">Периметр</div><div class="v">${fmt2(st.perim)}<small>м</small></div></div>${back}</div>
   <div class="meta">${shape}${S.ops.length ? `, правок <b>${S.ops.length}</b>` : ''} · тап по углу или стене — действия</div>
@@ -458,8 +461,9 @@ function updateSheet0() { const nn = $('#qnote'); if (!nn) return; const poly = 
 function quickBuild() { const poly = quickPoly(); if (!poly) return toast('Введите размеры', true); const q = S.quick;
   S.origin = q.kind === 'rect' ? { kind: 'rect' } : { kind: 'oval', mode: q.mode, f: { ...q.f } };
   S.base = poly; if (!q.edit) { S.ops = []; S.redoOps = []; S.m = null; S.hist2 = []; S.redo2 = []; } S.quick = null; S.stage = 3; S.sel = null; S.op = null; blurActive(); rebuild(); render(); }
-function renderChrome() { const names = ['Контур', 'Размеры', 'Правка'], quickShape = S.origin && S.origin.kind !== 'poly';
-  $('#stages').innerHTML = S.stage === 0 ? '' : S.stage === 3 && quickShape ? '<span class="pill on"><b>✓</b>Правка</span>' : names.map((nm, k) => `<span class="pill ${k + 1 === S.stage ? 'on' : k + 1 < S.stage ? 'done' : ''}"><b>${k + 1}</b>${nm}</span>`).join('');
+function renderChrome() { const names = ['Контур', 'Размеры', 'Правка'], isRect = S.origin && S.origin.kind === 'rect', isOval = S.origin && S.origin.kind === 'oval';
+  // пилюли этапов кликабельные: назад на контур или размеры, вперёд на правку, если размеров хватает
+  $('#stages').innerHTML = S.stage === 0 ? '' : isOval ? '<span class="pill on"><b>✓</b>Правка</span>' : names.map((nm, k) => (isRect && k === 0) ? '' : `<button class="pill ${k + 1 === S.stage ? 'on' : k + 1 < S.stage ? 'done' : ''}" data-stage="${k + 1}"><b>${k + 1}</b>${nm}</button>`).join('');
   $('#hint').textContent = S.stage === 0 ? (S.quick ? 'Чертёж появится по мере ввода размеров' : 'Выберите способ построения') : S.stage === 1 ? (S.sk.pts.length ? 'Следующий угол по порядку обхода, стены по сетке. Замкнуть — тап по A' : 'Тап по экрану ставит первый угол A') : S.stage === 2 ? 'Тап по стене — ввести длину. Тап по углу — прямой, свободный или градусы' : 'Тап по углу или стене — редактировать';
   $('#hint').style.display = S.stage === 1 && S.sk.pts.length > 5 ? 'none' : '';
   $('#sub').textContent = S.stage === 0 || S.stage === 1 ? '' : `${S.stage === 2 ? S.m.n : S.poly.v.length} углов`;
