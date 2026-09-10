@@ -20,6 +20,8 @@ await build({ entryPoints: ['src/design-bridge/contract-entry.jsx'], bundle: tru
   outfile: OUT + '/contract.js', minify: true, charset: 'utf8', jsx: 'automatic', loader: { '.js': 'jsx' }, logLevel: 'error',
   alias: { react: shim('react.js'), 'react-dom/client': shim('react-dom.js'), 'react-dom': shim('react-dom.js'), 'react/jsx-runtime': shim('jsx-runtime.js') } });
 
+await build({ entryPoints: ['src/design-bridge/ec-entry.js'], bundle: true, format: 'iife', globalName: 'MagicEC', outfile: OUT + '/ec.js', minify: true, charset: 'utf8', logLevel: 'error' });
+
 const src = fs.readFileSync('design-src/prototype.html', 'utf8');
 const grab = type => src.match(new RegExp('<script type="__bundler/' + type + '">([\\s\\S]*?)</script>'))[1];
 const manifest = JSON.parse(grab('manifest'));
@@ -42,7 +44,7 @@ const rep = (a, b, label) => { const n = tpl.split(a).length - 1; if (n !== 1) t
 rep('<meta name="viewport" content="width=device-width, initial-scale=1">',
   '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n<title>ZAMER.PRO · дизайн</title>\n' +
   '<link rel="stylesheet" href="/design/draw.css">\n<script src="/design/vendor/react.js"></script>\n<script src="/design/vendor/react-dom.js"></script>\n' +
-  '<script src="/design/draw.js"></script>\n<script src="/design/trace.js"></script>\n<script src="/design/contract.js"></script>\n' + MOBILE_CSS, 'head');
+  '<script src="/design/draw.js"></script>\n<script src="/design/trace.js"></script>\n<script src="/design/contract.js"></script>\n<script src="/design/ec.js"></script>\n' + MOBILE_CSS, 'head');
 
 /* Вводное описание прототипа (карточка над рамкой телефона) на сайт не идёт */
 {
@@ -80,10 +82,17 @@ const METHODS = [
   "      onSaveContract:c=>self.upd(p.id,x=>Object.assign({},x,{contract:c})),",
   "      onClose:()=>{h.close();}});}",
   "  openContractTpl(){if(!window.MagicContract){this.toast('Шаблон не загрузился');return;}const h=window.MagicContract.openTemplate({onClose:()=>h.close()});}",
+  "  exportEC(){const p=this.cur();if(!p||!window.MagicEC){this.toast('Выгрузка не загрузилась');return;}if(!p.rooms.length){this.toast('Сначала добавьте помещения');return;}const ed=this.ed(p.id);",
+  "    const rooms=p.rooms.filter(r=>r.on).map(r=>{const g=geom(r.v),e=est([r],ed),pr=PR('canvas',r.canvas.pid),nom=pr&&pr.items[0]?pr.items[0].n:'',w=(nom.match(/(\\d{3})\\s*см/)||[])[1];",
+  "      return{name:r.name,verts:r.v,area:g.a,perim:g.p,material:nom||(pr?pr.name:''),width:w?+w:320,texture:/ткан/i.test(nom)?'Ткань':'Матовая',items:e.mats.concat(e.works).map(l=>({n:l.n,q:l.q,u:l.u}))};});",
+  "    const all=est(p.rooms,ed),order=all.mats.concat(all.works).map(l=>({n:l.n,q:l.q,u:l.u}));let tpl=null;try{tpl=JSON.parse(localStorage.getItem('zamer.contractTpl')||'null');}catch(e){}const hd=(tpl&&tpl.head)||{};",
+  "    this.setState({sheet:null});window.MagicEC.exportFiles({company:hd.legal||hd.company||'',companyPhone:hd.phone||'',address:p.address||p.name,phone:p.phone||'',client:p.client||'',name:p.name,rooms,order}).then(res=>this.toast(res==='cancelled'?'Отменено':'Файлы .ec и .json для Easy Ceiling готовы'));}",
   '',
 ].join('\n');
 rep('  arVals(){\n', METHODS + '  arVals(){\n', 'methods');
 rep("pContract:()=>this.toast('Договор — не входит в этот прототип'),", 'pContract:()=>this.openContract(),', 'contract tab');
+rep("{label:'Тихие стены',color:INK,pick:()=>{this.setState({sheet:null});this.toast('Тихие стены — не входят в прототип');}},",
+  "{label:'Файл для Easy Ceiling (.ec + .json)',color:INK,pick:()=>this.exportEC()},\n        {label:'Тихие стены',color:INK,pick:()=>{this.setState({sheet:null});this.toast('Тихие стены — не входят в прототип');}},", 'ec menu');
 rep("it('Д',AS,A,'Шаблон договора','Автозаполнение из проекта')", "it('Д',AS,A,'Шаблон договора','Реквизиты, разделы, оформление',null,()=>this.openContractTpl())", 'account template item');
 
 /* Низ расчёта: слева сумма текущего помещения (итог проекта уже в шапке), сама панель компактнее */
@@ -132,4 +141,4 @@ const out = src
   .replace('<title>Bundled Page</title>', '<title>ZAMER.PRO · дизайн</title>');
 fs.writeFileSync(OUT + '/index.html', out);
 const kb = f => Math.round(fs.statSync(f).size / 1024) + ' КБ';
-console.log('design page:', kb(OUT + '/index.html'), '· draw.js', kb(OUT + '/draw.js'), '· trace.js', kb(OUT + '/trace.js'), '· contract.js', kb(OUT + '/contract.js'));
+console.log('design page:', kb(OUT + '/index.html'), '· draw.js', kb(OUT + '/draw.js'), '· trace.js', kb(OUT + '/trace.js'), '· contract.js', kb(OUT + '/contract.js'), '· ec.js', kb(OUT + '/ec.js'));
