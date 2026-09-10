@@ -2,7 +2,7 @@
 // Чистые функции без DOM. Единицы: метры; ввод в интерфейсе — сантиметры.
 'use strict';
 // ───────── helpers ─────────
-export const L = i => String.fromCharCode(65 + i);
+export const L = i => String.fromCharCode(65 + (i % 26)) + (i >= 26 ? Math.floor(i / 26) : ''); // после Z: A1, B1 … Z1, A2 …
 export const TAU = Math.PI * 2, DEG = 180 / Math.PI;
 export const wrap = a => { a = (a + Math.PI) % TAU; if (a < 0) a += TAU; return a - Math.PI; };
 export const hyp = (a, b) => Math.hypot(b.x - a.x, b.y - a.y);
@@ -203,7 +203,7 @@ export function opBump(poly, i, fromEnd, off, width, depth, dir) { const P = pts
   const list = [vA, ...mid, vB];
   const q = clone(poly);
   if (i === n - 1) { q.v.splice(n - 1, 1); q.v.splice(0, 1); q.v.push(...list); } else q.v.splice(i, 2, ...list);
-  if (q.v.length > 26) throw new Error('Больше 26 вершин пока нельзя'); return q; }
+  if (q.v.length > 200) throw new Error('Слишком много вершин'); return q; }
 
 
 // ───────── quick shapes ─────────

@@ -149,7 +149,7 @@ function onTap(p) { const P = S.sk.pts; if (S.stage === 0) return;
   if (S.stage === 1) {
     if (p.hit) { const i = p.hit.i; if (p.moved) { const n = P.length; P[i] = snapPt(P[i], P[(i - 1 + n) % n], P.filter((_, k) => k !== i)); commit(); }
       else if (i === 0 && P.length >= 3) closeSketch(); return; }
-    if (p.moved) return; if (P.length >= 26) return toast('Больше 26 вершин пока нельзя', true);
+    if (p.moved) return; if (P.length >= 200) return toast('Слишком много точек', true);
     const q = snapPt(fromS({ x: p.x, y: p.y }), P[P.length - 1], P, S.sk.mode === 'free', P[P.length - 2]); if (P.some(o => hyp(o, q) < 14 / Z.k)) return; P.push(q); commit(); return; }
   if (S.stage === 2) { const h = p.hit;
     if (S.pick) { if (h && h.t === 'v') pickVertex(h.i); return; }
@@ -167,8 +167,8 @@ function closeSketch() { const P = S.sk.pts; if (P.length < 3) return;
     const lastV = eq(last.x, prev.x), lastH = eq(last.y, prev.y), abH = eq(B.y, A.y), abV = eq(B.x, A.x);
     if (lastV && abV) last.y = A.y;
     else if (lastH && abH) last.x = A.x;
-    else if (lastV && abH) { if (eq(last.x, A.x)) P.pop(); else if (eq(last.y, A.y)) P.shift(); else if (n < 26) P.push({ x: A.x, y: last.y }); }
-    else if (lastH && abV) { if (eq(last.y, A.y)) P.pop(); else if (eq(last.x, A.x)) P.shift(); else if (n < 26) P.push({ x: last.x, y: A.y }); } }
+    else if (lastV && abH) { if (eq(last.x, A.x)) P.pop(); else if (eq(last.y, A.y)) P.shift(); else if (n < 200) P.push({ x: A.x, y: last.y }); }
+    else if (lastH && abV) { if (eq(last.y, A.y)) P.pop(); else if (eq(last.x, A.x)) P.shift(); else if (n < 200) P.push({ x: last.x, y: A.y }); } }
   S.m = solveModel(makeModel(P, S.sk.mode)); S.stage = 2; S.sel = null; S.hist2 = []; S.redo2 = []; S.tab2 = 'walls'; S.dpick = null; render();
   if (S.sk.mode === 'free') toast('Углы не заданы: после длин понадобятся диагонали. Прямые можно отметить во вкладке «Углы»'); else if (S.m.vert.every(v => v.kind === 'ortho')) toast('Все углы прямые. Введите длины стен'); else toast('Углы без маркера — свободные. Их можно уточнить'); }
 let toastT = null;
