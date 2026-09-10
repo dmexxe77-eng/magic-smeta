@@ -14,6 +14,7 @@ const TEMPLATE = `<div class="app" id="app">
     <div class="stages" id="stages"></div>
     <svg id="cv" xmlns="http://www.w3.org/2000/svg"></svg>
     <div class="zoom"><button id="zIn" title="Крупнее">+</button><button id="zOut" title="Мельче">−</button><button id="zFit" class="fit" title="Вписать">⤢</button></div>
+    <div class="start" id="start" hidden></div>
     <div class="hint" id="hint"></div>
     <div class="toast" id="toast"></div>
   </div>
@@ -422,6 +423,7 @@ function act(a, d) {
   if (a === 'unarc') return commitOp({ kind: 'arc', i: S.sel.i, mode: 'h', val: 0, dir: 'out' }); }
 sheet.addEventListener('input', e => { if (e.target && e.target.id === 'roomName') S.roomName = e.target.value; });
 sheet.addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (!b || !sheet.contains(b)) return; if ((b.dataset.act === 'nextField' || b.dataset.act === 'blur') && Date.now() - kbActAt < 600) return; act(b.dataset.act, b.dataset); });
+$('#start').addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b) act(b.dataset.act, b.dataset); });
 $('#bBack').addEventListener('click', () => { if (opts.onBack) opts.onBack(); });
 $('#bUndo').addEventListener('click', () => { if (S.stage === 1) { S.sk.pts.pop(); render(); } else if (S.stage === 2) undo2(); else if (S.stage === 3 && S.ops.length) { S.redoOps.push(S.ops.pop()); rebuild(); S.sel = null; S.op = null; render(); } });
 $('#bRedo').addEventListener('click', () => { if (S.stage === 2) redo2(); else if (S.stage === 3 && S.redoOps.length) { S.ops.push(S.redoOps.pop()); rebuild(); S.sel = null; S.op = null; render(); } });
@@ -433,6 +435,9 @@ $('#bNew').addEventListener('click', () => { if (S.stage === 0) { S.quick = null
 function viewKey() { const m = S.m; return [S.stage, S.quick ? S.quick.kind + S.quick.mode + (S.quick.edit ? 'e' : '') : '', S.origin ? S.origin.kind : '', S.sel ? S.sel.t + S.sel.i : '', S.pick ? S.pick.mode + (S.pick.a ?? '') : '', S.op ? S.op.kind + S.op.i + JSON.stringify(S.op.seg) : '',
   m ? m.n + ':' + m.diags.length + ':' + m.vert.map(v => v.kind[0]).join('') + ':' + (S.sel && S.sel.t === 'v' ? m.vert[S.sel.i].kind : '') : '', S.tab2, S.dpick ? S.dpick.a : '', S.ops.length, S.poly ? S.poly.v.length : 0, S.sk.pts.length, S.sk.free ? 'f' : ''].join('|'); }
 function renderSheet() { const key = viewKey(); if (key === sheetKey) { updateSheet(); return; }
+  const startOnly = S.stage === 0 && !S.quick; const start = $('#start'); // выбор способа — вверху холста, чтобы не тянуться вниз
+  start.hidden = !startOnly; sheet.hidden = startOnly;
+  if (startOnly) { sheetKey = key; start.innerHTML = sheet0(); sheet.innerHTML = ''; return; }
   const top = sheet.scrollTop; sheetKey = key; sheet.innerHTML = S.stage === 0 ? sheet0() : S.stage === 1 ? sheet1() : S.stage === 2 ? sheet2() : sheet3(); updateSheet(); sheet.scrollTop = top; }
 // ───────── stage 0: quick commands (rectangle, circle/ellipse, polygon) ─────────
 function quickPoly() { const q = S.quick; if (!q) return null; const n = k => parseNum(q.f[k]);
@@ -464,7 +469,7 @@ function quickBuild() { const poly = quickPoly(); if (!poly) return toast('Вв�
 function renderChrome() { const names = ['Контур', 'Размеры', 'Правка'], isRect = S.origin && S.origin.kind === 'rect', isOval = S.origin && S.origin.kind === 'oval';
   // пилюли этапов кликабельные: назад на контур или размеры, вперёд на правку, если размеров хватает
   $('#stages').innerHTML = S.stage === 0 ? '' : isOval ? '<span class="pill on"><b>✓</b>Правка</span>' : names.map((nm, k) => (isRect && k === 0) ? '' : `<button class="pill ${k + 1 === S.stage ? 'on' : k + 1 < S.stage ? 'done' : ''}" data-stage="${k + 1}"><b>${k + 1}</b>${nm}</button>`).join('');
-  $('#hint').textContent = S.stage === 0 ? (S.quick ? 'Чертёж появится по мере ввода размеров' : 'Выберите способ построения') : S.stage === 1 ? (S.sk.pts.length ? 'Следующий угол по порядку обхода, стены по сетке. Замкнуть — тап по A' : 'Тап по экрану ставит первый угол A') : S.stage === 2 ? 'Тап по стене — ввести длину. Тап по углу — прямой, свободный или градусы' : 'Тап по углу или стене — редактировать';
+  $('#hint').textContent = S.stage === 0 ? (S.quick ? 'Чертёж появится по мере ввода размеров' : '') : S.stage === 1 ? (S.sk.pts.length ? 'Следующий угол по порядку обхода, стены по сетке. Замкнуть — тап по A' : 'Тап по экрану ставит первый угол A') : S.stage === 2 ? 'Тап по стене — ввести длину. Тап по углу — прямой, свободный или градусы' : 'Тап по углу или стене — редактировать';
   $('#hint').style.display = S.stage === 1 && S.sk.pts.length > 5 ? 'none' : '';
   $('#sub').textContent = S.stage === 0 || S.stage === 1 ? '' : `${S.stage === 2 ? S.m.n : S.poly.v.length} углов`;
   $('#bUndo').disabled = S.stage === 0 ? true : S.stage === 1 ? !S.sk.pts.length : S.stage === 2 ? !S.hist2.length : !S.ops.length; $('#bRedo').disabled = S.stage === 2 ? !S.redo2.length : !(S.stage === 3 && S.redoOps.length);
