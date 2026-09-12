@@ -152,6 +152,96 @@ rep('<button sc-camel-on-click="{{ openRoomMenu }}" style="width:34px;height:34p
   tpl = tpl.slice(0, a) + blk + tpl.slice(b);
 }
 
+/* ── Экран «Финансы проекта» ─────────────────────────────────────────────
+   На карточке проекта остаются три последние операции: при тридцати приходах
+   и расходах экран был бесконечным. Полная история, сводка и фильтр — на
+   отдельном экране, куда ведёт строка под списком. */
+rep("pOps:ops.slice().reverse().map(o=>({label:o.note||(o.kind==='in'?'Оплата':'Расход'),date:o.date,color:o.kind==='in'?'#16A34A':'#FF3B30',sumTxt:(o.kind==='in'?'+':'−')+RUB(o.sum)})),",
+  "pOps:ops.slice().reverse().slice(0,3).map(o=>({label:o.note||(o.kind==='in'?'Оплата':'Расход'),date:o.date,color:o.kind==='in'?'#16A34A':'#FF3B30',sumTxt:(o.kind==='in'?'+':'−')+RUB(o.sum)})),\n      pOpsMoreOn:ops.length>0,pOpsMoreTxt:ops.length>3?'Все операции · '+ops.length:'Финансы объекта',openProjFin:()=>this.go('projFin'),",
+  'project ops limited');
+
+rep('                  </sc-for>\n                </div>\n              </sc-if>\n            </div>',
+  '                  </sc-for>\n                </div>\n              </sc-if>\n              <sc-if value="{{ pOpsMoreOn }}" hint-placeholder-val="{{ false }}">\n                <div sc-camel-on-click="{{ openProjFin }}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;height:36px;border-top:1px solid #F1F1F7;cursor:pointer;font-size:12.5px;font-weight:800;color:#4F46E5">{{ pOpsMoreTxt }}<span style="color:#A5A9B8;font-size:16px">›</span></div>\n              </sc-if>\n            </div>',
+  'project ops link');
+
+rep("isProject:s.screen==='project',isNew:s.screen==='new',", "isProject:s.screen==='project',isProjFin:s.screen==='projFin',isNew:s.screen==='new',", 'projFin flag');
+rep('this.projectVals(),this.newVals(),', 'this.projectVals(),this.projFinVals(),this.newVals(),', 'projFin vals');
+
+const PROJFIN_SCREEN = `        <sc-if value="{{ isProjFin }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;animation:zpIn .28s cubic-bezier(.2,.8,.2,1)">
+          <div style="flex:none;background:#fff;padding:6px {{ headPad }}px 10px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #ECECF4">
+            <button sc-camel-on-click="{{ pfBack }}" style="width:40px;height:40px;border-radius:12px;border:none;background:#F3F3FA;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none"><svg width="18" height="18" sc-camel-view-box="0 0 18 18"><path d="M11 4L6 9l5 5" style="fill:none;stroke:#1E2530;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"></path></svg></button>
+            <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:800">Финансы объекта</div><div style="font-size:11.5px;color:#6F7688;font-weight:600;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ pfName }}</div></div>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:12px {{ sidePad }}px 96px;scrollbar-width:none">
+            <div style="background:#fff;border-radius:20px;padding:14px 16px;margin-bottom:10px">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+                <div><div style="font-size:10.5px;font-weight:700;color:#6F7688;letter-spacing:.5px;text-transform:uppercase">Прибыль</div><div style="font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.6px;margin-top:2px;color:{{ pfProfitColor }}">{{ pfProfitTxt }}</div></div>
+                <div style="text-align:right"><div style="font-size:10.5px;font-weight:700;color:#6F7688;letter-spacing:.5px;text-transform:uppercase">По смете</div><div style="font-size:17px;font-weight:800;margin-top:4px;font-variant-numeric:tabular-nums">{{ pfSumTxt }}</div></div>
+              </div>
+              <div style="height:6px;border-radius:3px;background:#F1F1F7;margin-top:12px;overflow:hidden"><div style="height:100%;width:{{ pfPaidPct }}%;background:#16A34A;border-radius:3px"></div></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">
+                <sc-for list="{{ pfMetrics }}" as="mt" hint-placeholder-count="4">
+                  <div style="background:#F7F7FC;border-radius:14px;padding:9px 11px"><div style="font-size:10.5px;color:#6F7688;font-weight:700">{{ mt.label }}</div><div style="font-size:17px;font-weight:800;letter-spacing:-.3px;font-variant-numeric:tabular-nums;margin-top:2px;color:{{ mt.color }}">{{ mt.value }}</div><div style="font-size:10.5px;color:#A5A9B8;font-weight:600">{{ mt.sub }}</div></div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="display:flex;gap:6px;margin-bottom:10px">
+              <sc-for list="{{ pfChips }}" as="ch" hint-placeholder-count="3"><button sc-camel-on-click="{{ ch.pick }}" style="flex:1;height:34px;border-radius:999px;border:1.5px solid {{ ch.border }};background:{{ ch.bg }};color:{{ ch.color }};font-size:12.5px;font-weight:700;cursor:pointer">{{ ch.label }}</button></sc-for>
+            </div>
+            <sc-for list="{{ pfGroups }}" as="g" hint-placeholder-count="2">
+              <div style="background:#fff;border-radius:18px;padding:8px 14px 6px;margin-bottom:8px">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:2px 0 6px"><span style="font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#6F7688">{{ g.title }}</span><span style="font-size:12.5px;font-weight:800;font-variant-numeric:tabular-nums;color:{{ g.sumColor }}">{{ g.sumTxt }}</span></div>
+                <sc-for list="{{ g.items }}" as="op" hint-placeholder-count="3">
+                  <div style="display:flex;align-items:center;gap:10px;height:38px;border-top:1px solid #F1F1F7;font-size:12.5px"><span style="width:8px;height:8px;border-radius:50%;background:{{ op.color }};flex:none"></span><span style="flex:1;min-width:0;font-weight:600;color:#3D4454;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ op.label }}</span><span style="color:#A5A9B8;font-weight:600">{{ op.date }}</span><span style="font-weight:800;font-variant-numeric:tabular-nums;color:{{ op.color }};min-width:84px;text-align:right">{{ op.sumTxt }}</span></div>
+                </sc-for>
+              </div>
+            </sc-for>
+            <sc-if value="{{ pfEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#fff;border-radius:18px;padding:22px 16px;text-align:center;font-size:13px;color:#A5A9B8;font-weight:600">{{ pfEmptyTxt }}</div>
+            </sc-if>
+          </div>
+          <div style="flex:none;background:#fff;border-top:1px solid #ECECF4;padding:10px {{ sidePad }}px 8px;display:flex;gap:8px">
+            <button sc-camel-on-click="{{ pfIn }}" style="flex:1;height:44px;border-radius:14px;border:1.5px solid #B7E4C7;background:#fff;color:#16A34A;font-size:14px;font-weight:800;cursor:pointer">Приход</button>
+            <button sc-camel-on-click="{{ pfOut }}" style="flex:1;height:44px;border-radius:14px;border:1.5px solid #FFC7C2;background:#fff;color:#FF3B30;font-size:14px;font-weight:800;cursor:pointer">Расход</button>
+            <div style="height:{{ bottomPad }}px"></div>
+          </div>
+        </div>
+        </sc-if>
+
+`;
+rep('        <sc-if value="{{ isCalc }}" hint-placeholder-val="{{ false }}">', PROJFIN_SCREEN + '        <sc-if value="{{ isCalc }}" hint-placeholder-val="{{ false }}">', 'projFin screen');
+
+const PROJFIN_METHOD = [
+  "  projFinVals(){",
+  "    const s=this.state;if(s.screen!=='projFin')return{};const p=this.cur();if(!p)return{};",
+  "    const MON=['январь','февраль','март','апрель','май','июнь','июль','август','сентябрь','октябрь','ноябрь','декабрь'];",
+  "    const sum=this.pSum(p),paid=p.paid||0,debt=Math.max(0,sum-paid),ops=p.ops||[];",
+  "    const exp=ops.filter(o=>o.kind==='out').reduce((a,o)=>a+o.sum,0),profit=paid-exp,f=s.pfFilter||'all';",
+  "    const nIn=ops.filter(o=>o.kind==='in').length,nOut=ops.length-nIn;",
+  "    const chip=(id,label)=>{const on=f===id;return{label,pick:()=>this.setState({pfFilter:id}),border:on?INK:'#E4E4EE',bg:on?INK:'#fff',color:on?'#fff':'#3D4454'};};",
+  "    const shown=ops.map((o,i)=>Object.assign({},o,{i})).filter(o=>f==='all'||o.kind===f).reverse();",
+  "    const groups=[],by={};",
+  "    shown.forEach(o=>{const mm=parseInt(String(o.date||'').split('.')[1],10),key=mm>0&&mm<13?mm:0;",
+  "      if(!by[key]){by[key]={title:key?MON[key-1]:'Без даты',net:0,items:[]};groups.push(by[key]);}",
+  "      const g=by[key];g.net+=(o.kind==='in'?o.sum:-o.sum);",
+  "      g.items.push({label:o.note||(o.kind==='in'?'Оплата':'Расход'),date:o.date,color:o.kind==='in'?'#16A34A':'#FF3B30',sumTxt:(o.kind==='in'?'+':'−')+RUB(o.sum)});});",
+  "    groups.forEach(g=>{g.sumTxt=(g.net<0?'−':'+')+RUB(Math.abs(g.net));g.sumColor=g.net<0?'#FF3B30':'#16A34A';});",
+  "    const openFin=kind=>()=>this.setState({screen:'project',fin:{kind,sum:'',note:''}});",
+  "    return{pfName:[p.name,p.client].filter(Boolean).join(' · '),pfBack:()=>this.go('project'),",
+  "      pfSumTxt:sum?RUB(sum):'нет расчёта',pfProfitTxt:RUB(profit),pfProfitColor:profit>0?'#16A34A':profit<0?'#FF3B30':INK,",
+  "      pfPaidPct:sum?Math.min(100,Math.round(paid/sum*100)):0,",
+  "      pfMetrics:[{label:'Оплачено',value:RUB(paid),sub:sum?Math.min(100,Math.round(paid/sum*100))+'% сметы':'',color:'#16A34A'},",
+  "        {label:'Долг',value:RUB(debt),sub:debt?'ждём оплату':'всё оплачено',color:debt?'#FF3B30':INK},",
+  "        {label:'Расходы',value:RUB(exp),sub:nOut?nOut+' '+(nOut===1?'запись':nOut<5?'записи':'записей'):'нет записей',color:INK},",
+  "        {label:'Маржа',value:paid?Math.round(profit/paid*100)+'%':'—',sub:'от полученных денег',color:profit>0?'#16A34A':profit<0?'#FF3B30':INK}],",
+  "      pfChips:[chip('all','Все · '+ops.length),chip('in','Приходы · '+nIn),chip('out','Расходы · '+nOut)],",
+  "      pfGroups:groups,pfEmpty:groups.length===0,pfEmptyTxt:ops.length?'В этом фильтре записей нет':'Приходов и расходов пока нет',",
+  "      pfIn:openFin('in'),pfOut:openFin('out')};}",
+  '',
+].join('\n');
+rep('  arVals(){\n', PROJFIN_METHOD + '  arVals(){\n', 'projFin method');
+
 const json = JSON.stringify(tpl).replace(/<\//g, '<\\/');
 const out = src
   .replace(/<script type="__bundler\/template">[\s\S]*?<\/script>/, () => '<script type="__bundler/template">' + json + '</script>')
