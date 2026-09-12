@@ -453,7 +453,7 @@ const glyph = k => k === 'rect' ? '<svg viewBox="0 0 36 36"><rect x="4" y="8" wi
 function sheet0() { const q = S.quick;
   if (!q) return `<div class="sec">Как строить</div><div class="opts">
     <button class="opt" data-act="q-rect">${glyph('rect')}<div><b>Прямоугольник</b><span>Две стороны, готовый чертёж сразу</span></div></button>
-    <button class="opt" data-act="q-poly">${glyph('poly')}<div><b>Многоугольник · автоматически</b><span>Все углы прямые, одна-две косые стены распознаются сами</span></div></button>
+    <button class="opt" data-act="q-poly">${glyph('poly')}<div><b>Многоугольник · автоматически</b><span>Все углы прямые</span></div></button>
     <button class="opt" data-act="q-polyfree">${glyph('free')}<div><b>Сложный многоугольник</b><span>Углы неизвестны: длины, диагонали или градусы</span></div></button>
     <button class="opt" data-act="q-oval">${glyph('oval')}<div><b>Окружность / эллипс</b><span>Радиус или два радиуса</span></div></button></div>`;
   const sp = quickSpec(); let h = `<div class="card op"><h3>${esc(sp.title)}${q.edit ? ' · изменить' : ''}</h3>`;
