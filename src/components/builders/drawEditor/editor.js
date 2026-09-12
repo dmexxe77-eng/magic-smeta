@@ -473,8 +473,7 @@ function renderChrome() { const names = ['Контур', 'Размеры', 'Пр
   $('#hint').style.display = S.stage === 1 && S.sk.pts.length > 5 ? 'none' : '';
   $('#sub').textContent = S.stage === 0 || S.stage === 1 ? '' : `${S.stage === 2 ? S.m.n : S.poly.v.length} углов`;
   $('#bUndo').disabled = S.stage === 0 ? true : S.stage === 1 ? !S.sk.pts.length : S.stage === 2 ? !S.hist2.length : !S.ops.length; $('#bRedo').disabled = S.stage === 2 ? !S.redo2.length : !(S.stage === 3 && S.redoOps.length);
-  $('#bNew').style.visibility = S.stage === 0 && !S.quick ? 'hidden' : ''; $('.zoom').style.display = S.stage === 0 ? 'none' : '';
-  $('#app').classList.toggle('pick0', S.stage === 0 && !S.quick); }
+  $('#bNew').style.visibility = S.stage === 0 && !S.quick ? 'hidden' : ''; $('.zoom').style.display = S.stage === 0 ? 'none' : ''; }
 function save() { }
 function render() { if (S.stage !== lastStage) { Z = { k: 1, dx: 0, dy: 0 }; lastStage = S.stage; sheetKey = ''; } renderChrome(); renderCanvas(); renderSheet(); save();
   if (S.focusReq) { const el = sheet.querySelector(S.focusReq); S.focusReq = null; if (el) { focusIn(el); el.scrollIntoView({ block: 'nearest' });

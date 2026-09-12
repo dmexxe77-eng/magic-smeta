@@ -82,18 +82,26 @@ const METHODS = [
   "      onSaveContract:c=>self.upd(p.id,x=>Object.assign({},x,{contract:c})),",
   "      onClose:()=>{h.close();}});}",
   "  openContractTpl(){if(!window.MagicContract){this.toast('Шаблон не загрузился');return;}const h=window.MagicContract.openTemplate({onClose:()=>h.close()});}",
-  "  exportEC(){const p=this.cur();if(!p||!window.MagicEC){this.toast('Выгрузка не загрузилась');return;}if(!p.rooms.length){this.toast('Сначала добавьте помещения');return;}const ed=this.ed(p.id);",
-  "    const rooms=p.rooms.filter(r=>r.on).map(r=>{const g=geom(r.v),e=est([r],ed),pr=PR('canvas',r.canvas.pid),nom=pr&&pr.items[0]?pr.items[0].n:'',w=(nom.match(/(\\d{3})\\s*см/)||[])[1];",
-  "      return{name:r.name,verts:r.v,area:g.a,perim:g.p,material:nom||(pr?pr.name:''),width:w?+w:320,texture:/ткан/i.test(nom)?'Ткань':'Матовая',items:e.mats.concat(e.works).map(l=>({n:l.n,q:l.q,u:l.u}))};});",
-  "    const all=est(p.rooms,ed),order=all.mats.concat(all.works).map(l=>({n:l.n,q:l.q,u:l.u}));let tpl=null;try{tpl=JSON.parse(localStorage.getItem('zamer.contractTpl')||'null');}catch(e){}const hd=(tpl&&tpl.head)||{};",
-  "    this.setState({sheet:null});window.MagicEC.exportFiles({company:hd.legal||hd.company||'',companyPhone:hd.phone||'',address:p.address||p.name,phone:p.phone||'',client:p.client||'',name:p.name,rooms,order}).then(res=>this.toast(res==='cancelled'?'Отменено':'Файлы .ec и .json для Easy Ceiling готовы'));}",
+  "  exportEC(){const p=this.cur();if(!p||!window.MagicEC){this.toast('Выгрузка не загрузилась');return;}if(!p.rooms.length){this.toast('Сначала добавьте помещения');return;}",
+  "    const rooms=p.rooms.filter(r=>r.on).map(r=>{const g=geom(r.v),pr=PR('canvas',r.canvas.pid),nom=pr&&pr.items[0]?pr.items[0].n:'',w=(nom.match(/(\\d{3})\\s*см/)||[])[1];",
+  "      return{name:r.name,verts:r.v,area:g.a,perim:g.p,material:nom||(pr?pr.name:''),width:w?+w:320,texture:/ткан/i.test(nom)?'Ткань':'Матовая'};});",
+  "    if(!rooms.length){this.toast('Включите хотя бы одно помещение');return;}let tpl=null;try{tpl=JSON.parse(localStorage.getItem('zamer.contractTpl')||'null');}catch(e){}const hd=(tpl&&tpl.head)||{};",
+  "    this.setState({sheet:null});window.MagicEC.exportFiles({company:hd.legal||hd.company||'',companyPhone:hd.phone||'',address:p.address||p.name,phone:p.phone||'',client:p.client||'',name:p.name,rooms}).then(res=>this.toast(res==='cancelled'?'Отменено':'Чертежи (.ec) для Easy Ceiling готовы'));}",
   '',
 ].join('\n');
 rep('  arVals(){\n', METHODS + '  arVals(){\n', 'methods');
 rep("pContract:()=>this.toast('Договор — не входит в этот прототип'),", 'pContract:()=>this.openContract(),', 'contract tab');
+/* «Тихие стены» из меню убраны — на их место выгрузка чертежей для Easy Ceiling */
 rep("{label:'Тихие стены',color:INK,pick:()=>{this.setState({sheet:null});this.toast('Тихие стены — не входят в прототип');}},",
-  "{label:'Файл для Easy Ceiling (.ec + .json)',color:INK,pick:()=>this.exportEC()},\n        {label:'Тихие стены',color:INK,pick:()=>{this.setState({sheet:null});this.toast('Тихие стены — не входят в прототип');}},", 'ec menu');
+  "{label:'Чертежи для Easy Ceiling (.ec)',color:INK,pick:()=>this.exportEC()},", 'ec menu');
 rep("it('Д',AS,A,'Шаблон договора','Автозаполнение из проекта')", "it('Д',AS,A,'Шаблон договора','Реквизиты, разделы, оформление',null,()=>this.openContractTpl())", 'account template item');
+
+/* Выгрузка чертежей для Easy Ceiling — второй кнопкой в шторке «Экспорт», не только в меню проекта */
+rep("expDownloadLabel:'Скачать PDF',expDownload:()=>doneAnd('PDF сохранён · '+fname),",
+  "expDownloadLabel:'Скачать PDF',expDownload:()=>doneAnd('PDF сохранён · '+fname),expEC:()=>this.exportEC(),", 'export sheet ec handler');
+rep('<button sc-camel-on-click="{{ expToggleShare }}" style="height:44px;border-radius:14px;border:1.5px solid #E4E4EE;background:#fff;color:#1E2530;font-size:14px;font-weight:700;cursor:pointer">{{ expShareLabel }}</button>',
+  '<button sc-camel-on-click="{{ expToggleShare }}" style="height:44px;border-radius:14px;border:1.5px solid #E4E4EE;background:#fff;color:#1E2530;font-size:14px;font-weight:700;cursor:pointer">{{ expShareLabel }}</button>\n              <button sc-camel-on-click="{{ expEC }}" style="height:42px;border-radius:14px;border:1.5px solid #E4E4EE;background:#fff;color:#3D4454;font-size:13.5px;font-weight:700;cursor:pointer">Чертежи для Easy Ceiling (.ec)</button>',
+  'export sheet ec button');
 
 /* Низ расчёта: слева сумма текущего помещения (итог проекта уже в шапке), сама панель компактнее */
 rep("cTotalTxt:RUB(e.total),", "cTotalTxt:RUB(e.total),cRoomTotalTxt:RUB(est([r],ed).total),cRoomLabel:r.name,", 'room total');
