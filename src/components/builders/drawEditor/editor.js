@@ -33,7 +33,7 @@ function finish() { if (!S.poly) return; const st = polyStats(S.poly), F = flatt
 // ───────── state & canvas ─────────
 const FRESH = () => ({ stage: 0, sk: { pts: [], mode: 'grid' }, m: null, base: null, ops: [], redoOps: [], poly: null, sel: null, op: null, pick: null, hist2: [], redo2: [], hot: null, focusReq: null, sess: 0, quick: null, origin: null, roomName: opts.roomName || 'Помещение', tab2: 'walls', dpick: null });
 const S = FRESH();
-let VT = { s: 1, tx: 0, ty: 0 }, Z = { k: 1, dx: 0, dy: 0 }, lastStage = 0;
+let VT = { s: 1, tx: 0, ty: 0 }, Z = { k: 1, dx: 0, dy: 0 }, lastStage = 0, lastQuick = '';
 const svg = $('#cv'), NS = 'http://www.w3.org/2000/svg';
 function el(tag, attrs, text) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; return e; }
 const toS = p => ({ x: (p.x * VT.s + VT.tx) * Z.k + Z.dx, y: (p.y * VT.s + VT.ty) * Z.k + Z.dy });
@@ -101,11 +101,13 @@ function renderCanvas() { while (svg.firstChild) svg.removeChild(svg.firstChild)
   for (let i = 0; i < n; i++) { const p = toS(P[i]), fi = filletInfo(poly, i), o = dirOut(P, i);
     const on = S.sel && S.sel.t === 'v' && S.sel.i === i, isPick = (S.pick && S.pick.a === i) || (S.dpick && S.dpick.a === i);
     const nb = P.length, slA = hyp(toS(P[(i - 1 + nb) % nb]), p), slB = hyp(toS(P[(i + 1) % nb]), p), roomy = Math.min(slA, slB) >= 30;
-    if (S.stage === 2 && S.m.vert[i].kind === 'ortho' && roomy) { const n_ = P.length, u1 = norm(sub(P[(i - 1 + n_) % n_], P[i])), u2 = norm(sub(P[(i + 1) % n_], P[i])), s = 9 * LS;
+    // значок прямого угла ставим, только если угол и правда вышел прямым: иначе честно пишем градусы
+    const vkd = S.stage === 2 ? interiorDeg(P, i, wind) : 0, orthoOk = S.stage === 2 && S.m.vert[i].kind === 'ortho' && Math.min(Math.abs(vkd - 90), Math.abs(vkd - 270)) < 1;
+    if (orthoOk && roomy) { const n_ = P.length, u1 = norm(sub(P[(i - 1 + n_) % n_], P[i])), u2 = norm(sub(P[(i + 1) % n_], P[i])), s = 9 * LS;
       const a = add(p, mul(u1, s)), b = add(p, mul(add(u1, u2), s)), c = add(p, mul(u2, s));
       g.appendChild(el('path', { d: pathOf([a, b, c], false), style: 'fill:none;stroke:var(--ink2);stroke-width:1.2' })); }
-    if (S.stage === 2 && S.m.vert[i].kind !== 'ortho' && roomy) { const d = interiorDeg(P, i, wind), inn = mul(o, -1);
-      g.appendChild(text(add(p, mul(inn, 24 * LS)), Math.round(d) + '°', { size: 10 * LS, color: S.m.vert[i].kind === 'deg' ? 'var(--ink)' : 'var(--ink3)', italic: S.m.vert[i].kind === 'free' })); }
+    if (S.stage === 2 && !orthoOk && roomy) { const d = vkd, inn = mul(o, -1), vk = S.m.vert[i];
+      g.appendChild(text(add(p, mul(inn, 24 * LS)), Math.round(d) + '°', { size: 10 * LS, color: vk.kind === 'ortho' ? 'var(--bad)' : vk.kind === 'deg' ? 'var(--ink)' : 'var(--ink3)', italic: vk.kind === 'free' })); }
     if (fi) { g.appendChild(el('circle', { cx: p.x, cy: p.y, r: 3, style: 'fill:none;stroke:var(--ink3);stroke-width:1.2;stroke-dasharray:2 2' }));
       g.appendChild(text(add(toS(fi.C), mul(o, -2)), 'R' + cm(fi.R), { size: 10 * LS, color: 'var(--ink2)' })); }
     else g.appendChild(el('circle', { cx: p.x, cy: p.y, r: on || isPick ? 6 : 3.5 * LS, style: `fill:${on || isPick ? 'var(--laser)' : 'var(--paper)'};stroke:${on || isPick ? 'var(--laser)' : 'var(--ink)'};stroke-width:1.5` }));
@@ -116,7 +118,8 @@ function renderCanvas() { while (svg.firstChild) svg.removeChild(svg.firstChild)
 let ptr = null, pinch = null; const pointers = new Map();
 function xy(e) { const r = svg.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
 const midOf = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
-svg.addEventListener('pointerdown', e => { const p = xy(e); pointers.set(e.pointerId, p); try { svg.setPointerCapture(e.pointerId); } catch (err) { /* синтетические события без активного указателя */ } e.preventDefault();
+const gestureOff = () => S.stage === 0 && !S.quick; // экран выбора способа: холст пуст, жесты ни к чему
+svg.addEventListener('pointerdown', e => { if (gestureOff()) return; const p = xy(e); pointers.set(e.pointerId, p); try { svg.setPointerCapture(e.pointerId); } catch (err) { /* синтетические события без активного указателя */ } e.preventDefault();
   if (pointers.size === 2) { const [a, b] = [...pointers.values()]; pinch = { d0: Math.max(10, hyp(a, b)), m0: midOf(a, b), Z0: { ...Z } }; ptr = null; return; }
   if (pointers.size > 2 || pinch) return;
   const h = e.target.closest ? e.target.closest('[data-hit]') : null;
@@ -185,9 +188,12 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 const numIn = (name, extra, val, hint) => `<input class="in" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="next" data-in="${name}" ${extra} value="${esc(val ?? '')}" placeholder="${esc(hint ?? '')}">`;
 const parseNum = str => { const v = parseFloat(String(str).replace(',', '.')); return isFinite(v) && v > 0 ? v : null; };
 function statusInfo() { const st = S.m.status, n = S.m.n;
-  if (st.missing === 0) { const w = st.worst, a = w ? Math.abs(w.v) : 0, wa = st.worstAng ? Math.abs(st.worstAng.v) : 0;
+  if (st.missing === 0) { const w = st.worst, a = w ? Math.abs(w.v) : 0, wn = st.worstAng, wa = wn ? Math.abs(wn.v) : 0;
     if (a > 3) return { cls: 'bad', h: `Не сходится: ${w.label} на ${a.toFixed(0)} см`, s: 'Проверьте это измерение или соседние с ним' };
-    if (a > 1 || wa > 1) return { cls: 'warn', h: 'Фигура определена, размеры подогнаны', s: w ? `${w.label}: расхождение ${a.toFixed(1)} см` : `Угол ${st.worstAng.label}: расхождение ${wa.toFixed(1)}°` };
+    // длины держим точно, поэтому противоречие уходит в угол — говорим об этом прямо
+    if (wa > 2 && wn) return { cls: wa > 6 ? 'bad' : 'warn', h: `Угол ${wn.label} вышел ${Math.round(wn.act)}° вместо ${Math.round(wn.deg)}°`,
+      s: wn.auto ? 'Длины сохранены. Если угол точно прямой — проверьте соседние стены' : 'Длины сохранены. Проверьте этот угол или соседние измерения' };
+    if (a > 1 || wa > 1) return { cls: 'warn', h: 'Фигура определена, размеры подогнаны', s: w ? `${w.label}: расхождение ${a.toFixed(1)} см` : `Угол ${wn.label}: расхождение ${wa.toFixed(1)}°` };
     return { cls: 'ok', h: 'Фигура определена', s: st.empty.length ? 'Пустые стороны посчитаны автоматически' : 'Все размеры сходятся' }; }
   if (st.empty.length) return { cls: 'info', h: `Введите длины: осталось ${st.empty.length} из ${n}`, s: st.afterSides > 0 ? `Потом понадобится ещё ${st.afterSides}: диагональ или угол` : 'Длин сторон будет достаточно' };
   const sug = st.sug.diags.map(([i, j]) => 'диагональ ' + L(i) + '–' + L(j)); if (st.sug.angs.length) sug.push('угол ' + st.sug.angs.map(L).join(' / '));
@@ -250,7 +256,7 @@ function onInput(el) { const kind = el.dataset.in, v = parseNum(el.value), sess 
   if (kind === 'q') { if (S.quick) { S.quick.f[el.dataset.k] = el.value; renderCanvas(); updateSheet(); } return; }
   if (!S.m) return;
   withSnap(() => { if (kind === 'side') S.m.sides[+el.dataset.i] = v; else if (kind === 'diag') { const d = S.m.diags[+el.dataset.k]; if (d) d.cm = v; }
-    else if (kind === 'ang') { const vt = S.m.vert[+el.dataset.i]; vt.kind = 'deg'; vt.deg = (v && v > 3 && v < 357 && Math.abs(v - 180) > 1) ? v : null; } }, sess);
+    else if (kind === 'ang') { const vt = S.m.vert[+el.dataset.i]; vt.kind = 'deg'; vt.user = true; vt.deg = (v && v > 3 && v < 357 && Math.abs(v - 180) > 1) ? v : null; } }, sess);
   clearTimeout(applyT); applyT = setTimeout(flushApply, 500); }
 function flushApply() { if (!applyT) return; clearTimeout(applyT); applyT = null; if (!S.m || S.stage !== 2) return; solveModel(S.m); renderCanvas(); updateSheet(); save(); }
 // В режиме клавиатуры видна только активная строка: перед фокусом показываем строку нужного поля, иначе focus() не сработает
@@ -285,8 +291,8 @@ function pickVertex(i) { const p = S.pick; if (p.mode === 'ang') { S.pick = null
   if (p.a == null) { p.a = i; render(); return; } if (p.a === i) return toast('Выберите другую вершину', true); const a = p.a; S.pick = null; addDiag(a, i); }
 function setVKind(k) { return setVKindAt(S.sel.i, k); }
 function setVKindAt(i, k) { const vt = S.m.vert[i];
-  withSnap(() => { if (k === 'ortho') { const d = interiorDeg(S.m.sol, i, S.m.wind); vt.kind = 'ortho'; vt.deg = Math.abs(d - 270) < Math.abs(d - 90) ? 270 : 90; }
-    else if (k === 'free') { vt.kind = 'free'; vt.deg = null; } else if (vt.kind !== 'deg') { vt.kind = 'deg'; vt.deg = null; } });
+  withSnap(() => { if (k === 'ortho') { const d = interiorDeg(S.m.sol, i, S.m.wind); vt.kind = 'ortho'; vt.deg = Math.abs(d - 270) < Math.abs(d - 90) ? 270 : 90; vt.user = true; }
+    else if (k === 'free') { vt.kind = 'free'; vt.deg = null; vt.user = false; } else if (vt.kind !== 'deg') { vt.kind = 'deg'; vt.deg = null; vt.user = true; } });
   if (k === 'deg') S.focusReq = `input[data-in="ang"][data-i="${i}"]`; solveModel(S.m); render(); }
 
 // ───────── stage 3: operations, journal, persistence ─────────
@@ -473,9 +479,10 @@ function renderChrome() { const names = ['Контур', 'Размеры', 'Пр
   $('#hint').style.display = S.stage === 1 && S.sk.pts.length > 5 ? 'none' : '';
   $('#sub').textContent = S.stage === 0 || S.stage === 1 ? '' : `${S.stage === 2 ? S.m.n : S.poly.v.length} углов`;
   $('#bUndo').disabled = S.stage === 0 ? true : S.stage === 1 ? !S.sk.pts.length : S.stage === 2 ? !S.hist2.length : !S.ops.length; $('#bRedo').disabled = S.stage === 2 ? !S.redo2.length : !(S.stage === 3 && S.redoOps.length);
-  $('#bNew').style.visibility = S.stage === 0 && !S.quick ? 'hidden' : ''; $('.zoom').style.display = S.stage === 0 ? 'none' : ''; }
+  $('#bNew').style.visibility = S.stage === 0 && !S.quick ? 'hidden' : ''; $('.zoom').style.display = S.stage === 0 && !S.quick ? 'none' : ''; }
 function save() { }
-function render() { if (S.stage !== lastStage) { Z = { k: 1, dx: 0, dy: 0 }; lastStage = S.stage; sheetKey = ''; } renderChrome(); renderCanvas(); renderSheet(); save();
+function render() { const qk = S.quick ? S.quick.kind + (S.quick.mode || '') : '';
+  if (S.stage !== lastStage || qk !== lastQuick) { Z = { k: 1, dx: 0, dy: 0 }; lastStage = S.stage; lastQuick = qk; sheetKey = ''; } renderChrome(); renderCanvas(); renderSheet(); save();
   if (S.focusReq) { const el = sheet.querySelector(S.focusReq); S.focusReq = null; if (el) { focusIn(el); el.scrollIntoView({ block: 'nearest' });
     S.hot = el.dataset.in === 'side' ? { t: 's', i: +el.dataset.i } : el.dataset.in === 'diag' ? { t: 'd', k: +el.dataset.k } : null; renderCanvas(); } } }
 function commit() { render(); }

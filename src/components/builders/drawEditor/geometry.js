@@ -33,17 +33,20 @@ export function isInteriorDiag(P, i, j) { const n = P.length; if (i === j || (i 
   return inside(P, mul(add(P[i], P[j]), .5)); }
 
 // ───────── constraint solver (Levenberg–Marquardt over vertex coords) ─────────
-export const W_ANG = 2.0, W_PRIOR = 0.02, NEED = n => 2 * n - 3;
+/* Веса решателя. Длина в метрах = 1. Углы, которые назвал замерщик (прямой или градусы),
+   стоят дорого; углы, угаданные по наброску, — дёшево: при противоречии подвинется
+   предположение об угле, а введённые длины останутся как есть. */
+export const W_ANG = 2.0, W_ANG_AUTO = 0.12, W_PRIOR = 0.02, NEED = n => 2 * n - 3;
 export const toPts = X => { const P = []; for (let i = 0; i < X.length; i += 2) P.push({ x: X[i], y: X[i + 1] }); return P; };
 export const flat = P => { const X = []; P.forEach(p => X.push(p.x, p.y)); return X; };
 
 export function buildCons(m) { const n = m.n, cs = [];
   m.sides.forEach((v, i) => { if (v != null) cs.push({ t: 'len', i, j: (i + 1) % n, v: v / 100, label: L(i) + L((i + 1) % n) }); });
   m.diags.forEach(d => { if (d.cm != null) cs.push({ t: 'len', i: d.i, j: d.j, v: d.cm / 100, label: L(d.i) + '–' + L(d.j), diag: true }); });
-  m.vert.forEach((vt, i) => { if (vt.kind !== 'free' && vt.deg != null) cs.push({ t: 'ang', i, v: vt.deg, label: L(i) }); });
+  m.vert.forEach((vt, i) => { if (vt.kind !== 'free' && vt.deg != null) cs.push({ t: 'ang', i, v: vt.deg, label: L(i), auto: !vt.user, w: vt.user ? W_ANG : W_ANG_AUTO }); });
   return cs; }
 export function conRes(c, P, wind) { if (c.t === 'len') return hyp(P[c.i], P[c.j]) - c.v;
-  const tau = wind * (Math.PI - c.v / DEG); return wrap(turnAt(P, c.i) - tau) * W_ANG; }
+  const tau = wind * (Math.PI - c.v / DEG); return wrap(turnAt(P, c.i) - tau) * (c.w || W_ANG); }
 export function resid(X, cons, prior, wind) { const P = toPts(X); const r = cons.map(c => conRes(c, P, wind));
   if (prior) for (let i = 0; i < prior.length; i++) { r.push((X[2 * i] - prior[i].x) * W_PRIOR, (X[2 * i + 1] - prior[i].y) * W_PRIOR); } return r; }
 export function jac(X, f) { const r0 = f(X), m = r0.length, nv = X.length, J = [], eps = 1e-6;
@@ -81,9 +84,14 @@ export function estScale(m) { const rs = [], n = m.n; let mx = 1;
   if (!rs.length) return 4 / mx; return Math.exp(rs.reduce((a, b) => a + b, 0) / rs.length); }
 
 export function analyze(m, X) { const n = m.n, wind = m.wind, cons = buildCons(m), need = NEED(n), P = toPts(X);
-  const { r0, J } = cons.length ? jac(X.slice(), XX => resid(XX, cons, null, wind)) : { r0: [], J: [] };
+  const { r0 } = cons.length ? jac(X.slice(), XX => resid(XX, cons, null, wind)) : { r0: [] };
+  // ранг считаем по одинаково взвешенным углам, иначе дешёвые авто-углы теряются на пороге
+  const consN = cons.map(c => (c.t === 'ang' ? Object.assign({}, c, { w: W_ANG }) : c));
+  const { J } = cons.length ? jac(X.slice(), XX => resid(XX, consN, null, wind)) : { J: [] };
   const rank = rankOf(J), missing = Math.max(0, need - rank);
-  const res = cons.map((c, k) => ({ label: c.label, t: c.t, diag: !!c.diag, v: c.t === 'len' ? r0[k] * 100 : r0[k] / W_ANG * DEG }));
+  const res = cons.map((c, k) => ({ label: c.label, t: c.t, diag: !!c.diag, auto: !!c.auto, i: c.i,
+    deg: c.t === 'ang' ? c.v : null, act: c.t === 'ang' ? interiorDeg(P, c.i, wind) : null,
+    v: c.t === 'len' ? r0[k] * 100 : r0[k] / (c.w || W_ANG) * DEG }));
   const worst = res.filter(r => r.t === 'len').sort((a, b) => Math.abs(b.v) - Math.abs(a.v))[0] || null;
   const worstAng = res.filter(r => r.t === 'ang').sort((a, b) => Math.abs(b.v) - Math.abs(a.v))[0] || null;
   const empty = m.sides.map((v, i) => v == null ? i : -1).filter(i => i >= 0);

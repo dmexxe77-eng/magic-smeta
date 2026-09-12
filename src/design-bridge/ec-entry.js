@@ -16,6 +16,7 @@ function cmPoints(verts) {
 function sidesOf(P) { return P.map((p, i) => { const j = (i + 1) % P.length; return { a: i, b: j, len: hyp(p, P[j]) }; }); }
 /* Диагонали через одну вершину, как в SmartDraw: A–C, B–D, … ; для четырёхугольника только A–C */
 function diagsOf(P) { const n = P.length, out = [];
+  if (n < 4) return []; // у треугольника диагоналей нет: пара A–C — это сторона
   if (n === 4) return [{ a: 0, b: 2, len: hyp(P[0], P[2]) }];
   for (let i = 0; i < n; i++) { const j = (i + 2) % n; if (n > 4 || i < j) out.push({ a: i, b: j, len: hyp(P[i], P[j]) }); }
   return out; }
