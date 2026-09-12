@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom';
 import { DEFAULT_CONTRACT_TPL, CONTRACT_STYLES, contractFields, contractHtml, nextContractNumber } from '../data/contract.js';
 import { htmlToPdf } from '../utils/pdf.js';
 import { compressImg } from '../utils/imageUtils.js';
+import { fitToStage } from './stage.js';
 
 /* Договор для страницы дизайна.
    В проекте: условия (номер, дата монтажа, предоплата), заказчик, PDF / поделиться, предпросмотр — всё сохраняется само.
@@ -50,7 +51,7 @@ function Paper({ html }) {
 
 function Shell({ title, sub, onClose, children }) {
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 9000, background: D.bg, overflowY: 'auto', fontFamily: "'Manrope','Inter',system-ui,sans-serif", color: D.ink, WebkitFontSmoothing: 'antialiased' }}>
+    <div style={{ position: 'absolute', inset: 0, zIndex: 9000, background: D.bg, overflowY: 'auto', fontFamily: "'Manrope','Inter',system-ui,sans-serif", color: D.ink, WebkitFontSmoothing: 'antialiased' }}>
       <div style={{ position: 'sticky', top: 0, zIndex: 5, background: D.card, borderBottom: '1px solid ' + D.line, padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
         <button onClick={onClose} style={{ background: D.bg, border: 'none', borderRadius: 12, width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
           <svg width="16" height="16" fill="none" stroke={D.ink} strokeWidth="2" strokeLinecap="round"><path d="M10 4L6 8l4 4" /></svg>
@@ -225,9 +226,11 @@ function TemplateEditor({ onClose }) {
 
 function mount(node, onClose) {
   const host = document.createElement('div');
+  host.style.zIndex = '9000';
   document.body.appendChild(host);
+  const unfit = fitToStage(host);
   const root = ReactDOM.createRoot(host);
-  const close = () => { root.unmount(); host.remove(); };
+  const close = () => { root.unmount(); unfit(); host.remove(); };
   root.render(React.cloneElement(node, { onClose: () => { if (onClose) onClose(); else close(); } }));
   return { close };
 }

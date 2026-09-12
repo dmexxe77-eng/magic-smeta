@@ -1,4 +1,5 @@
 import { createDrawEditor } from '../components/builders/drawEditor/editor.js';
+import { fitToStage } from './stage.js';
 import '../components/builders/drawEditor/editor.css';
 
 /* Токены страницы дизайна (design-src/README.md, раздел 1) */
@@ -17,8 +18,9 @@ export function open(opts = {}) {
   host.style.zIndex = '9000';
   Object.entries(DESIGN_VARS).forEach(([k, v]) => host.style.setProperty(k, v));
   document.body.appendChild(host);
+  const unfit = fitToStage(host);
   let ed = null;
-  const close = () => { if (ed) { ed.destroy(); ed = null; } host.remove(); };
+  const close = () => { if (ed) { ed.destroy(); ed = null; } unfit(); host.remove(); };
   ed = createDrawEditor(host, {
     roomName: opts.roomName,
     initial: opts.initial || null,

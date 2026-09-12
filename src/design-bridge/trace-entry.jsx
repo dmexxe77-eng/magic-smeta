@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import TracingCanvas from '../components/canvas/TracingCanvas.jsx';
 import PdfPagePicker from '../components/builders/PdfPagePicker.jsx';
+import { fitToStage } from './stage.js';
 
 /* Обводка чертежа для страницы дизайна: тот же TracingCanvas, что в веб-версии,
    в полноэкранном оверлее. Помещения отдаются наружу по одному через onRoom. */
@@ -60,8 +61,9 @@ export function open(opts) {
   const host = document.createElement('div');
   Object.assign(host.style, { position: 'fixed', inset: '0', zIndex: '9000', background: '#fff', overflow: 'hidden', fontFamily: "'Manrope','Inter',system-ui,sans-serif" });
   document.body.appendChild(host);
+  const unfit = fitToStage(host);
   const root = ReactDOM.createRoot(host);
-  const close = () => { root.unmount(); host.remove(); };
+  const close = () => { root.unmount(); unfit(); host.remove(); };
   root.render(<TraceApp file={opts.file} roomCount={opts.roomCount || 0} onRoom={opts.onRoom || (() => {})} onDone={() => { if (opts.onDone) opts.onDone(); }} />);
   return { close };
 }
