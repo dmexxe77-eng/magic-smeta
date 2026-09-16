@@ -110,6 +110,7 @@ function CalcScreen({onMenu,initRooms,orderName,onBack,onRoomsChange,initPlanIma
   const[showExport,setShowExport]=useState(false);
   const[showConfigExport,setShowConfigExport]=useState(false);
   const[expType,setExpType]=useState("total");
+  const[expRoomId,setExpRoomId]=useState(null); /* помещение для сметы одного помещения; по умолчанию — открытое */
   const[expCols,setExpCols]=useState({num:true,name:true,qty:true,unit:true,price:true,total:true});
   const[expPct,setExpPct]=useState(0); /* корректировка стоимости: -15 = скидка 15%, +10 = наценка 10% */
   const[exportHtml,setExportHtml]=useState(null);
@@ -608,7 +609,10 @@ function CalcScreen({onMenu,initRooms,orderName,onBack,onRoomsChange,initPlanIma
             <span onClick={()=>setShowExport(false)} style={{color:T.red,fontSize:16,cursor:"pointer"}}>{"×"}</span>
           </div>
           <div style={{fontSize:10,color:T.dim,textTransform:"uppercase",marginBottom:6}}>{"Тип сметы"}</div>
-          {[{id:"total",n:"Общая смета"},{id:"totalDraw",n:"Общая + чертежи"},{id:"perRoom",n:"По помещениям"}].map(t=>{const a=t.id===expType;return(<div key={t.id} onClick={()=>setExpType(t.id)} style={{background:a?T.actBg:T.pillBg,border:"1.5px solid "+(a?T.accent:T.border),borderRadius:10,padding:"10px 12px",marginBottom:5,cursor:"pointer"}}><span style={{fontSize:12,fontWeight:a?600:400,color:a?T.accent:T.text}}>{t.n}</span></div>);})}
+          {[{id:"total",n:"Общая смета"},{id:"totalDraw",n:"Общая + чертежи"},{id:"perRoom",n:"По помещениям"},{id:"room",n:"Одно помещение"}].map(t=>{const a=t.id===expType;return(<div key={t.id} onClick={()=>setExpType(t.id)} style={{background:a?T.actBg:T.pillBg,border:"1.5px solid "+(a?T.accent:T.border),borderRadius:10,padding:"10px 12px",marginBottom:5,cursor:"pointer"}}><span style={{fontSize:12,fontWeight:a?600:400,color:a?T.accent:T.text}}>{t.n}</span></div>);})}
+          {expType==="room"&&<div style={{display:"flex",flexWrap:"wrap",gap:4,marginTop:4}}>
+            {rooms.map(rm2=>{const a=rm2.id===(expRoomId||tab);return(<span key={rm2.id} onClick={()=>setExpRoomId(rm2.id)} style={{background:a?T.actBg:T.pillBg,border:"1px solid "+(a?T.accent:T.border),borderRadius:8,padding:"6px 10px",fontSize:11,fontWeight:a?700:400,color:a?T.accent:T.sub,cursor:"pointer"}}>{rm2.name+" · "+fmt(gA(rm2))+" м²"}</span>);})}
+          </div>}
           <div style={{fontSize:10,color:T.dim,textTransform:"uppercase",margin:"10px 0 6px"}}>{"Столбцы"}</div>
           <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
             {[["num","#"],["name","Название"],["qty","Кол-во"],["unit","Ед."],["price","Цена"],["total","Итого"]].map(([k,l])=>{const on=expCols[k];return(<span key={k} onClick={()=>setExpCols(p=>({...p,[k]:!p[k]}))} style={{background:on?T.actBg:T.pillBg,border:"1px solid "+(on?T.accent+"40":T.border),borderRadius:6,padding:"5px 10px",fontSize:10,color:on?T.accent:T.dim,cursor:"pointer"}}>{(on?"✓ ":"")+l}</span>);})}
@@ -733,19 +737,21 @@ td.total-val{font-weight:700;color:#1e2530}
                 '<div class="grand-total"><div class="grand-title">ИТОГО К ОПЛАТЕ</div><div class="grand-value">'+fmtRub(adjTotal)+'</div></div>';
             };
             const nowDate=new Date().toLocaleDateString("ru-RU");
-            const activeRooms=rooms.filter(x=>x.on!==false);
+            /* смета одного помещения: берём выбранное в шторке, иначе открытое в расчёте */
+            const expRoom=expType==="room"?(rooms.find(x=>x.id===(expRoomId||tab))||r):null;
+            const activeRooms=expRoom?[expRoom]:rooms.filter(x=>x.on!==false);
             const totalArea=activeRooms.reduce((s,x)=>s+gA(x),0);
             const projectName=String(orderName||"");
             const projectCustomer="";
-            const projectType=expType==="perRoom"?"По помещениям":(expType==="totalDraw"?"Общая + чертежи":"Общая смета");
-            let html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>Смета — '+(orderName||'')+'</title><style>'+css+'</style></head><body><div class="page">';
+            const projectType=expRoom?("Помещение: "+String(expRoom.name||"")):expType==="perRoom"?"По помещениям":(expType==="totalDraw"?"Общая + чертежи":"Общая смета");
+            let html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>Смета — '+(orderName||'')+(expRoom?' — '+String(expRoom.name||''):'')+'</title><style>'+css+'</style></head><body><div class="page">';
             html+='<div class="header"><div class="hdr"><div class="hdr-left"><div class="hdr-title">Данные проекта</div><div class="hdr-grid"><div class="hdr-k">Название</div><div class="hdr-v">'+projectName+'</div><div class="hdr-k">Заказчик</div><div class="hdr-v">'+projectCustomer+'</div><div class="hdr-k">Тип сметы</div><div class="hdr-v">'+projectType+'</div><div class="hdr-k">Помещений</div><div class="hdr-v">'+activeRooms.length+'</div><div class="hdr-k">Площадь</div><div class="hdr-v">'+fmt(totalArea)+' м²</div></div></div><div class="hdr-right"><div><div class="co-brand">Magic</div><div class="co-name">студия отделки стен и потолков</div></div><div class="co-line">г.Хабаровск, ул.Промышленная, д.7<br/>тел: 8(924)4008040 Губарь Николай</div></div></div></div>';
             html+='<div class="body">';
 
-            if(expType==="perRoom"){
-              /* ═══ ПО ПОМЕЩЕНИЯМ ═══ */
+            if(expType==="perRoom"||expRoom){
+              /* ═══ ПО ПОМЕЩЕНИЯМ (или одно выбранное помещение) ═══ */
               let grandTotal=0;
-              for(const rm2 of rooms.filter(x=>x.on!==false)){
+              for(const rm2 of (expRoom?[expRoom]:rooms.filter(x=>x.on!==false))){
                 const re=buildEst([rm2],presets,globalOpts,nomSnapshot);
                 const worksRm=(re.works||[]).slice().sort((a,b)=>(b.q||0)-(a.q||0));
                 const mt2=re.mats.reduce((s,l)=>s+l.q*l.p,0);
