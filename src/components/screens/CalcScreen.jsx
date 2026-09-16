@@ -129,7 +129,7 @@ function CalcScreen({onMenu,initRooms,orderName,onBack,onRoomsChange,initPlanIma
   /* Список опций общий для всех проектов (живёт в CALC_STATE_REF и автосохранении), а галочки — свои у каждого проекта (initOptsOn) */
   const[globalOpts,setGlobalOpts]=useState(()=>{
     const base=Array.isArray(CALC_STATE_REF.globalOpts)&&CALC_STATE_REF.globalOpts.length?deep(CALC_STATE_REF.globalOpts):[{id:"go_wprot",name:"Укрытие стен защитной плёнкой",nomId:"w_prot",param:"perim",on:false}];
-    return base.map(o=>({...o,on:initOptsOn?!!initOptsOn[o.id]:o.on===true}));
+    return base.map(o=>({...o,on:!!(initOptsOn&&initOptsOn[o.id])})); /* галочки только из заказа: у старых заказов выключены */
   });
   const optsMounted=useRef(false);
   useEffect(()=>{if(!optsMounted.current){optsMounted.current=true;return;}if(onOptsChange)onOptsChange(Object.fromEntries(globalOpts.map(o=>[o.id,o.on===true])));},[globalOpts]);

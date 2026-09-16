@@ -161,8 +161,8 @@ export const USER_FAVS_OVERRIDE=USER_SNAPSHOT.sharedFavs||{};
 export const INITIAL_NOM_SNAPSHOT={customNoms:USER_SNAPSHOT.customNoms||[],editedNoms:USER_SNAPSHOT.editedNoms||[],deletedNomIds:USER_SNAPSHOT.deletedNomIds||[]};
 export const INITIAL_ORDERS=USER_SNAPSHOT.orders||[]; /* стартовые проекты для новых устройств */
 export const CALC_STATE_REF={presets:USER_PRESETS_OVERRIDE,sharedFavs:USER_FAVS_OVERRIDE,globalOpts:[],customBlocks:[]};
-/* Доп. опции для расчёта конкретного заказа: общий список, галочки — из заказа (ord.optsOn), у старых заказов — общие */
-export const optsForOrder=ord=>(CALC_STATE_REF.globalOpts||[]).map(g=>({...g,on:ord&&ord.optsOn?!!ord.optsOn[g.id]:g.on===true}));
+/* Доп. опции для расчёта конкретного заказа: общий список, галочки — только из заказа (ord.optsOn) */
+export const optsForOrder=ord=>(CALC_STATE_REF.globalOpts||[]).map(g=>({...g,on:!!(ord&&ord.optsOn&&ord.optsOn[g.id])}));
 
 export const BLOCK_CFG=[
   {id:"canvas",title:"Полотно",cat:"canvas",qtyLabel:"S",qtyUnit:"м²",maxFav:99,defFav:["btn_c_msd","btn_c_tkan","btn_c_trans","btn_c_clear"]},
