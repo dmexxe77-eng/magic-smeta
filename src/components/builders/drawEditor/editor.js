@@ -355,7 +355,7 @@ function sheet3() { const poly = S.poly, n = poly.v.length, st = polyStats(poly)
   const shape = oval ? (S.origin.mode === 'circle' ? `Окружность R <b>${S.origin.f.r}</b> см` : `Эллипс <b>${S.origin.f.rx}</b> × <b>${S.origin.f.ry}</b> см`) : `Углов <b>${n}</b>: внутр. <b>${st.inner}</b>, наруж. <b>${st.outer}</b>${st.fillets ? `, скруглений <b>${st.fillets}</b>` : ''}${st.arcs ? `, дуг <b>${st.arcs}</b>` : ''}`;
   return `<div class="res"><div class="t"><div class="k">Площадь</div><div class="v">${fmt2(st.area)}<small>м²</small></div></div><div class="t"><div class="k">Периметр</div><div class="v">${fmt2(st.perim)}<small>м</small></div></div>${back}</div>
   <div class="meta">${shape}${S.ops.length ? `, правок <b>${S.ops.length}</b>` : ''} · тап по углу или стене — действия</div>
-  <div class="btns fin"><input class="inName" id="roomName" value="${esc(S.roomName)}" placeholder="Название помещения" maxlength="40"><button class="btn pri" data-act="finish">Добавить в расчёт</button></div>`; }
+  <div class="btns fin"><input class="inName" id="roomName" value="${esc(S.roomName)}" placeholder="Название помещения" maxlength="40"><button class="btn pri" data-act="finish">${opts.initial ? 'Сохранить изменения' : 'Добавить в расчёт'}</button></div>`; }
 function updateSheet3() { const nn = $('#opnote'); if (nn && S.op) nn.textContent = opNote(); }
 function updateSheet() { if (S.stage === 0) updateSheet0(); else if (S.stage === 2 && S.m) updateSheet2(); else if (S.stage === 3) updateSheet3(); }
 function runOp(poly, op) { let q = null;
@@ -491,7 +491,12 @@ let vvFit = null;
 if (window.visualViewport) { const vv = window.visualViewport, app = $('#app'); vvFit = () => { if (window.innerWidth < 640) { app.style.height = vv.height + 'px'; app.style.transform = vv.offsetTop ? `translateY(${vv.offsetTop}px)` : ''; } else { app.style.height = ''; app.style.transform = ''; } renderCanvas(); }; vv.addEventListener('resize', vvFit); vv.addEventListener('scroll', vvFit); }
 document.fonts && document.fonts.ready.then(() => { if (alive) renderCanvas(); });
 // правка готового контура: сразу этап «Правка» с переданными вершинами (метры)
-if (opts.initial && Array.isArray(opts.initial.verts) && opts.initial.verts.length >= 3) { S.base = { v: opts.initial.verts.map(([x, y]) => ({ x, y, fillet: null, arc: null })) }; S.origin = { kind: 'poly' }; S.stage = 3; S.ops = []; rebuild(); }
+if (opts.initial && Array.isArray(opts.initial.verts) && opts.initial.verts.length >= 3) {
+  // если помещение построено этим же редактором, восстанавливаем базовую фигуру, правки и размеры — их можно продолжить
+  const d = opts.initial.draw, okDraw = d && d.base && Array.isArray(d.base.v) && d.base.v.length >= 3 && d.base.v.every(q => q && isFinite(q.x) && isFinite(q.y));
+  if (okDraw) { S.base = clone(d.base); S.ops = Array.isArray(d.ops) ? clone(d.ops) : []; S.origin = d.origin || { kind: 'poly' }; S.m = d.m && d.m.n === d.base.v.length ? clone(d.m) : null; }
+  else { S.base = { v: opts.initial.verts.map(([x, y]) => ({ x, y, fillet: null, arc: null })) }; S.origin = { kind: 'poly' }; S.ops = []; }
+  S.stage = 3; const rr = replay(S.base, S.ops); if (rr.failedAt != null) { S.ops = []; } rebuild(); }
 render();
 return { destroy() { alive = false; window.removeEventListener('resize', onResize); if (vvFit && window.visualViewport) { window.visualViewport.removeEventListener('resize', vvFit); window.visualViewport.removeEventListener('scroll', vvFit); } clearTimeout(applyT); root.innerHTML = ''; } };
 }

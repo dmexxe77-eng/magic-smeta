@@ -378,6 +378,8 @@ export default function App(){
       setTimeout(()=>{try{window.dispatchEvent(new Event("magicapp:saveNow"));}catch(e){}},200);
     }}
     onRoomsChange={updateOrderRooms}
+    initOptsOn={curOrder.optsOn||null}
+    onOptsChange={m=>{if(!curId)return;ordersRef.current=ordersRef.current.map(o=>o.id===curId?{...o,optsOn:m}:o);setOrders(ordersRef.current);}}
     initPlanImage={planImg||curOrder.planImage}
     initMode={["recognize","compass","manual","trace"].includes(curOrder.method)&&curOrder.rooms.length===0?curOrder.method:"main"}
     initNomSnapshot={curOrder.nomSnapshot||null}

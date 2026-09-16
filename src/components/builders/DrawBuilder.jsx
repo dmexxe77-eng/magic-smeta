@@ -6,16 +6,19 @@ import "./drawEditor/editor.css";
 
 /* Ручное построение: прямоугольник, овал или многоугольник с размерами → помещение в расчёт.
    Сам редактор императивный (drawEditor/editor.js), здесь только монтирование и перевод результата в Room. */
-export default function DrawBuilder({ onFinish, onBack, existingCount = 0 }) {
+export default function DrawBuilder({ onFinish, onBack, existingCount = 0, room = null }) {
   const ref = useRef(null);
   const cb = useRef({ onFinish, onBack });
   cb.current = { onFinish, onBack };
 
   useEffect(() => {
     const ed = createDrawEditor(ref.current, {
-      roomName: "Помещение " + (existingCount + 1),
+      roomName: room ? room.name : "Помещение " + (existingCount + 1),
+      /* правка готового помещения: открываем сразу этап «Правка» с его контуром и историей построения */
+      initial: room ? { verts: room.v, draw: room.draw || null } : null,
       onBack: () => { if (cb.current.onBack) cb.current.onBack(); },
       onFinish: ({ name, verts, area, perim, draw }) => {
+        if (room) { if (cb.current.onFinish) cb.current.onFinish({ name, verts, area, perim, draw }); return; }
         const rm = newR(name);
         rm.v = verts;           /* полилиния в метрах: дуги и скругления уже разбиты на отрезки */
         rm.aO = area;           /* точные площадь и периметр из редактора */

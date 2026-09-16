@@ -1549,3 +1549,8 @@ export const NOM_V2=[{"id":"n1","name":"TO GO Кейс мобильный с о�
 {"id":"n1724","name":"Bauf Serie 205 Глянец 303 белый","price":360,"unit":"м²","type":"canvas","brand":"v2_bauf","brandName":"Bauf","brandColor":"#0f8a8a","note":"Serie 205 · Глянец · Белый · код 303","ws":[3.2,4.5]},
 {"id":"n1728","name":"Bauf Serie 205 FIRE PROOF KM3 Матовый 303 белый 450 см","price":560,"unit":"м²","type":"canvas","brand":"v2_bauf","brandName":"Bauf","brandColor":"#0f8a8a","note":"205 FIRE PROOF KM3 · Матовый · Белый · ширина 450 см · код 303","w":4.5,"arch":true},
 {"id":"n1729","name":"Bauf Serie 205 FIRE PROOF KM3 Матовый 303 белый","price":460,"unit":"м²","type":"canvas","brand":"v2_bauf","brandName":"Bauf","brandColor":"#0f8a8a","note":"205 FIRE PROOF KM3 · Матовый · Белый · код 303","ws":[3.2,4.5]}];
+
+/* Папка «Гришины»: позиции из выгрузки SmartDrawPro. Кладём в ту же базу, чтобы папка бренда,
+   фильтры калькулятора и снапшоты цен работали как у остальных брендов новой базы. */
+import { NOM_GRISHINY } from "./nomGrishiny.js";
+NOM_V2.push(...NOM_GRISHINY);

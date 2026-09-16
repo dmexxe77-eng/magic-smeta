@@ -14,11 +14,7 @@ import { btnS, N, SecH, Sel, ProfSel, ProfDD, OptsInline, ProfLine, NI, ProGate 
 import { roomBox, canvasUsage, bestWidth, widthList, cutParams } from "../../data/canvas.js";
 import { AppHeader } from "../AppHeader.jsx";
 import PolyMini from "../canvas/PolyMini.jsx";
-import PolyEditorFull from "../canvas/PolyEditorFull.jsx";
-import RoomDrawer from "../builders/RoomDrawer.jsx";
 import TracingCanvas from "../canvas/TracingCanvas.jsx";
-import SketchRecognition from "../builders/SketchRecognition.jsx";
-import CompassBuilder from "../builders/CompassBuilder.jsx";
 import DrawBuilder from "../builders/DrawBuilder.jsx";
 import PdfPagePicker from "../builders/PdfPagePicker.jsx";
 
@@ -80,8 +76,9 @@ function BuilderSelect({ onSelect, onBack, rooms, onFileChosen }) {
   );
 }
 
-function CalcScreen({onMenu,initRooms,orderName,onBack,onRoomsChange,initPlanImage,initMode,onPlanImageChange,onSnapshotUpdate,initNomSnapshot}){
-  const[mode,setMode]=useState(initMode||"main");
+function CalcScreen({onMenu,initRooms,orderName,onBack,onRoomsChange,initPlanImage,initMode,onPlanImageChange,onSnapshotUpdate,initNomSnapshot,initOptsOn,onOptsChange}){
+  /* старые способы построения (распознавание, компас, рисование) заменены новым построителем: ведём на выбор способа */
+  const[mode,setMode]=useState(()=>["recognize","compass","draw"].includes(initMode)?"select":(initMode||"main"));
   const[nomSnapshot,setNomSnapshot]=useState(initNomSnapshot||null);
   const nomSnapshotRef=useRef(initNomSnapshot||null);
   const handleSnapshotUpdate=useCallback(snap=>{
@@ -118,7 +115,6 @@ function CalcScreen({onMenu,initRooms,orderName,onBack,onRoomsChange,initPlanIma
   const[exportHtml,setExportHtml]=useState(null);
   const[traceScale,setTraceScale]=useState(null);
   const[polyEdit,setPolyEdit]=useState(false);
-  const[roomDraw,setRoomDraw]=useState(false);
   const[delConfirm,setDelConfirm]=useState(null);
   const[editRoomName,setEditRoomName]=useState(null); /* id помещения в режиме редактирования названия */
   /* Если уже были в калькуляторе — берём из CALC_STATE_REF, иначе из базы */
@@ -130,7 +126,13 @@ function CalcScreen({onMenu,initRooms,orderName,onBack,onRoomsChange,initPlanIma
     return base;
   });
   /* globalOpts должен быть объявлен ДО useEffect который его использует */
-  const[globalOpts,setGlobalOpts]=useState([{id:uid(),name:"Укрытие стен защитной плёнкой",nomId:"w_prot",param:"perim",on:false}]);
+  /* Список опций общий для всех проектов (живёт в CALC_STATE_REF и автосохранении), а галочки — свои у каждого проекта (initOptsOn) */
+  const[globalOpts,setGlobalOpts]=useState(()=>{
+    const base=Array.isArray(CALC_STATE_REF.globalOpts)&&CALC_STATE_REF.globalOpts.length?deep(CALC_STATE_REF.globalOpts):[{id:"go_wprot",name:"Укрытие стен защитной плёнкой",nomId:"w_prot",param:"perim",on:false}];
+    return base.map(o=>({...o,on:initOptsOn?!!initOptsOn[o.id]:o.on===true}));
+  });
+  const optsMounted=useRef(false);
+  useEffect(()=>{if(!optsMounted.current){optsMounted.current=true;return;}if(onOptsChange)onOptsChange(Object.fromEntries(globalOpts.map(o=>[o.id,o.on===true])));},[globalOpts]);
   /* Свои блоки из редактора кнопок */
   const[customBlocks,setCustomBlocks]=useState(()=>Array.isArray(CALC_STATE_REF.customBlocks)?deep(CALC_STATE_REF.customBlocks):[]);
   /* Пишем текущее состояние в глобальный ref для экспорта */
@@ -297,14 +299,16 @@ function CalcScreen({onMenu,initRooms,orderName,onBack,onRoomsChange,initPlanIma
   const fileInput=(<input ref={fRef} type="file" accept="image/*,.pdf" onChange={handleFile} style={{display:"none"}}/>);
   /* Mode checks FIRST — before room access */
   if(pdfData)return(<PdfPagePicker pdfData={pdfData} onSelect={img=>{setPdfData(null);setPlanImage(img);setMode("trace");if(onPlanImageChange)onPlanImageChange(img);}} onBack={()=>setPdfData(null)}/>);
-  if(mode==="draw")return(<RoomDrawer roomCount={rooms.length} onDone={(poly,name)=>{const nm=name||("Помещение "+(rooms.length+1));const rm=newR(nm);rm.v=poly;rm.aO=null;rm.pO=null;const p2=calcPoly(poly);rm.canvas.qty=Math.round(p2.a*100)/100;rm.mainProf.qty=Math.round(p2.p*100)/100;setRooms(p=>[...p,rm]);setTab(rm.id);setMode("main");}} onCancel={()=>setMode(rooms.length?"main":"select")}/>);
   if(mode==="select")return(<BuilderSelect rooms={rooms} onSelect={m=>{setMode(m);}} onBack={rooms.length>0?()=>setMode("main"):onBack} onFileChosen={f=>{handleFile({target:{files:[f],value:""}});}}/>);
-  if(mode==="recognize")return(<SketchRecognition onFinish={rm=>{setRooms(p=>[...p,rm]);setTab(rm.id);setMode("main");}} onBack={()=>setMode("main")} existingCount={rooms.length}/>);
   if(mode==="manual")return(<DrawBuilder onFinish={rm=>{setRooms(p=>[...p,rm]);setTab(rm.id);setMode("main");}} onBack={()=>setMode("select")} existingCount={rooms.length}/>);
-  if(mode==="compass")return(<CompassBuilder onFinish={rm=>{setRooms(p=>[...p,rm]);setTab(rm.id);setMode("main");}} onBack={()=>setMode("main")} existingCount={rooms.length}/>);
   if(mode==="trace")return(<div style={{height:"100vh",display:"flex",flexDirection:"column"}}><TracingCanvas image={planImage} onFinish={rm=>{setRooms(p=>[...p,rm]);setTab(rm.id);}} completedRooms={rooms} initScale={traceScale} onScaleChange={s=>setTraceScale(s)}/><div style={{padding:"5px 10px",background:T.bg,display:"flex",justifyContent:"space-between",alignItems:"center",borderTop:"1px solid "+T.border,flexShrink:0}}><span style={{fontSize:10,color:T.sub}}>{"Обведено: "}<b style={{color:T.text}}>{rooms.length}</b></span><button onClick={()=>setMode("main")} style={{background:T.actBg,border:"1px solid "+T.actBd,borderRadius:10,padding:"5px 14px",color:T.accent,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{"Готово ("+rooms.length+")"}</button></div></div>);
 
   const r=rooms.find(x=>x.id===tab)||rooms[0];
+  /* Тап по чертежу — правка помещения в новом построителе (контур, размеры, правки) */
+  if(polyEdit&&r)return(<DrawBuilder room={r} onBack={()=>setPolyEdit(false)} onFinish={({name,verts,area,perim,draw})=>{
+    if(!verts||verts.length<3){setPolyEdit(false);return;}
+    u(r.id,rm=>{rm.v=verts;rm.aO=area;rm.pO=perim;rm.canvas.qty=area;rm.mainProf.qty=perim;rm.draw=draw;if(name)rm.name=name;return rm;});
+    setPolyEdit(false);}}/>);
   if(!r){if(mode==="main"&&rooms.length===0){setTimeout(()=>setMode("select"),0);}return null;}
   const poly=calcPoly(r.v||[]);
   const angs=getAngles((r.v||[]).map(p=>[p[0]*1000,p[1]*1000]));
@@ -381,10 +385,6 @@ function CalcScreen({onMenu,initRooms,orderName,onBack,onRoomsChange,initPlanIma
         </div>);})}
         <div onClick={()=>{const curR=rooms.find(x=>x.id===tab);const tplC=curR?.canvas?.applyAll?curR.canvas:null;const tplM=curR?.mainProf?.applyAll?curR.mainProf:null;setMode("select");}} style={{flex:"1 1 calc("+(100/perRow)+"% - 4px)",minWidth:0,border:"1px dashed "+T.border,borderRadius:10,padding:"5px 8px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{color:T.dim,fontSize:10}}>{"+"}</span></div>
       </div>);})()}
-
-      {/* Полноэкранные оверлеи чертежа — вне sticky-панели, иначе их перекрывают блоки */}
-      {polyEdit&&<PolyEditorFull verts={r.v} onChange={nv=>{if(!nv||nv.length<3||!nv.every(p=>Array.isArray(p)&&p.length===2&&isFinite(p[0])&&isFinite(p[1])))return;u(r.id,rm=>{rm.v=nv;rm.aO=null;rm.pO=null;const p2=calcPoly(nv);rm.canvas.qty=Math.round(p2.a*100)/100;rm.mainProf.qty=Math.round(p2.p*100)/100;return rm;});}} areaOverride={r.aO} perimOverride={r.pO} onAreaChange={v=>u(r.id,rm=>{rm.aO=v;rm.canvas.qty=v;return rm;})} onPerimChange={v=>u(r.id,rm=>{rm.pO=v;rm.mainProf.qty=v;return rm;})} onClose={()=>setPolyEdit(false)}/>}
-      {roomDraw&&<RoomDrawer initialVerts={r.v} onDone={nv=>{u(r.id,rm=>{rm.v=nv;rm.aO=null;rm.pO=null;const p2=calcPoly(nv);rm.canvas.qty=Math.round(p2.a*100)/100;rm.mainProf.qty=Math.round(p2.p*100)/100;return rm;});setRoomDraw(false);}} onCancel={()=>setRoomDraw(false)}/>}
 
       <div className="calc-2pane">
       <div className="calc-chart">

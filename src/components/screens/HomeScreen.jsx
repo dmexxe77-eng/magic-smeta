@@ -8,7 +8,7 @@ import { compressImg, profSvgHtml } from "../../utils/imageUtils.js";
 import { AUTO_SAVE_KEY, AUTO_SAVE_META_KEY, idbPut, idbGet, idbDel, blobToObjectUrl, blobToDataUrl, revokeObjectUrl, persistNomPhotoToIdb, loadNomPhotoFromIdb } from "../../utils/storage.js";
 import { P, PF, Pmp, Pap, Pcu, Ptr, DEFAULT_MAT, KK, LIGHT, OPT, PIMG, DEFAULT_FAV } from "../../data/profiles.js";
 import { ALL_NOM, NB, addNewNom, deleteNom, DELETED_NOM_IDS, RUNTIME_EDITED_NOMS, NOM_BRAND_GROUPS } from "../../data/nomenclature.jsx";
-import { PRESETS_GEN, PRbyId, USER_PRESETS_OVERRIDE, USER_FAVS_OVERRIDE, BLOCK_CFG, CALC_STATE_REF, newRoom, newR, gA, gP, buildEst, sanitizeOrdersForStorage, applyNomsSnapshot, STATUSES} from "../../data/presets.js";
+import { PRESETS_GEN, PRbyId, USER_PRESETS_OVERRIDE, USER_FAVS_OVERRIDE, BLOCK_CFG, CALC_STATE_REF, newRoom, newR, gA, gP, buildEst, sanitizeOrdersForStorage, applyNomsSnapshot, STATUSES, optsForOrder} from "../../data/presets.js";
 import { btnS, N, SecH, Sel, ProfSel, ProfDD, OptsInline, ProfLine, NI, ProGate } from "../ui.jsx";
 import PolyMini from "../canvas/PolyMini.jsx";
 import PolyEditorFull from "../canvas/PolyEditorFull.jsx";
@@ -139,7 +139,7 @@ function HomeScreen({onMenu,contractTpl,setContractTpl,orders,setOrders,onOpen,o
     salary:"ЗП",tools:"Инструменты",designer_bonus:"Бонус дизайнеру"};
   const EXP_CATS=["materials","transport","consumable","tools","salary","designer_bonus","other"];
   const calcFin=ord=>{
-    const est=(ord.rooms||[]).length>0?buildEst(ord.rooms,CALC_STATE_REF.presets,CALC_STATE_REF.globalOpts||[],ord.nomSnapshot||null):{mats:[],works:[]};
+    const est=(ord.rooms||[]).length>0?buildEst(ord.rooms,CALC_STATE_REF.presets,optsForOrder(ord),ord.nomSnapshot||null):{mats:[],works:[]};
     const total=est.mats.reduce((s,l)=>s+l.q*l.p,0)+est.works.reduce((s,l)=>s+l.q*l.p,0);
     const inc=(ord.payments||[]).filter(x=>x.type==="income").reduce((s,x)=>s+x.amount,0);
     const exp=(ord.expenses||[]).reduce((s,x)=>s+x.amount,0);
@@ -464,7 +464,7 @@ function HomeScreen({onMenu,contractTpl,setContractTpl,orders,setOrders,onOpen,o
       {/* Договор — поверх карточки проекта */}
       {showContract&&(()=>{
         const fin=calcFin(ord);
-        const est=(ord.rooms||[]).length>0?buildEst(ord.rooms,CALC_STATE_REF.presets,CALC_STATE_REF.globalOpts||[],ord.nomSnapshot||null):{mats:[],works:[]};
+        const est=(ord.rooms||[]).length>0?buildEst(ord.rooms,CALC_STATE_REF.presets,optsForOrder(ord),ord.nomSnapshot||null):{mats:[],works:[]};
         return(<ContractScreen ord={ord} est={est} total={fin.total} area={fin.area}
           tpl={contractTpl} onTplChange={setContractTpl}
           onSaveContract={c=>setOrders(prev=>prev.map(o=>o.id===ord.id?{...o,contract:c}:o))}
