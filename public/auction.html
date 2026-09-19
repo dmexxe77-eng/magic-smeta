@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#f7f7f5">
+<title>Авто из Японии — Владивосток</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Golos+Text:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f7f7f5;--card:#ffffff;--border:#e8e8e4;--border2:#d4d4ce;
+  --acc:#4F46E5;--acc-light:#eeeeff;--text:#111118;--sub:#6b6b7a;--dim:#b0b0ba;
+  --green:#16a34a;--green-light:#dcfce7;--orange:#d97706;--orange-light:#fef3c7;
+  --red:#dc2626;--red-light:#fee2e2;--navy:#1e2030;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{font-family:'Golos Text',sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.5;-webkit-tap-highlight-color:transparent;}
+input,select,button,textarea{font-family:inherit;font-size:inherit;color:inherit;}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
+input[type=number]{-moz-appearance:textfield;}
+
+.app{max-width:540px;margin:0 auto;padding:18px 16px 80px;}
+
+header{margin-bottom:18px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+.title{font-family:'Unbounded',sans-serif;font-size:18px;font-weight:700;letter-spacing:0.3px;line-height:1.2;}
+.subtitle{font-size:12px;color:var(--sub);margin-top:4px;}
+.rates-pill{
+  background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:6px 10px;font-size:11px;color:var(--sub);font-variant-numeric:tabular-nums;
+  cursor:pointer;display:flex;align-items:center;gap:6px;flex-shrink:0;
+}
+.rates-pill .dot{width:6px;height:6px;border-radius:50%;background:var(--green);}
+.rates-pill.stale .dot{background:var(--orange);}
+.rates-pill.err .dot{background:var(--red);}
+
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:12px;}
+.card-title{font-size:11px;font-weight:600;color:var(--sub);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;}
+.card-title .hint{font-size:10px;color:var(--dim);text-transform:none;letter-spacing:0;font-weight:500;}
+
+.field{margin-bottom:12px;}
+.field:last-child{margin-bottom:0;}
+.label{display:block;font-size:12px;color:var(--sub);margin-bottom:5px;font-weight:500;}
+.input,.select{
+  width:100%;background:#fafaf8;border:1px solid var(--border);border-radius:10px;
+  padding:11px 13px;font-size:15px;font-weight:500;color:var(--text);
+  transition:border-color .15s,background .15s;
+}
+.input:focus,.select:focus{outline:none;border-color:var(--acc);background:#fff;}
+.select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'><path fill='%236b6b7a' d='M6 8L0 0h12z'/></svg>");background-repeat:no-repeat;background-position:right 13px center;background-size:9px;padding-right:34px;}
+
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+
+.input-suffix{position:relative;}
+.input-suffix .input{padding-right:46px;}
+.input-suffix .suffix{position:absolute;right:13px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--dim);font-weight:600;pointer-events:none;}
+
+.toggle-grp{display:flex;background:#f0f0ed;border-radius:10px;padding:3px;}
+.toggle-grp button{
+  flex:1;background:none;border:none;border-radius:7px;padding:8px 6px;
+  font-size:12px;font-weight:600;color:var(--sub);cursor:pointer;transition:all .15s;
+}
+.toggle-grp button.on{background:#fff;color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,0.06);}
+
+.checkbox{display:flex;align-items:center;gap:10px;padding:10px 0;cursor:pointer;user-select:none;}
+.checkbox input{width:18px;height:18px;accent-color:var(--acc);cursor:pointer;}
+.checkbox span{font-size:14px;}
+.checkbox .help{font-size:11px;color:var(--dim);margin-top:2px;}
+
+.line{display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;font-size:14px;gap:12px;}
+.line .k{color:var(--sub);flex:1;}
+.line .v{font-weight:600;color:var(--text);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;}
+.line.muted .v{color:var(--sub);font-weight:500;}
+.line.bold .k,.line.bold .v{color:var(--text);font-weight:700;}
+.divider{height:1px;background:var(--border);margin:8px -2px;}
+
+.total-card{
+  background:var(--navy);color:#fff;border:none;
+  padding:20px;border-radius:16px;margin-bottom:12px;position:relative;overflow:hidden;
+}
+.total-card .lbl{font-size:11px;font-weight:600;color:#a0a0b8;letter-spacing:1.5px;text-transform:uppercase;}
+.total-card .val{font-family:'Unbounded',sans-serif;font-size:28px;font-weight:700;margin-top:6px;line-height:1.1;letter-spacing:-0.5px;font-variant-numeric:tabular-nums;}
+.total-card .sub{font-size:12px;color:#a0a0b8;margin-top:5px;font-variant-numeric:tabular-nums;}
+
+.warn{padding:10px 12px;border-radius:10px;font-size:12px;line-height:1.5;margin-top:8px;display:flex;gap:8px;align-items:flex-start;}
+.warn.orange{background:var(--orange-light);color:#7c4a04;}
+.warn.red{background:var(--red-light);color:#991b1b;}
+.warn .ico{font-weight:700;flex-shrink:0;}
+
+.btn{
+  width:100%;background:var(--navy);color:#fff;border:none;border-radius:10px;
+  padding:11px 14px;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s;
+}
+.btn:hover{background:var(--acc);}
+.btn.ghost{background:transparent;color:var(--sub);border:1px solid var(--border);}
+.btn.ghost:hover{background:var(--acc-light);color:var(--acc);border-color:var(--acc);}
+.btn-row{display:flex;gap:8px;}
+
+.history-item{
+  background:#fafaf8;border:1px solid var(--border);border-radius:10px;
+  padding:10px 12px;margin-bottom:6px;cursor:pointer;transition:all .15s;
+}
+.history-item:hover{border-color:var(--acc);background:#fff;}
+.history-item .h-name{font-size:13px;font-weight:600;}
+.history-item .h-meta{font-size:11px;color:var(--sub);margin-top:2px;display:flex;justify-content:space-between;}
+.history-item .h-total{font-weight:700;color:var(--acc);font-variant-numeric:tabular-nums;}
+.history-empty{font-size:12px;color:var(--dim);text-align:center;padding:14px 0;}
+
+.notes{font-size:11px;color:var(--dim);line-height:1.6;}
+.notes b{color:var(--sub);}
+
+/* Vision-блок */
+.vision-card{background:linear-gradient(135deg,#eef0ff 0%,#f7f7f5 100%);border:1px dashed var(--acc-mid,#c7c4f8);}
+.vision-drop{
+  border:2px dashed #c7c4f8;border-radius:12px;padding:18px 14px;text-align:center;cursor:pointer;
+  transition:all .15s;background:#fff;
+}
+.vision-drop:hover,.vision-drop.dragover{border-color:var(--acc);background:#f8f9ff;}
+.vision-drop .ico{font-size:24px;margin-bottom:6px;}
+.vision-drop .lbl{font-size:13px;font-weight:600;color:var(--text);}
+.vision-drop .hint{font-size:11px;color:var(--sub);margin-top:3px;}
+.vision-thumb{display:flex;gap:10px;align-items:center;background:#fff;border:1px solid var(--border);border-radius:10px;padding:8px;margin-top:8px;}
+.vision-thumb img{width:48px;height:48px;object-fit:cover;border-radius:6px;}
+.vision-thumb .meta{flex:1;font-size:12px;}
+.vision-thumb .meta .name{font-weight:600;color:var(--text);}
+.vision-thumb .meta .stat{color:var(--sub);font-size:11px;margin-top:2px;}
+.vision-thumb .x{background:none;border:none;color:var(--dim);font-size:18px;cursor:pointer;padding:4px 8px;}
+.vision-thumb .x:hover{color:var(--red);}
+
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--acc-light);border-top-color:var(--acc);border-radius:50%;animation:spin 0.8s linear infinite;vertical-align:-2px;margin-right:6px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+.api-key-input{display:flex;gap:6px;}
+.api-key-input .input{flex:1;font-family:'SF Mono',Menlo,monospace;font-size:12px;}
+.api-key-input button{background:none;border:1px solid var(--border);border-radius:8px;padding:0 12px;font-size:11px;color:var(--sub);cursor:pointer;}
+.api-key-input button:hover{border-color:var(--acc);color:var(--acc);}
+
+.coll-trigger{cursor:pointer;user-select:none;display:flex;justify-content:space-between;align-items:center;}
+.coll-trigger .arr{transition:transform .2s;color:var(--dim);font-size:12px;}
+.coll-trigger.open .arr{transform:rotate(90deg);}
+.coll-body{display:none;margin-top:12px;}
+.coll-body.open{display:block;}
+
+@media(max-width:380px){
+  .title{font-size:16px;}
+  .total-card .val{font-size:24px;}
+  .row3{grid-template-columns:1fr 1fr;}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<header>
+  <div>
+    <div class="title">Авто из Японии</div>
+    <div class="subtitle">Владивосток · под ключ</div>
+  </div>
+  <div class="rates-pill" id="rates-pill" title="Курсы ЦБ РФ + наценка перевода">
+    <span class="dot"></span>
+    <span id="rates-status">…</span>
+  </div>
+</header>
+
+<!-- ─── VISION (распознавание скриншота) ─── -->
+<div class="card vision-card">
+  <div class="card-title">
+    <span>Скриншот аукциона</span>
+    <span class="hint" id="vision-status"></span>
+  </div>
+  <div class="vision-drop" id="vision-drop" tabindex="0">
+    <div class="ico">📸</div>
+    <div class="lbl">Перетащить или вставить (Ctrl+V)</div>
+    <div class="hint">Распознает аукцион, цену, год, объём, мощность</div>
+    <input type="file" id="vision-file" accept="image/*" style="display:none">
+  </div>
+  <div id="vision-thumb-wrap"></div>
+</div>
+
+<!-- ─── НАСТРОЙКИ (API-ключ) ─── -->
+<div class="card">
+  <div class="card-title coll-trigger" id="settings-trigger">
+    <span>Настройки <span id="key-status" style="color:var(--dim);font-weight:500;text-transform:none;letter-spacing:0;font-size:10px;"></span></span>
+    <span class="arr">▶</span>
+  </div>
+  <div class="coll-body" id="settings-body">
+    <div class="field">
+      <label class="label" for="api-key">Ключ Anthropic API</label>
+      <div class="api-key-input">
+        <input id="api-key" class="input" type="password" placeholder="sk-ant-..." autocomplete="off">
+        <button id="show-key">Показать</button>
+      </div>
+      <div class="notes" style="margin-top:6px;">
+        Хранится только в этом браузере (localStorage). Получить ключ:
+        <a href="https://console.anthropic.com/" target="_blank" style="color:var(--acc);">console.anthropic.com</a>.
+        Один скан ≈ $0.02-0.04.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── ЛОТ ─── -->
+<div class="card">
+  <div class="card-title">Лот</div>
+  <div class="field">
+    <label class="label" for="auction">Аукцион / площадка</label>
+    <select id="auction" class="select"></select>
+  </div>
+  <div class="row">
+    <div class="field">
+      <label class="label" for="fob">Цена на аукционе</label>
+      <div class="input-suffix">
+        <input id="fob" class="input" type="number" inputmode="numeric" placeholder="0" min="0" step="1000">
+        <span class="suffix">¥</span>
+      </div>
+    </div>
+    <div class="field">
+      <label class="label" for="fee">Аукц. сбор</label>
+      <div class="input-suffix">
+        <input id="fee" class="input" type="number" inputmode="numeric" value="15000" min="0" step="500">
+        <span class="suffix">¥</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── АВТО ─── -->
+<div class="card">
+  <div class="card-title">Авто</div>
+  <div class="row">
+    <div class="field">
+      <label class="label" for="year">Год регистрации</label>
+      <input id="year" class="input" type="number" inputmode="numeric" placeholder="2022" min="1990" max="2030">
+    </div>
+    <div class="field">
+      <label class="label" for="month">Месяц</label>
+      <select id="month" class="select">
+        <option value="1">Янв</option><option value="2">Фев</option><option value="3">Мар</option>
+        <option value="4">Апр</option><option value="5">Май</option><option value="6">Июн</option>
+        <option value="7">Июл</option><option value="8">Авг</option><option value="9">Сен</option>
+        <option value="10">Окт</option><option value="11">Ноя</option><option value="12">Дек</option>
+      </select>
+    </div>
+  </div>
+  <div class="row">
+    <div class="field">
+      <label class="label" for="volume">Объём</label>
+      <div class="input-suffix">
+        <input id="volume" class="input" type="number" inputmode="numeric" placeholder="2000" min="0" step="50">
+        <span class="suffix">см³</span>
+      </div>
+    </div>
+    <div class="field">
+      <label class="label" for="power">Мощность</label>
+      <div class="input-suffix">
+        <input id="power" class="input" type="number" inputmode="numeric" placeholder="170" min="0" step="1">
+        <span class="suffix">л.с.</span>
+      </div>
+    </div>
+  </div>
+  <div class="field">
+    <label class="label">Топливо</label>
+    <div class="toggle-grp" id="fuel-grp">
+      <button data-v="gasoline" class="on">Бензин</button>
+      <button data-v="hybrid">Гибрид</button>
+      <button data-v="diesel">Дизель</button>
+      <button data-v="ev">Электро</button>
+    </div>
+  </div>
+  <label class="checkbox">
+    <input type="checkbox" id="personal" checked>
+    <span>
+      Личное пользование
+      <div class="help">Без перепродажи 12 мес — действует льготный утильсбор</div>
+    </span>
+  </label>
+</div>
+
+<!-- ─── КУРСЫ ─── -->
+<div class="card">
+  <div class="card-title coll-trigger" id="rates-trigger">
+    <span>Курсы валют</span>
+    <span class="arr">▶</span>
+  </div>
+  <div class="coll-body" id="rates-body">
+    <div class="row">
+      <div class="field">
+        <label class="label" for="rate-jpy">¥ → ₽</label>
+        <div class="input-suffix">
+          <input id="rate-jpy" class="input" type="number" inputmode="decimal" step="0.0001">
+          <span class="suffix">₽/¥</span>
+        </div>
+      </div>
+      <div class="field">
+        <label class="label" for="rate-eur">€ → ₽</label>
+        <div class="input-suffix">
+          <input id="rate-eur" class="input" type="number" inputmode="decimal" step="0.01">
+          <span class="suffix">₽/€</span>
+        </div>
+      </div>
+    </div>
+    <button class="btn ghost" id="refresh-rates">Обновить курсы ЦБ РФ</button>
+    <div class="notes" style="margin-top:8px;">Курсы ЦБ автоматически загружаются с cbr-xml-daily.ru. К ним добавлена наценка перевода (¥ ×1.025, € ×1.02). Можно править вручную.</div>
+  </div>
+</div>
+
+<!-- ─── РЕЗУЛЬТАТ: ЯПОНИЯ ─── -->
+<div class="card">
+  <div class="card-title">Япония</div>
+  <div class="line"><span class="k">Цена на аукционе</span><span class="v" id="r-fob">— ¥</span></div>
+  <div class="line"><span class="k">Аукционный сбор</span><span class="v" id="r-fee">— ¥</span></div>
+  <div class="line"><span class="k">Доставка до порта, фрахт,<br><span style="font-size:11px;color:var(--dim);">страховка, документы, комиссия</span></span><span class="v" id="r-cif">— ¥</span></div>
+  <div class="divider"></div>
+  <div class="line bold"><span class="k">Итого в Японии</span><span class="v" id="r-jpy">— ¥</span></div>
+  <div class="line muted"><span class="k">в рублях</span><span class="v" id="r-jpy-rub">— ₽</span></div>
+</div>
+
+<!-- ─── РЕЗУЛЬТАТ: РОССИЯ ─── -->
+<div class="card">
+  <div class="card-title">
+    <span>Россия</span>
+    <span class="hint" id="age-cat">—</span>
+  </div>
+  <div class="line"><span class="k">Таможенная пошлина<br><span style="font-size:11px;color:var(--dim);" id="duty-detail">—</span></span><span class="v" id="r-duty">— ₽</span></div>
+  <div class="line"><span class="k">Утилизационный сбор<br><span style="font-size:11px;color:var(--dim);" id="util-detail">—</span></span><span class="v" id="r-util">— ₽</span></div>
+  <div class="line"><span class="k">Таможенный сбор</span><span class="v" id="r-fee-rub">— ₽</span></div>
+  <div class="line"><span class="k">Оформление Akebono</span><span class="v" id="r-clr">55 550 ₽</span></div>
+  <div class="divider"></div>
+  <div class="line bold"><span class="k">Итого в России</span><span class="v" id="r-rus-total">— ₽</span></div>
+  <div id="warnings"></div>
+</div>
+
+<!-- ─── ИТОГ ─── -->
+<div class="total-card">
+  <div class="lbl">Под ключ во Владивостоке</div>
+  <div class="val" id="r-total">— ₽</div>
+  <div class="sub" id="r-total-meta">введите данные</div>
+</div>
+
+<div class="btn-row" style="margin-bottom:14px;">
+  <button class="btn" id="save-btn">Сохранить расчёт</button>
+  <button class="btn ghost" id="copy-btn">Копировать</button>
+</div>
+
+<!-- ─── ИСТОРИЯ ─── -->
+<div class="card">
+  <div class="card-title coll-trigger open" id="history-trigger">
+    <span>История <span id="hist-count" style="color:var(--dim);font-weight:500;">(0)</span></span>
+    <span class="arr">▶</span>
+  </div>
+  <div class="coll-body open" id="history-body">
+    <div id="history-list"></div>
+  </div>
+</div>
+
+<!-- ─── ПРИМЕЧАНИЯ ─── -->
+<div class="card">
+  <div class="card-title coll-trigger" id="info-trigger">
+    <span>Что в расчёте</span>
+    <span class="arr">▶</span>
+  </div>
+  <div class="coll-body" id="info-body">
+    <div class="notes">
+      <p><b>Япония:</b> цена авто + аукционный сбор + услуги Akebono в Японии (доставка от аукциона до порта, экспортные документы, фрахт, страховка, комиссия Akebono).</p>
+      <p style="margin-top:8px;"><b>Пошлина (физлицо, ЕЭК №107):</b><br>
+      • &lt;3 лет — % от цены, но не менее €/см³<br>
+      • 3–5 лет — €/см³ (льготная)<br>
+      • &gt;5 лет — €/см³ (повышенная)</p>
+      <p style="margin-top:8px;"><b>Утильсбор (ПП №1713):</b><br>
+      Льготная ставка 3 400 / 5 200 ₽ — только если: личное пользование + ≤160 л.с. (бензин/дизель) или ≤80 л.с. (гибрид/электро) + ≤3000 см³. Иначе коммерческие коэффициенты.</p>
+      <p style="margin-top:8px;"><b>Не учтено:</b> возможная корректировка таможенной стоимости (КТС) Минпромторгом для авто &lt;3 лет, акциз для мощных авто, доставка из Владивостока в другие регионы.</p>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// ТАРИФЫ AKEBONO
+// ═══════════════════════════════════════════════════════════════
+const TARIFFS = {
+  whole_car_cif: {
+    "CAA CHUBU":124150,"CAA GIFU":124150,"CAA TOKYO":132950,"CAA TOHOKU":147950,
+    "IAA OSAKA":129650,
+    "JU MIE":134300,"JU HOKKAIDO (HAKODATE)":171300,"JU HOKKAIDO (KITAMI)":176300,
+    "JU CHIBA":126900,"JU SAITAMA":126900,"JU OITA":152272,"JU NARA":142300,
+    "JU MIYAGI":127494,"JU MIYAGI (AKITA YARD)":141300,"JU MIYAZAKI":161800,
+    "JU TOYAMA":103810,"JU YAMAGUCHI":146080,"JU YAMAGATA":145098,"JU YAMANASHI":143650,
+    "JU GIFU":121500,"JU SHIMANE":172000,"JU HOKKAIDO (OBIHIRO)":169300,
+    "JU HIROSHIMA":149600,"JU AICHI":118100,"JU NIIGATA":117579,
+    "JU HOKKAIDO (ASAHIKAWA)":169300,"JU HOKKAIDO (SAPPORO)":166300,
+    "JU TOKYO":126900,"JU TOCHIGI":134103,"JU OKINAWA":178200,"JU KUMAMOTO":164000,
+    "JU ISHIKAWA":117017,"JU KANAGAWA":128800,"JU FUKUI":115927,"JU FUKUOKA":143950,
+    "JU FUKUOKA (KAGOSHIMA)":161800,"JU FUKUSHIMA":126392,"JU AKITA":140162,
+    "JU GUNMA":129100,"JU HOKKAIDO (TOMAKOMAI)":166300,"JU IBARAKI":134103,
+    "JU HOKKAIDO (KUSHIRO)":173300,"JU NAGASAKI":191500,"JU NAGANO":130798,
+    "JU AOMORI":154000,"JU SHIZUOKA":134300,"JU SHIZUOKA (HAMAMATSU)":134300,
+    "KCAA MINAMI KYUSHU":159900,"KCAA YAMAGUCHI":146080,"KCAA KYOTO":124150,"KCAA FUKUOKA":143950,
+    "LAA SHIKOKU":150200,"LAA OKAYAMA":134200,"LAA OKAYAMA (SATELLITE TOTTORI)":155200,
+    "LUM NAGOYA":131000,"LUM TOKYO":136500,"LUM FUKUOKA":154650,"LUM HOKKAIDO":174000,"LUM KOBE NYUSATSU":136533,
+    "NAA NAGOYA":119200,"NAA OSAKA":125832,"NAA TOKYO":129900,"NAA TOKYO (TOHOKU)":142400,"NAA FUKUOKA":145050,
+    "ORIX SENDAI":138498,"ORIX ATSUGI":136500,"ORIX KOBE":133533,"ORIX FUKUOKA":151650,
+    "SAA SAPPORO":165200,"SAA HAMAMATSU":136500,
+    "TAA CHUBU":124150,"TAA CHUBU (HOKURIKU)":124150,"TAA CHUBU (SHIZUOKA SATELLITE)":140350,
+    "TAA KYUSHU":151712,"TAA HYOGO":131883,"TAA HYOGO (KITA KOBE)":137383,
+    "TAA HOKKAIDO":172350,"TAA MINAMI KYUSHU":165950,"TAA MINAMI KYUSHU (KAGOSHIMA YARD)":167850,
+    "TAA SHIKOKU":157350,"TAA SHIKOKU (EHIME)":168350,"TAA HIROSHIMA":153550,
+    "TAA TOHOKU":135747,"TAA TOHOKU (SENDAI)":136848,
+    "TAA YOKOHAMA":132950,"TAA YOKOHAMA (ATSUGI)":146850,
+    "TAA KINKI":130782,"TAA KINKI (KYOTO YARD)":137850,"TAA KINKI (SHIGA YARD)":147350,
+    "TAA KANTOU":132950,"TAA KANTO (NORTH KANTO YARD)":132950,"TAA KANTO (SAITAMA SATELLITE)":134850,
+    "TAA KANTOU (TAMA YARD)":146850,"TAA KANTO (SHINKO YARD)":132950,
+    "USS HAA KOBE":128033,"USS HAA KOBE (SHIKOKU)":153000,"USS JAA":129100,
+    "USS R NAGOYA":120300,"USS KYUSHU":145659,"USS KYUSHU (KAGOSHIMA)":164000,
+    "USS HOKURIKU":111500,"USS NAGOYA":120300,"USS SAITAMA":129100,"USS OSAKA":126932,
+    "USS OKAYAMA":144100,"USS NIIGATA":119779,"USS SAPPORO":168500,"USS TOKYO":129100,
+    "USS TOHOKU":142056,"USS YOKOHAMA":129100,"USS KOBE":127703,"USS FUKUOKA":146150,
+    "USS FUKUOKA (KAGOSHIMA YARD)":164000,"USS GUNMA":129100,"USS SHIZUOKA":136500,
+    "ZIP OSAKA":127670,"ZIP TOKYO":129100,
+    "ARAI BAYSIDE IMPORTS":130200,"ARAI BAYSIDE JDM":129100,
+    "ARAI BAYSIDE (Sendai Yard) IMPORTS":134600,"ARAI BAYSIDE (Sendai Yard) JDM":133500,
+    "ARAI BAYSIDE (Chiba Sakura Yard) IMPORTS":139600,"ARAI BAYSIDE (Chiba Sakura Yard) JDM":138500,
+    "ARAI BAYSIDE (Okinawa Yard) IMPORTS":187100,"ARAI BAYSIDE (Okinawa Yard) JDM":186000,
+    "ARAI BAYSIDE (Fukuoka Yard) IMPORTS":152600,"ARAI BAYSIDE (Fukuoka Yard) JDM":151500,
+    "ARAI BAYSIDE (Kansai Yard) IMPORTS":132600,"ARAI BAYSIDE (Kansai Yard) JDM":131500,
+    "ARAI BAYSIDE  VENUE 2 (Плавучий остров) IMPORTS":135150,"ARAI BAYSIDE VENUE 2 (Плавучий остров) JDM":134050,
+    "ARAI SENDAI":132998,"ARAI OYAMA IMPORTS":130200,"ARAI OYAMA JDM":129100,"ARAI OYAMA TSUKUBA YARD":136500,
+    "ISUZU KYUSHU":147862,"ISUZU KOBE":128033,
+    "ZERO CHUBU":117000,"ZERO SENDAI":129698,"ZERO HOKKAIDO":165200,"ZERO CHIBA":128700,
+    "ZERO HAKATA":152200,"ZERO OSAKA":123650,"ZERO SHOUNAN":129350,
+    "HERO":128000,"BAYAUC":127670,
+    "HONDA KYUSHU":147312,"HONDA SENDAI":131450,"HONDA HOKKAIDO":167950,"HONDA NAGOYA":119750,
+    "HONDA TOKYO":128550,"HONDA TOKYO OGAWA/SAITAMA":128550,"HONDA TOKYO GOTEMBA/SHIZUOKA":142250,
+    "HONDA TOKYO MITSUKE/NIIGATA":128550,"HONDA KANSAI":127483,
+    "MIRIVE SAITAMA":130750,"MIRIVE OSAKA":128582,"MIRIVE AICHI":121950,
+    "NPS SENDAI":138498,"NPS OSAKA":133500,"NPS GIFU":127000,"NPS TOKYO":136500,
+    "NPS TOCHIGI":145850,"NPS FUKUOKA":151650,"NPS TOMAKOMAI":174000,
+    "NISSAN OSAKA":132432
+  },
+  russia_clearance_rub: 55550
+};
+
+// ═══════════════════════════════════════════════════════════════
+// ФОРМУЛЫ — все возвращают значение в указанной валюте
+// ═══════════════════════════════════════════════════════════════
+
+// Пошлина < 3 лет — % от цены в EUR, но не менее €/см³
+function dutyUnder3Years(priceEur, volumeCc){
+  let percent, minPerCc;
+  if(priceEur <= 8500)        { percent=0.54; minPerCc=2.5; }
+  else if(priceEur <= 16700)  { percent=0.48; minPerCc=3.5; }
+  else if(priceEur <= 42300)  { percent=0.48; minPerCc=5.5; }
+  else if(priceEur <= 84500)  { percent=0.48; minPerCc=7.5; }
+  else if(priceEur <= 169000) { percent=0.48; minPerCc=15;  }
+  else                        { percent=0.48; minPerCc=20;  }
+  return Math.max(priceEur * percent, volumeCc * minPerCc);
+}
+
+// Пошлина 3–5 лет — €/см³ (льготная)
+function duty3to5Years(volumeCc){
+  if(volumeCc <= 1000) return volumeCc * 1.5;
+  if(volumeCc <= 1500) return volumeCc * 1.7;
+  if(volumeCc <= 1800) return volumeCc * 2.5;
+  if(volumeCc <= 2300) return volumeCc * 2.7;
+  if(volumeCc <= 3000) return volumeCc * 3.0;
+  return volumeCc * 3.6;
+}
+
+// Пошлина > 5 лет — €/см³
+function dutyOver5Years(volumeCc){
+  if(volumeCc <= 1000) return volumeCc * 3.0;
+  if(volumeCc <= 1500) return volumeCc * 3.2;
+  if(volumeCc <= 1800) return volumeCc * 3.5;
+  if(volumeCc <= 2300) return volumeCc * 4.8;
+  if(volumeCc <= 3000) return volumeCc * 5.0;
+  return volumeCc * 5.7;
+}
+
+// Утильсбор — возвращает {amount, isPreferential, label}
+function utilFee(p){
+  const baseRate = 20000;
+  const isUnder3 = p.ageYears < 3;
+  const isHybridOrEV = p.fuel === 'hybrid' || p.fuel === 'ev';
+  const powerLimit = isHybridOrEV ? 80 : 160;
+
+  const eligibleForBenefit = p.isPersonalUse
+    && p.powerHp <= powerLimit
+    && p.volumeCc <= 3000;
+
+  if(eligibleForBenefit){
+    const amt = isUnder3 ? baseRate * 0.17 : baseRate * 0.26;
+    return { amount: amt, isPreferential: true, label: isUnder3 ? "льгота, <3 лет" : "льгота, ≥3 лет" };
+  }
+
+  // Коммерческие коэффициенты
+  let coef;
+  if(p.volumeCc <= 1000)      coef = isUnder3 ? 9.01 : 23;
+  else if(p.volumeCc <= 2000) coef = isUnder3 ? 45 : 74.6;
+  else if(p.volumeCc <= 3000) coef = isUnder3 ? 92 : 132;
+  else if(p.volumeCc <= 3500) coef = isUnder3 ? 150 : 220;
+  else                        coef = isUnder3 ? 137 : 248;
+  return { amount: baseRate * coef, isPreferential: false, label: `коммерч., k=${coef}` };
+}
+
+// Таможенный сбор — фиксированная шкала по таможенной стоимости в RUB
+function customsFee(taxableValueRub){
+  if(taxableValueRub <= 200000)    return 1067;
+  if(taxableValueRub <= 450000)    return 2134;
+  if(taxableValueRub <= 1200000)   return 3898;
+  if(taxableValueRub <= 2500000)   return 4924;
+  if(taxableValueRub <= 5000000)   return 6991;
+  if(taxableValueRub <= 10000000)  return 9114;
+  return 13404;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// СОСТОЯНИЕ
+// ═══════════════════════════════════════════════════════════════
+const STORAGE_KEY = "auctionCalc.v2";
+const HISTORY_KEY = "auctionCalc.history.v1";
+const RATES_CACHE_KEY = "auctionCalc.rates.v1";
+
+const state = {
+  fuel: "gasoline",
+  rates: { jpy: null, eur: null, ts: 0, source: "loading" }
+};
+
+const $ = id => document.getElementById(id);
+const fmt = (n, frac=0) => {
+  if(!isFinite(n)) return "—";
+  return new Intl.NumberFormat("ru-RU",{minimumFractionDigits:frac,maximumFractionDigits:frac}).format(Math.round(n*Math.pow(10,frac))/Math.pow(10,frac));
+};
+
+// ═══════════════════════════════════════════════════════════════
+// ИНИЦИАЛИЗАЦИЯ ДРОПДАУНА
+// ═══════════════════════════════════════════════════════════════
+const auctionSel = $("auction");
+const locations = Object.keys(TARIFFS.whole_car_cif).sort((a,b)=>a.localeCompare(b));
+locations.forEach(loc=>{
+  const opt = document.createElement("option");
+  opt.value = loc;
+  opt.textContent = `${loc} — ${fmt(TARIFFS.whole_car_cif[loc])} ¥`;
+  auctionSel.appendChild(opt);
+});
+
+// ═══════════════════════════════════════════════════════════════
+// КУРСЫ ЦБ
+// ═══════════════════════════════════════════════════════════════
+async function fetchRates(force=false){
+  // Cache for 1 hour
+  if(!force){
+    try{
+      const cached = JSON.parse(localStorage.getItem(RATES_CACHE_KEY)||"{}");
+      if(cached.ts && Date.now() - cached.ts < 3600*1000){
+        return cached;
+      }
+    }catch(e){}
+  }
+  try{
+    setRatesStatus("загрузка…", "stale");
+    const res = await fetch("https://www.cbr-xml-daily.ru/daily_json.js");
+    if(!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    const jpyPer1 = (data.Valute.JPY.Value / data.Valute.JPY.Nominal) * 1.025;
+    const eur = data.Valute.EUR.Value * 1.02;
+    const result = { jpy: jpyPer1, eur, ts: Date.now(), source: "cbr", date: data.Date };
+    try{ localStorage.setItem(RATES_CACHE_KEY, JSON.stringify(result)); }catch(e){}
+    return result;
+  }catch(e){
+    return { jpy: null, eur: null, ts: 0, source: "error", err: String(e) };
+  }
+}
+
+function setRatesStatus(text, cls){
+  $("rates-status").textContent = text;
+  const pill = $("rates-pill");
+  pill.classList.remove("stale","err");
+  if(cls) pill.classList.add(cls);
+}
+
+async function loadRates(force=false){
+  const r = await fetchRates(force);
+  if(r.source === "cbr"){
+    state.rates = r;
+    if(!$("rate-jpy").dataset.userEdited) $("rate-jpy").value = r.jpy.toFixed(4);
+    if(!$("rate-eur").dataset.userEdited) $("rate-eur").value = r.eur.toFixed(2);
+    setRatesStatus(`¥${r.jpy.toFixed(3)} €${r.eur.toFixed(1)}`, null);
+  } else {
+    setRatesStatus("ошибка ЦБ — введите вручную", "err");
+  }
+  calc();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// РАСЧЁТ
+// ═══════════════════════════════════════════════════════════════
+function calc(){
+  const loc  = auctionSel.value;
+  const cif  = TARIFFS.whole_car_cif[loc] || 0;
+  const fob  = parseFloat($("fob").value) || 0;
+  const fee  = parseFloat($("fee").value) || 0;
+  const year = parseInt($("year").value) || 0;
+  const month = parseInt($("month").value) || 1;
+  const volume = parseFloat($("volume").value) || 0;
+  const power = parseFloat($("power").value) || 0;
+  const rateJpy = parseFloat($("rate-jpy").value) || 0;
+  const rateEur = parseFloat($("rate-eur").value) || 0;
+  const personal = $("personal").checked;
+  const fuel = state.fuel;
+
+  // Япония
+  const jpy = fob + fee + cif;
+  const jpyRub = jpy * rateJpy;
+
+  $("r-fob").textContent = fmt(fob) + " ¥";
+  $("r-fee").textContent = fmt(fee) + " ¥";
+  $("r-cif").textContent = fmt(cif) + " ¥";
+  $("r-jpy").textContent = fmt(jpy) + " ¥";
+  $("r-jpy-rub").textContent = rateJpy > 0 ? fmt(jpyRub) + " ₽" : "укажите курс";
+
+  // Возраст
+  let ageYears = 0;
+  if(year > 1990 && year < 2030){
+    ageYears = (Date.now() - new Date(year, month - 1, 1).getTime()) / (365.25 * 24 * 3600 * 1000);
+  }
+  let ageCat = "—", ageCatKey = null;
+  if(ageYears > 0){
+    if(ageYears < 3)      { ageCat = `${ageYears.toFixed(1)} лет, <3`; ageCatKey = "under_3"; }
+    else if(ageYears < 5) { ageCat = `${ageYears.toFixed(1)} лет, 3–5`; ageCatKey = "3_to_5"; }
+    else                  { ageCat = `${ageYears.toFixed(1)} лет, >5`; ageCatKey = "over_5"; }
+  }
+  $("age-cat").textContent = ageCat;
+
+  // Пошлина
+  let duty = 0, dutyDetail = "—";
+  const carPriceEur = (rateJpy > 0 && rateEur > 0) ? (fob * rateJpy / rateEur) : 0;
+  if(volume > 0 && ageYears > 0 && carPriceEur > 0){
+    let dutyEur;
+    if(ageCatKey === "under_3"){
+      dutyEur = dutyUnder3Years(carPriceEur, volume);
+      dutyDetail = `<3 лет, € ${fmt(carPriceEur,0)}`;
+    } else if(ageCatKey === "3_to_5"){
+      dutyEur = duty3to5Years(volume);
+      dutyDetail = `3–5 лет, ${volume} см³`;
+    } else {
+      dutyEur = dutyOver5Years(volume);
+      dutyDetail = `>5 лет, ${volume} см³`;
+    }
+    duty = dutyEur * rateEur;
+  }
+  $("r-duty").textContent = duty > 0 ? fmt(duty) + " ₽" : "—";
+  $("duty-detail").textContent = dutyDetail;
+
+  // Утильсбор
+  let util = 0, utilDetail = "—", utilWarning = null;
+  if(volume > 0 && power > 0 && ageYears > 0){
+    const u = utilFee({ ageYears, volumeCc: volume, powerHp: power, fuel, isPersonalUse: personal });
+    util = u.amount;
+    utilDetail = u.label;
+    if(!u.isPreferential && personal){
+      const isHybridOrEV = fuel === 'hybrid' || fuel === 'ev';
+      const limit = isHybridOrEV ? 80 : 160;
+      if(power > limit) utilWarning = `Мощность ${power} л.с. > ${limit} → коммерческий утильсбор`;
+      else if(volume > 3000) utilWarning = `Объём ${volume} см³ > 3000 → коммерческий утильсбор`;
+    }
+  }
+  $("r-util").textContent = util > 0 ? fmt(util) + " ₽" : "—";
+  $("util-detail").textContent = utilDetail;
+
+  // Таможенный сбор (берём от ввозной таможенной стоимости = jpyRub)
+  let custFee = 0;
+  if(jpyRub > 0) custFee = customsFee(jpyRub);
+  $("r-fee-rub").textContent = custFee > 0 ? fmt(custFee) + " ₽" : "—";
+
+  // Итоги
+  const clr = TARIFFS.russia_clearance_rub;
+  const rusTotal = duty + util + custFee + clr;
+  const total = jpyRub + rusTotal;
+  $("r-rus-total").textContent = (rusTotal > 0) ? fmt(rusTotal) + " ₽" : "—";
+  $("r-total").textContent = (total > 0 && fob > 0) ? fmt(total) + " ₽" : "— ₽";
+  $("r-total-meta").textContent = (total > 0 && fob > 0)
+    ? `${fmt(jpy)} ¥ × ${rateJpy.toFixed(4)} + растаможка`
+    : "введите цену, год, объём, мощность";
+
+  // Предупреждения
+  const warnEl = $("warnings");
+  warnEl.innerHTML = "";
+  const warns = [];
+  if(ageCatKey === "under_3" && fob > 0){
+    warns.push({type:"orange", text:"Возраст < 3 лет — возможна КТС (корректировка таможенной стоимости) Минпромторгом, +400-500 тыс ₽ риск."});
+  }
+  if(utilWarning){
+    warns.push({type:"red", text:utilWarning});
+  }
+  if(!personal){
+    warns.push({type:"orange", text:"Не личное пользование — утильсбор по коммерческим коэффициентам."});
+  }
+  if(rateJpy > 0 && fob > 0 && (!volume || !power || !year)){
+    warns.push({type:"orange", text:"Введите год, объём и мощность для расчёта пошлины и утильсбора."});
+  }
+  warns.forEach(w=>{
+    const el = document.createElement("div");
+    el.className = "warn " + w.type;
+    el.innerHTML = `<span class="ico">⚠</span><span>${w.text}</span>`;
+    warnEl.appendChild(el);
+  });
+
+  // Сохранить состояние
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      auction: loc, fob, fee, year, month, volume, power,
+      rateJpy, rateEur, personal, fuel
+    }));
+  }catch(e){}
+
+  return { loc, fob, fee, jpy, rateJpy, total, rusTotal, ageYears, ageCatKey, duty, util, custFee };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ИСТОРИЯ
+// ═══════════════════════════════════════════════════════════════
+function loadHistory(){
+  try{ return JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]"); }catch(e){ return []; }
+}
+function saveHistory(arr){
+  try{ localStorage.setItem(HISTORY_KEY, JSON.stringify(arr.slice(0, 10))); }catch(e){}
+}
+function renderHistory(){
+  const arr = loadHistory();
+  const list = $("history-list");
+  $("hist-count").textContent = `(${arr.length})`;
+  if(arr.length === 0){
+    list.innerHTML = '<div class="history-empty">Нет сохранённых расчётов</div>';
+    return;
+  }
+  list.innerHTML = "";
+  arr.forEach((h, idx)=>{
+    const date = new Date(h.ts);
+    const dateStr = date.toLocaleDateString("ru-RU") + " " + date.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"});
+    const el = document.createElement("div");
+    el.className = "history-item";
+    el.innerHTML = `
+      <div class="h-name">${h.auction} · ${fmt(h.fob)} ¥ · ${h.year || "?"} г.</div>
+      <div class="h-meta"><span>${dateStr}</span><span class="h-total">${fmt(h.total)} ₽</span></div>
+    `;
+    el.addEventListener("click", ()=>{
+      if(confirm("Загрузить этот расчёт?")){
+        $("auction").value = h.auction;
+        $("fob").value = h.fob;
+        $("fee").value = h.fee;
+        $("year").value = h.year || "";
+        $("month").value = h.month || 1;
+        $("volume").value = h.volume || "";
+        $("power").value = h.power || "";
+        $("rate-jpy").value = h.rateJpy || "";
+        $("rate-eur").value = h.rateEur || "";
+        $("personal").checked = h.personal !== false;
+        setFuel(h.fuel || "gasoline");
+        calc();
+        window.scrollTo({top:0, behavior:"smooth"});
+      }
+    });
+    el.addEventListener("dblclick", e=>{
+      e.preventDefault();
+      if(confirm("Удалить этот расчёт?")){
+        const a = loadHistory();
+        a.splice(idx, 1);
+        saveHistory(a);
+        renderHistory();
+      }
+    });
+    list.appendChild(el);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// СОБЫТИЯ
+// ═══════════════════════════════════════════════════════════════
+function setFuel(v){
+  state.fuel = v;
+  $("fuel-grp").querySelectorAll("button").forEach(b=>{
+    b.classList.toggle("on", b.dataset.v === v);
+  });
+}
+
+$("fuel-grp").addEventListener("click", e=>{
+  const btn = e.target.closest("button");
+  if(!btn) return;
+  setFuel(btn.dataset.v);
+  calc();
+});
+
+["change","input"].forEach(ev=>{
+  ["auction","fob","fee","year","month","volume","power","rate-jpy","rate-eur","personal"].forEach(id=>{
+    $(id).addEventListener(ev, calc);
+  });
+});
+
+// Mark rates as user-edited so we don't overwrite them
+$("rate-jpy").addEventListener("input", ()=>{ $("rate-jpy").dataset.userEdited = "1"; });
+$("rate-eur").addEventListener("input", ()=>{ $("rate-eur").dataset.userEdited = "1"; });
+
+$("refresh-rates").addEventListener("click", ()=>{
+  delete $("rate-jpy").dataset.userEdited;
+  delete $("rate-eur").dataset.userEdited;
+  loadRates(true);
+});
+
+// Сворачивание секций
+function setupCollapse(triggerId, bodyId){
+  const t = $(triggerId), b = $(bodyId);
+  t.addEventListener("click", ()=>{
+    t.classList.toggle("open");
+    b.classList.toggle("open");
+  });
+}
+setupCollapse("rates-trigger", "rates-body");
+setupCollapse("history-trigger", "history-body");
+setupCollapse("info-trigger", "info-body");
+setupCollapse("settings-trigger", "settings-body");
+
+// ═══════════════════════════════════════════════════════════════
+// VISION API — распознавание аукционного листа
+// ═══════════════════════════════════════════════════════════════
+const API_KEY_STORAGE = "auctionCalc.apiKey.v1";
+
+function getApiKey(){ try{ return localStorage.getItem(API_KEY_STORAGE) || ""; }catch(e){ return ""; } }
+function setApiKey(k){ try{ localStorage.setItem(API_KEY_STORAGE, k); }catch(e){} }
+function maskKey(k){ if(!k) return ""; if(k.length < 12) return "···"; return k.slice(0,8) + "···" + k.slice(-4); }
+
+// Загрузка сохранённого ключа
+$("api-key").value = getApiKey();
+$("key-status").textContent = getApiKey() ? "ключ задан · " + maskKey(getApiKey()) : "ключ не задан";
+
+$("api-key").addEventListener("change", ()=>{
+  const k = $("api-key").value.trim();
+  setApiKey(k);
+  $("key-status").textContent = k ? "ключ задан · " + maskKey(k) : "ключ не задан";
+});
+
+$("show-key").addEventListener("click", ()=>{
+  const inp = $("api-key");
+  if(inp.type === "password"){ inp.type = "text"; $("show-key").textContent = "Скрыть"; }
+  else{ inp.type = "password"; $("show-key").textContent = "Показать"; }
+});
+
+// JSON Schema для structured output (без ограничений типа min/max)
+const AUCTION_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    auction_house: { type: "string", enum: locations },
+    final_price_jpy: { type: ["integer","null"] },
+    year: { type: ["integer","null"] },
+    month: { type: ["integer","null"] },
+    engine_volume_cc: { type: ["integer","null"] },
+    power_hp: { type: ["integer","null"] },
+    fuel: { type: "string", enum: ["gasoline","hybrid","diesel","ev"] },
+    drive: { type: "string", enum: ["2WD","4WD","AWD","unknown"] },
+    overall_grade: { type: ["string","null"] },
+    has_repair_history: { type: "boolean" },
+    inspector_notes: { type: ["string","null"] },
+    is_sold: { type: "boolean" }
+  },
+  required: ["auction_house","final_price_jpy","year","month","engine_volume_cc","power_hp","fuel","drive","overall_grade","has_repair_history","inspector_notes","is_sold"]
+};
+
+const VISION_PROMPT = `Ты — эксперт по японским аукционным листам (Aleado, USS, TAA, NAA и др.).
+Извлеки данные из листа на изображении в JSON.
+
+Правила:
+1. auction_house — выбери ТОЧНО из списка enum в схеме (например "TAA YOKOHAMA", "USS TOKYO"). Регистр верхний.
+2. Год: японский календарь Reiwa (R/令和) → +2018. R5=2023, R6=2024, R7=2025, R8=2026.
+   Heisei (H/平成) → +1988. H30=2018, H31=2019.
+   Если только западный год — используй его.
+3. final_price_jpy — финальная цена продажи (落札価格 / 終値 / "Цена кон."). Если только стартовая (Цена старт.) — используй её, поставь is_sold=false.
+4. month — месяц первой регистрации (1-12).
+5. has_repair_history=true если в поле 修復歴 что-то есть, кроме прочерка/пустоты. "B" или "C" — это категории ремонта, считай как true.
+6. drive: если в grade или строке есть "4WD" — "4WD", "AWD" — "AWD", иначе "2WD" (или "unknown" если не видно).
+7. fuel: бензин→gasoline, гибрид→hybrid, дизель→diesel, электро→ev.
+8. power_hp — мощность в л.с. Часто на листе её нет — тогда null.
+9. inspector_notes — краткая выжимка замечаний инспектора и проблем (на русском, до 200 символов).
+10. Если поле не видно или не уверен — null. Не выдумывай.`;
+
+let currentImage = null; // { dataUrl, mediaType, sizeKb }
+
+async function fileToBase64(file){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = ()=> resolve(reader.result); // dataURL
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function downscaleIfNeeded(dataUrl, maxDim = 2576){
+  return new Promise((resolve)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const longEdge = Math.max(img.width, img.height);
+      if(longEdge <= maxDim) return resolve(dataUrl);
+      const scale = maxDim / longEdge;
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL("image/jpeg", 0.92));
+    };
+    img.onerror = ()=> resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
+function setVisionStatus(text, kind){
+  const el = $("vision-status");
+  el.textContent = text || "";
+  el.style.color = kind === "err" ? "var(--red)" : kind === "ok" ? "var(--green)" : "var(--sub)";
+}
+
+async function loadImageFile(file){
+  if(!file || !file.type.startsWith("image/")){ setVisionStatus("Не изображение", "err"); return; }
+  let dataUrl = await fileToBase64(file);
+  dataUrl = await downscaleIfNeeded(dataUrl);
+  const sizeKb = Math.round(dataUrl.length * 0.75 / 1024);
+  const mediaMatch = dataUrl.match(/^data:([^;]+);base64,/);
+  const mediaType = mediaMatch ? mediaMatch[1] : "image/jpeg";
+  currentImage = { dataUrl, mediaType, sizeKb, name: file.name || "screenshot" };
+  renderThumb();
+  // Автозапуск распознавания
+  await recognize();
+}
+
+function renderThumb(){
+  const wrap = $("vision-thumb-wrap");
+  if(!currentImage){ wrap.innerHTML = ""; return; }
+  wrap.innerHTML = "";
+  const t = document.createElement("div");
+  t.className = "vision-thumb";
+  t.innerHTML = `
+    <img src="${currentImage.dataUrl}" alt="">
+    <div class="meta">
+      <div class="name">${currentImage.name}</div>
+      <div class="stat">${currentImage.sizeKb} КБ · ${currentImage.mediaType}</div>
+    </div>
+    <button class="x" id="thumb-x" title="Удалить">×</button>
+  `;
+  wrap.appendChild(t);
+  $("thumb-x").addEventListener("click", ()=>{ currentImage = null; renderThumb(); setVisionStatus(""); });
+}
+
+async function callVision(base64Data, mediaType){
+  const apiKey = getApiKey();
+  if(!apiKey) throw new Error("Сначала укажите ключ Anthropic в настройках");
+
+  const body = {
+    model: "claude-opus-4-7",
+    max_tokens: 1024,
+    output_config: {
+      format: { type: "json_schema", schema: AUCTION_SCHEMA }
+    },
+    system: [{
+      type: "text",
+      text: VISION_PROMPT,
+      cache_control: { type: "ephemeral" }
+    }],
+    messages: [{
+      role: "user",
+      content: [
+        { type: "image", source: { type: "base64", media_type: mediaType, data: base64Data } },
+        { type: "text", text: "Извлеки данные из этого аукционного листа в JSON." }
+      ]
+    }]
+  };
+
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true",
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
+
+  if(!res.ok){
+    let errMsg = `HTTP ${res.status}`;
+    try{
+      const err = await res.json();
+      errMsg = err?.error?.message || errMsg;
+    }catch(e){}
+    throw new Error(errMsg);
+  }
+
+  const data = await res.json();
+  // Ищем JSON в content blocks
+  for(const block of (data.content || [])){
+    if(block.type === "text" && block.text){
+      try{ return JSON.parse(block.text); }catch(e){}
+    }
+  }
+  throw new Error("Не удалось разобрать ответ модели");
+}
+
+async function recognize(){
+  if(!currentImage){ setVisionStatus("Загрузите скриншот", "err"); return; }
+  if(!getApiKey()){
+    setVisionStatus("Откройте настройки и укажите ключ", "err");
+    $("settings-trigger").classList.add("open");
+    $("settings-body").classList.add("open");
+    return;
+  }
+  setVisionStatus("распознаю…", null);
+  $("vision-status").innerHTML = '<span class="spinner"></span>распознаю…';
+
+  try{
+    const base64 = currentImage.dataUrl.split(",")[1];
+    const data = await callVision(base64, currentImage.mediaType);
+    applyExtracted(data);
+    setVisionStatus("✓ распознано", "ok");
+  }catch(e){
+    setVisionStatus("Ошибка: " + e.message, "err");
+    console.error(e);
+  }
+}
+
+function applyExtracted(d){
+  const filled = [];
+  if(d.auction_house && TARIFFS.whole_car_cif[d.auction_house]){
+    auctionSel.value = d.auction_house;
+    filled.push("аукцион");
+  }
+  if(d.final_price_jpy != null && d.final_price_jpy > 0){
+    $("fob").value = d.final_price_jpy;
+    filled.push("цена");
+  }
+  if(d.year != null && d.year > 1990 && d.year < 2030){
+    $("year").value = d.year;
+    filled.push("год");
+  }
+  if(d.month != null && d.month >= 1 && d.month <= 12){
+    $("month").value = d.month;
+  }
+  if(d.engine_volume_cc != null && d.engine_volume_cc > 0){
+    $("volume").value = d.engine_volume_cc;
+    filled.push("объём");
+  }
+  if(d.power_hp != null && d.power_hp > 0){
+    $("power").value = d.power_hp;
+    filled.push("мощность");
+  }
+  if(d.fuel){ setFuel(d.fuel); }
+  calc();
+
+  // Покажем то, что вытащили — особенно warnings
+  const warnings = [];
+  if(d.power_hp == null) warnings.push("⚠ мощность не указана на листе — введите вручную");
+  if(d.has_repair_history) warnings.push(`⚠ ремонт в истории${d.overall_grade ? " (грейд " + d.overall_grade + ")" : ""}`);
+  if(!d.is_sold) warnings.push("⚠ цена стартовая, не финальная");
+  if(d.inspector_notes) warnings.push("📝 " + d.inspector_notes);
+
+  let msg = filled.length ? "Заполнено: " + filled.join(", ") : "Ничего не распознано";
+  if(warnings.length) msg += "\n\n" + warnings.join("\n");
+  setTimeout(()=> alert(msg), 100);
+}
+
+// События для drop-зоны
+const dropEl = $("vision-drop");
+dropEl.addEventListener("click", ()=> $("vision-file").click());
+dropEl.addEventListener("keydown", e=>{ if(e.key === "Enter" || e.key === " "){ e.preventDefault(); $("vision-file").click(); } });
+$("vision-file").addEventListener("change", e=>{
+  const f = e.target.files?.[0];
+  if(f) loadImageFile(f);
+  e.target.value = "";
+});
+dropEl.addEventListener("dragover", e=>{ e.preventDefault(); dropEl.classList.add("dragover"); });
+dropEl.addEventListener("dragleave", ()=> dropEl.classList.remove("dragover"));
+dropEl.addEventListener("drop", e=>{
+  e.preventDefault();
+  dropEl.classList.remove("dragover");
+  const f = e.dataTransfer.files?.[0];
+  if(f) loadImageFile(f);
+});
+
+// Paste из буфера
+window.addEventListener("paste", e=>{
+  const items = e.clipboardData?.items || [];
+  for(const item of items){
+    if(item.type.startsWith("image/")){
+      const f = item.getAsFile();
+      if(f){ loadImageFile(f); break; }
+    }
+  }
+});
+
+// Сохранить расчёт
+$("save-btn").addEventListener("click", ()=>{
+  const r = calc();
+  if(!r.total || r.total <= 0){ alert("Введите данные для расчёта"); return; }
+  const arr = loadHistory();
+  const entry = {
+    ts: Date.now(),
+    auction: r.loc, fob: r.fob, fee: parseFloat($("fee").value)||15000,
+    year: parseInt($("year").value)||0, month: parseInt($("month").value)||1,
+    volume: parseFloat($("volume").value)||0, power: parseFloat($("power").value)||0,
+    rateJpy: parseFloat($("rate-jpy").value)||0, rateEur: parseFloat($("rate-eur").value)||0,
+    personal: $("personal").checked, fuel: state.fuel,
+    total: r.total
+  };
+  arr.unshift(entry);
+  saveHistory(arr);
+  renderHistory();
+  $("save-btn").textContent = "✓ Сохранено";
+  setTimeout(()=>{ $("save-btn").textContent = "Сохранить расчёт"; }, 1500);
+});
+
+// Копировать
+$("copy-btn").addEventListener("click", async()=>{
+  const r = calc();
+  if(!r.total || r.total <= 0){ alert("Введите данные"); return; }
+  const text = [
+    `Авто из Японии — расчёт`,
+    `Аукцион: ${r.loc}`,
+    `Цена: ${fmt(r.fob)} ¥ + сбор ${fmt(parseFloat($("fee").value))} ¥ + CIF ${fmt(TARIFFS.whole_car_cif[r.loc])} ¥`,
+    `Итого Япония: ${fmt(r.jpy)} ¥ × ${r.rateJpy.toFixed(4)} = ${fmt(r.jpy * r.rateJpy)} ₽`,
+    `Пошлина: ${fmt(r.duty)} ₽`,
+    `Утильсбор: ${fmt(r.util)} ₽`,
+    `Тамож. сбор: ${fmt(r.custFee)} ₽`,
+    `Оформление Akebono: ${fmt(TARIFFS.russia_clearance_rub)} ₽`,
+    `―――――――――――――`,
+    `ИТОГО: ${fmt(r.total)} ₽`
+  ].join("\n");
+  try{
+    await navigator.clipboard.writeText(text);
+    $("copy-btn").textContent = "✓ Скопировано";
+    setTimeout(()=>{ $("copy-btn").textContent = "Копировать"; }, 1500);
+  }catch(e){
+    prompt("Скопируйте вручную:", text);
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// ВОССТАНОВЛЕНИЕ СОСТОЯНИЯ
+// ═══════════════════════════════════════════════════════════════
+const saved = (()=>{ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)||"{}"); }catch(e){ return {}; } })();
+if(saved.auction && TARIFFS.whole_car_cif[saved.auction]) auctionSel.value = saved.auction;
+else auctionSel.value = "USS TOKYO";
+if(saved.fob !== undefined && saved.fob > 0) $("fob").value = saved.fob;
+if(saved.fee !== undefined) $("fee").value = saved.fee;
+if(saved.year) $("year").value = saved.year;
+if(saved.month) $("month").value = saved.month;
+if(saved.volume) $("volume").value = saved.volume;
+if(saved.power) $("power").value = saved.power;
+if(saved.rateJpy){ $("rate-jpy").value = saved.rateJpy; $("rate-jpy").dataset.userEdited = "1"; }
+if(saved.rateEur){ $("rate-eur").value = saved.rateEur; $("rate-eur").dataset.userEdited = "1"; }
+if(saved.personal === false) $("personal").checked = false;
+if(saved.fuel) setFuel(saved.fuel);
+
+renderHistory();
+loadRates(false);
+calc();
+</script>
+</body>
+</html>
