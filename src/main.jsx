@@ -34,29 +34,15 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-/* Стартовое меню: выбор версии. В пределах вкладки спрашиваем один раз; ?app открывает основную версию сразу */
-const LAUNCH_KEY = "zamer.launcher.main";
-const remember = () => { try { sessionStorage.setItem(LAUNCH_KEY, "1"); } catch (e) { /* приватный режим — просто спросим ещё раз */ } };
-const chosen = () => { try { return sessionStorage.getItem(LAUNCH_KEY) === "1"; } catch (e) { return false; } };
-
 // Динамический импорт — ловим ошибки модуля
-function startApp() {
-  import("./App.jsx")
-    .then(({ default: App }) => {
-      root.render(
-        React.createElement(React.StrictMode, null,
-          React.createElement(ErrorBoundary, null,
-            React.createElement(App)
-          )
+import("./App.jsx")
+  .then(({ default: App }) => {
+    root.render(
+      React.createElement(React.StrictMode, null,
+        React.createElement(ErrorBoundary, null,
+          React.createElement(App)
         )
-      );
-    })
-    .catch(showError);
-}
-
-if (chosen() || /[?&]app\b/.test(window.location.search)) startApp();
-else {
-  import("./launcher/Launcher.jsx")
-    .then(({ default: Launcher }) => root.render(React.createElement(Launcher, { onMain: () => { remember(); startApp(); } })))
-    .catch(startApp);
-}
+      )
+    );
+  })
+  .catch(showError);

@@ -95,6 +95,19 @@ export function patchTemplate(source) {
   rep('chips:PRESETS[b.id].map(pr=>Object.assign({name:pr.name,pick:()=>setInst(', 'chips:PRESETS[b.id].filter(pr=>pr.items.length||pr.id===inst.pid).map(pr=>Object.assign({name:pr.name,pick:()=>setInst(', 'single chips');
   rep('chips:PRESETS[b.id].map(pr=>Object.assign({name:pr.name,pick:()=>this.updRoom(', 'chips:PRESETS[b.id].filter(pr=>pr.items.length||pr.id===i.pid).map(pr=>Object.assign({name:pr.name,pick:()=>this.updRoom(', 'multi chips');
 
+  /* Данные реальных объектов длиннее демонстрационных: семизначные суммы и длинные статусы
+     распирали карточку проекта, из-за чего экран прокручивался вбок и обрезался. Колонке списка
+     и самим экранам запрещаем расти по горизонтали, а статус ужимаем многоточием. */
+  rep('<div style="display:grid;grid-template-columns:{{ homeCols }};gap:8px">', '<div style="display:grid;grid-template-columns:{{ homeCols }};gap:8px;min-width:0">', 'projects grid');
+  rep('style="background:#fff;border-radius:18px;padding:14px 16px 13px;display:flex;gap:12px;align-items:flex-start;cursor:pointer;transition:transform .12s"',
+    'style="background:#fff;border-radius:18px;padding:14px 16px 13px;display:flex;gap:12px;align-items:flex-start;cursor:pointer;transition:transform .12s;min-width:0"', 'project card');
+  rep('<span style="font-size:11px;font-weight:700;color:{{ c.color }};background:{{ c.bg }};padding:4px 9px;border-radius:999px;white-space:nowrap">{{ c.status }}</span>',
+    '<span style="font-size:11px;font-weight:700;color:{{ c.color }};background:{{ c.bg }};padding:4px 9px;border-radius:999px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">{{ c.status }}</span>', 'project status');
+  rep('<span style="font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.2px;color:{{ c.sumColor }}">{{ c.sumTxt }}</span>',
+    '<span style="font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.2px;white-space:nowrap;flex:none;color:{{ c.sumColor }}">{{ c.sumTxt }}</span>', 'project sum');
+  /* прокручиваемые экраны: вертикальная прокрутка включает и горизонтальную — выключаем её */
+  tpl = tpl.split('overflow-y:auto').join('overflow-y:auto;overflow-x:hidden');
+
   /* фото позиций вместо заглушки: в списке номенклатур, в выборе позиций и в карточке */
   const THUMB = "thumbBg:n.img?'#fff url(/design/nom/'+n.img+') center/contain no-repeat':'repeating-linear-gradient(135deg,#EEEDFC 0 6px,#F7F7FC 6px 12px)',thumbTxt:n.img?'':'фото',";
   rep('background:repeating-linear-gradient(135deg,#EEEDFC 0 6px,#F7F7FC 6px 12px);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#A5A9B8;font-family:ui-monospace,Menlo,monospace">фото</div>',

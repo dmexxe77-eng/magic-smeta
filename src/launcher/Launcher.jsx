@@ -9,7 +9,7 @@ const ICONS = {
   online: <path d="M3 5h18v11H3zM8 20h8M12 16v4" />,
 };
 
-function Card({ version, onMain }) {
+function Card({ version }) {
   const body = (
     <>
       <span className="launch-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{ICONS[version.id]}</svg></span>
@@ -19,12 +19,11 @@ function Card({ version, onMain }) {
       <span className="launch-device">{version.device}</span>
     </>
   );
-  if (version.id === 'main') return <button className="launch-card is-primary" onClick={onMain}>{body}</button>;
   if (!version.href) return <div className="launch-card is-disabled" aria-disabled="true">{body}<span className="launch-soon">Ссылка появится после публикации</span></div>;
-  return <a className="launch-card" href={version.href}>{body}</a>;
+  return <a className={'launch-card' + (version.id === 'main' ? ' is-primary' : '')} href={version.href}>{body}</a>;
 }
 
-export default function Launcher({ onMain }) {
+export default function Launcher() {
   return (
     <main className="launch">
       <header className="launch-head">
@@ -33,7 +32,7 @@ export default function Launcher({ onMain }) {
         <p>Выберите версию</p>
       </header>
       <nav className="launch-grid" aria-label="Версии приложения">
-        {VERSIONS.map(v => <Card key={v.id} version={v} onMain={onMain} />)}
+        {VERSIONS.map(v => <Card key={v.id} version={v} />)}
       </nav>
       <footer className="launch-foot">Данные каждой версии хранятся отдельно</footer>
     </main>
