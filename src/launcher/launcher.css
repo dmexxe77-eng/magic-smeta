@@ -1,0 +1,35 @@
+/* Стартовое меню: тёмный фон бренда, три карточки версий */
+.launch {
+  --launch-bg: #1e2530; --launch-card: #262e3c; --launch-line: rgba(255, 255, 255, 0.08); --launch-ink: #f4f5fb; --launch-sub: #9aa1b2;
+  --launch-accent: #6366f1; --launch-accent-strong: #4f46e5; --launch-fast: 150ms;
+  min-height: 100dvh; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px;
+  padding: 32px 16px calc(24px + env(safe-area-inset-bottom)); background: radial-gradient(1200px 600px at 50% -10%, #2b3350 0%, var(--launch-bg) 60%); color: var(--launch-ink);
+  font-family: 'Golos Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+.launch-head { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+.launch-mark { width: 44px; height: 44px; border-radius: 12px; background: var(--launch-card); display: flex; flex-direction: column; justify-content: center; gap: 4px; padding: 0 10px; box-sizing: border-box; }
+.launch-mark i { display: block; height: 4px; border-radius: 2px; background: var(--launch-accent); }
+.launch-mark i:nth-child(2) { width: 70%; opacity: 0.72; }
+.launch-mark i:nth-child(3) { width: 45%; opacity: 0.48; }
+.launch-head h1 { margin: 6px 0 0; font-size: clamp(26px, 5vw, 34px); font-weight: 800; letter-spacing: 2px; }
+.launch-head h1 span { color: var(--launch-accent); }
+.launch-head p { margin: 0; color: var(--launch-sub); font-size: 14px; }
+.launch-grid { width: 100%; max-width: 980px; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; }
+.launch-card {
+  position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-align: left; text-decoration: none; color: inherit; font: inherit; cursor: pointer;
+  background: var(--launch-card); border: 1px solid var(--launch-line); border-radius: 18px; padding: 20px; min-height: 190px; box-sizing: border-box;
+  transition: transform var(--launch-fast), border-color var(--launch-fast), background var(--launch-fast);
+}
+.launch-card:hover, .launch-card:focus-visible { transform: translateY(-2px); border-color: var(--launch-accent); outline: none; }
+.launch-card:active { transform: translateY(0); }
+.launch-card.is-primary { background: linear-gradient(160deg, var(--launch-accent-strong), #3730a3); border-color: transparent; }
+.launch-card.is-disabled { cursor: default; opacity: 0.55; }
+.launch-card.is-disabled:hover { transform: none; border-color: var(--launch-line); }
+.launch-icon { width: 42px; height: 42px; border-radius: 12px; background: rgba(255, 255, 255, 0.1); display: flex; align-items: center; justify-content: center; margin-bottom: 6px; }
+.launch-badge { font-size: 10.5px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: #c7c9ff; }
+.launch-title { font-size: 17px; font-weight: 700; line-height: 1.25; }
+.launch-text { font-size: 13px; line-height: 1.45; color: rgba(255, 255, 255, 0.72); }
+.launch-device { margin-top: auto; padding-top: 10px; font-size: 11.5px; font-weight: 600; color: rgba(255, 255, 255, 0.55); }
+.launch-soon { margin-top: 8px; font-size: 10.5px; font-weight: 700; color: #ffd591; background: rgba(255, 159, 10, 0.16); border-radius: 7px; padding: 3px 8px; }
+.launch-foot { font-size: 12px; color: var(--launch-sub); }
+@media (prefers-reduced-motion: reduce) { .launch-card { transition: none; } }

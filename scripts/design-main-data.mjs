@@ -44,7 +44,10 @@ export async function writeMainData(outDir) {
   const nom = data.nom.map(nomForDesign);
   const projects = data.projects.map(p => ({ ...p, status: STATUS_MAP[p.status] || p.status }));
   const images = await writeImages(path.join(outDir, 'nom'), new Set(nom.map(n => n.img).filter(Boolean)));
-  const payload = { nom, presets: data.presets, projects, estEd: data.estEd };
+  /* параметр кнопки в шаблоне /design называется S / P / manual */
+  const PARAM = { area: 'S', perim: 'P', manual: 'manual' };
+  const presets = Object.fromEntries(Object.entries(data.presets).map(([bid, list]) => [bid, list.map(pr => (pr.param ? { ...pr, param: PARAM[pr.param] || pr.param } : pr))]));
+  const payload = { nom, presets, projects, estEd: data.estEd, roomOpts: data.roomOpts || [], otherTitle: data.otherTitle || 'Прочее' };
   const file = path.join(outDir, 'main-data.js');
   fs.writeFileSync(file, '/* Данные основной версии ZAMER.PRO. Сгенерировано: scripts/design-main-data.mjs */\nwindow.MAGIC_MAIN=' + JSON.stringify(payload).replace(/<\//g, '<\\/') + ';\n');
   return { nom: nom.length, images, presets: Object.values(data.presets).flat().length, projects: projects.length, file };
@@ -69,15 +72,20 @@ export function patchTemplate(source) {
 
   /* справочники: кнопки и номенклатура из основной версии, блок «Прочее», кнопка по умолчанию — первая избранная с позициями */
   repRange('const PRESETS={', 'const BLOCKS=[',
-    "const MAIN=window.MAGIC_MAIN||{nom:[],presets:{},projects:[],estEd:{}};\nconst PRESETS=MAIN.presets;\n['canvas','main','extra','light','track','curtain','other'].forEach(b=>{PRESETS[b]=PRESETS[b]||[];});\n", 'PRESETS');
+    "const MAIN=window.MAGIC_MAIN||{nom:[],presets:{},projects:[],estEd:{},roomOpts:[]};\nconst PRESETS=MAIN.presets;\n['canvas','main','extra','light','track','curtain','other'].forEach(b=>{PRESETS[b]=PRESETS[b]||[];});\n", 'PRESETS');
   rep("{id:'curtain',title:'Шторы',unit:'м.п.',step:0.1,add:'нишу под шторы',def:'box',defQty:3,subP:true}\n];",
-    "{id:'curtain',title:'Шторы',unit:'м.п.',step:0.1,add:'нишу под шторы',def:'box',defQty:3,subP:true},\n  {id:'other',title:'Прочее',unit:'шт',step:1,add:'позицию',def:null,defQty:1}\n];\n" +
+    "{id:'curtain',title:'Шторы',unit:'м.п.',step:0.1,add:'нишу под шторы',def:'box',defQty:3,subP:true},\n  {id:'other',title:MAIN.otherTitle||'Прочее',unit:'шт',step:1,add:'позицию',def:null,defQty:1}\n];\n" +
     'BLOCKS.forEach(b=>{const l=PRESETS[b.id]||[];const d=l.find(p=>p.fav&&p.items.length)||l.find(p=>p.items.length)||l[0];b.def=d?d.id:null;});', 'BLOCKS other');
   repRange('const NOM=[', "[{n:'Защита стен плёнкой'", 'const NOM=MAIN.nom;\n', 'NOM');
   rep("['extra','light','track','curtain'].forEach(bid=>(r[bid]||[]).forEach(i=>run(bid,i,i.qty||0)));",
     'BLOCKS.filter(b=>!b.single).forEach(b=>(r[b.id]||[]).forEach(i=>run(b.id,i,i.qty||0)));', 'est blocks');
   rep("canvas:{pid:x.canvas||'msd',off:{}},main:{pid:x.main||'ek_strong',off:{}}", 'canvas:{pid:x.canvas||BLOCKS[0].def,off:{}},main:{pid:x.main||BLOCKS[1].def,off:{}}', 'mk defaults');
   rep('curtain:inst(x.curtain)};};', 'curtain:inst(x.curtain),other:inst(x.other)};};', 'mk other');
+
+  /* опции помещения: общая доп. опция основной версии вместо демо-«укрытия стен», «вынос мусора» остаётся */
+  rep("const ROOM_OPTS=[{id:'o1',title:'Укрытие стен защитной плёнкой',n:'Защита стен плёнкой',p:365,u:'м.п.',m:0,src:'perim'},{id:'o2',",
+    "const ROOM_OPTS=(MAIN.roomOpts&&MAIN.roomOpts.length?MAIN.roomOpts.map(o=>Object.assign({},o)):[{id:'o1',title:'Укрытие стен защитной плёнкой',n:'Защита стен плёнкой',p:365,u:'м.п.',m:0,src:'perim'}]).concat([{id:'o2',", 'ROOM_OPTS start');
+  rep("n:'Вынос строительного мусора',p:120,u:'м²',m:0,src:'area'}];\nconst optQty=", "n:'Вынос строительного мусора',p:120,u:'м²',m:0,src:'area'}]);\nconst optQty=", 'ROOM_OPTS end');
 
   /* проекты и правки цен сметы — как в основной версии */
   repRange('  seed(){\n', '  /* ── helpers ── */', '  seed(){return JSON.parse(JSON.stringify(MAIN.projects||[]));}\n\n', 'seed');
