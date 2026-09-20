@@ -5,6 +5,7 @@ import { build } from 'esbuild';
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
+import { patchTemplate, writeMainData } from './design-main-data.mjs';
 
 const OUT = 'public/design';
 fs.mkdirSync(OUT + '/vendor', { recursive: true });
@@ -242,10 +243,15 @@ const PROJFIN_METHOD = [
 ].join('\n');
 rep('  arVals(){\n', PROJFIN_METHOD + '  arVals(){\n', 'projFin method');
 
+/* Номенклатура с фото, кнопки и проекты основной версии */
+const mainStats = await writeMainData(OUT);
+tpl = patchTemplate(tpl);
+
 const json = JSON.stringify(tpl).replace(/<\//g, '<\\/');
 const out = src
   .replace(/<script type="__bundler\/template">[\s\S]*?<\/script>/, () => '<script type="__bundler/template">' + json + '</script>')
   .replace('<title>Bundled Page</title>', '<title>ZAMER.PRO · дизайн</title>');
 fs.writeFileSync(OUT + '/index.html', out);
 const kb = f => Math.round(fs.statSync(f).size / 1024) + ' КБ';
+console.log('main data:', mainStats.nom, 'позиций ·', mainStats.images, 'фото ·', mainStats.presets, 'кнопок ·', mainStats.projects, 'проектов ·', kb(mainStats.file));
 console.log('design page:', kb(OUT + '/index.html'), '· draw.js', kb(OUT + '/draw.js'), '· trace.js', kb(OUT + '/trace.js'), '· contract.js', kb(OUT + '/contract.js'), '· ec.js', kb(OUT + '/ec.js'));
