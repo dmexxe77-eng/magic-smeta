@@ -1,4 +1,4 @@
-/* Версии ZAMER.PRO в стартовом меню. Онлайн-версия живёт отдельным проектом на Vercel
+/* Версии ЗАМЕРX в стартовом меню. Онлайн-версия живёт отдельным проектом на Vercel
    (репозиторий dmexxe77-eng/magic-online); пока адрес не вписан, карточка неактивна. */
 export const ONLINE_URL = 'https://magic-online-orpin.vercel.app';
 

@@ -22,8 +22,8 @@ function TraceApp({ file, roomCount, onRoom, onDone }) {
     else { r.onload = () => setImage(r.result); r.readAsDataURL(file); }
   }, [file]);
 
-  const btn = { background: '#4F46E5', border: 'none', borderRadius: 12, padding: '10px 18px', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' };
-  if (err) return <div style={{ padding: 20, color: '#1E2530' }}>{err}<div style={{ marginTop: 12 }}><button style={btn} onClick={onDone}>Закрыть</button></div></div>;
+  const btn = { background: '#1461EE', border: 'none', borderRadius: 12, padding: '10px 18px', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' };
+  if (err) return <div style={{ padding: 20, color: '#0F1620' }}>{err}<div style={{ marginTop: 12 }}><button style={btn} onClick={onDone}>Закрыть</button></div></div>;
   if (pdfData) return <PdfPagePicker pdfData={pdfData} onSelect={img => { setPdfData(null); setImage(img); }} onBack={onDone} />;
   if (!image) return <div style={{ padding: 20, color: '#6F7688' }}>Загрузка файла…</div>;
 
@@ -38,10 +38,10 @@ function TraceApp({ file, roomCount, onRoom, onDone }) {
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <div style={{ background: '#fff', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
         <button onClick={onDone} style={{ background: '#F3F3FA', border: 'none', borderRadius: 12, width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
-          <svg width="16" height="16" fill="none" stroke="#1E2530" strokeWidth="2" strokeLinecap="round"><path d="M10 4L6 8l4 4"/></svg>
+          <svg width="16" height="16" fill="none" stroke="#0F1620" strokeWidth="2" strokeLinecap="round"><path d="M10 4L6 8l4 4"/></svg>
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 15, fontWeight: 800, color: '#1E2530' }}>Обводка чертежа</div>
+          <div style={{ fontSize: 15, fontWeight: 800, color: '#0F1620' }}>Обводка чертежа</div>
           <div style={{ fontSize: 11.5, fontWeight: 600, color: '#6F7688', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{rooms.length ? 'Обведено: ' + rooms.length : (file.name || 'план')}</div>
         </div>
       </div>
@@ -49,7 +49,7 @@ function TraceApp({ file, roomCount, onRoom, onDone }) {
         <TracingCanvas image={image} completedRooms={rooms} initScale={scale} onScaleChange={setScale} onFinish={finish} />
       </div>
       <div style={{ padding: '8px 14px', background: '#fff', borderTop: '1px solid #ECECF4', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
-        <span style={{ fontSize: 12, color: '#6F7688' }}>Обведено: <b style={{ color: '#1E2530' }}>{rooms.length}</b></span>
+        <span style={{ fontSize: 12, color: '#6F7688' }}>Обведено: <b style={{ color: '#0F1620' }}>{rooms.length}</b></span>
         <button style={btn} onClick={onDone}>{rooms.length ? 'Готово (' + rooms.length + ')' : 'Отмена'}</button>
       </div>
     </div>

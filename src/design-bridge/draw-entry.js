@@ -5,8 +5,8 @@ import '../components/builders/drawEditor/editor.css';
 /* Токены страницы дизайна (design-src/README.md, раздел 1) */
 const DESIGN_VARS = {
   '--ground': '#F3F3FA', '--paper': '#F7F7FC', '--surface': '#FFFFFF', '--surface2': '#F3F3FA',
-  '--ink': '#1E2530', '--ink2': '#6F7688', '--ink3': '#A5A9B8', '--line': '#E4E4EE', '--grid': '#ECECF4',
-  '--fill': 'rgba(79,70,229,.10)', '--pri': '#4F46E5', '--laser': '#4F46E5', '--laser-soft': '#EEEDFC',
+  '--ink': '#0F1620', '--ink2': '#6F7688', '--ink3': '#A5A9B8', '--line': '#E4E4EE', '--grid': '#ECECF4',
+  '--fill': 'rgba(20,97,238,.10)', '--pri': '#1461EE', '--laser': '#1461EE', '--laser-soft': '#E7EFFD',
   '--sans': "'Manrope','Inter',system-ui,sans-serif", '--mono': "'Manrope','Inter',system-ui,sans-serif",
 };
 

@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import { patchTemplate, writeMainData } from './design-main-data.mjs';
+import { BRAND, FAVICON, brandTemplate } from './design-brand.mjs';
 
 const OUT = 'public/design';
 fs.mkdirSync(OUT + '/vendor', { recursive: true });
@@ -43,7 +44,7 @@ let tpl = JSON.parse(grab('template'));
 const rep = (a, b, label) => { const n = tpl.split(a).length - 1; if (n !== 1) throw new Error('template: «' + label + '» найдено ' + n + ' раз'); tpl = tpl.replace(a, () => b); };
 
 rep('<meta name="viewport" content="width=device-width, initial-scale=1">',
-  '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n<title>ZAMER.PRO · дизайн</title>\n' +
+  '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n<meta name="theme-color" content="#0b1119">\n<link rel="icon" href="' + FAVICON + '">\n<title>' + BRAND.title + '</title>\n' +
   '<link rel="stylesheet" href="/design/draw.css">\n<script src="/design/vendor/react.js"></script>\n<script src="/design/vendor/react-dom.js"></script>\n' +
   '<script src="/design/draw.js"></script>\n<script src="/design/trace.js"></script>\n<script src="/design/contract.js"></script>\n<script src="/design/ec.js"></script>\n' + MOBILE_CSS, 'head');
 
@@ -246,11 +247,13 @@ rep('  arVals(){\n', PROJFIN_METHOD + '  arVals(){\n', 'projFin method');
 /* Номенклатура с фото, кнопки и проекты основной версии */
 const mainStats = await writeMainData(OUT);
 tpl = patchTemplate(tpl);
+/* Бренд ЗАМЕРX: знак, название, палитра */
+tpl = brandTemplate(tpl);
 
 const json = JSON.stringify(tpl).replace(/<\//g, '<\\/');
 const out = src
   .replace(/<script type="__bundler\/template">[\s\S]*?<\/script>/, () => '<script type="__bundler/template">' + json + '</script>')
-  .replace('<title>Bundled Page</title>', '<title>ZAMER.PRO · дизайн</title>');
+  .replace('<title>Bundled Page</title>', '<title>' + BRAND.title + '</title>');
 fs.writeFileSync(OUT + '/index.html', out);
 const kb = f => Math.round(fs.statSync(f).size / 1024) + ' КБ';
 console.log('main data:', mainStats.nom, 'позиций ·', mainStats.images, 'фото ·', mainStats.presets, 'кнопок ·', mainStats.projects, 'проектов ·', kb(mainStats.file));

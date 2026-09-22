@@ -9,7 +9,7 @@ import { fitToStage } from './stage.js';
    В проекте: условия (номер, дата монтажа, предоплата), заказчик, PDF / поделиться, предпросмотр — всё сохраняется само.
    В главном меню: шаблон договора (шапка исполнителя, оформление, разделы, подстановки), один на студию, localStorage.
    Токены — design-src/README.md, раздел 1. */
-const D = { ink: '#1E2530', sub: '#6F7688', dim: '#A5A9B8', accent: '#4F46E5', soft: '#EEEDFC', bg: '#F3F3FA', card: '#fff', field: '#F7F7FC', line: '#ECECF4', border: '#E4E4EE', danger: '#FF3B30', dangerSoft: '#FFECEA' };
+const D = { ink: '#0F1620', sub: '#6F7688', dim: '#A5A9B8', accent: '#1461EE', soft: '#E7EFFD', bg: '#F3F3FA', card: '#fff', field: '#F7F7FC', line: '#ECECF4', border: '#E4E4EE', danger: '#FF3B30', dangerSoft: '#FFECEA' };
 const TPL_KEY = 'zamer.contractTpl';
 const loadTpl = () => { try { const t = JSON.parse(localStorage.getItem(TPL_KEY) || 'null'); return t ? { ...DEFAULT_CONTRACT_TPL, ...t, head: { ...DEFAULT_CONTRACT_TPL.head, ...(t.head || {}) } } : DEFAULT_CONTRACT_TPL; } catch { return DEFAULT_CONTRACT_TPL; } };
 const saveTpl = t => { try { localStorage.setItem(TPL_KEY, JSON.stringify(t)); } catch { /* приватный режим */ } };
