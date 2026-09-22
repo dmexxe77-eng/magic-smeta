@@ -7,6 +7,7 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 import { patchTemplate, writeMainData } from './design-main-data.mjs';
 import { BRAND, FAVICON, brandTemplate } from './design-brand.mjs';
+import { holesMethods, holesTemplate } from './design-holes.mjs';
 
 const OUT = 'public/design';
 fs.mkdirSync(OUT + '/vendor', { recursive: true });
@@ -91,7 +92,7 @@ const METHODS = [
   "    this.setState({sheet:null});window.MagicEC.exportFiles({company:hd.legal||hd.company||'',companyPhone:hd.phone||'',address:p.address||p.name,phone:p.phone||'',client:p.client||'',name:p.name,rooms}).then(res=>this.toast(res==='cancelled'?'Отменено':'Чертежи (.ec) для Easy Ceiling готовы'));}",
   '',
 ].join('\n');
-rep('  arVals(){\n', METHODS + '  arVals(){\n', 'methods');
+rep('  arVals(){\n', holesMethods(METHODS.split('\n')).join('\n') + '  arVals(){\n', 'methods');
 rep("pContract:()=>this.toast('Договор — не входит в этот прототип'),", 'pContract:()=>this.openContract(),', 'contract tab');
 /* «Тихие стены» из меню убраны — на их место выгрузка чертежей для Easy Ceiling */
 rep("{label:'Тихие стены',color:INK,pick:()=>{this.setState({sheet:null});this.toast('Тихие стены — не входят в прототип');}},",
@@ -247,7 +248,9 @@ rep('  arVals(){\n', PROJFIN_METHOD + '  arVals(){\n', 'projFin method');
 /* Номенклатура с фото, кнопки и проекты основной версии */
 const mainStats = await writeMainData(OUT);
 tpl = patchTemplate(tpl);
-/* Бренд ЗАМЕРX: знак, название, палитра */
+/* Внутренние вырезы из построителя: площадь, периметр, чертёж */
+tpl = holesTemplate(tpl);
+/* Бренд ЗАМЕРX: знак, название, палитра — после всех правок разметки, чтобы перекрасить и их */
 tpl = brandTemplate(tpl);
 
 const json = JSON.stringify(tpl).replace(/<\//g, '<\\/');

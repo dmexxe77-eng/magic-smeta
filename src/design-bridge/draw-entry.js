@@ -1,6 +1,6 @@
-import { createDrawEditor } from '../components/builders/drawEditor/editor.js';
+import { createDrawEditor } from './drawEditor/editor.js';
 import { fitToStage } from './stage.js';
-import '../components/builders/drawEditor/editor.css';
+import './drawEditor/editor.css';
 
 /* Токены страницы дизайна (design-src/README.md, раздел 1) */
 const DESIGN_VARS = {
