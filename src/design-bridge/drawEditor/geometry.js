@@ -242,10 +242,16 @@ export function holeError(poly, k) { const outer = flatten(poly), hs = flattenHo
   for (let j = 0; j < hs.length; j++) if (j !== k && (segsX(H, hs[j]) || hs[j].some(p => inside(H, p)) || H.some(p => inside(hs[j], p)))) return 'Вырезы пересекаются';
   return null; }
 export function checkHoles(poly) { for (let k = 0; k < holesOf(poly).length; k++) { const e = holeError(poly, k); if (e) throw new Error(e); } }
-/* Прямоугольный вырез: отступы от левой и верхней стены по габариту, ширина и высота — всё в метрах */
-export function opHole(poly, dx, dy, w, h) { if (!(w > 0) || !(h > 0)) throw new Error('Введите размеры выреза');
-  const b = bboxOf(flatten(poly)), x = b.x0 + dx, y = b.y0 + dy, q = clone(poly);
-  q.holes = [...holesOf(q), { v: [[x, y], [x + w, y], [x + w, y + h], [x, y + h]].map(([px, py]) => ({ x: px, y: py, fillet: null, arc: null })) }];
+/* Прямоугольный вырез привязан к углу помещения c: от него отступают d1 вдоль следующей стены и d2 вдоль предыдущей —
+   это первый угол выреза; стороны выреза w и h параллельны этим стенам. Всё в метрах */
+export function opHole(poly, spec) { const { w, hh: h } = spec; if (!(w > 0) || !(h > 0)) throw new Error('Введите размеры выреза');
+  if (!(spec.d1 >= 0) || !(spec.d2 >= 0)) throw new Error('Введите отступы от угла');
+  const P = ptsOf(poly), n = P.length, i = spec.c;
+  if (!(i >= 0 && i < n)) throw new Error('Опорный угол изменился — выберите угол заново');
+  const A = P[i], u1 = norm(sub(P[(i + 1) % n], A)), u2 = norm(sub(P[(i - 1 + n) % n], A));
+  const Q = add(add(A, mul(u1, spec.d1)), mul(u2, spec.d2)), q = clone(poly);
+  const ring = [Q, add(Q, mul(u1, w)), add(add(Q, mul(u1, w)), mul(u2, h)), add(Q, mul(u2, h))];
+  q.holes = [...holesOf(q), { v: ring.map(p => ({ x: p.x, y: p.y, fillet: null, arc: null })) }];
   const e = holeError(q, q.holes.length - 1); if (e) throw new Error(e); return q; }
 export function opHoleDelete(poly, k) { const q = clone(poly); q.holes = holesOf(q).filter((_, i) => i !== k); if (!q.holes.length) delete q.holes; return q; }
 /* Правка угла или стены выреза: та же операция над его контуром, результат подставляется на место */

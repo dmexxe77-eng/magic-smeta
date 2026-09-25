@@ -46,7 +46,8 @@ function fitView(pts) { const W = svg.clientWidth, H = svg.clientHeight, pad = 6
   pts.forEach(p => { x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y); });
   const w = Math.max(x1 - x0, 1e-6), h = Math.max(y1 - y0, 1e-6), s = Math.min((W - 2 * pad) / w, (H - 2 * pad - 36) / h);
   VT = { s, tx: (W - w * s) / 2 - x0 * s, ty: (H - h * s) / 2 - y0 * s + 18 }; }
-const HL = (h, i) => L(i).toLowerCase() + (h ? h + 1 : '');
+const holeBase = (poly, h) => { if (!poly) return 0; let b = poly.v.length; const hs = holesOf(poly); for (let k = 0; k < h && k < hs.length; k++) b += hs[k].v.length; return b; };
+const HL = (h, i) => L(holeBase(S.poly, h) + i);
 function dirOut(P, i) { const n = P.length, u1 = norm(sub(P[(i - 1 + n) % n], P[i])), u2 = norm(sub(P[(i + 1) % n], P[i])), b = add(u1, u2);
   if (Math.hypot(b.x, b.y) < 1e-6) return outNormal(P, i); const bis = norm(b); return interiorDeg(P, i, windOf(P)) < 180 ? mul(bis, -1) : bis; }
 const TXT = 'paint-order:stroke;stroke:var(--paper);stroke-width:4px;stroke-linejoin:round;';
@@ -92,7 +93,7 @@ function renderCanvas() { while (svg.firstChild) svg.removeChild(svg.firstChild)
       g.appendChild(el('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, stroke: 'transparent', 'stroke-width': 26, 'data-hit': 'd', 'data-i': k })); }); }
   // sides
   for (let i = 0; i < n; i++) { const sp = sidePts(poly, i).map(toS), j = (i + 1) % n;
-    const on = (S.stage === 2 && S.hot && S.hot.t === 's' && S.hot.i === i) || (S.stage === 3 && S.sel && S.sel.t === 's' && S.sel.i === i);
+    const on = (S.stage === 2 && S.hot && S.hot.t === 's' && S.hot.i === i) || (S.stage === 3 && S.sel && S.sel.t === 's' && S.sel.h == null && S.sel.i === i);
     if (on) g.appendChild(el('path', { d: pathOf(sp, false), style: 'fill:none;stroke:var(--laser);stroke-width:5;stroke-linecap:round' }));
     const mid = toS(mul(add(P[i], P[j]), .5)), nO = outNormal(P, i), lp = add(mid, mul(nO, 14 * LS)), sl = hyp(sp[0], sp[sp.length - 1]);
     let str, color = 'var(--ink)', italic = false;
@@ -104,7 +105,7 @@ function renderCanvas() { while (svg.firstChild) svg.removeChild(svg.firstChild)
   // vertices
   const wind = windOf(P);
   for (let i = 0; i < n; i++) { const p = toS(P[i]), fi = filletInfo(poly, i), o = dirOut(P, i);
-    const on = S.sel && S.sel.t === 'v' && S.sel.i === i, isPick = (S.pick && S.pick.a === i) || (S.dpick && S.dpick.a === i);
+    const on = S.sel && S.sel.t === 'v' && S.sel.h == null && S.sel.i === i, isPick = (S.pick && S.pick.a === i) || (S.dpick && S.dpick.a === i);
     const nb = P.length, slA = hyp(toS(P[(i - 1 + nb) % nb]), p), slB = hyp(toS(P[(i + 1) % nb]), p), roomy = Math.min(slA, slB) >= 30;
     // значок прямого угла ставим, только если угол и правда вышел прямым: иначе честно пишем градусы
     const vkd = S.stage === 2 ? interiorDeg(P, i, wind) : 0, orthoOk = S.stage === 2 && S.m.vert[i].kind === 'ortho' && Math.min(Math.abs(vkd - 90), Math.abs(vkd - 270)) < 1;
@@ -330,14 +331,18 @@ const GL = {
   arc: dir => gsvg(G_ROOM + `<path d="M5 14 L35 14" ${G_OLD}/><path d="M5 14 Q20 ${dir === 'in' ? 27 : 1} 35 14" ${G_PRI}/><circle cx="5" cy="14" r="2.5" fill="var(--ink)"/><circle cx="35" cy="14" r="2.5" fill="var(--ink)"/>`),
   bump: dir => gsvg(G_ROOM + `<path d="M14 14 L26 14" ${G_OLD}/><path d="M5 14 L14 14 L14 ${dir === 'niche' ? 6 : 22} L26 ${dir === 'niche' ? 6 : 22} L26 14 L35 14" ${G_PRI}/>`),
   fillet: () => gsvg(`<rect x="8" y="8" width="29" height="18" rx="1" fill="var(--fill)"/><path d="M8 26 L8 8 L36 8" ${G_OLD}/><path d="M8 26 L8 17 Q8 8 17 8 L36 8" ${G_PRI}/>`),
+  hole: () => gsvg(`<rect x="3" y="4" width="34" height="20" rx="1" fill="var(--fill)" stroke="var(--ink)" stroke-width="1.6"/><rect x="14" y="10" width="12" height="8" rx="1" fill="var(--paper)" ${G_PRI}/><path d="M3 14 L14 14" ${G_OLD}/><path d="M20 4 L20 10" ${G_OLD}/>`),
   del: () => gsvg(`<path d="M6 24 L20 8 L34 24" ${G_OLD}/><path d="M6 24 L34 24" ${G_PRI}/><circle cx="6" cy="24" r="2.5" fill="var(--ink)"/><circle cx="34" cy="24" r="2.5" fill="var(--ink)"/><path d="M17 5 L23 11 M23 5 L17 11" fill="none" stroke="var(--bad)" stroke-width="1.8" stroke-linecap="round"/>`),
 };
 function opPic(o) { const k = o.kind, sg = o.seg;
-  return k === 'len' ? GL.len(sg.end) : k === 'add' ? GL.add(sg.from) : k === 'shift' ? GL.shift(sg.dir) : k === 'arc' ? GL.arc(sg.dir) : k === 'bump' ? GL.bump(sg.dir) : k === 'fillet' ? GL.fillet() : ''; }
+  return k === 'len' ? GL.len(sg.end) : k === 'add' ? GL.add(sg.from) : k === 'shift' ? GL.shift(sg.dir) : k === 'arc' ? GL.arc(sg.dir) : k === 'bump' ? GL.bump(sg.dir) : k === 'fillet' ? GL.fillet() : k === 'hole' ? GL.hole() : ''; }
 function opTarget(h) { return h != null ? holesOf(S.poly)[h] : S.poly; }
 function makeOp(kind, i, h) { const T = opTarget(h), inHole = h != null, n = T.v.length, A = inHole ? HL(h, i) : L(i), B = inHole ? HL(h, (i + 1) % n) : L((i + 1) % n), seg = {}, spec = { fields: [], segs: [] };
-  if (kind === 'hole') { spec.title = 'Внутренний вырез'; spec.fields = [['dx', 'От левой стены', 'см'], ['dy', 'От верхней стены', 'см'], ['w', 'Ширина', 'см'], ['hh', 'Высота', 'см']];
-    S.op = { kind, i: 0, spec, seg, f: {} }; S.focusReq = 'input[data-in="op"][data-k="dx"]'; return; }
+  if (kind === 'hole') { spec.title = 'Внутренний вырез'; const P = ptsOf(S.poly), wind = windOf(P);
+    /* опорный угол — любой внутренний угол помещения; от наружного (270°) отступы ушли бы за стены */
+    const corners = P.map((_, k) => k).filter(k => interiorDeg(P, k, wind) < 180).map(k => ['c' + k, L(k)]);
+    spec.segs = [['c', corners, 'От какого угла отступать']]; seg.c = corners[0][0];
+    S.op = { kind, i: 0, spec, seg, f: {} }; opFields(); S.focusReq = 'input[data-in="op"][data-k="d1"]'; return; }
   if (kind === 'len') { spec.title = 'Длина стены ' + A + B; spec.segLabel = 'Какой угол сместить'; spec.fields = [['len', 'Новая длина', 'см']]; spec.segs = [['end', [['end', 'Угол ' + B], ['start', 'Угол ' + A]]]]; seg.end = 'end'; }
   if (kind === 'add') { spec.title = 'Точка на стене ' + A + B; spec.fields = [['d', 'Расстояние', 'см']]; spec.segs = [['from', [['start', 'от ' + A], ['end', 'от ' + B]]]]; seg.from = 'start'; }
   if (kind === 'shift') { spec.title = 'Сдвиг стены ' + A + B; spec.fields = [['d', 'На сколько', 'см']]; spec.segs = [['dir', inHole ? [['out', 'Расширить вырез'], ['in', 'Сузить вырез']] : [['out', 'Наружу'], ['in', 'Внутрь']]]]; seg.dir = 'out'; }
@@ -349,9 +354,41 @@ function makeOp(kind, i, h) { const T = opTarget(h), inHole = h != null, n = T.v
   const f = {}; if (kind === 'len') f.len = String(cm(sideLen(T, i))); if (kind === 'fillet' && T.v[i].fillet) f.r = String(cm(T.v[i].fillet));
   if (kind === 'arc' && T.v[i].arc) f.h = String(cm(T.v[i].arc.h));
   S.op = { kind, i, h, spec, seg, f }; opFields(); S.focusReq = `input[data-in="op"][data-k="${S.op.spec.fields[0][0]}"]`; }
-function opFields() { const o = S.op; if (o.kind === 'arc') o.spec.fields = o.seg.mode === 'h' ? [['h', 'Стрела (высота дуги)', 'см']] : [['s', 'Длина дуги', 'см']]; }
+/* стены, примыкающие к опорному углу выреза: следующая (A→B) и предыдущая (D→A), в буквах помещения */
+function holeCorner(o) { const n = S.poly.v.length, i = +String(o.seg.c || 'c0').slice(1); return { i, next: L(i) + L((i + 1) % n), prev: L((i - 1 + n) % n) + L(i) }; }
+function opFields() { const o = S.op; if (o.kind === 'arc') o.spec.fields = o.seg.mode === 'h' ? [['h', 'Стрела (высота дуги)', 'см']] : [['s', 'Длина дуги', 'см']];
+  if (o.kind === 'hole') { const c = holeCorner(o); o.spec.fields = [['d1', 'От ' + L(c.i) + ' вдоль ' + c.next, 'см'], ['d2', 'От ' + L(c.i) + ' вдоль ' + c.prev, 'см'], ['w', 'Ширина (вдоль ' + c.next + ')', 'см'], ['hh', 'Высота (вдоль ' + c.prev + ')', 'см']]; } }
+/* Схема выреза: помещение, опорный угол, две стрелки от него вдоль стен до первого угла выреза, сам вырез.
+   Угол рисуем в той четверти, где он стоит в помещении, стрелки — по направлению его стен */
+function holeScheme(o) { const c = holeCorner(o), P = ptsOf(S.poly), n = P.length, A = P[c.i], num = k => parseNum(o.f[k]), txt = k => (isFinite(num(k)) && num(k) > 0 ? cm(num(k) / 100) : '?');
+  const u1 = norm(sub(P[(c.i + 1) % n], A)), u2 = norm(sub(P[(c.i - 1 + n) % n], A));
+  const b = bboxOf(P), left = A.x - b.x0 <= b.x1 - A.x, top = A.y - b.y0 <= b.y1 - A.y;
+  /* какая из двух стен угла идёт по горизонтали схемы */
+  const nextHoriz = Math.abs(u1.x) >= Math.abs(u1.y);
+  const R = { x: 24, y: 18, w: 172, h: 94 }, dh = 50, dv = 40, W = 54, Hh = 30;
+  const cx0 = left ? R.x : R.x + R.w, cy0 = top ? R.y : R.y + R.h, sx = left ? 1 : -1, sy = top ? 1 : -1;
+  const qx = cx0 + sx * dh, qy = cy0 + sy * dv, hx = left ? qx : qx - W, hy = top ? qy : qy - Hh;
+  const hLabel = (nextHoriz ? c.next : c.prev) + ' ' + txt(nextHoriz ? 'd1' : 'd2'), vLabel = (nextHoriz ? c.prev : c.next) + ' ' + txt(nextHoriz ? 'd2' : 'd1');
+  const T = (x, y, str, o2 = {}) => `<text x="${x}" y="${y}"${o2.rot ? ` transform="rotate(-90 ${x} ${y})"` : ''} text-anchor="${o2.a || 'middle'}" font-size="${o2.s || 10}" font-weight="${o2.w || 600}" fill="${o2.c || 'var(--pri)'}" font-family="var(--sans)">${esc(str)}</text>`;
+  /* буквы углов: выбранный — ярко, его соседи по стенам — у концов этих стен, для четырёхугольника ещё и противоположный; серым */
+  const cornerAt = (l, t) => ({ x: l ? R.x : R.x + R.w, y: t ? R.y : R.y + R.h, l, t });
+  const label = (pt, str, hot) => T(pt.x + (pt.l ? -9 : 9), pt.y + (pt.t ? -6 : 13), str, { c: hot ? 'var(--laser)' : 'var(--ink3)', s: hot ? 11 : 10, w: hot ? 700 : 600 });
+  const nextPt = nextHoriz ? cornerAt(!left, top) : cornerAt(left, !top), prevPt = nextHoriz ? cornerAt(left, !top) : cornerAt(!left, top);
+  let cornerLabels = label(cornerAt(left, top), L(c.i), true) + label(nextPt, L((c.i + 1) % n)) + label(prevPt, L((c.i - 1 + n) % n));
+  if (n === 4) cornerLabels += label(cornerAt(!left, !top), L((c.i + 2) % n));
+  const tick = (x, y, vert) => (vert ? `<path d="M${x - 4} ${y} L${x + 4} ${y}" ${G_PRI}/>` : `<path d="M${x} ${y - 4} L${x} ${y + 4}" ${G_PRI}/>`);
+  return `<svg class="scheme" viewBox="0 0 220 130" aria-hidden="true">
+    <rect x="${R.x}" y="${R.y}" width="${R.w}" height="${R.h}" rx="2" fill="var(--fill)" stroke="var(--ink)" stroke-width="2"/>
+    <rect x="${hx}" y="${hy}" width="${W}" height="${Hh}" rx="1.5" fill="var(--paper)" stroke="var(--pri)" stroke-width="2"/>
+    <path d="M${cx0} ${qy} L${qx} ${qy}" ${G_PRI}/>${tick(cx0, qy, false)}${tick(qx, qy, false)}${T((cx0 + qx) / 2, top ? qy - 5 : qy + 12, hLabel, { s: 9.5 })}
+    <path d="M${qx} ${cy0} L${qx} ${qy}" ${G_PRI}/>${tick(qx, cy0, true)}${tick(qx, qy, true)}${T(qx + sx * 6, (cy0 + qy) / 2 + 3, vLabel, { s: 9.5, a: left ? 'start' : 'end' })}
+    ${cornerLabels}
+    <circle cx="${cx0}" cy="${cy0}" r="4" fill="var(--laser)"/>
+    <circle cx="${qx}" cy="${qy}" r="3" fill="var(--pri)"/>
+    ${T(hx + W / 2, hy + Hh / 2 + 3, txt('w') + ' × ' + txt('hh'), { c: 'var(--ink)', s: 9.5 })}
+  </svg>`; }
 function opNote() { const o = S.op, num = k => parseNum(o.f[k]) / 100, T = opTarget(o.h), inHole = o.h != null, NL = i => (inHole ? HL(o.h, i) : L(i));
-  if (o.kind === 'hole') { const b = bboxOf(flatten(S.poly)); return `Габарит помещения ${cm(b.w)} × ${cm(b.h)} см. Отступы — от левой и верхней стены`; }
+  if (o.kind === 'hole') { const c = holeCorner(o); return `Первый угол выреза — на отступах от угла ${L(c.i)} вдоль стен ${c.next} и ${c.prev}. Стороны выреза параллельны этим стенам`; }
   if (o.kind === 'fillet') { const fi = filletInfo({ v: T.v.map((p, k) => ({ ...p, fillet: k === o.i ? 1 : p.fillet })) }, o.i); if (!fi) return '';
     const Rmax = Math.min(fi.lp, fi.ln) / 2 * Math.tan(fi.phi / 2), r = num('r');
     return isFinite(r) && r > 0 ? `Касание на ${cm(r / Math.tan(fi.phi / 2))} см от угла · максимум R ${cm(Rmax)}` : `Угол ${Math.round(fi.phi * DEG)}° · максимум R ${cm(Rmax)} см`; }
@@ -363,8 +400,9 @@ function opNote() { const o = S.op, num = k => parseNum(o.f[k]) / 100, T = opTar
   if (o.kind === 'shift') return 'Соседние стены удлинятся или укоротятся'; return ''; }
 function sheet3() { const poly = S.poly, n = poly.v.length, st = polyStats(poly);
   if (S.op) { const o = S.op; let h = `<div class="card op"><h3><span>${esc(o.spec.title)}</span>${opPic(o)}</h3>`;
+    if (o.kind === 'hole') h += holeScheme(o);
     if (o.spec.segLabel) h += `<div class="sec">${esc(o.spec.segLabel)}</div>`;
-    o.spec.segs.forEach(([name, opts]) => { h += '<div class="seg">' + opts.map(([v, lbl]) => `<button class="${o.seg[name] === v ? 'on' : ''}" data-act="seg" data-n="${name}" data-v="${v}">${esc(lbl)}</button>`).join('') + '</div>'; });
+    o.spec.segs.forEach(([name, opts, label]) => { if (label) h += `<div class="sec">${esc(label)}</div>`; h += '<div class="seg' + (opts.length > 4 ? ' wrap' : '') + '">' + opts.map(([v, lbl]) => `<button class="${o.seg[name] === v ? 'on' : ''}" data-act="seg" data-n="${name}" data-v="${v}">${esc(lbl)}</button>`).join('') + '</div>'; });
     h += '<div class="fields">' + o.spec.fields.map(([k, lbl, u]) => `<div class="fld"><span class="k">${esc(lbl)}</span>${numIn('op', `data-k="${k}"`, o.f[k] ?? '', '')}<span class="u">${u}</span></div>`).join('') + '</div>';
     h += `<div class="note" id="opnote"></div><div class="btns"><button class="btn ghost" data-act="cancel">Отмена</button><button class="btn laser" data-act="apply">Применить</button></div></div>`; return h; }
   const inHole = S.sel && S.sel.h != null, T = inHole ? holesOf(poly)[S.sel.h] : poly, tn = T ? T.v.length : 0, NL = i => (inHole ? HL(S.sel.h, i) : L(i));
@@ -381,12 +419,12 @@ function sheet3() { const poly = S.poly, n = poly.v.length, st = polyStats(poly)
   <div class="meta">${shape}${st.holes ? `, вырезов <b>${st.holes}</b>` : ''}${S.ops.length ? `, правок <b>${S.ops.length}</b>` : ''} · тап по углу или стене — действия</div>
   <div class="btns"><button class="btn sm" data-act="hole">＋ Внутренний вырез</button></div>
   <div class="btns fin"><input class="inName" id="roomName" value="${esc(S.roomName)}" placeholder="Название помещения" maxlength="40"><button class="btn pri" data-act="finish">${opts.initial ? 'Сохранить изменения' : 'Добавить в расчёт'}</button></div>`; }
-function updateSheet3() { const nn = $('#opnote'); if (nn && S.op) nn.textContent = opNote(); }
+function updateSheet3() { const nn = $('#opnote'); if (nn && S.op) nn.textContent = opNote(); const sc = sheet.querySelector('svg.scheme'); if (sc && S.op && S.op.kind === 'hole') sc.outerHTML = holeScheme(S.op); }
 function updateSheet() { if (S.stage === 0) updateSheet0(); else if (S.stage === 2 && S.m) updateSheet2(); else if (S.stage === 3) updateSheet3(); }
 function runOp(poly, op) { let q = null;
-  if (op.kind === 'hole') return { q: opHole(poly, op.dx, op.dy, op.w, op.hh), dropped: [] };
+  if (op.kind === 'hole') return { q: opHole(poly, op), dropped: [] };
   if (op.kind === 'holeDel') return { q: opHoleDelete(poly, op.h), dropped: [] };
-  if (op.h != null) { let dropped = []; q = withHole(poly, op.h, hole => { const r = runOp(hole, { ...op, h: undefined }); dropped = r.dropped.map(l => l.toLowerCase()); return r.q; }); return { q, dropped }; }
+  if (op.h != null) { let dropped = []; q = withHole(poly, op.h, hole => { const r = runOp(hole, { ...op, h: undefined }); dropped = r.dropped.map(l => HL(op.h, l.charCodeAt(0) - 65)); return r.q; }); return { q, dropped }; }
   if (op.kind === 'len') q = opLength(poly, op.i, op.end, op.len); else if (op.kind === 'add') q = opAddPoint(poly, op.i, op.from, op.d);
   else if (op.kind === 'shift') q = opShift(poly, op.i, op.off); else if (op.kind === 'arc') q = opArc(poly, op.i, op.mode, op.val, op.dir);
   else if (op.kind === 'bump') q = opBump(poly, op.i, op.from, op.off, op.w, op.dp, op.dir); else if (op.kind === 'fillet') q = opFillet(poly, op.i, op.r);
@@ -408,7 +446,7 @@ function commitOp(op) { try { const { q, dropped } = runOp(S.poly, op); S.ops.pu
 function applyOp() { const o = S.op; if (!o) return; const num = k => { const v = parseNum(o.f[k]); return v == null ? NaN : v / 100; };
   for (const [k, lbl] of o.spec.fields) if (!isFinite(num(k))) return toast('Введите: ' + lbl.toLowerCase(), true);
   const op = { kind: o.kind, i: o.i }; if (o.h != null) op.h = o.h;
-  if (o.kind === 'hole') Object.assign(op, { dx: num('dx'), dy: num('dy'), w: num('w'), hh: num('hh') });
+  if (o.kind === 'hole') Object.assign(op, { c: holeCorner(o).i, d1: num('d1'), d2: num('d2'), w: num('w'), hh: num('hh') });
   else if (o.kind === 'len') Object.assign(op, { end: o.seg.end, len: num('len') });
   else if (o.kind === 'add') Object.assign(op, { from: o.seg.from, d: num('d') });
   else if (o.kind === 'shift') Object.assign(op, { off: (o.seg.dir === 'out' ? 1 : -1) * num('d') });
@@ -469,7 +507,7 @@ function disarmNew() { clearTimeout(newArm); newArm = null; const b = $('#bNew')
 $('#bNew').addEventListener('click', () => { if (S.stage === 0) { S.quick = null; return render(); } if (S.stage === 1 && !S.sk.pts.length) return;
   if (!newArm) { const b = $('#bNew'); b.textContent = 'Стереть?'; b.style.color = 'var(--laser)'; newArm = setTimeout(disarmNew, 3000); toast('Ещё раз, чтобы начать новый чертёж'); return; }
   disarmNew(); Object.assign(S, FRESH()); render(); });
-function viewKey() { const m = S.m; return [S.stage, S.quick ? S.quick.kind + S.quick.mode + (S.quick.edit ? 'e' : '') : '', S.origin ? S.origin.kind : '', S.sel ? S.sel.t + S.sel.i : '', S.pick ? S.pick.mode + (S.pick.a ?? '') : '', S.op ? S.op.kind + S.op.i + JSON.stringify(S.op.seg) : '',
+function viewKey() { const m = S.m; return [S.stage, S.quick ? S.quick.kind + S.quick.mode + (S.quick.edit ? 'e' : '') : '', S.origin ? S.origin.kind : '', S.sel ? S.sel.t + S.sel.i + (S.sel.h != null ? 'h' + S.sel.h : '') : '', S.pick ? S.pick.mode + (S.pick.a ?? '') : '', S.op ? S.op.kind + S.op.i + JSON.stringify(S.op.seg) : '',
   m ? m.n + ':' + m.diags.length + ':' + m.vert.map(v => v.kind[0]).join('') + ':' + (S.sel && S.sel.t === 'v' ? m.vert[S.sel.i].kind : '') : '', S.tab2, S.dpick ? S.dpick.a : '', S.ops.length, S.poly ? S.poly.v.length : 0, S.sk.pts.length, S.sk.free ? 'f' : ''].join('|'); }
 function renderSheet() { const key = viewKey(); if (key === sheetKey) { updateSheet(); return; }
   const startOnly = S.stage === 0 && !S.quick; const start = $('#start'); // выбор способа — вверху холста, чтобы не тянуться вниз
