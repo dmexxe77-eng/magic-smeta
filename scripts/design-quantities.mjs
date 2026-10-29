@@ -37,13 +37,15 @@ const METHODS = String.raw`
     cancelAnimationFrame(this._quantityTabFrame);this._quantityTabFrame=requestAnimationFrame(()=>{const el=document.querySelector('[data-quantity-tab="'+id+'"]');if(!el)return;const parent=el.parentElement;parent.scrollLeft+=el.getBoundingClientRect().left-parent.getBoundingClientRect().left-(parent.clientWidth-el.offsetWidth)/2;});
   }
   quantityLine(l,r,b,inst,editInst,qkey){
-    const s=this.state,key=qkey+'|'+l.n;
+    const s=this.state,rowKey=l.key||l.n,key=qkey+'|'+rowKey;
     return{n:l.n,editNom:()=>this.openNom(l.n),priceTxt:F(l.p)+' ₽/'+l.u,srcSign:l.manual?'#':'×',srcColor:l.manual?'#6F7688':ACC,u:l.u,sourceLabel:quantitySource(l),qAria:'Количество позиции '+l.n,
+      hasVariants:Array.isArray(l.variants)&&l.variants.length>1,variantAria:'Выбрать номенклатуру: '+l.n,
+      chooseVariant:()=>{this._variantEdit=editInst;this.setState({sheet:'calcVariant',calcVariant:{key:rowKey,name:l.n,options:l.variants||[]}});},
       qTxt:s.qtyBuf&&s.qtyBuf.k===key?s.qtyBuf.t:QF(l.q),qOverridden:l.ov,qBorderStyle:l.missing?'dashed':'solid',qBorder:l.ov?'#C9C6F5':l.missing?'#C9C9D6':'transparent',qBg:l.ov?'#EEEDFC':'#F3F3FA',
       qChange:e=>this.setState({qtyBuf:{k:key,t:e.target.value}}),
-      qBlur:()=>{const qb=this.state.qtyBuf;if(!qb||qb.k!==key)return;const n=readQuantity(qb.t);if(n===undefined){this.toast('Введите неотрицательное количество');return;}editInst(i=>{i.iq=i.iq||{};if(n===null)delete i.iq[l.n];else i.iq[l.n]=n;});this.setState({qtyBuf:null});},
-      qReset:()=>editInst(i=>{if(i.iq)delete i.iq[l.n];}),totalTxt:l.on?F(l.t):'—',on:l.on,boxBg:l.on?ACC:'#fff',boxBorder:l.on?ACC:'#D6D6E2',nameColor:l.on?INK:DIM,totalColor:l.on?INK:DIM,
-      toggle:()=>editInst(i=>{i.off=i.off||{};i.off[l.n]=!i.off[l.n];})};
+      qBlur:()=>{const qb=this.state.qtyBuf;if(!qb||qb.k!==key)return;const n=readQuantity(qb.t);if(n===undefined){this.toast('Введите неотрицательное количество');return;}editInst(i=>{i.iq=i.iq||{};if(n===null)delete i.iq[rowKey];else i.iq[rowKey]=n;});this.setState({qtyBuf:null});},
+      qReset:()=>editInst(i=>{if(i.iq)delete i.iq[rowKey];}),totalTxt:l.on?F(l.t):'—',on:l.on,boxBg:l.on?ACC:'#fff',boxBorder:l.on?ACC:'#D6D6E2',nameColor:l.on?INK:DIM,totalColor:l.on?INK:DIM,
+      toggle:()=>editInst(i=>{i.off=i.off||{};i.off[rowKey]=!i.off[rowKey];})};
   }
   quantityBlocks(r,g,p,chipStyle){
     const s=this.state,col=s.collapsed||{};
@@ -68,7 +70,7 @@ const METHODS = String.raw`
           const base=pending!==undefined?pending:blockQty(b,i,room,quantityGeom(room)).shown;
           setQ(Math.max(0,Math.round(((base||0)+d)*1000)/1000));this.setState({qtyBuf:null});
         };
-        const choices=(PRESETS[b.id]||[]).filter(pr=>!pr.hidden&&(pr.items.length||pr.id===inst.pid)).map(pr=>Object.assign({name:pr.name,pick:()=>editInst(i=>{if(i.pid!==pr.id){i.pid=pr.id;i.off={};i.iq={};}})},chipStyle(pr.id===inst.pid)));
+        const choices=(PRESETS[b.id]||[]).filter(pr=>!pr.hidden&&(pr.items.length||pr.id===inst.pid)).map(pr=>Object.assign({name:pr.name,pick:()=>editInst(i=>{if(i.pid!==pr.id){i.pid=pr.id;i.off={};i.iq={};i.variants={};}})},chipStyle(pr.id===inst.pid)));
         return{id:inst.id||'single',unit:q.unit,qtyAria:'Общее количество '+b.title+' '+(index+1),qtyTxt:s.qtyBuf&&s.qtyBuf.k===key?s.qtyBuf.t:QF(q.shown),totalTxt:total?RUB(total):'—',inc:()=>step(b.step||1),dec:()=>step(-(b.step||1)),
           qtyChange:e=>this.setState({qtyBuf:{k:key,t:e.target.value}}),
           qtyBlur:()=>{const qb=this.state.qtyBuf;if(!qb||qb.k!==key)return;const n=readQuantity(qb.t);if(n===undefined){this.toast('Введите неотрицательное количество');return;}setQ(n);this.setState({qtyBuf:null});},

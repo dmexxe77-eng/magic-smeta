@@ -13,10 +13,10 @@ test('editor keeps changes in a draft until Save', async () => {
   const original = r.PRESETS.canvas[0].name;
   app.beVals().beSetName({ target: { value: 'Черновик' } });
   app.saveDesign();
-  const before = await runtime({ saved: JSON.parse(r.entries.get('zamer.design.v1')) });
+  const before = await runtime({ saved: r.entries.get('zamer.design.v1') });
   assert.equal(before.PRESETS.canvas[0].name, original);
   app.presetEditorVals().peSave();
-  const after = await runtime({ saved: JSON.parse(r.entries.get('zamer.design.v1')) });
+  const after = await runtime({ saved: r.entries.get('zamer.design.v1') });
   assert.equal(after.PRESETS.canvas[0].name, 'Черновик');
   assert.equal(app.state.screen, 'account');
 });
@@ -94,6 +94,6 @@ test('list editor adds alternatives to one row and persists them with the preset
   assert.equal(r.PRESETS.canvas[0].items.length, count);
   assert.deepEqual(Array.from(first.variants, n => n.n), [first.n, alternative.n]);
   app.presetEditorVals().peSave();
-  const restored = await runtime({ saved: JSON.parse(r.entries.get('zamer.design.v1')) });
+  const restored = await runtime({ saved: r.entries.get('zamer.design.v1') });
   assert.equal(restored.PRESETS.canvas[0].items[0].variants[1].n, alternative.n);
 });

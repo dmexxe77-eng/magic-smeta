@@ -7,6 +7,9 @@ const identifier = value => (typeof value === 'string' && value.length > 0) || N
 const safeBlockId = value => typeof value === 'string' && /^[a-zA-Z0-9_-]+$/.test(value)
   && !['__proto__', 'constructor', 'prototype'].includes(value);
 const position = value => record(value) && typeof value.n === 'string' && typeof value.u === 'string' && nonnegative(value.p);
+const presetPosition = value => position(value) && (value.variants == null || (Array.isArray(value.variants)
+  && value.variants.length > 0 && value.variants.every(position)
+  && new Set(value.variants.map(option => option.n)).size === value.variants.length));
 const contour = value => Array.isArray(value) && value.every(point => Array.isArray(point) && point.length >= 2
   && Number.isFinite(point[0]) && Number.isFinite(point[1]));
 
@@ -28,7 +31,7 @@ export function validateDesignSnapshot(value) {
       const presetIds = new Set();
       for (const preset of list) {
         if (!record(preset) || !identifier(preset.id) || presetIds.has(preset.id)
-          || typeof preset.name !== 'string' || !Array.isArray(preset.items) || !preset.items.every(position)) return false;
+          || typeof preset.name !== 'string' || !Array.isArray(preset.items) || !preset.items.every(presetPosition)) return false;
         presetIds.add(preset.id);
       }
     }
