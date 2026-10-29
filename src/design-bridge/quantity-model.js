@@ -86,7 +86,7 @@ function sourceQuantity(source, block, g) {
 
 /** iq contains the final user-entered quantity, so norms and multiples do not run again. */
 export function itemQuantity(item, instance, block, g) {
-  const override = instance?.iq?.[item.n];
+  const override = instance?.iq?.[item.key || item.n];
   if (override != null) {
     const value = quantity(override);
     return { value, overridden: true, missing: value == null };
@@ -109,11 +109,15 @@ export function itemQuantity(item, instance, block, g) {
 export function instanceLines(def, instance, preset, room, g, defs) {
   const block = blockQuantity(def, instance, room, g, defs);
   return (preset?.items || []).map(item => {
-    const q = itemQuantity(item, instance, block, g);
+    const variants = Array.isArray(item.variants) ? item.variants : [];
+    const selected = variants.find(option => option.n === instance?.variants?.[item.n]) || variants[0];
+    const effective = selected ? { ...item, n: selected.n, p: selected.p, u: selected.u, m: selected.m, key: item.n } : item;
+    const q = itemQuantity(effective, instance, block, g);
     const on = instance?.off?.[item.n] !== true;
-    const price = Number(item.p);
+    const price = Number(effective.p);
     return {
-      ...item,
+      ...effective,
+      key: item.n,
       q: q.value,
       t: on && q.value != null && Number.isFinite(price) ? q.value * price : 0,
       on,
