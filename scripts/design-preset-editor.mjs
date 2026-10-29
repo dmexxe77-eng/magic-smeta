@@ -108,9 +108,9 @@ const METHODS = String.raw`
     const basis='На 1 единицу основного количества';
     const example=row&&norm>0?window.MagicQuantity.itemQuantity(Object.assign({},row,{src:undefined,k:norm,mult:0,u:(options[0]||row).u}),{},{value:15},{}).value:null;
     const unitPhrase=({'м.п.':'погонный метр','м.п':'погонный метр','м²':'квадратный метр','шт':'штуку','шт.':'штуку','компл.':'комплект','компл':'комплект'})[def.unit]||'единицу';
-    const objectPhrase=({canvas:'полотна',main:'профиля',extra:'доп. профиля',linear:'линейного освещения',curtain:'штор'})[be.bid]||'основного количества';
+    const objectPhrase=({canvas:'полотна',main:'профиля',extra:'доп. профиля',track:'линейного освещения',curtain:'штор'})[be.bid]||'основного количества';
     const onePhrase=be.bid==='light'?'На 1 светильник':'На 1 '+unitPhrase+' '+objectPhrase;
-    const scenario=be.bid==='light'?'Для 15 светильников':def.unit==='м²'?'При площади 15 '+def.unit:['main','extra','linear','curtain'].includes(be.bid)?'При длине 15 '+def.unit:'При основном количестве 15 '+def.unit;
+    const scenario=be.bid==='light'?'Для 15 светильников':def.unit==='м²'?'При площади 15 '+def.unit:['main','extra','track','curtain'].includes(be.bid)?'При длине 15 '+def.unit:'При основном количестве 15 '+def.unit;
     const result={...flags,peDismiss:dismiss,peSettings:s.sheet==='presetSettings',peDeleteConfirm:s.sheet==='presetDelete',peNorm:s.sheet==='presetNorm',peList:s.sheet==='presetList',peOrder:s.sheet==='presetOrder',peHelp:s.sheet==='presetHelp',
       peClose:()=>this.finishPresetDraft(false),peSave:()=>this.finishPresetDraft(true),peOpenSettings:()=>open('presetSettings'),peOpenHelp:()=>open('presetHelp'),peOpenOrder:()=>open('presetOrder'),
       peMeta:def.title+' · '+n+' '+word+' · '+(pr&&!pr.hidden?'виден в калькуляторе':'скрыт в калькуляторе'),peVisible:!!pr&&!pr.hidden,peSwitchKnob:pr&&!pr.hidden?17:2,
