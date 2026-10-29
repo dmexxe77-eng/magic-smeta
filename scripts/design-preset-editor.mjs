@@ -32,12 +32,12 @@ const EDITOR = `
       </div>
     </div>
     <div style="background:#fff;border-radius:20px;padding:14px;margin-bottom:14px">
-      <div style="${small};margin-bottom:10px">Параметры пресета</div>
+      <div style="${small};margin-bottom:10px">Название пресета</div>
       <div style="display:flex;gap:8px"><input aria-label="Название пресета" value="{{ beName }}" sc-camel-on-change="{{ beSetName }}" maxlength="70" style="${field};flex:1"><button sc-camel-on-click="{{ peOpenSettings }}" style="flex:none;display:flex;align-items:center;justify-content:center;gap:5px;min-height:42px;padding:0 10px;border:1.5px solid #E4E4EE;border-radius:13px;background:#fff;font-size:12.5px;font-weight:700;color:#1E2530;cursor:pointer"><span style="color:#4F46E5;display:flex">${pencil}</span>Настроить</button></div>
     </div>
-    <div role="note" aria-label="Количество пресета" style="background:#F7F7FC;border:1.5px solid #DFE2EC;border-radius:17px;padding:10px 14px;margin-bottom:14px">
-      <div style="font-size:12px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;color:#6F7688;margin-bottom:4px">Количество</div>
-      <div style="display:flex;gap:8px;align-items:center"><div style="flex:1;min-width:0;font-size:15px;line-height:1.35;font-weight:800">{{ beQuantityTitle }}</div><sc-if value="{{ beCustom }}" hint-placeholder-val="{{ false }}"><button aria-label="Настроить блок" sc-camel-on-click="{{ beEditBlock }}" style="display:flex;flex:none;border:0;background:transparent;color:#4F46E5;padding:3px;cursor:pointer">${pencil}</button></sc-if></div>
+    <div role="note" aria-label="Количество пресета" style="background:#fff;border-radius:20px;padding:14px;margin-bottom:14px">
+      <div style="${small};margin-bottom:10px">Количество</div>
+      <div style="display:flex;gap:8px;align-items:center"><div style="flex:1;min-width:0;font-size:14px;line-height:1.35;font-weight:700">{{ beQuantityTitle }}</div><sc-if value="{{ beCustom }}" hint-placeholder-val="{{ false }}"><button aria-label="Настроить блок" sc-camel-on-click="{{ beEditBlock }}" style="display:flex;flex:none;border:0;background:transparent;color:#4F46E5;padding:3px;cursor:pointer">${pencil}</button></sc-if></div>
       <div style="font-size:12px;color:#6F7688;line-height:1.45;margin-top:4px">По умолчанию для всех позиций. У каждой можно изменить.</div>
     </div>
     <div style="background:#fff;border-radius:20px;padding:14px">
