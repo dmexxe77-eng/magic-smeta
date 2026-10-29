@@ -6,6 +6,36 @@ import {
 } from '../src/design-bridge/quantity-model.js';
 
 const geometry = { a: 24, p: 20, inn: 4, out: 2, angs: [90, 90, 90, 90, 270, 270] };
+
+test('variant selection changes one row and its price independently in each instance', () => {
+  const a = { n: 'Лента A', u: 'м.п.', p: 100, m: 1 };
+  const b = { n: 'Лента B', u: 'м.п.', p: 250, m: 1 };
+  const preset = { items: [{ ...a, k: 10, variants: [a, b] }] };
+  const def = { id: 'track', source: 'manual', unit: 'м.п.' };
+  const first = instanceLines(def, { qty: 3, variants: { [a.n]: b.n } }, preset, {}, geometry)[0];
+  const second = instanceLines(def, { qty: 2 }, preset, {}, geometry)[0];
+  assert.equal(first.n, b.n);
+  assert.equal(first.q, 30);
+  assert.equal(first.t, 7500);
+  assert.equal(second.n, a.n);
+  assert.equal(second.q, 20);
+  assert.equal(second.t, 2000);
+  assert.equal(preset.items[0].n, a.n);
+});
+
+test('variant rows retain their stable override and exclusion key', () => {
+  const item = { n: 'A', u: 'м²', p: 1, m: 1, k: 10, variants: [{ n: 'B', u: 'шт', p: 5, m: 0 }] };
+  const def = { id: 'canvas', single: true, unit: 'м²' };
+  const line = instanceLines(def, { qtyO: 3, iq: { A: 7 }, off: { A: true } }, { items: [item] }, {}, geometry)[0];
+  assert.equal(line.key, 'A');
+  assert.equal(line.n, 'B');
+  assert.equal(line.q, 7);
+  assert.equal(line.on, false);
+  assert.equal(line.t, 0);
+  const fallback = instanceLines(def, { qtyO: 3, variants: { A: 'removed' } }, { items: [item] }, {}, geometry)[0];
+  assert.equal(fallback.n, 'B');
+  assert.equal(fallback.q, 30);
+});
 const definitions = [
   { id: 'canvas', single: true, unit: 'м²' },
   { id: 'main', single: true, unit: 'м.п.' },

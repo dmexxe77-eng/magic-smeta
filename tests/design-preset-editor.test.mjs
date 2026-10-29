@@ -81,3 +81,19 @@ test('norm rejects empty, zero and invalid input without closing its sheet', asy
   app.presetEditorVals().peApplyNorm();
   assert.equal(first.k, 1.5);
 });
+
+test('list editor adds alternatives to one row and persists them with the preset', async () => {
+  const r = await editor(), app = r.component;
+  const first = r.PRESETS.canvas[0].items[0], count = r.PRESETS.canvas[0].items.length;
+  app.presetEditorVals().peItems[0].openList();
+  assert.equal(app.presetEditorVals().peList, true);
+  app.presetEditorVals().peAddVariants();
+  const alternative = r.NOM.find(n => n.n !== first.n && !r.PRESETS.canvas[0].items.some(i => i.n === n.n));
+  app.setState({ be: { ...app.state.be, sel: [alternative.n] } });
+  app.beVals().nomAdd();
+  assert.equal(r.PRESETS.canvas[0].items.length, count);
+  assert.deepEqual(Array.from(first.variants, n => n.n), [first.n, alternative.n]);
+  app.presetEditorVals().peSave();
+  const restored = await runtime({ saved: JSON.parse(r.entries.get('zamer.design.v1')) });
+  assert.equal(restored.PRESETS.canvas[0].items[0].variants[1].n, alternative.n);
+});
