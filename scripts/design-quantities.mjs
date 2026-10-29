@@ -33,6 +33,9 @@ const ESTIMATE = String.raw`const est=(rooms,ed)=>{
 `;
 
 const METHODS = String.raw`
+  scrollQuantityTab(id){
+    cancelAnimationFrame(this._quantityTabFrame);this._quantityTabFrame=requestAnimationFrame(()=>{const el=document.querySelector('[data-quantity-tab="'+id+'"]');if(!el)return;const parent=el.parentElement;parent.scrollLeft+=el.getBoundingClientRect().left-parent.getBoundingClientRect().left-(parent.clientWidth-el.offsetWidth)/2;});
+  }
   quantityLine(l,r,b,inst,editInst,qkey){
     const s=this.state,key=qkey+'|'+l.n;
     return{n:l.n,editNom:()=>this.openNom(l.n),priceTxt:F(l.p)+' ₽/'+l.u,srcSign:l.manual?'#':'×',srcColor:l.manual?'#6F7688':ACC,u:l.u,sourceLabel:quantitySource(l),qAria:'Количество позиции '+l.n,
@@ -113,7 +116,7 @@ const METHODS = String.raw`
         if(old){const snapshot={source:window.MagicQuantity.sourceOfBlock(old),unit:old.unit};projects=projects.map(p=>Object.assign({},p,{rooms:p.rooms.map(r=>{const copy=Object.assign({},r);if(Array.isArray(r[id]))copy[id]=r[id].map(i=>Object.assign({},i,{qdef:i.qdef||Object.assign({},snapshot)}));return copy;})}));}
         let def=old;if(!def){def={id,custom:true,single:false};BLOCKS.push(def);const pid='u'+uid();PRESETS[id]=[{id:pid,name:'Новый пресет',items:[]}];def.def=pid;}
         Object.assign(def,{title:name,source:f.source,unit,step:unit==='шт'||unit==='компл.'?1:0.5,add:name.toLocaleLowerCase('ru'),defQty:null});
-        this.setState({projects,screen:'btnEd',blockForm:null,be:Object.assign({},this.state.be,{bid:id,pid:(PRESETS[id][0]||{}).id})});this.toast(old?'Блок сохранён':'Блок создан — добавьте позиции пресета');
+        this.setState({projects,screen:'btnEd',blockForm:null,be:Object.assign({},this.state.be,{bid:id,pid:(PRESETS[id][0]||{}).id})});this.scrollQuantityTab(id);this.toast(old?'Блок сохранён':'Блок создан — добавьте позиции пресета');
       }};
   }
 `;
@@ -193,6 +196,9 @@ export function quantitiesTemplate(source) {
   rep("beAddBlock:()=>this.toast('Свой блок — не входит в прототип'),", "beAddBlock:()=>this.setState({screen:'newBlock',blockForm:{name:'',source:'manual',unit:'м.п.'}}),\n      beCustom:!!bdef.custom,beQuantityTitle:quantityDescription(bdef),beEditBlock:()=>this.setState({screen:'newBlock',blockForm:{id:bid,name:bdef.title,source:bdef.source,unit:bdef.unit}}),", 'new block handler');
   rep("      beParams,beIsCanvas:bid==='canvas',", "      beIsCanvas:bid==='canvas',", 'remove parameter return');
   rep("    const brand=be.brand||brandList[0],kind=be.kind||'all'", "    const brand=brandList.includes(be.brand)?be.brand:brandList[0],kind=be.kind||'all'", 'picker default brand');
+  rep('const setBe=patch=>this.setState(x=>({be:Object.assign({},x.be||be,patch)}));', 'const setBe=patch=>{this.setState(x=>({be:Object.assign({},x.be||be,patch)}));if(patch.bid)this.scrollQuantityTab(patch.bid);};', 'active block navigation');
+  rep('return{label:titles[id]||id,pick:', 'return{id,label:titles[id]||id,pick:', 'block tab identifiers');
+  rep('<button sc-camel-on-click="{{ bb.pick }}"', '<button data-quantity-tab="{{ bb.id }}" sc-camel-on-click="{{ bb.pick }}"', 'block tab marker');
   rep("srcLabel:srcLabel(it),srcBg:", "detail:be.detail===i,more:()=>setBe({detail:be.detail===i?null:i}),srcLabel:srcLabel(it),srcBg:", 'more values');
   const normStart=tpl.indexOf('                    <span sc-camel-on-click="{{ it.editK }}"');
   const normEnd=tpl.indexOf('                    <span sc-camel-on-click="{{ it.remove }}"',normStart);

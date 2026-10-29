@@ -23,6 +23,7 @@ try{
   await page.getByRole('button',{name:'Создать блок',exact:true}).click();
   const blockId=await page.evaluate(()=>window.__zamer.state.be.bid);
   assert.match(blockId,/^custom_/);
+  await page.waitForFunction(id=>{const el=document.querySelector('[data-quantity-tab="'+id+'"]');if(!el)return false;const box=el.getBoundingClientRect();return box.x>=0&&box.right<=innerWidth;},blockId,{timeout:5000});
   const activeTab=await page.getByRole('button',{name,exact:true}).boundingBox();
   assert.ok(activeTab&&activeTab.x>=0&&activeTab.x+activeTab.width<=390,'newly created block tab is visible');
   await page.locator('input:visible').first().fill('Защита пола');
