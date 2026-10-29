@@ -107,6 +107,10 @@ const METHODS = String.raw`
     const norm=readQuantity(form.value);
     const basis='На 1 единицу основного количества';
     const example=row&&norm>0?window.MagicQuantity.itemQuantity(Object.assign({},row,{src:undefined,k:norm,mult:0,u:(options[0]||row).u}),{},{value:15},{}).value:null;
+    const unitPhrase=({'м.п.':'погонный метр','м.п':'погонный метр','м²':'квадратный метр','шт':'штуку','шт.':'штуку','компл.':'комплект','компл':'комплект'})[def.unit]||'единицу';
+    const objectPhrase=({canvas:'полотна',main:'профиля',extra:'доп. профиля',linear:'линейного освещения',curtain:'штор'})[be.bid]||'основного количества';
+    const onePhrase=be.bid==='light'?'На 1 светильник':'На 1 '+unitPhrase+' '+objectPhrase;
+    const scenario=be.bid==='light'?'Для 15 светильников':def.unit==='м²'?'При площади 15 '+def.unit:['main','extra','linear','curtain'].includes(be.bid)?'При длине 15 '+def.unit:'При основном количестве 15 '+def.unit;
     const result={...flags,peDismiss:dismiss,peSettings:s.sheet==='presetSettings',peDeleteConfirm:s.sheet==='presetDelete',peNorm:s.sheet==='presetNorm',peList:s.sheet==='presetList',peOrder:s.sheet==='presetOrder',peHelp:s.sheet==='presetHelp',
       peClose:()=>this.finishPresetDraft(false),peSave:()=>this.finishPresetDraft(true),peOpenSettings:()=>open('presetSettings'),peOpenHelp:()=>open('presetHelp'),peOpenOrder:()=>open('presetOrder'),
       peMeta:def.title+' · '+n+' '+word+' · '+(pr&&!pr.hidden?'виден в калькуляторе':'скрыт в калькуляторе'),peVisible:!!pr&&!pr.hidden,peSwitchKnob:pr&&!pr.hidden?17:2,
@@ -117,7 +121,7 @@ const METHODS = String.raw`
         openList:()=>{if(!Array.isArray(item.variants))item.variants=[{n:item.n,p:item.p,u:item.u,m:item.m}];this.setState({be:Object.assign({},this.state.be,{rowIdx:i}),sheet:'presetList'});}});}),
       peRowName:row?(options[0]||row).n:'',peRowUnit:row?(options[0]||row).u:'',peNormBasis:basis,peNormValue:form.value||'',
       peSetNorm:e=>setForm({value:e.target.value}),
-      peNormExample:example!=null?'Пример: 15 '+def.unit+' × '+QF(norm)+' = '+QF(example)+' '+(options[0]||row).u:'Введите расход на одну единицу.',
+      peNormExample:example!=null?onePhrase+' — '+QF(norm)+' '+(options[0]||row).u+'. '+scenario+' понадобится '+QF(example)+' '+(options[0]||row).u+'.':'Введите расход на одну единицу.',
       peApplyNorm:()=>{if(!row||!(norm>0)){this.toast('Введите норму больше нуля');return;}row.k=norm;row.mult=0;delete row.src;dismiss();},
       peResetNorm:()=>{if(row)row.k=1;dismiss();},
       peVariants:options.map((option,i)=>({n:option.n,price:F(option.p)+' ₽/'+option.u,note:i===0?'по умолчанию':'вариант',dot:i===0?'●':'○',color:i===0?ACC:DIM,defaultAria:'По умолчанию: '+option.n,removeAria:'Убрать вариант '+option.n,makeDefault:()=>{options.splice(i,1);options.unshift(option);this.forceUpdate();},remove:()=>{if(options.length<=1){this.toast('В списке должна остаться хотя бы одна позиция');return;}options.splice(i,1);this.forceUpdate();}})),
