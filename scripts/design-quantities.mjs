@@ -39,7 +39,7 @@ const METHODS = String.raw`
   quantityLine(l,r,b,inst,editInst,qkey){
     const s=this.state,rowKey=l.key||l.n,key=qkey+'|'+rowKey;
     return{n:l.n,editNom:()=>this.openNom(l.n),priceTxt:F(l.p)+' ₽/'+l.u,srcSign:l.manual?'#':'×',srcColor:l.manual?'#6F7688':ACC,u:l.u,sourceLabel:quantitySource(l),qAria:'Количество позиции '+l.n,
-      hasVariants:Array.isArray(l.variants)&&l.variants.length>1,variantAria:'Выбрать номенклатуру: '+l.n,variantsOpen:s.variantOpen===key,variantArrow:s.variantOpen===key?'▴':'▾',
+      hasVariants:Array.isArray(l.variants)&&l.variants.length>1,variantAria:'Выбрать номенклатуру: '+l.n,variantsOpen:s.variantOpen===key,variantDeg:s.variantOpen===key?180:0,
       chooseVariant:()=>this.setState({variantOpen:this.state.variantOpen===key?null:key}),
       variantChoices:(l.variants||[]).map(option=>({n:option.n,price:F(option.p)+' ₽/'+option.u,selected:option.n===l.n,dot:option.n===l.n?'●':'○',bg:option.n===l.n?'#EEEDFC':'#fff',pick:()=>{if(option.n!==l.n)editInst(i=>{i.variants=i.variants||{};i.variants[rowKey]=option.n;if(i.iq)delete i.iq[rowKey];});this.setState({variantOpen:null});}})),
       qTxt:s.qtyBuf&&s.qtyBuf.k===key?s.qtyBuf.t:QF(l.q),qOverridden:l.ov,qBorderStyle:l.missing?'dashed':'solid',qBorder:l.ov?'#C9C6F5':l.missing?'#C9C9D6':'transparent',qBg:l.ov?'#EEEDFC':'#F3F3FA',
