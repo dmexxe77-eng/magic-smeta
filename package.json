@@ -7,7 +7,10 @@
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "design": "node scripts/build-design.mjs"
+    "design": "node scripts/build-design.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "test:quantities": "node --test --experimental-test-coverage --test-coverage-include=src/design-bridge/quantity-model.js --test-coverage-include=src/design-bridge/design-storage.js --test-coverage-lines=80 --test-coverage-functions=80 --test-coverage-branches=80 tests/design-quantity-model.test.mjs tests/design-storage.test.mjs",
+    "test:e2e": "node tests/design-e2e.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -16,6 +19,7 @@
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.3",
     "esbuild": "^0.21.5",
+    "playwright": "1.62.1",
     "vite": "^5.4.10"
   }
 }

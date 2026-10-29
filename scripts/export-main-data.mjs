@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
+import { blockQuantity } from '../src/design-bridge/quantity-model.js';
 
 const OUT = path.resolve('design-src/main-data.json');
 const bundle = path.join(os.tmpdir(), 'magic-main-data-' + process.pid + '.cjs');
@@ -82,15 +83,27 @@ const resolve = (id, where) => {
 
 /* ── пресеты кнопок ── */
 const BLOCK_OF = { canvas: 'canvas', main: 'main', extra: 'extra', light: 'light', track: 'track', curtain: 'curtain', other: 'other' };
-/* свои блоки редактора кнопок («Разное») в модели /design — один блок other */
-SOURCE.customBlocks.forEach(b => { BLOCK_OF[b.id] = 'other'; });
-const otherTitle = (SOURCE.customBlocks[0] && String(SOURCE.customBlocks[0].label || '').trim()) || 'Прочее';
+/* У своих блоков остаются исходные id: на них ссылаются и пресеты, и r.cst.
+   Параметры старых кнопок не задают настройки блока: у старого блока ручной ввод. */
+const safeBlockId = id => typeof id === 'string' && /^[A-Za-z][A-Za-z0-9_-]*$/.test(id) && !Object.hasOwn(Object.prototype, id);
+const blocks = [];
+SOURCE.customBlocks.forEach(b => {
+  if (!b || !safeBlockId(b.id) || Object.hasOwn(BLOCK_OF, b.id)) return;
+  const source = ['area', 'perim', 'manual'].includes(b.source) ? b.source : 'manual';
+  const unit = source === 'area' ? 'м²' : source === 'perim' ? 'м.п.' : unitOf(b.unit);
+  const title = String(b.title || b.label || 'Свой блок').trim() || 'Свой блок';
+  blocks.push({ id: b.id, title, source, unit, custom: true, single: false, step: ['шт', 'компл'].includes(unit) ? 1 : 0.5, add: title, def: null, defQty: null });
+  BLOCK_OF[b.id] = b.id;
+});
+const otherTitle = 'Прочее';
 const favs = SOURCE.favs;
 const BLOCK_UNIT = { canvas: 'м²', main: 'м.п.', extra: 'м.п.', light: 'шт', track: 'м.п.', curtain: 'м.п.', other: 'шт' };
 const presetById = new Map();
 const presets = { canvas: [], main: [], extra: [], light: [], track: [], curtain: [], other: [] };
+blocks.forEach(b => { presets[b.id] = []; BLOCK_UNIT[b.id] = b.unit; });
+const multiBlockIds = ['extra', 'light', 'track', 'curtain', 'other', ...blocks.map(b => b.id)];
 SOURCE.presets.forEach(pr => {
-  const bid = BLOCK_OF[pr.cat];
+  const bid = Object.hasOwn(BLOCK_OF, pr.cat) ? BLOCK_OF[pr.cat] : null;
   if (!bid) return;
   const where = 'кнопка «' + pr.name + '»';
   const items = [];
@@ -137,7 +150,8 @@ const polyPerim = v => v.reduce((s, p, i) => { const q = v[(i + 1) % v.length]; 
 function convertInstance(inst, where) {
   const meta = presetById.get(inst.btnId);
   const out = { id: inst.id, pid: meta ? inst.btnId : null, off: {}, iq: {} };
-  out.qty = round2(Number(inst.qty) || 0);
+  if (inst.qty != null && inst.qty !== '' && Number.isFinite(Number(inst.qty)) && Number(inst.qty) >= 0) out.qty = round2(Number(inst.qty));
+  if (inst.qdef && typeof inst.qdef === 'object' && !Array.isArray(inst.qdef)) out.qdef = { ...inst.qdef };
   if (inst.subP) out.subP = true;
   if (inst.applyAll) out.applyAll = true;
   if (!meta) { if (inst.btnId) missing.push(where + ' → кнопка ' + inst.btnId); return out; }
@@ -168,10 +182,15 @@ function convertRoom(r, where, optsOn) {
     (meta ? meta.src.items : []).forEach(id => { const n = lookup(id); if (n && n.type === 'canvas') canvas.iq[String(n.name).trim()] = round2(r.canvas.overcutArea); });
   }
   const room = { id: r.id, name: r.name, v, on: r.on !== false, canvas, main, extra: [], light: [], track: [], curtain: [], other: [], extraItems: [], opts: { ...optsOn }, optQ: {} };
+  blocks.forEach(b => { room[b.id] = []; });
   [['extras', 'extra'], ['lights', 'light'], ['tracks', 'track'], ['curtains', 'curtain']].forEach(([from, to]) => (r[from] || []).forEach(i => room[to].push(convertInstance(i, where))));
   /* ручной периметр: в основной версии вычеты доп. профилей и штор действуют и на него, а в модели /design qtyO — уже итог */
   if (main.qtyO != null) { const sub = [...room.extra, ...room.curtain].filter(i => i.subP).reduce((s, i) => s + (i.qty || 0), 0); if (sub > 0) main.qtyO = Math.max(0, round2(main.qtyO - sub)); }
-  Object.values(r.cst || {}).forEach(list => (list || []).forEach(i => room.other.push(convertInstance(i, where))));
+  Object.entries(r.cst || {}).forEach(([id, list]) => {
+    if (!safeBlockId(id) || !Array.isArray(list)) return;
+    const bid = blocks.some(b => b.id === id) ? id : 'other';
+    list.forEach(i => room[bid].push(convertInstance(i, where)));
+  });
   (r.extraItems || []).forEach(x => { const n = resolve(x.nomId, where + ' · доп. позиция'); if (!n || !(x.qty > 0)) return; const it = { id: x.id, n: String(n.name).trim(), p: Number(n.price) || 0, u: unitOf(n.unit), m: n.type === 'work' ? 0 : 1, qty: Number(x.qty), nid: n.id }; if (n.img && imgExt(n.img)) it.img = n.img + '.' + imgExt(n.img); room.extraItems.push(it); });
   /* доп. полотна: отдельного блока в модели нет — переносим строками */
   (r.extraCanvas || []).forEach(ec => { const meta = presetById.get(ec.btnId); if (!meta || !(ec.qty > 0)) return; meta.out.items.forEach(it => { if (it.src) return; room.extraItems.push({ id: ec.id + '_' + room.extraItems.length, n: it.n + ' (доп. полотно)', p: it.p, u: it.u, m: it.m, qty: round2(ec.qty), nid: it.nid }); }); });
@@ -217,7 +236,7 @@ function designLines(project) {
     const run = (bid, inst, qty) => linesOf(bid, inst, qty, g).forEach(it => add(it.m && bid === 'canvas' ? it.n + '|' + r.id : it.n, it, it.q, it.p));
     run('canvas', r.canvas, r.canvas.qtyO != null ? r.canvas.qtyO : g.a);
     run('main', r.main, r.main.qtyO != null ? r.main.qtyO : Math.max(0, round2(g.p - sub)));
-    ['extra', 'light', 'track', 'curtain', 'other'].forEach(bid => r[bid].forEach(i => run(bid, i, i.qty || 0)));
+    multiBlockIds.forEach(bid => r[bid].forEach(i => { const def = blocks.find(b => b.id === bid); const qty = def ? blockQuantity(def, i, r, g, blocks).value : i.qty; run(bid, i, qty == null ? 0 : qty); }));
     r.extraItems.forEach(x => add(x.n, x, x.qty, x.p));
     roomOpts.forEach(ro => { if (r.opts[ro.id]) add(ro.n, ro, ro.src === 'area' ? g.a : g.p, ro.p); });
   });
@@ -227,7 +246,7 @@ function designLines(project) {
 /* авто-опции (углы): если в основной версии количество поправлено руками — переносим как правку количества */
 projects.forEach(pr => pr.rooms.forEach(r => {
   const g = geomOf(r.v);
-  [r.canvas, r.main, ...r.extra, ...r.light, ...r.track, ...r.curtain, ...r.other].forEach(inst => {
+  [r.canvas, r.main, ...multiBlockIds.flatMap(bid => r[bid])].forEach(inst => {
     Object.entries(inst._oq || {}).forEach(([name, { q, src }]) => { const auto = srcQty({ src }, 0, g); if (Math.abs(q - auto) > 0.005) inst.iq[name] = q; });
     delete inst._oq;
   });
@@ -267,7 +286,7 @@ Object.values(presets).forEach(list => list.forEach(pr => { pr.items = pr.items.
 projects.forEach(pr => pr.rooms.forEach(r => { r.extraItems = r.extraItems.map(strip); }));
 
 const nom = [...active, ...archiveUsed.values()].map(nomOut).filter(n => n.n);
-const data = { generatedAt: new Date().toISOString(), source: backup ? 'backup ' + (backup._exportedAt || '') : 'code snapshot', nom, presets, projects, estEd, roomOpts: roomOpts.map(strip), otherTitle,
+const data = { generatedAt: new Date().toISOString(), source: backup ? 'backup ' + (backup._exportedAt || '') : 'code snapshot', nom, presets, projects, estEd, blocks, roomOpts: roomOpts.map(strip), otherTitle,
   report: { projects: report, emptyPresets: Object.values(presets).flat().filter(p => !p.items.length).map(p => p.name), archived: [...archiveUsed.values()].map(n => String(n.name).trim()), missing: [...new Set(missing)] } };
 fs.writeFileSync(OUT, JSON.stringify(data));
 

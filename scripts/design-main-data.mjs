@@ -47,7 +47,7 @@ export async function writeMainData(outDir) {
   /* параметр кнопки в шаблоне /design называется S / P / manual */
   const PARAM = { area: 'S', perim: 'P', manual: 'manual' };
   const presets = Object.fromEntries(Object.entries(data.presets).map(([bid, list]) => [bid, list.map(pr => (pr.param ? { ...pr, param: PARAM[pr.param] || pr.param } : pr))]));
-  const payload = { nom, presets, projects, estEd: data.estEd, roomOpts: data.roomOpts || [], otherTitle: data.otherTitle || 'Прочее' };
+  const payload = { nom, presets, projects, estEd: data.estEd, blocks: data.blocks || [], roomOpts: data.roomOpts || [], otherTitle: data.otherTitle || 'Прочее' };
   const file = path.join(outDir, 'main-data.js');
   fs.writeFileSync(file, '/* Данные основной версии ZAMER.PRO. Сгенерировано: scripts/design-main-data.mjs */\nwindow.MAGIC_MAIN=' + JSON.stringify(payload).replace(/<\//g, '<\\/') + ';\n');
   return { nom: nom.length, images, presets: Object.values(data.presets).flat().length, projects: projects.length, file };
