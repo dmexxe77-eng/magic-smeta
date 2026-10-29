@@ -3,7 +3,6 @@ const svg = path => `<svg width="19" height="19" sc-camel-view-box="0 0 24 24" s
 const pencil = svg('<path d="M15 5l4 4M4 20l4-1L20 7a2.8 2.8 0 0 0-4-4L4 15z"></path>');
 const copy = svg('<rect x="8" y="8" width="12" height="13" rx="2"></rect><path d="M15 8V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h4"></path>');
 const trash = svg('<path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"></path>');
-const listIcon = svg('<path d="M9 5h12M9 12h12M9 19h12M3 5h1M3 12h1M3 19h1"></path>');
 const chevron = svg('<path d="M9 5l7 7-7 7"></path>');
 const field = 'width:100%;min-width:0;height:42px;border:1.5px solid #E4E4EE;border-radius:13px;background:#F7F7FC;padding:0 12px;font-size:14px;color:#1E2530;box-sizing:border-box';
 const small = 'font-size:11px;font-weight:800;letter-spacing:.35px;text-transform:uppercase;color:#3D4454';
@@ -47,9 +46,16 @@ const EDITOR = `
         <div style="display:flex;align-items:baseline;gap:9px"><div style="flex:1;min-width:0;font-size:13px;font-weight:700;line-height:1.45;overflow-wrap:anywhere">{{ it.displayName }}</div><div style="flex:none;font-size:13px;font-weight:800;white-space:nowrap">{{ it.displayPrice }} <span style="color:#A5A9B8;font-size:11px;font-weight:500">₽/{{ it.displayUnit }}</span></div></div>
         <div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:9px">
           <div style="display:flex;align-items:center;border-radius:999px;padding:3px;background:#F3F3FA;min-width:0;max-width:100%"><button sc-camel-on-click="{{ it.cycleSrc }}" style="min-height:27px;padding:0 8px;border:0;border-radius:999px;background:{{ it.srcBg }};color:{{ it.srcColor }};font-size:11.5px;font-weight:700;cursor:pointer">{{ it.srcLabel }}</button><button sc-camel-on-click="{{ it.openNorm }}" style="min-height:27px;padding:0 9px;border:0;border-radius:999px;background:transparent;color:{{ it.normColor }};font-size:11.5px;font-weight:700;cursor:pointer">{{ it.normLabel }}</button></div>
-          <button sc-camel-on-click="{{ it.openList }}" style="display:flex;align-items:center;gap:4px;min-height:31px;padding:0 10px;border:0;border-radius:999px;background:{{ it.listBg }};color:{{ it.listColor }};font-size:11.5px;font-weight:700;cursor:pointer">${listIcon}{{ it.listLabel }}</button>
+          <button aria-expanded="{{ it.listOpen }}" sc-camel-on-click="{{ it.openList }}" style="display:flex;align-items:center;gap:4px;min-height:31px;padding:0 10px;border:0;border-radius:999px;background:{{ it.listBg }};color:{{ it.listColor }};font-size:11.5px;font-weight:700;cursor:pointer">{{ it.listLabel }}<svg aria-hidden="true" width="13" height="13" sc-camel-view-box="0 0 16 16" style="flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transform:rotate({{ it.listDeg }}deg)"><path d="M4 6l4 4 4-4"></path></svg></button>
           <button aria-label="{{ it.removeAria }}" sc-camel-on-click="{{ it.remove }}" style="margin-left:auto;width:26px;height:26px;padding:0;border:0;border-radius:50%;background:#FFECEA;color:#FF3B30;font-size:21px;cursor:pointer">×</button>
         </div>
+        <sc-if value="{{ it.listOpen }}" hint-placeholder-val="{{ false }}"><div role="group" aria-label="{{ it.listAria }}" style="margin-top:10px;padding-left:11px;border-left:2px solid #ECECF4">
+          <sc-for list="{{ it.listVariants }}" as="v" hint-placeholder-count="2"><div style="display:flex;align-items:center;gap:5px">
+            <button aria-label="{{ v.defaultAria }}" aria-pressed="{{ v.selected }}" sc-camel-on-click="{{ v.makeDefault }}" style="flex:1;min-width:0;display:flex;align-items:center;gap:8px;text-align:left;border:0;background:transparent;color:#1E2530;padding:10px 0;cursor:pointer"><span style="display:flex;width:14px;flex:none;color:#4F46E5"><sc-if value="{{ v.selected }}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="14" height="14" sc-camel-view-box="0 0 16 16" style="fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M3 8l3 3 7-7"></path></svg></sc-if></span><span style="flex:1;min-width:0;font-size:12px;line-height:1.4;overflow-wrap:anywhere">{{ v.n }}</span><span style="flex:none;font-size:11px;color:#8E94A3;white-space:nowrap">{{ v.price }}</span></button>
+            <button aria-label="{{ v.removeAria }}" disabled="{{ v.removeDisabled }}" sc-camel-on-click="{{ v.remove }}" style="display:flex;align-items:center;justify-content:center;width:28px;min-height:32px;flex:none;border:0;background:transparent;color:#8E94A3;font-size:18px;opacity:{{ v.removeOpacity }};cursor:pointer">×</button>
+          </div></sc-for>
+          <button sc-camel-on-click="{{ it.addVariant }}" style="display:flex;align-items:center;gap:5px;min-height:34px;padding:8px 0;border:0;background:transparent;color:#4F46E5;font-size:12px;font-weight:600;cursor:pointer"><span aria-hidden="true">+</span>Добавить вариант</button>
+        </div></sc-if>
       </div></sc-for>
       <sc-if value="{{ beNoItems }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;color:#A5A9B8;text-align:center;padding:22px 6px">Добавьте первую позицию из номенклатуры</div></sc-if>
     </div>
@@ -71,10 +77,6 @@ const NORM = sheet('peNorm', 'Норма расхода', `
 <div style="font-size:13px;font-weight:700;margin:20px 0 9px">{{ peNormBasis }}</div><div style="display:flex;align-items:center;gap:10px"><input aria-label="Норма расхода" value="{{ peNormValue }}" sc-camel-on-change="{{ peSetNorm }}" sc-camel-input-mode="decimal" style="${field};height:54px;font-size:23px;font-weight:800"><span style="font-size:14px;color:#6F7688;white-space:nowrap">{{ peRowUnit }}</span></div>
 <div style="background:#F7F7FC;border-radius:13px;padding:13px;margin-top:12px;font-size:13px;line-height:1.5;color:#6F7688">{{ peNormExample }}</div>
 <button sc-camel-on-click="{{ peApplyNorm }}" style="${primary};margin-top:20px">Применить</button><div style="display:flex;gap:8px;margin-top:8px"><button sc-camel-on-click="{{ peResetNorm }}" style="${secondary}">Сбросить норму</button><button sc-camel-on-click="{{ peDismiss }}" style="${secondary}">Отмена</button></div>`);
-const LIST = sheet('peList', 'Список номенклатур', `
-<div style="font-size:19px;font-weight:800">Список номенклатур</div><div style="font-size:12.5px;line-height:1.5;color:#6F7688;margin:7px 0 16px">В калькуляторе можно будет выбрать одну из этих позиций.</div>
-<sc-for list="{{ peVariants }}" as="v" hint-placeholder-count="3"><div style="display:flex;align-items:center;gap:10px;padding:13px 0;border-top:1px solid #F1F1F7"><button aria-label="{{ v.defaultAria }}" sc-camel-on-click="{{ v.makeDefault }}" style="flex:1;min-width:0;display:flex;align-items:center;gap:10px;text-align:left;border:0;background:transparent;padding:0;cursor:pointer;color:#1E2530"><span style="font-size:20px;color:{{ v.color }}">{{ v.dot }}</span><span style="min-width:0"><span style="display:block;font-size:13px;font-weight:700;line-height:1.4;overflow-wrap:anywhere">{{ v.n }}</span><span style="display:block;font-size:11.5px;color:#A5A9B8;margin-top:4px">{{ v.price }} · {{ v.note }}</span></span></button><button aria-label="{{ v.removeAria }}" sc-camel-on-click="{{ v.remove }}" style="width:28px;height:28px;flex:none;border:0;border-radius:50%;background:#FFECEA;color:#FF3B30;font-size:20px;cursor:pointer">×</button></div></sc-for>
-<button sc-camel-on-click="{{ peAddVariants }}" style="${secondary};border:1.5px dashed #B8CFFA;color:#4F46E5;margin-top:12px">+ Добавить из номенклатуры</button><button sc-camel-on-click="{{ peDismiss }}" style="${primary};margin-top:12px">Готово</button>`);
 const ORDER = sheet('peOrder', 'Порядок пресетов', `<div style="font-size:19px;font-weight:800">Порядок пресетов</div><div style="font-size:13px;color:#6F7688;margin:8px 0 18px">{{ beName }}</div><div style="display:flex;gap:8px"><button sc-camel-on-click="{{ beMoveL }}" style="${secondary}">← Левее</button><button sc-camel-on-click="{{ beMoveR }}" style="${secondary}">Правее →</button></div><button sc-camel-on-click="{{ peDismiss }}" style="${primary};margin-top:12px">Готово</button>`);
 const HELP = sheet('peHelp', 'Как настроить пресет', `<div style="font-size:19px;font-weight:800">Как настроить пресет</div><div style="font-size:14px;line-height:1.65;color:#6F7688;margin:14px 0 22px">Пресет — готовый набор для сметы.<br><br>Добавьте позиции и выберите, как считать количество.<br><br>«Норма» задаёт расход на одну единицу. «Список» добавляет варианты для выбора в калькуляторе.<br><br>Нажмите «Сохранить», чтобы применить изменения.</div><button sc-camel-on-click="{{ peDismiss }}" style="${primary}">Понятно</button>`);
 
@@ -96,7 +98,7 @@ const METHODS = String.raw`
     this.go(from,{be:null,editLine:null,normForm:null});
   }
   presetEditorVals(){
-    const s=this.state,be=s.be||{},flags={peSettings:false,peDeleteConfirm:false,peNorm:false,peList:false,peOrder:false,peHelp:false};
+    const s=this.state,be=s.be||{},flags={peSettings:false,peDeleteConfirm:false,peNorm:false,peOrder:false,peHelp:false};
     const dismiss=()=>this.setState({sheet:null,normForm:null});
     if(s.screen!=='btnEd')return flags;
     const v=this.beVals(),list=(PRESETS[be.bid]||[]).filter(p=>!p.archived),pr=list.find(p=>p.id===be.pid)||list[0],def=blockDef(be.bid),row=pr&&pr.items[be.rowIdx],form=s.normForm||{};
@@ -111,22 +113,29 @@ const METHODS = String.raw`
     const objectPhrase=({canvas:'полотна',main:'профиля',extra:'доп. профиля',track:'линейного освещения',curtain:'штор'})[be.bid]||'основного количества';
     const onePhrase=be.bid==='light'?'На 1 светильник':'На 1 '+unitPhrase+' '+objectPhrase;
     const scenario=be.bid==='light'?'Для 15 светильников':def.unit==='м²'?'При площади 15 '+def.unit:['main','extra','track','curtain'].includes(be.bid)?'При длине 15 '+def.unit:'При основном количестве 15 '+def.unit;
-    const result={...flags,peDismiss:dismiss,peSettings:s.sheet==='presetSettings',peDeleteConfirm:s.sheet==='presetDelete',peNorm:s.sheet==='presetNorm',peList:s.sheet==='presetList',peOrder:s.sheet==='presetOrder',peHelp:s.sheet==='presetHelp',
+    const result={...flags,peDismiss:dismiss,peSettings:s.sheet==='presetSettings',peDeleteConfirm:s.sheet==='presetDelete',peNorm:s.sheet==='presetNorm',peOrder:s.sheet==='presetOrder',peHelp:s.sheet==='presetHelp',
       peClose:()=>this.finishPresetDraft(false),peSave:()=>this.finishPresetDraft(true),peOpenSettings:()=>open('presetSettings'),peOpenHelp:()=>open('presetHelp'),peOpenOrder:()=>open('presetOrder'),
       peMeta:def.title+' · '+n+' '+word+' · '+(pr&&!pr.hidden?'виден в калькуляторе':'скрыт в калькуляторе'),peVisible:!!pr&&!pr.hidden,peSwitchKnob:pr&&!pr.hidden?17:2,
       peToggleVisibility:()=>v.beToggleVis(),peDuplicate:()=>{v.beDup();open(null);},peAskDelete:()=>{if(list.length<=1){this.toast('Последний пресет удалить нельзя');return;}open('presetDelete');},peConfirmDelete:()=>{if(!pr||list.length<=1)return;pr.archived=true;pr.hidden=true;const next=list.find(p=>p!==pr);if(def.def===pr.id)def.def=next.id;this.setState({be:Object.assign({},be,{pid:next.id}),sheet:null});},
       peChips:v.beChips.map((ch,i)=>Object.assign({},ch,{selected:!!pr&&list[i].id===pr.id})),
-      peItems:v.beItems.map((it,i)=>{const item=pr.items[i],variants=Array.isArray(item.variants)?item.variants:[],display=variants[0]||item;return Object.assign({},it,{displayName:display.n,displayPrice:F(display.p),displayUnit:display.u,removeAria:'Убрать позицию '+display.n,normLabel:item.k&&item.k!==1?'Норма ×'+F(item.k):'Норма',normColor:item.k&&item.k!==1?ACC:'#6F7688',listLabel:variants.length>1?'Список · '+variants.length:'Список',listBg:variants.length>1?'#EEEDFC':'#F3F3FA',listColor:variants.length>1?ACC:'#6F7688',
-        openNorm:()=>{this.setState({be:Object.assign({},this.state.be,{rowIdx:i}),sheet:'presetNorm',normForm:{value:String(item.k||1)}});},
-        openList:()=>{if(!Array.isArray(item.variants))item.variants=[{n:item.n,p:item.p,u:item.u,m:item.m}];this.setState({be:Object.assign({},this.state.be,{rowIdx:i}),sheet:'presetList'});}});}),
+      peItems:v.beItems.map((it,i)=>{
+        const item=pr.items[i],variants=Array.isArray(item.variants)&&item.variants.length?item.variants:[{n:item.n,p:item.p,u:item.u,m:item.m}],display=variants[0];
+        const listKey=JSON.stringify([be.bid,pr.id,item.n]),listOpen=be.inlineList===listKey;
+        return Object.assign({},it,{displayName:display.n,displayPrice:F(display.p),displayUnit:display.u,removeAria:'Убрать позицию '+display.n,normLabel:item.k&&item.k!==1?'Норма ×'+F(item.k):'Норма',normColor:item.k&&item.k!==1?ACC:'#6F7688',
+          listOpen,listAria:'Варианты позиции: '+display.n,listDeg:listOpen?180:0,listLabel:variants.length>1?'Список · '+variants.length:'Список',listBg:listOpen||variants.length>1?'#EEEDFC':'#F3F3FA',listColor:listOpen||variants.length>1?ACC:'#6F7688',
+          openNorm:()=>this.setState({be:Object.assign({},this.state.be,{rowIdx:i}),sheet:'presetNorm',normForm:{value:String(item.k||1)}}),
+          openList:()=>{if(!Array.isArray(item.variants)||!item.variants.length)item.variants=variants;this.setState({be:Object.assign({},this.state.be,{inlineList:listOpen?null:listKey}),sheet:null});},
+          addVariant:()=>this.setState({be:Object.assign({},this.state.be,{target:'variants',variantIdx:i,inlineList:listKey,sel:[],q:''}),sheet:'nom'}),
+          listVariants:variants.map((option,index)=>({n:option.n,price:F(option.p)+' ₽/'+option.u,selected:index===0,defaultAria:'По умолчанию: '+option.n,removeAria:'Убрать вариант '+option.n,removeDisabled:variants.length<=1,removeOpacity:variants.length<=1?.3:1,
+            makeDefault:()=>{variants.splice(index,1);variants.unshift(option);this.forceUpdate();},
+            remove:()=>{if(variants.length<=1)return;variants.splice(index,1);this.forceUpdate();}}))});
+      }),
       peRowName:row?(options[0]||row).n:'',peRowUnit:row?(options[0]||row).u:'',peNormBasis:basis,peNormValue:form.value||'',
       peSetNorm:e=>setForm({value:e.target.value}),
       peNormExample:example!=null?onePhrase+' — '+QF(norm)+' '+(options[0]||row).u+'. '+scenario+' понадобится '+QF(example)+' '+(options[0]||row).u+'.':'Введите расход на одну единицу.',
       peApplyNorm:()=>{if(!row||!(norm>0)){this.toast('Введите норму больше нуля');return;}row.k=norm;row.mult=0;delete row.src;dismiss();},
-      peResetNorm:()=>{if(row)row.k=1;dismiss();},
-      peVariants:options.map((option,i)=>({n:option.n,price:F(option.p)+' ₽/'+option.u,note:i===0?'по умолчанию':'вариант',dot:i===0?'●':'○',color:i===0?ACC:DIM,defaultAria:'По умолчанию: '+option.n,removeAria:'Убрать вариант '+option.n,makeDefault:()=>{options.splice(i,1);options.unshift(option);this.forceUpdate();},remove:()=>{if(options.length<=1){this.toast('В списке должна остаться хотя бы одна позиция');return;}options.splice(i,1);this.forceUpdate();}})),
-      peAddVariants:()=>this.setState({be:Object.assign({},this.state.be,{target:'variants',variantIdx:be.rowIdx,sel:[],q:''}),sheet:'nom'})};
-    if(s.sheet==='nom'&&be.target==='variants')result.closeSheet=()=>open('presetList');
+      peResetNorm:()=>{if(row)row.k=1;dismiss();}};
+    if(s.sheet==='nom'&&be.target==='variants')result.closeSheet=()=>this.setState({be:Object.assign({},this.state.be,{target:null,sel:[]}),sheet:null});
     return result;
   }
 `;
@@ -141,7 +150,7 @@ export function presetEditorTemplate(source) {
   const start = tpl.indexOf('        <sc-if value="{{ isBtnEd }}"');
   const end = tpl.indexOf('        <sc-if value="{{ sheetOptSrc }}"', start);
   if (start < 0 || end < start) throw new Error('preset editor: screen boundaries missing');
-  tpl = tpl.slice(0, start) + EDITOR + SETTINGS + DELETE + NORM + LIST + ORDER + HELP + tpl.slice(end);
+  tpl = tpl.slice(0, start) + EDITOR + SETTINGS + DELETE + NORM + ORDER + HELP + tpl.slice(end);
   rep('  beVals(){', METHODS + '\n  beVals(){', 'editor methods');
   rep('this.beVals(),this.accountVals()', 'this.beVals(),this.presetEditorVals(),this.accountVals()', 'view values');
   rep('go(screen,extra){this.setState(', "go(screen,extra){if(screen==='btnEd'&&!this._presetDraft)this.beginPresetDraft(extra&&extra.be);this.setState(", 'draft entry');
@@ -158,7 +167,7 @@ export function presetEditorTemplate(source) {
         const item=pr&&pr.items[be.variantIdx];if(!item)return;
         item.variants=item.variants||[{n:item.n,p:item.p,u:item.u,m:item.m}];
         sel.forEach(name=>{const n=NOM.find(x=>x.n===name);if(n&&!item.variants.some(v=>v.n===n.n))item.variants.push({n:n.n,p:n.p,u:n.u,m:n.m});});
-        setBe({sel:[],target:null});this.setState({sheet:'presetList'});return;
+        setBe({sel:[],target:null});this.setState({sheet:null});return;
       }`, 'add list options');
   rep('const used=new Set(toOpt?[]:', "const used=new Set(be.target==='variants'?(pr&&pr.items[be.variantIdx]&&pr.items[be.variantIdx].variants||[]).map(v=>v.n):toOpt?[]:", 'list picker membership');
   rep("nomAddLabel:sel.length?(toOpt?", "nomAddLabel:sel.length?(be.target==='variants'?'Добавить в список · '+sel.length:toOpt?", 'list picker action');
