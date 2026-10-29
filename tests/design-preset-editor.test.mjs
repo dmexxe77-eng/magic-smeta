@@ -110,7 +110,7 @@ test('applying a norm uses the main quantity even for a row previously tied to c
   preset.items = [item];
   app.go('btnEd', { be: { bid: 'main', pid: preset.id, from: 'account' } });
   app.presetEditorVals().peItems[0].openNorm();
-  assert.equal(app.presetEditorVals().peNormBasis, 'На 1 погонный метр');
+  assert.equal(app.presetEditorVals().peNormBasis, 'На 1 единицу основного количества');
   app.presetEditorVals().peSetNorm({ target: { value: '10' } });
   app.presetEditorVals().peApplyNorm();
   const line = r.instLines('main', { pid: preset.id, qtyO: 15 }, 15, { a: 30, p: 40, inn: 4, out: 2 })[0];
@@ -121,12 +121,13 @@ test('applying a norm uses the main quantity even for a row previously tied to c
   assert.equal(item.k, 1, 'an explicit geometric source switches out of the block norm');
 });
 
-test('norm labels use the light or custom block unit rather than the nomenclature unit', async () => {
-  for (const [bid, unit, expected] of [['light', 'шт', 'На 1 штуку'], ['custom_length', 'м.п.', 'На 1 погонный метр'], ['custom_area', 'м²', 'На 1 квадратный метр'], ['custom_set', 'компл.', 'На 1 комплект']]) {
+test('norm uses a common basis label and the block unit in its calculation example', async () => {
+  for (const [bid, unit] of [['light', 'шт'], ['custom_length', 'м.п.'], ['custom_area', 'м²'], ['custom_set', 'компл.']]) {
     const r = await runtime({ mainDataPatch: main => ({ blocks: bid === 'light' ? [] : [{ id: bid, title: bid, source: 'manual', unit }], presets: { ...main.presets, [bid]: [{ id: 'test', name: 'Тест', items: [{ n: 'Угол', p: 10, u: 'шт', m: 1 }] }] } }) });
     r.component.go('btnEd', { be: { bid, pid: 'test', from: 'account' } });
     r.component.presetEditorVals().peItems[0].openNorm();
-    assert.equal(r.component.presetEditorVals().peNormBasis, expected);
+    assert.equal(r.component.presetEditorVals().peNormBasis, 'На 1 единицу основного количества');
+    assert.equal(r.component.presetEditorVals().peNormExample, 'Пример: 15 '+unit+' × 1 = 15 шт');
   }
 });
 
