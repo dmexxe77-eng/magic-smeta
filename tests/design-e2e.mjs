@@ -32,11 +32,11 @@ try{
   await page.getByPlaceholder('Поиск по базе',{exact:true}).fill('Натяжка ПВХ потолка');
   await page.getByText('Натяжка ПВХ потолка',{exact:true}).last().click();
   await page.getByRole('button',{name:'Добавить в кнопку · 1',exact:true}).click();
-  await page.getByText('Количество блока',{exact:true}).last().click();
+  await page.getByText('Общее количество',{exact:true}).last().click();
   await page.getByText('Ввести отдельно',{exact:true}).last().click();
   assert.equal(await page.evaluate(()=>window.__zamer.beVals().beItems[0].srcLabel),'Ввести отдельно');
   await page.getByText('Ввести отдельно',{exact:true}).last().click();
-  await page.getByText('Количество блока',{exact:true}).last().click();
+  await page.getByText('Общее количество',{exact:true}).last().click();
   await page.screenshot({path:dir+'/editor.png'});
   const fixture=await page.evaluate(({blockId})=>{
     const app=window.__zamer,original=app.state.projects.find(p=>p.rooms.length),originalRoom=original.rooms[0];
@@ -49,8 +49,8 @@ try{
   const add=page.getByRole('button',{name:'+ Добавить '+name.toLocaleLowerCase('ru'),exact:true});
   await add.click();
   await add.click();
-  const first=page.getByLabel('Количество блока '+name+' 1',{exact:true});
-  const second=page.getByLabel('Количество блока '+name+' 2',{exact:true});
+  const first=page.getByLabel('Общее количество '+name+' 1',{exact:true});
+  const second=page.getByLabel('Общее количество '+name+' 2',{exact:true});
   assert.equal(await first.inputValue(),'12');
   assert.equal(await second.inputValue(),'12');
   await first.fill('3');await first.press('Tab');
@@ -74,7 +74,7 @@ try{
   },blockId);
   assert.equal(persisted[0].qty,4);assert.equal(persisted[1].qty,0);
   assert.equal(persisted[0].iq['Натяжка ПВХ потолка'],5);
-  assert.equal(await page.getByLabel('Количество блока '+name+' 1',{exact:true}).inputValue(),'4');
+  assert.equal(await page.getByLabel('Общее количество '+name+' 1',{exact:true}).inputValue(),'4');
   await page.screenshot({path:dir+'/calculator.png'});
   await page.evaluate(({blockId,pid})=>window.__zamer.go('btnEd',{be:{bid:blockId,pid,from:'calc'}}),{blockId,pid:fixture.pid});
   await page.getByRole('button',{name:'Настроить блок',exact:true}).click();
@@ -83,7 +83,7 @@ try{
   await page.getByRole('button',{name:'Сохранить блок',exact:true}).click();
   await page.evaluate(()=>window.__zamer.openCalc('e2e_project'));
   await page.getByRole('button',{name:'+ Добавить '+name.toLocaleLowerCase('ru'),exact:true}).click();
-  const third=page.getByLabel('Количество блока '+name+' 3',{exact:true});
+  const third=page.getByLabel('Общее количество '+name+' 3',{exact:true});
   assert.equal(await third.inputValue(),'');
   const definitions=await page.evaluate(blockId=>window.__zamer.state.projects[0].rooms[0][blockId].map(i=>i.qdef),blockId);
   assert.deepEqual(definitions.map(d=>d.unit),['м²','м²','шт']);
@@ -103,7 +103,7 @@ try{
     app.setState({projects:[{...p,rooms:[r,second]}],screen:'calc',tab:r.id});
   });
   await page.getByRole('button',{name:'MSD Evolution',exact:true}).click();
-  const area=page.getByLabel('Количество блока Полотно 1',{exact:true});
+  const area=page.getByLabel('Общее количество Полотно 1',{exact:true});
   await area.fill('9');await area.press('Tab');
   await page.getByText('Ко всем',{exact:true}).first().click();
   const spread=await page.evaluate(()=>window.__zamer.state.projects[0].rooms.map(r=>r.canvas));

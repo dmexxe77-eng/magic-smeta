@@ -5,8 +5,8 @@ const quantityGeom=r=>Array.isArray(r.v)&&r.v.length>=3?geom(r.v,r.holes):{a:nul
 const blockQty=(b,i,r,g)=>window.MagicQuantity.blockQuantity(b,i,r,g,BLOCKS);
 const QF=n=>n==null?'':String(Math.round(n*1000)/1000).replace('.',',');
 const readQuantity=text=>{const t=String(text==null?'':text).trim().replace(/\s/g,'').replace(',','.');if(!t)return null;if(!/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(t))return undefined;const n=Number(t);return Number.isFinite(n)&&n>=0?Math.round(n*1000)/1000:undefined;};
-const quantityDescription=b=>(window.MagicQuantity.sourceOfBlock(b)==='area'?'Площадь с чертежа':window.MagicQuantity.sourceOfBlock(b)==='perim'?'Периметр с чертежа':'Вводится вручную')+' · '+b.unit;
-const quantitySource=(l,q)=>l.ov?'Вручную':({area:'Площадь с чертежа',perim:'Периметр с чертежа',angles:'Все углы с чертежа',inner:'Внутренние углы',outer:'Внешние углы',manual:'Ввести отдельно'})[l.src]||'Количество блока';
+const quantityDescription=b=>(window.MagicQuantity.sourceOfBlock(b)==='area'?'По площади чертежа':window.MagicQuantity.sourceOfBlock(b)==='perim'?'По периметру чертежа':'Вручную')+' · '+b.unit;
+const quantitySource=(l,q)=>l.ov?'Вручную':({area:'Площадь с чертежа',perim:'Периметр с чертежа',angles:'Все углы с чертежа',inner:'Внутренние углы',outer:'Внешние углы',manual:'Ввести отдельно'})[l.src]||'Общее количество';
 const instLines=(bid,inst,qty,g,room)=>{const b=blockDef(bid);const i=room?inst:Object.assign({},inst,b.single?{qtyO:qty}:{qty});return window.MagicQuantity.instanceLines(b,i,PR(bid,i.pid),room||{},g,BLOCKS);};
 const subP=r=>blockQty(blockDef('main'),Object.assign({},r.main,{qtyO:null}),r,quantityGeom(r)).deducted;
 const singleQty=(r,bid,g)=>blockQty(blockDef(bid),r[bid]||{},r,g).value;
@@ -69,7 +69,7 @@ const METHODS = String.raw`
           setQ(Math.max(0,Math.round(((base||0)+d)*1000)/1000));this.setState({qtyBuf:null});
         };
         const choices=(PRESETS[b.id]||[]).filter(pr=>!pr.hidden&&(pr.items.length||pr.id===inst.pid)).map(pr=>Object.assign({name:pr.name,pick:()=>editInst(i=>{if(i.pid!==pr.id){i.pid=pr.id;i.off={};i.iq={};}})},chipStyle(pr.id===inst.pid)));
-        return{id:inst.id||'single',unit:q.unit,qtyAria:'Количество блока '+b.title+' '+(index+1),qtyTxt:s.qtyBuf&&s.qtyBuf.k===key?s.qtyBuf.t:QF(q.shown),totalTxt:total?RUB(total):'—',inc:()=>step(b.step||1),dec:()=>step(-(b.step||1)),
+        return{id:inst.id||'single',unit:q.unit,qtyAria:'Общее количество '+b.title+' '+(index+1),qtyTxt:s.qtyBuf&&s.qtyBuf.k===key?s.qtyBuf.t:QF(q.shown),totalTxt:total?RUB(total):'—',inc:()=>step(b.step||1),dec:()=>step(-(b.step||1)),
           qtyChange:e=>this.setState({qtyBuf:{k:key,t:e.target.value}}),
           qtyBlur:()=>{const qb=this.state.qtyBuf;if(!qb||qb.k!==key)return;const n=readQuantity(qb.t);if(n===undefined){this.toast('Введите неотрицательное количество');return;}setQ(n);this.setState({qtyBuf:null});},
           qtyReset:()=>setQ(null),qtyCanReset:q.overridden,qtyResetLabel:q.source==='manual'?'очистить':'сбросить',qtyNote:q.overridden?'Вручную':q.source==='manual'?'Вводится вручную':q.source==='area'?'Площадь с чертежа':'Периметр с чертежа',
@@ -135,7 +135,7 @@ const NEW_BLOCK_SCREEN = String.raw`
               <div style="font-size:12px;line-height:1.4;color:#6F7688;margin-top:10px">Появится в редакторе кнопок и калькуляторе.</div>
             </div>
             <div style="background:#fff;border-radius:20px;padding:16px;margin-bottom:12px">
-              <div style="font-size:11px;font-weight:800;letter-spacing:.7px;color:#6F7688;text-transform:uppercase">Количество блока</div>
+              <div style="font-size:11px;font-weight:800;letter-spacing:.7px;color:#6F7688;text-transform:uppercase">Общее количество</div>
               <div style="font-size:12px;line-height:1.4;color:#6F7688;margin:8px 0 14px">Откуда брать основное число в каждой карточке.</div>
               <sc-for list="{{ nbSources }}" as="ns" hint-placeholder-count="3"><button sc-camel-on-click="{{ ns.pick }}" style="width:100%;display:flex;align-items:center;gap:12px;text-align:left;min-height:70px;padding:12px;border-radius:14px;border:1.5px solid {{ ns.border }};background:{{ ns.bg }};color:{{ ns.color }};cursor:pointer;margin-bottom:8px"><span style="font-size:24px;line-height:1">{{ ns.dot }}</span><span><span style="display:block;font-size:14px;font-weight:800">{{ ns.label }}</span><span style="display:block;font-size:11.5px;color:#6F7688;margin-top:3px">{{ ns.sub }}</span></span></button></sc-for>
               <sc-if value="{{ nbManual }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px;color:#6F7688;margin:14px 0 8px;font-weight:700">Единица количества</div><div style="display:flex;gap:7px"><sc-for list="{{ nbUnits }}" as="nu" hint-placeholder-count="4"><button sc-camel-on-click="{{ nu.pick }}" style="flex:1;height:40px;padding:0 9px;border-radius:10px;border:1.5px solid {{ nu.border }};background:{{ nu.bg }};color:{{ nu.color }};font-size:13px;font-weight:800;cursor:pointer">{{ nu.label }}</button></sc-for></div></sc-if>
@@ -183,15 +183,15 @@ export function quantitiesTemplate(source) {
   const paramEnd=tpl.indexOf('            <div style="background:#fff;border-radius:18px;padding:10px 14px 4px">',paramTitle);
   if(paramTitle<0||paramStart<0||paramEnd<paramStart)throw new Error('quantities: preset parameter card missing');
   tpl=tpl.slice(0,paramStart)+String.raw`            <div style="background:#EEEDFC;border-radius:18px;padding:14px;margin-bottom:10px;border:1px solid #DCD9FA">
-              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><div style="font-size:11px;font-weight:800;letter-spacing:.7px;color:#4F46E5;text-transform:uppercase">Количество блока</div><sc-if value="{{ beCustom }}" hint-placeholder-val="{{ false }}"><button sc-camel-on-click="{{ beEditBlock }}" style="background:transparent;color:#4F46E5;border:0;font-size:11px;font-weight:700;cursor:pointer">Настроить блок</button></sc-if></div>
-              <div style="font-size:14px;font-weight:800;margin:7px 0 5px">{{ beQuantityTitle }}</div><div style="font-size:11.5px;color:#6F7688;font-weight:600;line-height:1.45">Позиции с привязкой «Количество блока» берут число своей карточки в калькуляторе.</div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><div style="font-size:11px;font-weight:800;letter-spacing:.7px;color:#4F46E5;text-transform:uppercase">Общее количество</div><sc-if value="{{ beCustom }}" hint-placeholder-val="{{ false }}"><button sc-camel-on-click="{{ beEditBlock }}" style="background:transparent;color:#4F46E5;border:0;font-size:11px;font-weight:700;cursor:pointer">Настроить блок</button></sc-if></div>
+              <div style="font-size:14px;font-weight:800;margin:7px 0 5px">{{ beQuantityTitle }}</div><div style="font-size:11.5px;color:#6F7688;font-weight:600;line-height:1.45">По умолчанию для всех позиций. У каждой можно изменить.</div>
             </div>
 `+tpl.slice(paramEnd);
   range("    const param=pr?(pr.param||", '    const cut=pr?', "    const bdef=blockDef(bid);\n", 'preset parameter values');
   rep("    const paramSub=param==='S'?'S — площадь чертежа (м²)':param==='P'?'P — периметр чертежа (м.п.)':'N — вводится вручную';", "    const paramSub=quantityDescription(bdef);", 'source context');
-  rep("opt(undefined,'× Параметр кнопки'", "opt(undefined,'Количество блока'", 'source default');
+  rep("opt(undefined,'× Параметр кнопки'", "opt(undefined,'Общее количество'", 'source default');
   rep("opt('manual','Ручной ввод','в смете по умолчанию 0'", "opt('manual','Ввести отдельно','Замерщик введёт количество позиции'", 'source manual');
-  rep("})[it.src]||'× Параметр';", "})[it.src]||'Количество блока';", 'item default label');
+  rep("})[it.src]||'× Параметр';", "})[it.src]||'Общее количество';", 'item default label');
   rep("manual:'Ручной ввод'})[it.src]", "manual:'Ввести отдельно'})[it.src]", 'item manual label');
   rep("beAddBlock:()=>this.toast('Свой блок — не входит в прототип'),", "beAddBlock:()=>this.setState({screen:'newBlock',blockForm:{name:'',source:'manual',unit:'м.п.'}}),\n      beCustom:!!bdef.custom,beQuantityTitle:quantityDescription(bdef),beEditBlock:()=>this.setState({screen:'newBlock',blockForm:{id:bid,name:bdef.title,source:bdef.source,unit:bdef.unit}}),", 'new block handler');
   rep("      beParams,beIsCanvas:bid==='canvas',", "      beIsCanvas:bid==='canvas',", 'remove parameter return');
