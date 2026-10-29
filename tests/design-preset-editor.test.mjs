@@ -112,6 +112,7 @@ test('applying a norm uses the main quantity even for a row previously tied to c
   app.presetEditorVals().peItems[0].openNorm();
   assert.equal(app.presetEditorVals().peNormBasis, 'На 1 единицу основного количества');
   app.presetEditorVals().peSetNorm({ target: { value: '10' } });
+  assert.equal(app.presetEditorVals().peNormExample, 'На 1 погонный метр профиля — 10 шт. При длине 15 м.п. понадобится 150 шт.');
   app.presetEditorVals().peApplyNorm();
   const line = r.instLines('main', { pid: preset.id, qtyO: 15 }, 15, { a: 30, p: 40, inn: 4, out: 2 })[0];
   assert.equal(line.q, 150);
@@ -127,7 +128,10 @@ test('norm uses a common basis label and the block unit in its calculation examp
     r.component.go('btnEd', { be: { bid, pid: 'test', from: 'account' } });
     r.component.presetEditorVals().peItems[0].openNorm();
     assert.equal(r.component.presetEditorVals().peNormBasis, 'На 1 единицу основного количества');
-    assert.equal(r.component.presetEditorVals().peNormExample, 'Пример: 15 '+unit+' × 1 = 15 шт');
+    const example=r.component.presetEditorVals().peNormExample;
+    assert.ok(example.includes('понадобится 15 шт.'));
+    assert.ok(bid==='light'?example.includes('15 светильников'):example.includes('15 '+unit));
+    assert.doesNotMatch(example, /[×=]/);
   }
 });
 
