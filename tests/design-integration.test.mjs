@@ -12,8 +12,8 @@ const editor = async () => {
 test('editor exposes quantity of block instead of a second preset parameter',async()=>{
   const r=await editor();
   const values=r.component.beVals();
-  assert.equal(values.srcOptions[0].label,'Количество блока');
-  assert.equal(values.beQuantityTitle,'Площадь с чертежа · м²');
+  assert.equal(values.srcOptions[0].label,'Общее количество');
+  assert.equal(values.beQuantityTitle,'По площади чертежа · м²');
   assert.doesNotMatch(readTemplate(),/>Параметр кнопки</);
 });
 
