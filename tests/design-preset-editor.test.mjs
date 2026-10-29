@@ -106,7 +106,7 @@ test('norm rejects empty, zero and invalid input without closing its sheet', asy
 test('applying a norm uses the main quantity even for a row previously tied to corners', async () => {
   const r = await runtime(), app = r.component;
   const preset = r.PRESETS.main.find(p => p.items.length);
-  const item = { n: 'Внешние углы', p: 100, u: 'шт', m: 1, src: 'outer' };
+  const item = { n: 'Внешние углы', p: 100, u: 'шт', m: 1, src: 'outer', mult: 7 };
   preset.items = [item];
   app.go('btnEd', { be: { bid: 'main', pid: preset.id, from: 'account' } });
   app.presetEditorVals().peItems[0].openNorm();
