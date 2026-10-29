@@ -116,6 +116,18 @@ test('applying a norm uses the main quantity even for a row previously tied to c
   const line = r.instLines('main', { pid: preset.id, qtyO: 15 }, 15, { a: 30, p: 40, inn: 4, out: 2 })[0];
   assert.equal(line.q, 150);
   assert.equal(item.src, undefined);
+  app.beVals().beItems[0].cycleSrc();
+  app.beVals().srcOptions.find(option => option.label === 'Внешние углы').pick();
+  assert.equal(item.k, 1, 'an explicit geometric source switches out of the block norm');
+});
+
+test('norm labels use the light or custom block unit rather than the nomenclature unit', async () => {
+  for (const [bid, unit, expected] of [['light', 'шт', 'На 1 штуку'], ['custom_length', 'м.п.', 'На 1 погонный метр'], ['custom_area', 'м²', 'На 1 квадратный метр'], ['custom_set', 'компл.', 'На 1 комплект']]) {
+    const r = await runtime({ mainDataPatch: main => ({ blocks: bid === 'light' ? [] : [{ id: bid, title: bid, source: 'manual', unit }], presets: { ...main.presets, [bid]: [{ id: 'test', name: 'Тест', items: [{ n: 'Угол', p: 10, u: 'шт', m: 1 }] }] } }) });
+    r.component.go('btnEd', { be: { bid, pid: 'test', from: 'account' } });
+    r.component.presetEditorVals().peItems[0].openNorm();
+    assert.equal(r.component.presetEditorVals().peNormBasis, expected);
+  }
 });
 
 test('list editor adds alternatives to one row and persists them with the preset', async () => {

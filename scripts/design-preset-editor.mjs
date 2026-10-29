@@ -79,7 +79,6 @@ const LIST = sheet('peList', 'Список номенклатур', `
 <button sc-camel-on-click="{{ peAddVariants }}" style="${secondary};border:1.5px dashed #B8CFFA;color:#4F46E5;margin-top:12px">+ Добавить из номенклатуры</button><button sc-camel-on-click="{{ peDismiss }}" style="${primary};margin-top:12px">Готово</button>`);
 const ORDER = sheet('peOrder', 'Порядок пресетов', `<div style="font-size:19px;font-weight:800">Порядок пресетов</div><div style="font-size:13px;color:#6F7688;margin:8px 0 18px">{{ beName }}</div><div style="display:flex;gap:8px"><button sc-camel-on-click="{{ beMoveL }}" style="${secondary}">← Левее</button><button sc-camel-on-click="{{ beMoveR }}" style="${secondary}">Правее →</button></div><button sc-camel-on-click="{{ peDismiss }}" style="${primary};margin-top:12px">Готово</button>`);
 const HELP = sheet('peHelp', 'Как настроить пресет', `<div style="font-size:19px;font-weight:800">Как настроить пресет</div><div style="font-size:14px;line-height:1.65;color:#6F7688;margin:14px 0 22px">Пресет — готовый набор для сметы.<br><br>Добавьте позиции и выберите, как считать количество.<br><br>«Норма» задаёт расход на одну единицу. «Список» добавляет варианты для выбора в калькуляторе.<br><br>Нажмите «Сохранить», чтобы применить изменения.</div><button sc-camel-on-click="{{ peDismiss }}" style="${primary}">Понятно</button>`);
-const CALC_VARIANT = sheet('peCalcVariant', 'Выбор номенклатуры', `<div style="font-size:19px;font-weight:800">Выберите номенклатуру</div><div style="font-size:12.5px;color:#6F7688;line-height:1.5;margin:8px 0 15px">Изменится только эта строка в текущей карточке.</div><sc-for list="{{ peCalcChoices }}" as="v" hint-placeholder-count="3"><button sc-camel-on-click="{{ v.pick }}" style="width:100%;display:flex;gap:12px;align-items:center;text-align:left;border:0;border-top:1px solid #F1F1F7;background:{{ v.bg }};border-radius:12px;padding:14px 10px;color:#1E2530;cursor:pointer"><span style="color:#4F46E5;font-size:20px">{{ v.dot }}</span><span><span style="display:block;font-size:14px;font-weight:700;line-height:1.4">{{ v.n }}</span><span style="display:block;font-size:12px;color:#6F7688;margin-top:5px">{{ v.price }}</span></span></button></sc-for><button sc-camel-on-click="{{ peDismiss }}" style="${secondary};margin-top:14px">Отмена</button>`);
 
 const METHODS = String.raw`
   beginPresetDraft(be){
@@ -99,12 +98,8 @@ const METHODS = String.raw`
     this.go(from,{be:null,editLine:null,normForm:null});
   }
   presetEditorVals(){
-    const s=this.state,be=s.be||{},flags={peSettings:false,peDeleteConfirm:false,peNorm:false,peList:false,peOrder:false,peHelp:false,peCalcVariant:false};
-    const dismiss=()=>{this._variantEdit=null;this.setState({sheet:null,normForm:null,calcVariant:null});};
-    if(s.sheet==='calcVariant'){
-      const context=s.calcVariant,edit=this._variantEdit;
-      return Object.assign(flags,{peCalcVariant:!!context,peDismiss:dismiss,peCalcChoices:(context&&context.options||[]).map(option=>({n:option.n,price:F(option.p)+' ₽/'+option.u,dot:option.n===context.name?'●':'○',bg:option.n===context.name?'#EEEDFC':'transparent',pick:()=>{if(edit&&option.n!==context.name){edit(i=>{i.variants=i.variants||{};i.variants[context.key]=option.n;if(i.iq)delete i.iq[context.key];});}dismiss();}}))});
-    }
+    const s=this.state,be=s.be||{},flags={peSettings:false,peDeleteConfirm:false,peNorm:false,peList:false,peOrder:false,peHelp:false};
+    const dismiss=()=>this.setState({sheet:null,normForm:null});
     if(s.screen!=='btnEd')return flags;
     const v=this.beVals(),list=(PRESETS[be.bid]||[]).filter(p=>!p.archived),pr=list.find(p=>p.id===be.pid)||list[0],def=blockDef(be.bid),row=pr&&pr.items[be.rowIdx],form=s.normForm||{};
     const open=(sheet,extra)=>this.setState(Object.assign({sheet},extra||{}));
@@ -112,7 +107,8 @@ const METHODS = String.raw`
     const n=pr?pr.items.length:0,word=n%10===1&&n%100!==11?'позиция':n%10>=2&&n%10<=4&&(n%100<12||n%100>14)?'позиции':'позиций';
     const options=row&&Array.isArray(row.variants)?row.variants:[];
     const norm=readQuantity(form.value),multiple=readQuantity(form.mult);
-    const basis=row&&({area:'Расход на 1 м²',perim:'Расход на 1 м.п.',angles:'Расход на 1 угол',inner:'Расход на 1 внутренний угол',outer:'Расход на 1 внешний угол',manual:'Расход на 1 введённую единицу'})[row.src]||'Расход на 1 '+def.unit+' общего количества';
+    const basis=({'м.п.':'На 1 погонный метр','м.п':'На 1 погонный метр','м²':'На 1 квадратный метр','шт':'На 1 штуку','шт.':'На 1 штуку','компл.':'На 1 комплект','компл':'На 1 комплект'})[def.unit]||'На 1 единицу основного количества';
+    const example=row&&norm>0?window.MagicQuantity.itemQuantity(Object.assign({},row,{src:undefined,k:norm,mult:multiple||0,u:(options[0]||row).u}),{},{value:15},{}).value:null;
     const result={...flags,peDismiss:dismiss,peSettings:s.sheet==='presetSettings',peDeleteConfirm:s.sheet==='presetDelete',peNorm:s.sheet==='presetNorm',peList:s.sheet==='presetList',peOrder:s.sheet==='presetOrder',peHelp:s.sheet==='presetHelp',
       peClose:()=>this.finishPresetDraft(false),peSave:()=>this.finishPresetDraft(true),peOpenSettings:()=>open('presetSettings'),peOpenHelp:()=>open('presetHelp'),peOpenOrder:()=>open('presetOrder'),
       peMeta:def.title+' · '+n+' '+word+' · '+(pr&&!pr.hidden?'виден в калькуляторе':'скрыт в калькуляторе'),peVisible:!!pr&&!pr.hidden,peSwitchKnob:pr&&!pr.hidden?17:2,
@@ -123,8 +119,8 @@ const METHODS = String.raw`
         openList:()=>{if(!Array.isArray(item.variants))item.variants=[{n:item.n,p:item.p,u:item.u,m:item.m}];this.setState({be:Object.assign({},this.state.be,{rowIdx:i}),sheet:'presetList'});}});}),
       peRowName:row?(options[0]||row).n:'',peRowUnit:row?(options[0]||row).u:'',peNormBasis:basis,peNormValue:form.value||'',peMultValue:form.mult||'',peShowMultiple:!!form.showMultiple,
       peSetNorm:e=>setForm({value:e.target.value}),peSetMult:e=>setForm({mult:e.target.value}),peToggleMultiple:()=>setForm({showMultiple:!form.showMultiple}),
-      peNormExample:row&&row.src==='manual'?'При отдельном вводе количество итоговое. Чтобы применить норму, выберите общее количество или чертёж.':norm>0?'Пример: 3 × '+QF(norm)+' = '+QF(3*norm)+' '+(row?(options[0]||row).u:''):'Введите расход на одну единицу.',
-      peApplyNorm:()=>{if(!row||!(norm>0)||multiple===undefined){this.toast('Введите норму больше нуля и корректную кратность');return;}row.k=norm;row.mult=multiple||0;dismiss();},
+      peNormExample:example!=null?'Пример: 15 '+def.unit+' × '+QF(norm)+' = '+QF(example)+' '+(options[0]||row).u:'Введите расход на одну единицу.',
+      peApplyNorm:()=>{if(!row||!(norm>0)||multiple===undefined){this.toast('Введите норму больше нуля и корректную кратность');return;}row.k=norm;row.mult=multiple||0;delete row.src;dismiss();},
       peResetNorm:()=>{if(row)row.k=1;dismiss();},
       peVariants:options.map((option,i)=>({n:option.n,price:F(option.p)+' ₽/'+option.u,note:i===0?'по умолчанию':'вариант',dot:i===0?'●':'○',color:i===0?ACC:DIM,defaultAria:'По умолчанию: '+option.n,removeAria:'Убрать вариант '+option.n,makeDefault:()=>{options.splice(i,1);options.unshift(option);this.forceUpdate();},remove:()=>{if(options.length<=1){this.toast('В списке должна остаться хотя бы одна позиция');return;}options.splice(i,1);this.forceUpdate();}})),
       peAddVariants:()=>this.setState({be:Object.assign({},this.state.be,{target:'variants',variantIdx:be.rowIdx,sel:[],q:''}),sheet:'nom'})};
@@ -143,7 +139,7 @@ export function presetEditorTemplate(source) {
   const start = tpl.indexOf('        <sc-if value="{{ isBtnEd }}"');
   const end = tpl.indexOf('        <sc-if value="{{ sheetOptSrc }}"', start);
   if (start < 0 || end < start) throw new Error('preset editor: screen boundaries missing');
-  tpl = tpl.slice(0, start) + EDITOR + SETTINGS + DELETE + NORM + LIST + ORDER + HELP + CALC_VARIANT + tpl.slice(end);
+  tpl = tpl.slice(0, start) + EDITOR + SETTINGS + DELETE + NORM + LIST + ORDER + HELP + tpl.slice(end);
   rep('  beVals(){', METHODS + '\n  beVals(){', 'editor methods');
   rep('this.beVals(),this.accountVals()', 'this.beVals(),this.presetEditorVals(),this.accountVals()', 'view values');
   rep('go(screen,extra){this.setState(', "go(screen,extra){if(screen==='btnEd'&&!this._presetDraft)this.beginPresetDraft(extra&&extra.be);this.setState(", 'draft entry');
@@ -154,6 +150,7 @@ export function presetEditorTemplate(source) {
   rep('const j=idx+d;if(idx<0||j<0||j>=list.length)return;', 'const visible=list.filter(p=>!p.archived),target=visible[visible.indexOf(pr)+d],j=list.indexOf(target);if(idx<0||j<0)return;', 'reorder visible presets');
   rep("id,name:'Новая кнопка'", "id,name:'Новый пресет'", 'new preset name');
   rep("priceTxt:F(n.p)+' ₽',opacity:", "priceTxt:F(n.p),opacity:", 'picker currency');
+  rep('mut(()=>{if(srcIt)srcIt.src=v;});', 'mut(()=>{if(srcIt){srcIt.src=v;if(v!==undefined)srcIt.k=1;}});', 'explicit source leaves block norm mode');
   rep("const nomAdd=()=>{if(!sel.length)return;", `const nomAdd=()=>{if(!sel.length)return;
       if(be.target==='variants'){
         const item=pr&&pr.items[be.variantIdx];if(!item)return;
@@ -164,7 +161,15 @@ export function presetEditorTemplate(source) {
   rep('const used=new Set(toOpt?[]:', "const used=new Set(be.target==='variants'?(pr&&pr.items[be.variantIdx]&&pr.items[be.variantIdx].variants||[]).map(v=>v.n):toOpt?[]:", 'list picker membership');
   rep("nomAddLabel:sel.length?(toOpt?", "nomAddLabel:sel.length?(be.target==='variants'?'Добавить в список · '+sel.length:toOpt?", 'list picker action');
   const name = '{{ ln.n }}</div><div style="font-size:10px;color:#A5A9B8;margin-top:2px">';
-  const dropdown = `{{ ln.n }}<sc-if value="{{ ln.hasVariants }}" hint-placeholder-val="{{ false }}"><button aria-label="{{ ln.variantAria }}" sc-camel-on-click="{{ ln.chooseVariant }}" style="display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;width:30px;height:26px;border:0;border-radius:8px;background:#EEEDFC;color:#4F46E5;font-size:16px;margin-left:5px;cursor:pointer">▾</button></sc-if></div><div style="font-size:10px;color:#A5A9B8;margin-top:2px">`;
+  const dropdown = `{{ ln.n }}<sc-if value="{{ ln.hasVariants }}" hint-placeholder-val="{{ false }}"><button aria-label="{{ ln.variantAria }}" aria-expanded="{{ ln.variantsOpen }}" sc-camel-on-click="{{ ln.chooseVariant }}" style="display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;width:30px;height:26px;border:0;border-radius:8px;background:#EEEDFC;color:#4F46E5;font-size:16px;margin-left:5px;cursor:pointer">{{ ln.variantArrow }}</button></sc-if></div><div style="font-size:10px;color:#A5A9B8;margin-top:2px">`;
   rep(name, dropdown, 'calculator variant arrows', 2);
+  const inlineList = `<sc-if value="{{ ln.variantsOpen }}" hint-placeholder-val="{{ false }}"><div role="group" aria-label="Варианты номенклатуры" style="margin:0 0 12px 26px;border:1.5px solid #B8CFFA;border-radius:13px;max-height:240px;overflow-y:auto;overflow-x:hidden"><sc-for list="{{ ln.variantChoices }}" as="vc" hint-placeholder-count="2"><button aria-pressed="{{ vc.selected }}" sc-camel-on-click="{{ vc.pick }}" style="display:flex;align-items:center;gap:10px;width:100%;padding:12px 10px;text-align:left;border:0;border-bottom:1px solid #F1F1F7;background:{{ vc.bg }};color:#1E2530;cursor:pointer"><span style="flex:none;color:#4F46E5;font-size:17px">{{ vc.dot }}</span><span style="min-width:0"><span style="display:block;font-size:12.5px;font-weight:700;line-height:1.45;overflow-wrap:anywhere">{{ vc.n }}</span><span style="display:block;font-size:11px;color:#6F7688;margin-top:4px">{{ vc.price }}</span></span></button></sc-for></div></sc-if>`;
+  for (const list of ['b.lines','it.lines']) {
+    const from = tpl.indexOf('<sc-for list="{{ ' + list + ' }}"');
+    const contentStart = tpl.indexOf('>', from) + 1;
+    const contentEnd = tpl.indexOf('</sc-for>', contentStart);
+    if (from < 0 || contentStart < 1 || contentEnd < contentStart) throw new Error('preset editor: line markup missing');
+    tpl = tpl.slice(0, contentStart) + '<div>' + tpl.slice(contentStart, contentEnd) + inlineList + '</div>' + tpl.slice(contentEnd);
+  }
   return tpl;
 }
