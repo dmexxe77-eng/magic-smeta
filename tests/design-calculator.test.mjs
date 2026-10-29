@@ -9,16 +9,31 @@ test('room options and extra rows fold independently without changing the estima
   const room = app.cur().rooms[0];
   room.opts = { [r.ROOM_OPTS[0].id]: true };
   const total = app.pSum(app.cur());
-  assert.equal(app.calculatorAppearanceVals().pcOptionsOpen, true);
-  app.calculatorAppearanceVals().pcToggleOptions();
   assert.equal(app.calculatorAppearanceVals().pcOptionsOpen, false);
-  assert.equal(app.calculatorAppearanceVals().pcExtrasOpen, true);
+  app.calculatorAppearanceVals().pcToggleOptions();
+  assert.equal(app.calculatorAppearanceVals().pcOptionsOpen, true);
+  assert.equal(app.calculatorAppearanceVals().pcExtrasOpen, false);
   assert.equal(app.calculatorAppearanceVals().pcOptionsSummary[0].title, r.ROOM_OPTS[0].title);
   app.calculatorAppearanceVals().pcToggleExtras();
-  assert.equal(app.calculatorAppearanceVals().pcExtrasOpen, false);
+  assert.equal(app.calculatorAppearanceVals().pcExtrasOpen, true);
   assert.equal(app.pSum(app.cur()), total);
   app.calculatorAppearanceVals().pcToggleOptions();
-  assert.equal(app.calculatorAppearanceVals().pcOptionsOpen, true);
+  assert.equal(app.calculatorAppearanceVals().pcOptionsOpen, false);
+});
+
+test('every calculator entry starts with all sections collapsed', async () => {
+  const r = await runtime(), app = r.component;
+  const project = app.state.projects.find(p => p.rooms.length);
+  app.openCalc(project.id);
+  assert.ok(app.calcVals().blocks.every(b => b.closed));
+  app.calcVals().blocks[0].toggleOpen();
+  app.calculatorAppearanceVals().pcToggleOptions();
+  assert.equal(app.calcVals().blocks[0].closed, false);
+  app.go('project');
+  app.openCalc(project.id);
+  assert.ok(app.calcVals().blocks.every(b => b.closed));
+  assert.equal(app.calculatorAppearanceVals().pcOptionsOpen, false);
+  assert.equal(app.calculatorAppearanceVals().pcExtrasOpen, false);
 });
 
 test('calculator chooses an alternative in only the clicked instance and clears its old override', async () => {

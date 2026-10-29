@@ -11,6 +11,7 @@ import { holesMethods, holesTemplate } from './design-holes.mjs';
 import { quantitiesTemplate } from './design-quantities.mjs';
 import { storageTemplate } from './design-storage.mjs';
 import { presetEditorTemplate } from './design-preset-editor.mjs';
+import { calculatorTemplate } from './design-calculator.mjs';
 
 const OUT = 'public/design';
 fs.mkdirSync(OUT + '/vendor', { recursive: true });
@@ -259,6 +260,7 @@ tpl = holesTemplate(tpl);
 tpl = quantitiesTemplate(tpl);
 tpl = storageTemplate(tpl);
 tpl = presetEditorTemplate(tpl);
+tpl = calculatorTemplate(tpl);
 /* Бренд ЗАМЕРX: знак, название, палитра — после всех правок разметки, чтобы перекрасить и их */
 tpl = brandTemplate(tpl);
 

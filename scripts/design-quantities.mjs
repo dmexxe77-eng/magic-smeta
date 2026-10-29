@@ -44,14 +44,14 @@ const METHODS = String.raw`
       qTxt:s.qtyBuf&&s.qtyBuf.k===key?s.qtyBuf.t:QF(l.q),qOverridden:l.ov,qBorderStyle:l.missing?'dashed':'solid',qBorder:l.ov?'#C9C6F5':l.missing?'#C9C9D6':'transparent',qBg:l.ov?'#EEEDFC':'#F3F3FA',
       qChange:e=>this.setState({qtyBuf:{k:key,t:e.target.value}}),
       qBlur:()=>{const qb=this.state.qtyBuf;if(!qb||qb.k!==key)return;const n=readQuantity(qb.t);if(n===undefined){this.toast('Введите неотрицательное количество');return;}editInst(i=>{i.iq=i.iq||{};if(n===null)delete i.iq[rowKey];else i.iq[rowKey]=n;});this.setState({qtyBuf:null});},
-      qReset:()=>editInst(i=>{if(i.iq)delete i.iq[rowKey];}),totalTxt:l.on?F(l.t):'—',on:l.on,boxBg:l.on?ACC:'#fff',boxBorder:l.on?ACC:'#D6D6E2',nameColor:l.on?INK:DIM,totalColor:l.on?INK:DIM,
+      qReset:()=>editInst(i=>{if(i.iq)delete i.iq[rowKey];}),totalTxt:l.on?F(l.t):'—',on:l.on,boxBg:l.on?'#16A34A':'#fff',boxBorder:l.on?'#16A34A':'#D6D6E2',nameColor:l.on?INK:DIM,totalColor:l.on?INK:DIM,
       toggle:()=>editInst(i=>{i.off=i.off||{};i.off[rowKey]=!i.off[rowKey];})};
   }
   quantityBlocks(r,g,p,chipStyle){
     const s=this.state,col=s.collapsed||{};
     return BLOCKS.map(b=>{
-      const open=!col[b.id],allInstances=window.MagicQuantity.getInstances(r,b);
-      const hdr={id:b.id,toggleOpen:()=>this.setState(x=>({collapsed:Object.assign({},x.collapsed||{},{[b.id]:!(x.collapsed||{})[b.id]})})),chevDeg:open?0:-90,closed:!open,headMb:open?10:2};
+      const open=col[b.id]===false,allInstances=window.MagicQuantity.getInstances(r,b);
+      const hdr={id:b.id,open,toggleOpen:()=>this.setState(x=>({collapsed:Object.assign({},x.collapsed||{},{[b.id]:(x.collapsed||{})[b.id]===false})})),chevDeg:open?0:-90,closed:!open,headMb:open?10:2};
       const editInstance=(id,fn,spread=false)=>this.updRoom(rm=>{
         if(b.single){rm[b.id]=rm[b.id]||{pid:null};fn(rm[b.id]);}
         else{const i=(rm[b.id]||[]).find(x=>x.id===id);if(i)fn(i);}

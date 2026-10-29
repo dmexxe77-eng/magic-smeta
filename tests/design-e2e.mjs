@@ -27,7 +27,7 @@ try{
   const activeTab=await page.getByRole('button',{name,exact:true}).boundingBox();
   assert.ok(activeTab&&activeTab.x>=0&&activeTab.x+activeTab.width<=390,'newly created block tab is visible');
   await page.locator('input:visible').first().fill('Защита пола');
-  await page.getByRole('button',{name:'+ Добавить',exact:true}).click();
+  await page.getByRole('button',{name:'+ Позиция',exact:true}).click();
   assert.doesNotMatch(await page.locator('body').innerText(),/^all\n0 позиций/m);
   await page.getByPlaceholder('Поиск по базе',{exact:true}).fill('Натяжка ПВХ потолка');
   await page.getByText('Натяжка ПВХ потолка',{exact:true}).last().click();
@@ -38,14 +38,16 @@ try{
   await page.getByText('Ввести отдельно',{exact:true}).last().click();
   await page.getByText('Общее количество',{exact:true}).last().click();
   await page.screenshot({path:dir+'/editor.png'});
-  const fixture=await page.evaluate(({blockId})=>{
+  const selectedPid=await page.evaluate(()=>window.__zamer.state.be.pid);
+  await page.getByRole('button',{name:'Сохранить',exact:true}).click();
+  const fixture=await page.evaluate(({blockId,pid})=>{
     const app=window.__zamer,original=app.state.projects.find(p=>p.rooms.length),originalRoom=original.rooms[0];
     const room={...originalRoom,id:'e2e_room',name:'Тестовая комната',on:true,v:[[0,0],[4,0],[4,3],[0,3]],holes:[],canvas:{pid:null,off:{}},main:{pid:null,off:{}},extra:[],light:[],track:[],curtain:[],other:[],extraItems:[],opts:{},optQ:{}};
     const project={...original,id:'e2e_project',name:'Проверка пресетов',status:'estimate',rooms:[room]};
-    const pid=app.state.be.pid;
     app.setState({projects:[project],screen:'calc',curId:project.id,tab:room.id,sheet:null});
     return{pid,price:app.calcVals().blocks.find(b=>b.id===blockId).unit};
-  },{blockId});
+  },{blockId,pid:selectedPid});
+  await page.getByRole('button',{name,exact:true}).click();
   const add=page.getByRole('button',{name:'+ Добавить '+name.toLocaleLowerCase('ru'),exact:true});
   await add.click();
   await add.click();
@@ -74,6 +76,7 @@ try{
   },blockId);
   assert.equal(persisted[0].qty,4);assert.equal(persisted[1].qty,0);
   assert.equal(persisted[0].iq['Натяжка ПВХ потолка'],5);
+  await page.getByRole('button',{name,exact:true}).click();
   assert.equal(await page.getByLabel('Общее количество '+name+' 1',{exact:true}).inputValue(),'4');
   await page.screenshot({path:dir+'/calculator.png'});
   await page.evaluate(({blockId,pid})=>window.__zamer.go('btnEd',{be:{bid:blockId,pid,from:'calc'}}),{blockId,pid:fixture.pid});
@@ -81,7 +84,9 @@ try{
   await page.getByRole('button',{name:/Вводится вручную/}).click();
   await page.getByRole('button',{name:'шт',exact:true}).click();
   await page.getByRole('button',{name:'Сохранить блок',exact:true}).click();
+  await page.getByRole('button',{name:'Сохранить',exact:true}).click();
   await page.evaluate(()=>window.__zamer.openCalc('e2e_project'));
+  await page.getByRole('button',{name,exact:true}).click();
   await page.getByRole('button',{name:'+ Добавить '+name.toLocaleLowerCase('ru'),exact:true}).click();
   const third=page.getByLabel('Общее количество '+name+' 3',{exact:true});
   assert.equal(await third.inputValue(),'');
@@ -102,6 +107,7 @@ try{
     const second={...JSON.parse(JSON.stringify(r)),id:'e2e_room_2',name:'Вторая комната',canvas:{pid:null,qtyO:8,iq:{'Натяжка ПВХ потолка':6},off:{}}};
     app.setState({projects:[{...p,rooms:[r,second]}],screen:'calc',tab:r.id});
   });
+  await page.getByRole('button',{name:'Полотно',exact:true}).click();
   await page.getByRole('button',{name:'MSD Evolution',exact:true}).click();
   const area=page.getByLabel('Общее количество Полотно 1',{exact:true});
   await area.fill('9');await area.press('Tab');

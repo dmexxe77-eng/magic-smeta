@@ -39,9 +39,9 @@ const EDITOR = `
     <div style="background:#fff;border-radius:20px;padding:14px">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px"><span style="${small}">Что попадает в смету</span><button sc-camel-on-click="{{ beAddItem }}" style="flex:none;min-height:30px;padding:0 9px;border:1.5px solid #B8CFFA;border-radius:10px;background:#fff;color:#4F46E5;font-size:12px;font-weight:800;cursor:pointer">+ Позиция</button></div>
       <div style="background:#F7F7FC;border-radius:15px;padding:12px;margin-bottom:10px">
-        <div style="font-size:10px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;color:#6F7688;margin-bottom:5px">Общее количество</div>
-        <div style="display:flex;gap:8px;align-items:center"><div style="flex:1;font-size:14px;font-weight:800">{{ beQuantityTitle }}</div><sc-if value="{{ beCustom }}" hint-placeholder-val="{{ false }}"><button aria-label="Настроить блок" sc-camel-on-click="{{ beEditBlock }}" style="display:flex;border:0;background:transparent;color:#4F46E5;padding:6px;cursor:pointer">${pencil}</button></sc-if></div>
-        <div style="font-size:11.5px;color:#6F7688;line-height:1.45;margin-top:5px">По умолчанию для всех позиций. У каждой можно изменить.</div>
+        <div style="font-size:12px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;color:#6F7688;margin-bottom:6px">Количество</div>
+        <div style="display:flex;gap:8px;align-items:center"><div style="flex:1;font-size:15px;font-weight:800">{{ beQuantityTitle }}</div><sc-if value="{{ beCustom }}" hint-placeholder-val="{{ false }}"><button aria-label="Настроить блок" sc-camel-on-click="{{ beEditBlock }}" style="display:flex;border:0;background:transparent;color:#4F46E5;padding:6px;cursor:pointer">${pencil}</button></sc-if></div>
+        <div style="font-size:12px;color:#6F7688;line-height:1.45;margin-top:5px">По умолчанию для всех позиций. У каждой можно изменить.</div>
       </div>
       <sc-for list="{{ peItems }}" as="it" hint-placeholder-count="3"><div style="padding:13px 0;border-top:1px solid #F1F1F7">
         <div style="display:flex;align-items:baseline;gap:9px"><div style="flex:1;min-width:0;font-size:13px;font-weight:700;line-height:1.45;overflow-wrap:anywhere">{{ it.displayName }}</div><div style="flex:none;font-size:13px;font-weight:800;white-space:nowrap">{{ it.displayPrice }} <span style="color:#A5A9B8;font-size:11px;font-weight:500">₽/{{ it.displayUnit }}</span></div></div>
@@ -63,9 +63,9 @@ const SETTINGS = sheet('peSettings', 'Настройки пресета', `
 <div style="font-size:19px;font-weight:800;overflow-wrap:anywhere">{{ beName }}</div><div style="color:#6F7688;font-size:12.5px;line-height:1.5;margin-top:5px;margin-bottom:12px">{{ peMeta }}</div>
 <button role="switch" aria-checked="{{ peVisible }}" sc-camel-on-click="{{ peToggleVisibility }}" style="${action}"><span style="width:36px;height:21px;background:{{ beVisBg }};border-radius:99px;position:relative;flex:none"><span style="position:absolute;top:2px;left:{{ peSwitchKnob }}px;width:17px;height:17px;border-radius:50%;background:#fff;box-shadow:0 1px 3px #0002"></span></span><span><span style="display:block;font-size:16px;font-weight:700">Показывать в калькуляторе</span><span style="display:block;font-size:12px;color:#6F7688;line-height:1.45;margin-top:4px">Скрывает кнопку, сохраняя пресет</span></span></button>
 <button sc-camel-on-click="{{ peDuplicate }}" style="${action}"><span style="display:flex;padding:8px;background:#F3F3FA;border-radius:9px">${copy}</span><span><span style="display:block;font-size:16px;font-weight:700">Дублировать</span><span style="display:block;font-size:12px;color:#6F7688;line-height:1.45;margin-top:4px">Копия с теми же позициями</span></span></button>
-<button sc-camel-on-click="{{ peAskDelete }}" style="${action};color:#FF3B30"><span style="display:flex;padding:8px;background:#FF3B30;color:#fff;border-radius:9px">${trash}</span><span><span style="display:block;font-size:16px;font-weight:700">Удалить пресет</span><span style="display:block;font-size:12px;color:#6F7688;line-height:1.45;margin-top:4px">Пресет и его позиции будут удалены</span></span></button>
+<button sc-camel-on-click="{{ peAskDelete }}" style="${action};color:#FF3B30"><span style="display:flex;padding:8px;background:#FF3B30;color:#fff;border-radius:9px">${trash}</span><span><span style="display:block;font-size:16px;font-weight:700">Удалить пресет</span><span style="display:block;font-size:12px;color:#6F7688;line-height:1.45;margin-top:4px">Убрать из редактора и калькулятора</span></span></button>
 <button sc-camel-on-click="{{ peDismiss }}" style="${secondary};margin-top:15px">Отмена</button>`);
-const DELETE = sheet('peDeleteConfirm', 'Удалить пресет', `<div style="font-size:19px;font-weight:800">Удалить «{{ beName }}»?</div><div style="font-size:13px;line-height:1.5;color:#6F7688;margin:10px 0 20px">Позиции этого пресета тоже будут удалены. Изменения применятся после сохранения редактора.</div><button sc-camel-on-click="{{ peConfirmDelete }}" style="${primary};background:#FF3B30">Удалить пресет</button><button sc-camel-on-click="{{ peOpenSettings }}" style="${secondary};margin-top:8px">Отмена</button>`);
+const DELETE = sheet('peDeleteConfirm', 'Удалить пресет', `<div style="font-size:19px;font-weight:800">Удалить «{{ beName }}»?</div><div style="font-size:13px;line-height:1.5;color:#6F7688;margin:10px 0 20px">Он исчезнет из редактора и калькулятора. Старые сметы сохранятся. Изменения применятся после сохранения.</div><button sc-camel-on-click="{{ peConfirmDelete }}" style="${primary};background:#FF3B30">Удалить пресет</button><button sc-camel-on-click="{{ peOpenSettings }}" style="${secondary};margin-top:8px">Отмена</button>`);
 const NORM = sheet('peNorm', 'Норма расхода', `
 <div style="font-size:19px;font-weight:800">Норма расхода</div><div style="font-size:12.5px;line-height:1.5;color:#6F7688;margin-top:5px">{{ peRowName }}</div>
 <div style="font-size:13px;font-weight:700;margin:20px 0 9px">{{ peNormBasis }}</div><div style="display:flex;align-items:center;gap:10px"><input aria-label="Норма расхода" value="{{ peNormValue }}" sc-camel-on-change="{{ peSetNorm }}" sc-camel-input-mode="decimal" style="${field};height:54px;font-size:23px;font-weight:800"><span style="font-size:14px;color:#6F7688;white-space:nowrap">{{ peRowUnit }}</span></div>
@@ -87,7 +87,7 @@ const METHODS = String.raw`
   }
   finishPresetDraft(save){
     const draft=this._presetDraft,from=draft?draft.from:(this.state.be&&this.state.be.from)||'account';
-    if(save&&Object.values(PRESETS).some(list=>list.some(p=>!p.name.trim()))){this.toast('Введите название пресета');return;}
+    if(save&&Object.values(PRESETS).some(list=>list.some(p=>!p.archived&&!p.name.trim()))){this.toast('Введите название пресета');return;}
     if(!save&&draft){
       const snapshot=draft.snapshot;
       Object.keys(PRESETS).forEach(k=>delete PRESETS[k]);Object.assign(PRESETS,JSON.parse(JSON.stringify(snapshot.presets)));
@@ -95,7 +95,7 @@ const METHODS = String.raw`
       this._presetDraft=null;this.setState({projects:JSON.parse(JSON.stringify(snapshot.projects))});
     }
     this._presetDraft=null;
-    if(save)this.saveDesign();
+    if(save&&!this.saveDesign()){this._presetDraft=draft;this.toast('Не удалось сохранить. Попробуйте ещё раз.');return;}
     this.go(from,{be:null,editLine:null,normForm:null});
   }
   presetEditorVals(){
@@ -103,10 +103,10 @@ const METHODS = String.raw`
     const dismiss=()=>{this._variantEdit=null;this.setState({sheet:null,normForm:null,calcVariant:null});};
     if(s.sheet==='calcVariant'){
       const context=s.calcVariant,edit=this._variantEdit;
-      return Object.assign(flags,{peCalcVariant:!!context,peDismiss:dismiss,peCalcChoices:(context&&context.options||[]).map(option=>({n:option.n,price:F(option.p)+' ₽/'+option.u,dot:option.n===context.name?'●':'○',bg:option.n===context.name?'#EEEDFC':'transparent',pick:()=>{if(edit){edit(i=>{i.variants=i.variants||{};i.variants[context.key]=option.n;if(i.iq)delete i.iq[context.key];});}dismiss();}}))});
+      return Object.assign(flags,{peCalcVariant:!!context,peDismiss:dismiss,peCalcChoices:(context&&context.options||[]).map(option=>({n:option.n,price:F(option.p)+' ₽/'+option.u,dot:option.n===context.name?'●':'○',bg:option.n===context.name?'#EEEDFC':'transparent',pick:()=>{if(edit&&option.n!==context.name){edit(i=>{i.variants=i.variants||{};i.variants[context.key]=option.n;if(i.iq)delete i.iq[context.key];});}dismiss();}}))});
     }
     if(s.screen!=='btnEd')return flags;
-    const v=this.beVals(),list=PRESETS[be.bid]||[],pr=list.find(p=>p.id===be.pid)||list[0],def=blockDef(be.bid),row=pr&&pr.items[be.rowIdx],form=s.normForm||{};
+    const v=this.beVals(),list=(PRESETS[be.bid]||[]).filter(p=>!p.archived),pr=list.find(p=>p.id===be.pid)||list[0],def=blockDef(be.bid),row=pr&&pr.items[be.rowIdx],form=s.normForm||{};
     const open=(sheet,extra)=>this.setState(Object.assign({sheet},extra||{}));
     const setForm=patch=>this.setState({normForm:Object.assign({},this.state.normForm,patch)});
     const n=pr?pr.items.length:0,word=n%10===1&&n%100!==11?'позиция':n%10>=2&&n%10<=4&&(n%100<12||n%100>14)?'позиции':'позиций';
@@ -116,14 +116,14 @@ const METHODS = String.raw`
     const result={...flags,peDismiss:dismiss,peSettings:s.sheet==='presetSettings',peDeleteConfirm:s.sheet==='presetDelete',peNorm:s.sheet==='presetNorm',peList:s.sheet==='presetList',peOrder:s.sheet==='presetOrder',peHelp:s.sheet==='presetHelp',
       peClose:()=>this.finishPresetDraft(false),peSave:()=>this.finishPresetDraft(true),peOpenSettings:()=>open('presetSettings'),peOpenHelp:()=>open('presetHelp'),peOpenOrder:()=>open('presetOrder'),
       peMeta:def.title+' · '+n+' '+word+' · '+(pr&&!pr.hidden?'виден в калькуляторе':'скрыт в калькуляторе'),peVisible:!!pr&&!pr.hidden,peSwitchKnob:pr&&!pr.hidden?17:2,
-      peToggleVisibility:()=>v.beToggleVis(),peDuplicate:()=>{v.beDup();open(null);},peAskDelete:()=>{if(list.length<=1){this.toast('Последний пресет удалить нельзя');return;}open('presetDelete');},peConfirmDelete:()=>{v.beDel();open(null);},
+      peToggleVisibility:()=>v.beToggleVis(),peDuplicate:()=>{v.beDup();open(null);},peAskDelete:()=>{if(list.length<=1){this.toast('Последний пресет удалить нельзя');return;}open('presetDelete');},peConfirmDelete:()=>{if(!pr||list.length<=1)return;pr.archived=true;pr.hidden=true;const next=list.find(p=>p!==pr);if(def.def===pr.id)def.def=next.id;this.setState({be:Object.assign({},be,{pid:next.id}),sheet:null});},
       peChips:v.beChips.map((ch,i)=>Object.assign({},ch,{selected:!!pr&&list[i].id===pr.id})),
-      peItems:v.beItems.map((it,i)=>{const item=pr.items[i],variants=Array.isArray(item.variants)?item.variants:[],display=variants[0]||item;return Object.assign({},it,{displayName:display.n,displayPrice:F(display.p),displayUnit:display.u,removeAria:'Убрать позицию '+display.n,normLabel:item.k&&item.k!==1?'Норма ×'+F(item.k):'Норма',normColor:item.k&&item.k!==1?ACC:DIM,listLabel:variants.length>1?'Список · '+variants.length:'Список',listBg:variants.length>1?'#EEEDFC':'#F3F3FA',listColor:variants.length>1?ACC:DIM,
+      peItems:v.beItems.map((it,i)=>{const item=pr.items[i],variants=Array.isArray(item.variants)?item.variants:[],display=variants[0]||item;return Object.assign({},it,{displayName:display.n,displayPrice:F(display.p),displayUnit:display.u,removeAria:'Убрать позицию '+display.n,normLabel:item.k&&item.k!==1?'Норма ×'+F(item.k):'Норма',normColor:item.k&&item.k!==1?ACC:'#6F7688',listLabel:variants.length>1?'Список · '+variants.length:'Список',listBg:variants.length>1?'#EEEDFC':'#F3F3FA',listColor:variants.length>1?ACC:'#6F7688',
         openNorm:()=>{this.setState({be:Object.assign({},this.state.be,{rowIdx:i}),sheet:'presetNorm',normForm:{value:String(item.k||1),mult:String(item.mult||0),showMultiple:!!item.mult}});},
         openList:()=>{if(!Array.isArray(item.variants))item.variants=[{n:item.n,p:item.p,u:item.u,m:item.m}];this.setState({be:Object.assign({},this.state.be,{rowIdx:i}),sheet:'presetList'});}});}),
       peRowName:row?(options[0]||row).n:'',peRowUnit:row?(options[0]||row).u:'',peNormBasis:basis,peNormValue:form.value||'',peMultValue:form.mult||'',peShowMultiple:!!form.showMultiple,
       peSetNorm:e=>setForm({value:e.target.value}),peSetMult:e=>setForm({mult:e.target.value}),peToggleMultiple:()=>setForm({showMultiple:!form.showMultiple}),
-      peNormExample:norm>0?'Пример: 3 × '+QF(norm)+' = '+QF(3*norm)+' '+(row?(options[0]||row).u:''):'Введите расход на одну единицу.',
+      peNormExample:row&&row.src==='manual'?'При отдельном вводе количество итоговое. Чтобы применить норму, выберите общее количество или чертёж.':norm>0?'Пример: 3 × '+QF(norm)+' = '+QF(3*norm)+' '+(row?(options[0]||row).u:''):'Введите расход на одну единицу.',
       peApplyNorm:()=>{if(!row||!(norm>0)||multiple===undefined){this.toast('Введите норму больше нуля и корректную кратность');return;}row.k=norm;row.mult=multiple||0;dismiss();},
       peResetNorm:()=>{if(row)row.k=1;dismiss();},
       peVariants:options.map((option,i)=>({n:option.n,price:F(option.p)+' ₽/'+option.u,note:i===0?'по умолчанию':'вариант',dot:i===0?'●':'○',color:i===0?ACC:DIM,defaultAria:'По умолчанию: '+option.n,removeAria:'Убрать вариант '+option.n,makeDefault:()=>{options.splice(i,1);options.unshift(option);this.forceUpdate();},remove:()=>{if(options.length<=1){this.toast('В списке должна остаться хотя бы одна позиция');return;}options.splice(i,1);this.forceUpdate();}})),
@@ -148,6 +148,12 @@ export function presetEditorTemplate(source) {
   rep('this.beVals(),this.accountVals()', 'this.beVals(),this.presetEditorVals(),this.accountVals()', 'view values');
   rep('go(screen,extra){this.setState(', "go(screen,extra){if(screen==='btnEd'&&!this._presetDraft)this.beginPresetDraft(extra&&extra.be);this.setState(", 'draft entry');
   rep('return DESIGN_STORE.save(this.designSnapshot());', 'return DESIGN_STORE.save(this._presetDraft?this._presetDraft.snapshot:this.designSnapshot());', 'draft persistence');
+  rep('const pr=list.find(p=>p.id===be.pid)||list[0];', 'const pr=list.find(p=>p.id===be.pid&&!p.archived)||list.find(p=>!p.archived);', 'exclude archived presets');
+  rep('const beChips=list.map(p=>', 'const beChips=list.filter(p=>!p.archived).map(p=>', 'hide archived chips');
+  rep('const d=l.find(p=>p.fav&&p.items.length)||l.find(p=>p.items.length)||l[0];', 'const visible=l.filter(p=>!p.archived&&!p.hidden);const d=visible.find(p=>p.fav&&p.items.length)||visible.find(p=>p.items.length)||visible[0];', 'visible default preset');
+  rep('const j=idx+d;if(idx<0||j<0||j>=list.length)return;', 'const visible=list.filter(p=>!p.archived),target=visible[visible.indexOf(pr)+d],j=list.indexOf(target);if(idx<0||j<0)return;', 'reorder visible presets');
+  rep("id,name:'Новая кнопка'", "id,name:'Новый пресет'", 'new preset name');
+  rep("priceTxt:F(n.p)+' ₽',opacity:", "priceTxt:F(n.p),opacity:", 'picker currency');
   rep("const nomAdd=()=>{if(!sel.length)return;", `const nomAdd=()=>{if(!sel.length)return;
       if(be.target==='variants'){
         const item=pr&&pr.items[be.variantIdx];if(!item)return;

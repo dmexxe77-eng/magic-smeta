@@ -49,7 +49,28 @@ test('settings menu exposes visibility, duplication and confirmed deletion', asy
   assert.equal(r.PRESETS.canvas.length, n + 1);
   assert.equal(app.presetEditorVals().peDeleteConfirm, true);
   app.presetEditorVals().peConfirmDelete();
-  assert.equal(r.PRESETS.canvas.length, n);
+  assert.equal(r.PRESETS.canvas.filter(p => !p.archived).length, n);
+});
+
+test('failed storage write keeps the editor open and allows another save attempt', async () => {
+  const r = await runtime({ storageError: true }), app = r.component;
+  app.go('btnEd', { be: { bid: 'canvas', pid: r.PRESETS.canvas[0].id, from: 'account' } });
+  app.beVals().beSetName({ target: { value: 'Несохранённый пресет' } });
+  app.presetEditorVals().peSave();
+  assert.equal(app.state.screen, 'btnEd');
+  assert.equal(app.beVals().beName, 'Несохранённый пресет');
+});
+
+test('deleting a preset preserves estimates where it was already selected', async () => {
+  const r = await runtime(), app = r.component;
+  const project = app.state.projects.find(p => p.rooms.length && p.rooms[0].canvas.pid);
+  const pid = project.rooms[0].canvas.pid, total = app.pSum(project);
+  app.go('btnEd', { be: { bid: 'canvas', pid, from: 'account' } });
+  app.presetEditorVals().peAskDelete();
+  app.presetEditorVals().peConfirmDelete();
+  assert.equal(app.pSum(project), total);
+  assert.equal(r.PRESETS.canvas.find(p => p.id === pid).archived, true);
+  assert.ok(!app.presetEditorVals().peChips.some(ch => ch.name === r.PRESETS.canvas.find(p => p.id === pid).name));
 });
 
 test('norm is a per-position multiplier and can be reset to one', async () => {
