@@ -136,3 +136,60 @@ test('denied access to localStorage does not crash the editor and reports once',
   assert.equal(store.save(snapshot()), false);
   assert.equal(errors.length, 1);
 });
+
+test('the template restores directories before state creation and saves global edits through lifecycle hooks', async () => {
+  const { storageTemplate } = await import('../scripts/design-storage.mjs');
+  const { runInNewContext } = await import('node:vm');
+  const saved = snapshot();
+  const storage = memoryStorage({ [DESIGN_STORAGE_KEY]: JSON.stringify(saved) });
+  const source = `<script src="/design/main-data.js"></script>
+const MAIN=JSON.parse(JSON.stringify(window.MAGIC_MAIN));
+const PRESETS=MAIN.presets;
+const BLOCKS=[{id:'canvas',single:true},{id:'main',single:true}];
+BLOCKS.forEach(b=>{const l=PRESETS[b.id]||[];b.def=(l[0]||{}).id;});
+const NOM=MAIN.nom;
+[{n:'Защита стен плёнкой',p:365,u:'м.п.',m:0,br:'Прочее'},{n:'Вынос строительного мусора',p:120,u:'м²',m:0,br:'Прочее'}].forEach(x=>{if(!NOM.some(n=>n.n===x.n))NOM.push(x);});
+const ROOM_OPTS=MAIN.roomOpts.concat([{id:'builtin',n:'Builtin',p:1,u:'шт'}]);
+const optQty=o=>0;
+class Component extends DCLogic {
+  state={projects:this.seed(),estEd:JSON.parse(JSON.stringify(MAIN.estEd||{}))};
+  seed(){return JSON.parse(JSON.stringify(MAIN.projects||[]));}
+  componentDidMount(){this.applyStart();window.__zamer=this;this.themeTick();}
+  componentDidUpdate(pp){if(pp.startScreen!==this.props.startScreen)this.applyStart();if(pp.theme!==this.props.theme&&this.state.themeO)this.setState({themeO:null});this.themeTick();}
+  componentWillUnmount(){if(this._mo)this._mo.disconnect();}
+  applyStart(){} themeTick(){} toast(message){this.notice=message;}
+}
+globalThis.TestComponent=Component;
+globalThis.TestDirectories={BLOCKS,PRESETS,NOM,ROOM_OPTS};`;
+  const seed = { presets: { canvas: [], main: [] }, nom: [], roomOpts: [], projects: [], estEd: {} };
+  const listeners = new Map();
+  const window = { MAGIC_MAIN: copy(seed), localStorage: storage,
+    MagicDesignStorage: { createDesignStorage },
+    addEventListener: (name, fn) => listeners.set('window:' + name, fn),
+    removeEventListener: name => listeners.delete('window:' + name),
+  };
+  const document = { visibilityState: 'visible',
+    addEventListener: (name, fn) => listeners.set('document:' + name, fn),
+    removeEventListener: name => listeners.delete('document:' + name),
+  };
+  const context = { window, document, setTimeout, clearTimeout, DCLogic: class { constructor(){this.props={};} } };
+  const patched = storageTemplate(source);
+  assert.match(patched, /src="\/design\/storage\.js"/);
+  runInNewContext(patched.replace(/<script[^>]*><\/script>/g, ''), context);
+  const component = new context.TestComponent();
+  assert.deepEqual(copy(component.state.projects), saved.projects);
+  assert.deepEqual(copy(context.TestDirectories.BLOCKS).map(b => b.id), saved.blocks.map(b => b.id));
+  assert.deepEqual(copy(context.TestDirectories.ROOM_OPTS), saved.roomOpts);
+  assert.deepEqual(copy(context.TestDirectories.NOM), saved.nom);
+  assert.deepEqual(window.MAGIC_MAIN, seed);
+  component.componentDidMount();
+  context.TestDirectories.PRESETS.custom_1[0].name = 'Новое имя';
+  component.state.estEd.project1.Лента.q = 7;
+  component.componentDidUpdate({});
+  listeners.get('window:pagehide')();
+  const reloaded = createDesignStorage({ storage }).load();
+  assert.equal(reloaded.presets.custom_1[0].name, 'Новое имя');
+  assert.equal(reloaded.estEd.project1.Лента.q, 7);
+  component.componentWillUnmount();
+  assert.equal(listeners.size, 0);
+});
