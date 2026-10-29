@@ -105,7 +105,7 @@ const METHODS = String.raw`
     const n=pr?pr.items.length:0,word=n%10===1&&n%100!==11?'позиция':n%10>=2&&n%10<=4&&(n%100<12||n%100>14)?'позиции':'позиций';
     const options=row&&Array.isArray(row.variants)?row.variants:[];
     const norm=readQuantity(form.value);
-    const basis=({'м.п.':'На 1 погонный метр','м.п':'На 1 погонный метр','м²':'На 1 квадратный метр','шт':'На 1 штуку','шт.':'На 1 штуку','компл.':'На 1 комплект','компл':'На 1 комплект'})[def.unit]||'На 1 единицу основного количества';
+    const basis='На 1 единицу основного количества';
     const example=row&&norm>0?window.MagicQuantity.itemQuantity(Object.assign({},row,{src:undefined,k:norm,mult:0,u:(options[0]||row).u}),{},{value:15},{}).value:null;
     const result={...flags,peDismiss:dismiss,peSettings:s.sheet==='presetSettings',peDeleteConfirm:s.sheet==='presetDelete',peNorm:s.sheet==='presetNorm',peList:s.sheet==='presetList',peOrder:s.sheet==='presetOrder',peHelp:s.sheet==='presetHelp',
       peClose:()=>this.finishPresetDraft(false),peSave:()=>this.finishPresetDraft(true),peOpenSettings:()=>open('presetSettings'),peOpenHelp:()=>open('presetHelp'),peOpenOrder:()=>open('presetOrder'),
