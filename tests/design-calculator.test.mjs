@@ -44,12 +44,16 @@ test('calculator chooses an alternative in only the clicked instance and clears 
   room.extra = [{ id: 'a', pid: preset.id, qty: 3, iq: { [item.n]: 7 } }, { id: 'b', pid: preset.id, qty: 5 }];
   app.openCalc(project.id);
   app.calcVals().blocks.find(b => b.id === 'extra').insts[0].lines[0].chooseVariant();
-  app.presetEditorVals().peCalcChoices[1].pick();
+  let line = app.calcVals().blocks.find(b => b.id === 'extra').insts[0].lines[0];
+  assert.equal(app.state.sheet, null, 'variant choices stay inline');
+  assert.equal(line.variantsOpen, true);
+  line.variantChoices[1].pick();
   const instances = app.cur().rooms[0].extra;
   assert.equal(instances[0].variants[item.n], 'Вариант B');
   assert.equal(instances[0].iq[item.n], undefined);
   assert.equal(instances[1].variants, undefined);
   const cards = app.calcVals().blocks.find(b => b.id === 'extra').insts;
   assert.equal(cards[0].lines[0].n, 'Вариант B');
+  assert.equal(cards[0].lines[0].variantsOpen, false);
   assert.equal(cards[1].lines[0].n, item.n);
 });
