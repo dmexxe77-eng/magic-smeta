@@ -67,3 +67,11 @@ test('new preset picker falls back from legacy all-brand to an actual nomenclatu
   assert.ok(values.nomGroups.length>0);
   assert.notEqual(values.nomBrandTitle,'all');
 });
+
+test('all existing project estimates retain the imported reference amounts',async()=>{
+  const {readFileSync}=await import('node:fs');
+  const reference=JSON.parse(readFileSync('design-src/main-data.json','utf8')).report.projects;
+  const r=await runtime();
+  assert.equal(r.component.state.projects.length,reference.length);
+  r.component.state.projects.forEach((p,i)=>assert.equal(Math.round(r.component.pSum(p)),reference[i].design,p.name));
+});
