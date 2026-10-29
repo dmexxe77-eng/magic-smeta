@@ -59,3 +59,11 @@ test('imported complete-set blocks retain their unit at runtime',async()=>{
   const r=await runtime({mainDataPatch:main=>({blocks:[{id:'cst_packs',title:'Комплекты',source:'manual',unit:'компл'}],presets:{...main.presets,cst_packs:[]}})});
   assert.equal(r.BLOCKS.find(b=>b.id==='cst_packs').unit,'компл.');
 });
+
+test('new preset picker falls back from legacy all-brand to an actual nomenclature section',async()=>{
+  const r=await editor();
+  r.component.setState({sheet:'nom',be:{...r.component.state.be,brand:'all'}});
+  const values=r.component.beVals();
+  assert.ok(values.nomGroups.length>0);
+  assert.notEqual(values.nomBrandTitle,'all');
+});
