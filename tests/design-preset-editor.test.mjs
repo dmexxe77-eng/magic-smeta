@@ -103,6 +103,21 @@ test('norm rejects empty, zero and invalid input without closing its sheet', asy
   assert.equal(first.k, 1.5);
 });
 
+test('applying a norm uses the main quantity even for a row previously tied to corners', async () => {
+  const r = await runtime(), app = r.component;
+  const preset = r.PRESETS.main.find(p => p.items.length);
+  const item = { n: 'Внешние углы', p: 100, u: 'шт', m: 1, src: 'outer' };
+  preset.items = [item];
+  app.go('btnEd', { be: { bid: 'main', pid: preset.id, from: 'account' } });
+  app.presetEditorVals().peItems[0].openNorm();
+  assert.equal(app.presetEditorVals().peNormBasis, 'На 1 погонный метр');
+  app.presetEditorVals().peSetNorm({ target: { value: '10' } });
+  app.presetEditorVals().peApplyNorm();
+  const line = r.instLines('main', { pid: preset.id, qtyO: 15 }, 15, { a: 30, p: 40, inn: 4, out: 2 })[0];
+  assert.equal(line.q, 150);
+  assert.equal(item.src, undefined);
+});
+
 test('list editor adds alternatives to one row and persists them with the preset', async () => {
   const r = await editor(), app = r.component;
   const first = r.PRESETS.canvas[0].items[0], count = r.PRESETS.canvas[0].items.length;
