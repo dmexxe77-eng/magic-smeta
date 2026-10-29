@@ -30,3 +30,14 @@
 .launch-soon { margin-top: 8px; font-size: 10.5px; font-weight: 700; color: #ffd591; background: rgba(255, 159, 10, 0.16); border-radius: 7px; padding: 3px 8px; }
 .launch-foot { font-size: 12px; color: var(--launch-sub); }
 @media (prefers-reduced-motion: reduce) { .launch-card { transition: none; } }
+
+.launch-resources { width: 100%; max-width: 980px; border-top: 1px solid var(--launch-line); padding-top: 28px; margin-top: 2px; }
+.launch-resources > header { margin-bottom: 18px; }
+.launch-resources h2 { font-size: 23px; letter-spacing: -.4px; margin: 0 0 6px; }
+.launch-resources header p { font-size: 13px; color: var(--launch-sub); margin: 0; }
+.launch-resource-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.launch-resource-grid .launch-card { min-height: 185px; }
+.launch-resource-grid .launch-icon { color: #82d5c5; background: rgba(83, 190, 168, .12); }
+.launch-resource-grid .launch-badge { color: #9dd9cf; }
+.launch-foot { margin: 0; text-align: center; }
+@media (max-width: 580px) { .launch-resource-grid { grid-template-columns: 1fr; } .launch-resources { padding-top: 23px; } .launch-resources h2 { font-size: 21px; } }

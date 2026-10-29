@@ -1,11 +1,13 @@
 /* Стартовое меню сайта: выбор версии ЗАМЕРX. Каждая версия открывается по своей ссылке */
 import React from 'react';
-import { VERSIONS } from './links.js';
+import { VERSIONS, MAGIC_RESOURCES } from './links.js';
 import './launcher.css';
 
 const ICONS = {
   main: <path d="M4 5h16v14H4zM4 9h16M9 9v10" />,
   design: <path d="M8 3h8a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM11 18h2" />,
+  crm: <path d="M4 4h16v16H4zM4 9h16M10 9v11M14 13h3m-3 3h3" />,
+  lighting: <path d="M8 14a6 6 0 1 1 8 0l-1 3H9l-1-3Zm1 6h6M12 1v1M3 5l1 1m16-1-1 1M1 12h2m18 0h2" />,
   online: <path d="M3 5h18v11H3zM8 20h8M12 16v4" />,
 };
 
@@ -19,7 +21,7 @@ function Card({ version }) {
       <span className="launch-device">{version.device}</span>
     </>
   );
-  if (!version.href) return <div className="launch-card is-disabled" aria-disabled="true">{body}<span className="launch-soon">Ссылка появится после публикации</span></div>;
+  if (!version.href) return <div className="launch-card is-disabled" aria-disabled="true">{body}<span className="launch-soon">{version.pending || 'Ссылка появится после публикации'}</span></div>;
   return <a className={'launch-card' + (version.id === 'main' ? ' is-primary' : '')} href={version.href}>{body}</a>;
 }
 
@@ -40,7 +42,13 @@ export default function Launcher() {
       <nav className="launch-grid" aria-label="Версии приложения">
         {VERSIONS.map(v => <Card key={v.id} version={v} />)}
       </nav>
-      <footer className="launch-foot">Данные каждой версии хранятся отдельно</footer>
+      <p className="launch-foot">Данные каждой версии хранятся отдельно</p>
+      <section className="launch-resources" aria-labelledby="magic-resources-title">
+        <header><h2 id="magic-resources-title">Magic Ресурсы</h2><p>Рабочие инструменты вашей команды</p></header>
+        <nav className="launch-grid launch-resource-grid" aria-label="Magic Ресурсы">
+          {MAGIC_RESOURCES.map(resource => <Card key={resource.id} version={resource} />)}
+        </nav>
+      </section>
     </main>
   );
 }
