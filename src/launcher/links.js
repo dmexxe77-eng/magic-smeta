@@ -11,5 +11,5 @@ export const VERSIONS = [
 
 export const MAGIC_RESOURCES = [
   { id: 'crm', badge: 'Управление бизнесом', title: 'CRM', text: 'Деньги, склад, монтажные проекты и продажи — в одной системе.', device: 'телефон и компьютер', href: 'https://magic-crm.magic-crm-online.workers.dev' },
-  { id: 'lighting', badge: 'Проектирование света', title: 'Светорасчёт', text: 'Освещение помещений, фотометрия и визуализация в 3D.', device: 'телефон и компьютер', href: '', pending: 'Готовится к публикации' },
+  { id: 'lighting', badge: 'Проектирование света', title: 'Светорасчёт', text: 'Освещение помещений, фотометрия и визуализация в 3D.', device: 'телефон и компьютер', href: 'https://magic-lighting.vercel.app' },
 ];
