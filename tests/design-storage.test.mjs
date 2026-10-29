@@ -93,6 +93,8 @@ test('validation rejects unsafe, inconsistent and unsupported snapshots without 
   const badId = snapshot(); badId.blocks[2].id = '__proto__'; invalid.push(badId);
   const duplicateId = snapshot(); duplicateId.blocks[2].id = 'main'; invalid.push(duplicateId);
   const badPoint = snapshot(); badPoint.projects[0].rooms[0].v[0][0] = 'NaN'; invalid.push(badPoint);
+  const badExtraItems = snapshot(); badExtraItems.projects[0].rooms[0].extraItems = {}; invalid.push(badExtraItems);
+  const badExtraPosition = snapshot(); badExtraPosition.projects[0].rooms[0].extraItems = [null]; invalid.push(badExtraPosition);
   for (const value of invalid) assert.equal(validateDesignSnapshot(value), false);
   const storage = memoryStorage({ [DESIGN_STORAGE_KEY]: JSON.stringify(missingPresets) });
   assert.equal(createDesignStorage({ storage }).load(), null);
