@@ -41,7 +41,7 @@ const METHODS = String.raw`
     return{n:l.n,editNom:()=>this.openNom(l.n),priceTxt:F(l.p)+' ₽/'+l.u,srcSign:l.manual?'#':'×',srcColor:l.manual?'#6F7688':ACC,u:l.u,sourceLabel:quantitySource(l),qAria:'Количество позиции '+l.n,
       hasVariants:Array.isArray(l.variants)&&l.variants.length>1,variantAria:'Выбрать номенклатуру: '+l.n,variantsOpen:s.variantOpen===key,variantDeg:s.variantOpen===key?180:0,
       chooseVariant:()=>this.setState({variantOpen:this.state.variantOpen===key?null:key}),
-      variantChoices:(l.variants||[]).map(option=>({n:option.n,price:F(option.p)+' ₽/'+option.u,selected:option.n===l.n,dot:option.n===l.n?'●':'○',bg:option.n===l.n?'#EEEDFC':'#fff',pick:()=>{if(option.n!==l.n)editInst(i=>{i.variants=i.variants||{};i.variants[rowKey]=option.n;if(i.iq)delete i.iq[rowKey];});this.setState({variantOpen:null});}})),
+      variantChoices:(l.variants||[]).map(option=>({n:option.n,price:F(option.p)+' ₽/'+option.u,selected:option.n===l.n,bg:option.n===l.n?'#EBF2FF':'#F7F7FC',pick:()=>{if(option.n!==l.n)editInst(i=>{i.variants=i.variants||{};i.variants[rowKey]=option.n;if(i.iq)delete i.iq[rowKey];});this.setState({variantOpen:null});}})),
       qTxt:s.qtyBuf&&s.qtyBuf.k===key?s.qtyBuf.t:QF(l.q),qOverridden:l.ov,qBorderStyle:l.missing?'dashed':'solid',qBorder:l.ov?'#C9C6F5':l.missing?'#C9C9D6':'transparent',qBg:l.ov?'#EEEDFC':'#F3F3FA',
       qChange:e=>this.setState({qtyBuf:{k:key,t:e.target.value}}),
       qBlur:()=>{const qb=this.state.qtyBuf;if(!qb||qb.k!==key)return;const n=readQuantity(qb.t);if(n===undefined){this.toast('Введите неотрицательное количество');return;}editInst(i=>{i.iq=i.iq||{};if(n===null)delete i.iq[rowKey];else i.iq[rowKey]=n;});this.setState({qtyBuf:null});},
