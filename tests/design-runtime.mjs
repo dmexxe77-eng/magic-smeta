@@ -6,7 +6,7 @@ export function readTemplate() {
   return JSON.parse(bundled.match(/<script type="__bundler\/template">([\s\S]*?)<\/script>/)[1]);
 }
 
-export async function runtime({ saved, storageError = false } = {}) {
+export async function runtime({ saved, storageError = false, mainDataPatch } = {}) {
   const entries = new Map(saved ? [['zamer.design.v1', saved]] : []);
   const localStorage = {
     getItem: key => entries.get(key) ?? null,
@@ -33,6 +33,7 @@ export async function runtime({ saved, storageError = false } = {}) {
     const filePath = 'public/design/' + file;
     if (fs.existsSync(filePath)) vm.runInContext(fs.readFileSync(filePath,'utf8'),ctx);
   }
+  if (mainDataPatch) Object.assign(ctx.MAGIC_MAIN, typeof mainDataPatch === 'function' ? mainDataPatch(ctx.MAGIC_MAIN) : mainDataPatch);
   const template = readTemplate();
   const code = template.match(/<script\b(?=[^>]*\bdata-dc-script\b)[^>]*>([\s\S]*?)<\/script>/)[1];
   vm.runInContext(code + '\n;globalThis.testAPI={Component,BLOCKS,PRESETS,NOM,ROOM_OPTS,geom,est,instLines,singleQty,shownQty,mk};',ctx);

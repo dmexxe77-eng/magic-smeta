@@ -53,3 +53,9 @@ test('existing multi block instances keep independent values and manual line ove
   assert.equal(fresh.extra[1].qty,5);
   assert.equal(fresh.extra[0].iq[preset.items[0].n],2);
 });
+
+
+test('imported complete-set blocks retain their unit at runtime',async()=>{
+  const r=await runtime({mainDataPatch:main=>({blocks:[{id:'cst_packs',title:'Комплекты',source:'manual',unit:'компл'}],presets:{...main.presets,cst_packs:[]}})});
+  assert.equal(r.BLOCKS.find(b=>b.id==='cst_packs').unit,'компл.');
+});

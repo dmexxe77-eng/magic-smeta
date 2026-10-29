@@ -26,8 +26,8 @@ const backup = () => ({
     { id: 'preset_decor', cat: 'cst_decor', name: 'Профиль', items: ['nom_export_test'], options: [] },
     { id: 'preset_piece', cat: 'custom_pieces', name: 'Деталь', items: ['nom_export_test'], options: [], param: { src: 'area' } },
   ],
-  orders: [{ id: 'project_export', name: 'Два своих блока', rooms: [{ id: 'room_export', name: 'Комната', v: [[0, 0], [4, 0], [4, 3], [0, 3]], cst: {
-    cst_decor: [{ id: 'instance_decor', btnId: 'preset_decor', qty: 7 }],
+  orders: [{ id: 'project_export', name: 'Два своих блока', rooms: [{ id: 'room_export', name: 'Комната', on: true, v: [[0, 0], [4, 0], [4, 3], [0, 3]], cst: {
+    cst_decor: [{ id: 'instance_decor', btnId: 'preset_decor', qty: 7, qdef: { source: 'manual', unit: 'м.п.' } }],
     custom_pieces: [{ id: 'instance_piece', btnId: 'preset_piece', qty: 2 }],
   } }] }],
 });
@@ -58,9 +58,11 @@ test('fresh export preserves custom block identities, preset membership and room
     assert.deepEqual(data.presets.custom_pieces.map(p => p.id), ['preset_piece']);
     assert.equal(data.presets.custom_pieces[0].param, 'area');
     assert.deepEqual(data.presets.other, []);
+    assert.equal(data.otherTitle, 'Прочее');
     const room = data.projects[0].rooms[0];
     assert.equal(room.cst_decor[0].qty, 7);
     assert.equal(room.cst_decor[0].pid, 'preset_decor');
+    assert.deepEqual(room.cst_decor[0].qdef, { source: 'manual', unit: 'м.п.' });
     assert.equal(room.custom_pieces[0].qty, 2);
     assert.deepEqual(room.other, []);
     assert.equal(data.report.projects[0].diff, 0);
@@ -98,4 +100,33 @@ test('legacy main-data without blocks keeps presets and quantities and declares 
     assert.equal(payload.presets.other[0].param, 'S');
     assert.equal(payload.projects[0].rooms[0].other[0].qty, 9);
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+
+test('code snapshot export retains the reference estimate totals', () => {
+  const dir = fixture();
+  try {
+    run(dir, 'scripts/export-main-data.mjs');
+    const data = JSON.parse(fs.readFileSync(path.join(dir, 'design-src/main-data.json'), 'utf8'));
+    assert.deepEqual(data.blocks, []);
+    assert.ok(data.report.projects.length > 0);
+    assert.deepEqual(data.report.projects.filter(p => p.diff !== 0), []);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('export preserves missing automatic quantity and explicit zero separately',()=>{
+  const dir=fixture();
+  try{
+    const data=backup();
+    data.customBlocks[0].source='area';
+    data.orders[0].rooms[0].cst.cst_decor=[
+      {id:'auto',btnId:'preset_decor',qdef:{source:'area',unit:'м²'}},
+      {id:'zero',btnId:'preset_decor',qty:0,qdef:{source:'area',unit:'м²'}},
+    ];
+    const output=exportBackup(dir,data);
+    const instances=output.projects[0].rooms[0].cst_decor;
+    assert.equal(Object.hasOwn(instances[0],'qty'),false);
+    assert.equal(instances[1].qty,0);
+    assert.equal(output.report.projects[0].design,140);
+  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
