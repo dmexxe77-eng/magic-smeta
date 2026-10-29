@@ -35,13 +35,13 @@ const EDITOR = `
       <div style="${small};margin-bottom:10px">Параметры пресета</div>
       <div style="display:flex;gap:8px"><input aria-label="Название пресета" value="{{ beName }}" sc-camel-on-change="{{ beSetName }}" maxlength="70" style="${field};flex:1"><button sc-camel-on-click="{{ peOpenSettings }}" style="flex:none;display:flex;align-items:center;justify-content:center;gap:5px;min-height:42px;padding:0 10px;border:1.5px solid #E4E4EE;border-radius:13px;background:#fff;font-size:12.5px;font-weight:700;color:#1E2530;cursor:pointer"><span style="color:#4F46E5;display:flex">${pencil}</span>Настроить</button></div>
     </div>
+    <div role="note" aria-label="Количество пресета" style="background:#F7F7FC;border:1.5px solid #DFE2EC;border-radius:17px;padding:10px 14px;margin-bottom:14px">
+      <div style="font-size:12px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;color:#6F7688;margin-bottom:4px">Количество</div>
+      <div style="display:flex;gap:8px;align-items:center"><div style="flex:1;min-width:0;font-size:15px;line-height:1.35;font-weight:800">{{ beQuantityTitle }}</div><sc-if value="{{ beCustom }}" hint-placeholder-val="{{ false }}"><button aria-label="Настроить блок" sc-camel-on-click="{{ beEditBlock }}" style="display:flex;flex:none;border:0;background:transparent;color:#4F46E5;padding:3px;cursor:pointer">${pencil}</button></sc-if></div>
+      <div style="font-size:12px;color:#6F7688;line-height:1.45;margin-top:4px">По умолчанию для всех позиций. У каждой можно изменить.</div>
+    </div>
     <div style="background:#fff;border-radius:20px;padding:14px">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px"><span style="${small}">Что попадает в смету</span><button sc-camel-on-click="{{ beAddItem }}" style="flex:none;min-height:30px;padding:0 9px;border:1.5px solid #B8CFFA;border-radius:10px;background:#fff;color:#4F46E5;font-size:12px;font-weight:800;cursor:pointer">+ Позиция</button></div>
-      <div role="note" aria-label="Количество пресета" style="padding:0 0 11px">
-        <div style="font-size:11px;font-weight:600;color:#6F7688;margin-bottom:3px">Количество</div>
-        <div style="display:flex;gap:8px;align-items:center"><div style="flex:1;min-width:0;font-size:13.5px;line-height:1.35;font-weight:700">{{ beQuantityTitle }}</div><sc-if value="{{ beCustom }}" hint-placeholder-val="{{ false }}"><button aria-label="Настроить блок" sc-camel-on-click="{{ beEditBlock }}" style="display:flex;flex:none;border:0;background:transparent;color:#4F46E5;padding:3px;cursor:pointer">${pencil}</button></sc-if></div>
-        <div style="font-size:11.5px;color:#6F7688;line-height:1.4;margin-top:4px">По умолчанию для всех позиций. У каждой можно изменить.</div>
-      </div>
       <sc-for list="{{ peItems }}" as="it" hint-placeholder-count="3"><div style="padding:13px 0;border-top:1px solid #F1F1F7">
         <div style="display:flex;align-items:baseline;gap:9px"><div style="flex:1;min-width:0;font-size:13px;font-weight:700;line-height:1.45;overflow-wrap:anywhere">{{ it.displayName }}</div><div style="flex:none;font-size:13px;font-weight:800;white-space:nowrap">{{ it.displayPrice }} <span style="color:#A5A9B8;font-size:11px;font-weight:500">₽/{{ it.displayUnit }}</span></div></div>
         <div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:9px">
