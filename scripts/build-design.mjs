@@ -8,6 +8,8 @@ import zlib from 'node:zlib';
 import { patchTemplate, writeMainData } from './design-main-data.mjs';
 import { BRAND, FAVICON, brandTemplate } from './design-brand.mjs';
 import { holesMethods, holesTemplate } from './design-holes.mjs';
+import { quantitiesTemplate } from './design-quantities.mjs';
+import { storageTemplate } from './design-storage.mjs';
 
 const OUT = 'public/design';
 fs.mkdirSync(OUT + '/vendor', { recursive: true });
@@ -24,6 +26,9 @@ await build({ entryPoints: ['src/design-bridge/contract-entry.jsx'], bundle: tru
   alias: { react: shim('react.js'), 'react-dom/client': shim('react-dom.js'), 'react-dom': shim('react-dom.js'), 'react/jsx-runtime': shim('jsx-runtime.js') } });
 
 await build({ entryPoints: ['src/design-bridge/ec-entry.js'], bundle: true, format: 'iife', globalName: 'MagicEC', outfile: OUT + '/ec.js', minify: true, charset: 'utf8', logLevel: 'error' });
+
+await build({ entryPoints: ['src/design-bridge/quantity-model.js'], bundle: true, format: 'iife', globalName: 'MagicQuantity', outfile: OUT + '/quantity.js', minify: true, charset: 'utf8', logLevel: 'error' });
+await build({ entryPoints: ['src/design-bridge/design-storage.js'], bundle: true, format: 'iife', globalName: 'MagicDesignStorage', outfile: OUT + '/storage.js', minify: true, charset: 'utf8', logLevel: 'error' });
 
 const src = fs.readFileSync('design-src/prototype.html', 'utf8');
 const grab = type => src.match(new RegExp('<script type="__bundler/' + type + '">([\\s\\S]*?)</script>'))[1];
@@ -250,6 +255,8 @@ const mainStats = await writeMainData(OUT);
 tpl = patchTemplate(tpl);
 /* Внутренние вырезы из построителя: площадь, периметр, чертёж */
 tpl = holesTemplate(tpl);
+tpl = quantitiesTemplate(tpl);
+tpl = storageTemplate(tpl);
 /* Бренд ЗАМЕРX: знак, название, палитра — после всех правок разметки, чтобы перекрасить и их */
 tpl = brandTemplate(tpl);
 
