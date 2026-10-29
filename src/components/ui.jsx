@@ -32,7 +32,10 @@ export function ProfLine({item,allProfs,onDel,onChange}){const pp=PF(item.pid);r
 /* ═══ POLYGON MINI-PREVIEW (компактный в калькуляторе, клик → полный редактор) ═══ */
 
 
-export function NI({value,onChange,w}){const[ed,setEd]=useState(false);const[tmp,setTmp]=useState("");if(ed)return(<input autoFocus type="text" inputMode="decimal" value={tmp} onChange={e=>setTmp(e.target.value)} onBlur={()=>{onChange(parseFloat(tmp)||0);setEd(false);}} onKeyDown={e=>{if(e.key==="Enter"){onChange(parseFloat(tmp)||0);setEd(false);}}} style={{width:w?Math.max(w,56):60,background:T.inputBg,border:"1px solid "+T.border,borderRadius:6,padding:"4px 8px",color:T.text,fontSize:12,fontFamily:"inherit",textAlign:"center",outline:"none",WebkitAppearance:"none",MozAppearance:"textfield"}}/>);return(<span onClick={()=>{setTmp(String(value||0));setEd(true);}} style={{display:"inline-block",minWidth:w?Math.max(w,56):60,padding:"4px 8px",background:T.inputBg,borderRadius:6,textAlign:"center",cursor:"pointer",fontSize:12,fontWeight:500,color:T.text}}>{fmt(value||0)}</span>);}
+/* Число без изменений не сохраняем: тап «посмотреть» не должен превращать расчётное значение строки в ручное */
+export function NI({value,onChange,w}){const[ed,setEd]=useState(false);const[tmp,setTmp]=useState("");const start=useRef(null);
+  const commit=()=>{const s=start.current;if(s===null)return;start.current=null;setEd(false);if(tmp.trim()===s)return;const v=parseFloat(tmp.replace(/\s/g,"").replace(",","."));onChange(isFinite(v)?v:0);};
+  if(ed)return(<input autoFocus type="text" inputMode="decimal" value={tmp} onFocus={e=>e.target.select()} onChange={e=>setTmp(e.target.value)} onBlur={commit} onKeyDown={e=>{if(e.key==="Enter")commit();}} style={{width:w?Math.max(w,56):60,background:T.inputBg,border:"1px solid "+T.border,borderRadius:6,padding:"4px 8px",color:T.text,fontSize:12,fontFamily:"inherit",textAlign:"center",outline:"none",WebkitAppearance:"none",MozAppearance:"textfield"}}/>);return(<span onClick={()=>{const s=String(Math.round((value||0)*100)/100).replace(".",",");start.current=s;setTmp(s);setEd(true);}} style={{display:"inline-block",minWidth:w?Math.max(w,56):60,padding:"4px 8px",background:T.inputBg,borderRadius:6,textAlign:"center",cursor:"pointer",fontSize:12,fontWeight:500,color:T.text}}>{fmt(value||0)}</span>);}
 
 
 

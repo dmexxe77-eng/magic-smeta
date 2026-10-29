@@ -326,12 +326,13 @@ function CalcBlock({config,instance,onChange,presets,onPresets,autoAngles,roomIn
           const baseQ=(ocArea&&n.type==="canvas")?ocArea:effectiveQ;
           const iq=instance.iq?.[n.id];
           /* норма расхода: та же формула, что в смете (qty.js) */
-          const qUse=isParam
-            ?(iq!=null?iq:applyMult(applyKo(baseQ,k,n.unit),n.mult,m))
-            :(instance.oq?.[n.id]||0);
+          const autoQ=applyMult(applyKo(baseQ,k,n.unit),n.mult,m);
+          const qUse=isParam?(iq!=null?iq:autoQ):(instance.oq?.[n.id]||0);
           const showKo=isParam&&hasKo(src,k);
           const manualZero=src==="manual"&&!qUse;
-          const setQ=v=>isParam?upd({iq:{...(instance.iq||{}),[n.id]:v}}):upd({oq:{...(instance.oq||{}),[n.id]:v}});
+          /* как у S/P: расчётное число снимает ручную правку, строка снова следует за параметром */
+          const setIq=v=>{const next={...(instance.iq||{})};if(Math.abs(v-autoQ)<=0.004)delete next[n.id];else next[n.id]=v;upd({iq:next});};
+          const setQ=v=>isParam?setIq(v):upd({oq:{...(instance.oq||{}),[n.id]:v}});
           return(<div key={n.id} style={{display:"flex",alignItems:"center",gap:4,padding:"3px 0",borderBottom:"0.5px solid "+T.border}}>
             <input type="checkbox" checked={on} onChange={e=>upd({off:{...instance.off,[n.id]:!e.target.checked}})} style={{accentColor:T.green,width:12,height:12,flexShrink:0}}/>
             <div style={{flex:1,minWidth:0}}>
@@ -344,6 +345,7 @@ function CalcBlock({config,instance,onChange,presets,onPresets,autoAngles,roomIn
                 {on
                   ?<span style={{display:"inline-flex",border:manualZero?"1px dashed #c2c5d1":"1px solid transparent",borderRadius:6,opacity:manualZero?0.7:1}}><NI value={qUse} onChange={setQ} w={isParam?44:34}/></span>
                   :<span>{fmt(qUse)}</span>}
+                {on&&isParam&&iq!=null&&<span onClick={()=>setIq(autoQ)} title={"Вернуть расчётное: "+fmt(autoQ)} style={{fontSize:11,color:T.orange,cursor:"pointer",padding:"0 3px",fontWeight:700}}>{"↺"}</span>}
               </div>
             </div>
             <span style={{fontSize:10,fontWeight:500,color:on?T.accent:T.muted,minWidth:34,textAlign:"right"}}>{fmt(on?qUse*gp(n):0)}</span>

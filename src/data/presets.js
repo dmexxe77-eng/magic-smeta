@@ -161,8 +161,10 @@ export const USER_FAVS_OVERRIDE=USER_SNAPSHOT.sharedFavs||{};
 export const INITIAL_NOM_SNAPSHOT={customNoms:USER_SNAPSHOT.customNoms||[],editedNoms:USER_SNAPSHOT.editedNoms||[],deletedNomIds:USER_SNAPSHOT.deletedNomIds||[]};
 export const INITIAL_ORDERS=USER_SNAPSHOT.orders||[]; /* стартовые проекты для новых устройств */
 export const CALC_STATE_REF={presets:USER_PRESETS_OVERRIDE,sharedFavs:USER_FAVS_OVERRIDE,globalOpts:[],customBlocks:[]};
-/* Доп. опции для расчёта конкретного заказа: общий список, галочки — только из заказа (ord.optsOn) */
+/* Доп. опции для расчёта конкретного заказа: общий список, галочки заказа (ord.optsOn) — запасные для помещений без своих */
 export const optsForOrder=ord=>(CALC_STATE_REF.globalOpts||[]).map(g=>({...g,on:!!(ord&&ord.optsOn&&ord.optsOn[g.id])}));
+/* Галочка опции своя у каждого помещения (r.optsOn); помещения старых заказов без своих галочек считаются по галочке заказа */
+export const roomOptOn=(r,go)=>r&&r.optsOn?r.optsOn[go.id]===true:go.on===true;
 
 export const BLOCK_CFG=[
   {id:"canvas",title:"Полотно",cat:"canvas",qtyLabel:"S",qtyUnit:"м²",maxFav:99,defFav:["btn_c_msd","btn_c_tkan","btn_c_trans","btn_c_clear"]},
@@ -265,7 +267,8 @@ export function buildEst(rooms,allPresets,gOpts,priceSnap){
         if(r.canvas.off?.[nomId]===true)return;
         const useCanvasArea=(nom.type==="canvas");
         const useQBase=useCanvasArea?canvasArea:a;
-        const qUse=useQBase;
+        const iq=r.canvas.iq?.[nomId];
+        const qUse=iq!=null?iq:useQBase;
         if(nom.type==="profile"||nom.type==="canvas"||nom.type==="option"){
           const key=useCanvasArea?nomId+"_"+r.id:nomId;
           const nm=nom.name+(useCanvasArea?" ("+r.name+")":"");
@@ -299,7 +302,7 @@ export function buildEst(rooms,allPresets,gOpts,priceSnap){
     if(r.mainProf)processBlock(r.mainProf,peEff);
     /* Global options (protect etc.) */
     (gOpts||[]).forEach(go=>{
-      if(!go.on||!go.nomId)return;
+      if(!roomOptOn(r,go)||!go.nomId)return;
       const nom=NB(go.nomId);if(!nom)return;
       const qty=go.param==="area"?a:pe;
       if(nom.type==="profile"||nom.type==="canvas"||nom.type==="option")addM(go.nomId,nom.name,qty,nom.unit,gPrice(go.nomId,nom.price));
