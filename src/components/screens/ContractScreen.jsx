@@ -24,7 +24,8 @@ export default function ContractScreen({ ord, est, total, area, tpl, onTplChange
 
   const fields = contractFields(ord, total, { number: num, prepay, area: Math.round(area * 100) / 100, installDate });
   const estimateAdjustment = normalizeEstimateAdjustment(ord.estimateAdjustment);
-  const html = saved?.html && mode === "preview" && !saved._stale ? saved.html : contractHtml(t, fields, est, estimateAdjustment);
+  const estimateExportOptions = { showAdjustment: ord.estimateExportOptions?.showAdjustment !== false };
+  const html = saved?.html && mode === "preview" && !saved._stale ? saved.html : contractHtml(t, fields, est, estimateAdjustment, estimateExportOptions);
 
   const patch = p => onTplChange({ ...t, ...p });
   const patchHead = p => patch({ head: { ...t.head, ...p } });
@@ -40,7 +41,7 @@ export default function ContractScreen({ ord, est, total, area, tpl, onTplChange
   };
   const doSave = () => {
     /* снапшот в проект: номер занят — двигаем счётчик */
-    onSaveContract({ number: num, prepay, installDate, date: fields["дата"], total, estimateAdjustment, html: contractHtml(t, fields, est, estimateAdjustment) });
+    onSaveContract({ number: num, prepay, installDate, date: fields["дата"], total, estimateAdjustment, estimateExportOptions, html: contractHtml(t, fields, est, estimateAdjustment, estimateExportOptions) });
     patch({ numSeq: (t.numSeq || 1) + 1 });
   };
   const pickImg = (ref, key) => {

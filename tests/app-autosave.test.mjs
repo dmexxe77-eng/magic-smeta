@@ -128,6 +128,7 @@ test('rapid markup and quantity edits queue a save behind an in-flight IDB write
   app.calc.onEstimateAdjustmentChange({ percent: 0, scope: 'works' });
   app.calc.onEstimateAdjustmentChange({ percent: 10, scope: 'works' });
   app.calc.onEstimateEditsChange({ '["total","works","x"]': { q: 150 } });
+  app.calc.onEstimateExportOptionsChange({ showAdjustment: false });
   await app.flush();
   const syncCopy = JSON.parse(persistence.local.get('magicapp_v2_4_autosave_v1'));
   assert.equal(syncCopy.orders[0].estimateAdjustment.percent, 10, 'latest edit is protected before IDB finishes');
@@ -135,6 +136,7 @@ test('rapid markup and quantity edits queue a save behind an in-flight IDB write
   assert.equal(persistence.pending.length, 1, 'coalesced latest edit must be written after the first transaction');
   assert.equal(persistence.pending[0].value.orders[0].estimateAdjustment.percent, 10);
   assert.equal(persistence.pending[0].value.orders[0].estimateEdits['["total","works","x"]'].q, 150);
+  assert.equal(persistence.pending[0].value.orders[0].estimateExportOptions.showAdjustment, false);
   assert.equal(JSON.parse(persistence.local.get('magicapp_v2_4_autosave_v1')).orders[0].estimateAdjustment.percent, 10, 'old completion cannot overwrite the fallback');
   persistence.pending.shift().commit(); await app.flush();
   app.unmount();

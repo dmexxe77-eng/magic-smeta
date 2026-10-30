@@ -386,6 +386,13 @@ export default function App(){
   else if(screen==="calc"&&curOrder)content=(<CalcScreen onMenu={()=>setMenuOpen(true)}
     key={curOrder.id}
     initRooms={curOrder.rooms}
+    initEstimateExportOptions={curOrder.estimateExportOptions}
+    onEstimateExportOptionsChange={options=>{
+      if(!curId)return;
+      ordersRef.current=ordersRef.current.map(o=>o.id===curId?{...o,estimateExportOptions:options}:o);
+      setOrders(ordersRef.current);
+      try{window.dispatchEvent(new Event("magicapp:saveNow"));}catch(e){}
+    }}
     initEstimateAdjustment={curOrder.estimateAdjustment}
     onEstimateAdjustmentChange={adjustment=>{
       if(!curId)return;

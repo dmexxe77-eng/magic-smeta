@@ -14,6 +14,7 @@ import { btnS, N, SecH, Sel, ProfSel, ProfDD, OptsInline, ProfLine, NI, ProGate 
 import { roomBox, canvasUsage, bestWidth, widthList, cutParams } from "../../data/canvas.js";
 import { AppHeader } from "../AppHeader.jsx";
 import { normalizeEstimateAdjustment, calculateEstimateTotals, adjustmentLabel } from "../../utils/estimate-adjustment.js";
+import { prepareEstimateExport } from "../../utils/estimate-export.js";
 import PolyMini from "../canvas/PolyMini.jsx";
 import TracingCanvas from "../canvas/TracingCanvas.jsx";
 import DrawBuilder from "../builders/DrawBuilder.jsx";
@@ -77,7 +78,7 @@ function BuilderSelect({ onSelect, onBack, rooms, onFileChosen }) {
   );
 }
 
-function CalcScreen({onMenu,initRooms,orderName,onBack,onRoomsChange,initPlanImage,initMode,onPlanImageChange,onSnapshotUpdate,initNomSnapshot,initOptsOn,onOptsChange,initEstimateEdits,onEstimateEditsChange,initEstimateAdjustment,onEstimateAdjustmentChange}){
+function CalcScreen({onMenu,initRooms,orderName,onBack,onRoomsChange,initPlanImage,initMode,onPlanImageChange,onSnapshotUpdate,initNomSnapshot,initOptsOn,onOptsChange,initEstimateEdits,onEstimateEditsChange,initEstimateAdjustment,onEstimateAdjustmentChange,initEstimateExportOptions,onEstimateExportOptionsChange}){
   /* старые способы построения (распознавание, компас, рисование) заменены новым построителем: ведём на выбор способа */
   const[mode,setMode]=useState(()=>["recognize","compass","draw"].includes(initMode)?"select":(initMode||"main"));
   const[nomSnapshot,setNomSnapshot]=useState(initNomSnapshot||null);
@@ -122,6 +123,11 @@ function CalcScreen({onMenu,initRooms,orderName,onBack,onRoomsChange,initPlanIma
     onEstimateAdjustmentChange?.(next);
   };
   const expPct=estimateAdjustment.percent;
+  const[showAdjustment,setShowAdjustment]=useState(initEstimateExportOptions?.showAdjustment!==false);
+  const saveExportDisclosure=value=>{
+    setShowAdjustment(value);
+    onEstimateExportOptionsChange?.({showAdjustment:value});
+  };
   const[exportHtml,setExportHtml]=useState(null);
   const[traceScale,setTraceScale]=useState(null);
   const[polyEdit,setPolyEdit]=useState(false);
@@ -663,6 +669,11 @@ function CalcScreen({onMenu,initRooms,orderName,onBack,onRoomsChange,initPlanIma
             <input aria-label="Процент наценки или скидки" type="number" min="-100" max="1000" step="0.5" value={expPct} onChange={e=>saveEstimateAdjustment({percent:parseFloat(e.target.value)||0})} placeholder="Свой %" style={{width:80,background:T.inputBg,border:"1px solid "+T.border,borderRadius:8,padding:"5px 8px",color:T.text,fontSize:11,fontFamily:"inherit",outline:"none"}}/>
             <span style={{fontSize:11,color:expPct<0?"#16a34a":expPct>0?"#ff9500":T.dim,fontWeight:expPct!==0?600:400}}>{adjustmentText}</span>
           </div>
+          <label style={{display:"flex",alignItems:"flex-start",gap:8,marginTop:12,fontSize:11,color:T.text,lineHeight:1.4,cursor:"pointer"}}>
+            <input aria-label="Показывать наценку или скидку в смете" type="checkbox" checked={showAdjustment} onChange={e=>saveExportDisclosure(e.target.checked)} style={{marginTop:1,accentColor:T.accent,flexShrink:0}}/>
+            <span>Показывать наценку или скидку в смете</span>
+          </label>
+          <div style={{fontSize:10,color:T.sub,lineHeight:1.4,marginTop:4,marginLeft:21}}>{showAdjustment?"Отдельной строкой в итогах.":"Будет включена в цены позиций."}</div>
           <button onClick={async ()=>{
             const C=expCols;
             const cH=(c,t)=>c?"<th>"+t+"</th>":"";
@@ -731,8 +742,7 @@ td.total-val{font-weight:700;color:#1e2530}
               const nameCell=photoDataUrl
                 ?('<div style="display:flex;align-items:center;gap:10px"><img src="'+photoDataUrl+'" style="width:40px;height:40px;object-fit:cover;border-radius:6px;flex-shrink:0"/><span>'+String(l.n||"")+'</span></div>')
                 :String(l.n||"");
-              const eq=l.q,ep=l.p; /* правки строк из панели «Смета» — как в итогах */
-              return '<tr>'+cD(C.num,String(i+1))+cD(C.name,nameCell)+cD(C.qty,fmt(eq))+cD(C.unit,String(l.u||""))+cD(C.price,fmt(ep),'r')+cD(C.total,fmtRub(eq*ep),'r total-val')+'</tr>';
+              return '<tr>'+cD(C.num,String(i+1))+cD(C.name,nameCell)+cD(C.qty,l.exportQuantity)+cD(C.unit,String(l.u||""))+cD(C.price,l.exportPrice,'r')+cD(C.total,fmtRub(l.exportTotal),'r total-val')+'</tr>';
             };
 
             /* SVG чертёж помещения */
@@ -762,10 +772,9 @@ td.total-val{font-weight:700;color:#1e2530}
 
             const fmtRub=n=>Number(n||0).toLocaleString("ru-RU",{maximumFractionDigits:2})+'&nbsp;₽';
             /* helper: рендер блока с итоговой стоимостью + опциональной корректировкой % */
-            const renderGrand=(materialsTotal,worksTotal)=>{
-              const {baseTotal:rawTotal,adjustedTotal:adjTotal,adjustmentAmount:delta}=calculateEstimateTotals(materialsTotal,worksTotal,estimateAdjustment);
-              if(expPct===0){
-                return '<div class="grand-total"><div class="grand-title">ИТОГОВАЯ СТОИМОСТЬ</div><div class="grand-value">'+fmtRub(rawTotal)+'</div></div>';
+            const renderGrand=({baseTotal:rawTotal,adjustedTotal:adjTotal,adjustmentAmount:delta})=>{
+              if(expPct===0||!showAdjustment){
+                return '<div class="grand-total"><div class="grand-title">ИТОГОВАЯ СТОИМОСТЬ</div><div class="grand-value">'+fmtRub(adjTotal)+'</div></div>';
               }
               const adjLabel=adjustmentText;
               const deltaCol=expPct<0?"#16a34a":"#ff9500";
@@ -777,6 +786,16 @@ td.total-val{font-weight:700;color:#1e2530}
             /* смета одного помещения: берём выбранное в шторке, иначе открытое в расчёте */
             const expRoom=expType==="room"?(rooms.find(x=>x.id===(expRoomId||tab))||r):null;
             const activeRooms=expRoom?[expRoom]:rooms.filter(x=>x.on!==false);
+            const roomExport=expType==="perRoom"||!!expRoom;
+            // Round all exported rooms together, then partition the prepared
+            // rows, so embedded pricing never adds one markup per room twice.
+            const exportSource=roomExport?activeRooms.reduce((all,rm)=>{
+              const roomEstimate=buildEst([rm],presets,globalOpts,nomSnapshot,estEd,rm.id);
+              all.mats.push(...roomEstimate.mats.map(line=>({...line,exportRoomId:rm.id})));
+              all.works.push(...roomEstimate.works.sort((a,b)=>(b.q||0)-(a.q||0)).map(line=>({...line,exportRoomId:rm.id})));
+              return all;
+            },{mats:[],works:[]}):{mats:matsE,works:worksE};
+            const prepared=prepareEstimateExport(exportSource,estimateAdjustment,showAdjustment);
             const totalArea=activeRooms.reduce((s,x)=>s+gA(x),0);
             const projectName=String(orderName||"");
             const projectCustomer="";
@@ -785,16 +804,14 @@ td.total-val{font-weight:700;color:#1e2530}
             html+='<div class="header"><div class="hdr"><div class="hdr-left"><div class="hdr-title">Данные проекта</div><div class="hdr-grid"><div class="hdr-k">Название</div><div class="hdr-v">'+projectName+'</div><div class="hdr-k">Заказчик</div><div class="hdr-v">'+projectCustomer+'</div><div class="hdr-k">Тип сметы</div><div class="hdr-v">'+projectType+'</div><div class="hdr-k">Помещений</div><div class="hdr-v">'+activeRooms.length+'</div><div class="hdr-k">Площадь</div><div class="hdr-v">'+fmt(totalArea)+' м²</div></div></div><div class="hdr-right"><div><div class="co-brand">Magic</div><div class="co-name">студия отделки стен и потолков</div></div><div class="co-line">г.Хабаровск, ул.Промышленная, д.7<br/>тел: 8(924)4008040 Губарь Николай</div></div></div></div>';
             html+='<div class="body">';
 
-            if(expType==="perRoom"||expRoom){
+            if(roomExport){
               /* ═══ ПО ПОМЕЩЕНИЯМ (или одно выбранное помещение) ═══ */
-              let exportMatTotal=0,exportWorkTotal=0;
               if(hasTotalQuantityEdits)html+='<div style="font-size:11px;color:#666;margin-bottom:12px">'+roomExportNote+'</div>';
-              for(const rm2 of (expRoom?[expRoom]:rooms.filter(x=>x.on!==false))){
-                const re=buildEst([rm2],presets,globalOpts,nomSnapshot,estEd,rm2.id);
-                const worksRm=(re.works||[]).slice().sort((a,b)=>(b.q||0)-(a.q||0));
-                const mt2=re.mats.reduce((s,l)=>s+l.q*l.p,0);
-                const wt2=worksRm.reduce((s,l)=>s+l.q*l.p,0);
-                exportMatTotal+=mt2;exportWorkTotal+=wt2;
+              for(const rm2 of activeRooms){
+                const re={mats:prepared.mats.filter(line=>line.exportRoomId===rm2.id),works:prepared.works.filter(line=>line.exportRoomId===rm2.id)};
+                const worksRm=re.works;
+                const mt2=re.mats.reduce((s,line)=>s+line.exportTotal,0);
+                const wt2=worksRm.reduce((s,line)=>s+line.exportTotal,0);
                 html+='<div class="no-split"><div class="room-header"><span class="room-name">'+String(rm2.name)+'</span><span class="room-meta">'+fmt(gA(rm2))+' м² &middot; '+fmt(gP(rm2))+' м.п.</span></div>';
                 html+=roomSvg(rm2)+'</div>';
                 if(re.mats.length){
@@ -815,27 +832,27 @@ td.total-val{font-weight:700;color:#1e2530}
                   }
                   html+='</tbody><tfoot><tr class="subtotal"><td colspan="5" class="r">Итого работы:</td><td class="r">'+fmtRub(wt2)+'</td></tr></tfoot></table>';
                 }
-                html+='<div style="text-align:right;font-weight:700;color:#4F46E5;margin:6px 0 20px;font-size:13px">Итого '+String(rm2.name)+(expPct!==0?' ('+baseTotalLabel.toLowerCase()+')':'')+': '+fmtRub(mt2+wt2)+'</div>';
+                html+='<div style="text-align:right;font-weight:700;color:#4F46E5;margin:6px 0 20px;font-size:13px">Итого '+String(rm2.name)+(expPct!==0&&showAdjustment?' ('+baseTotalLabel.toLowerCase()+')':'')+': '+fmtRub(mt2+wt2)+'</div>';
               }
-              html+=renderGrand(exportMatTotal,exportWorkTotal);
+              html+=renderGrand(prepared.totals);
 
             }else if(expType==="totalDraw"){
               /* ═══ ОБЩАЯ + ЧЕРТЕЖИ ═══ */
               html+='<div class="section-label">МАТЕРИАЛЫ</div>'+tH;
-              for(let i=0;i<matsE.length;i++){
-                const l=matsE[i];
+              for(let i=0;i<prepared.mats.length;i++){
+                const l=prepared.mats[i];
                 const ph=await ensurePhoto(l);
                 html+=rowHtml(l,i,ph);
               }
-              html+='</tbody><tfoot><tr class="subtotal"><td colspan="5" class="r">Итого материалы:</td><td class="r">'+fmtRub(matTot)+'</td></tr></tfoot></table>';
+              html+='</tbody><tfoot><tr class="subtotal"><td colspan="5" class="r">Итого материалы:</td><td class="r">'+fmtRub(prepared.materialsTotal)+'</td></tr></tfoot></table>';
               html+='<div class="page-break"></div><div class="section-label">РАБОТЫ</div>'+tH;
-              for(let i=0;i<worksE.length;i++){
-                const l=worksE[i];
+              for(let i=0;i<prepared.works.length;i++){
+                const l=prepared.works[i];
                 const ph=await ensurePhoto(l);
                 html+=rowHtml(l,i,ph);
               }
-              html+='</tbody><tfoot><tr class="subtotal"><td colspan="5" class="r">Итого работы:</td><td class="r">'+fmtRub(workTot)+'</td></tr></tfoot></table>';
-              html+=renderGrand(matTot,workTot);
+              html+='</tbody><tfoot><tr class="subtotal"><td colspan="5" class="r">Итого работы:</td><td class="r">'+fmtRub(prepared.worksTotal)+'</td></tr></tfoot></table>';
+              html+=renderGrand(prepared.totals);
               
               // then drawings for all rooms
               rooms.filter(x=>x.on!==false).forEach(rm2=>{
@@ -846,20 +863,20 @@ td.total-val{font-weight:700;color:#1e2530}
             }else{
               /* ═══ ОБЩАЯ СМЕТА ═══ */
               html+='<div class="section-label">МАТЕРИАЛЫ</div>'+tH;
-              for(let i=0;i<matsE.length;i++){
-                const l=matsE[i];
+              for(let i=0;i<prepared.mats.length;i++){
+                const l=prepared.mats[i];
                 const ph=await ensurePhoto(l);
                 html+=rowHtml(l,i,ph);
               }
-              html+='</tbody><tfoot><tr class="subtotal"><td colspan="5" class="r">Итого материалы:</td><td class="r">'+fmtRub(matTot)+'</td></tr></tfoot></table>';
+              html+='</tbody><tfoot><tr class="subtotal"><td colspan="5" class="r">Итого материалы:</td><td class="r">'+fmtRub(prepared.materialsTotal)+'</td></tr></tfoot></table>';
               html+='<div class="page-break"></div><div class="section-label">РАБОТЫ</div>'+tH;
-              for(let i=0;i<worksE.length;i++){
-                const l=worksE[i];
+              for(let i=0;i<prepared.works.length;i++){
+                const l=prepared.works[i];
                 const ph=await ensurePhoto(l);
                 html+=rowHtml(l,i,ph);
               }
-              html+='</tbody><tfoot><tr class="subtotal"><td colspan="5" class="r">Итого работы:</td><td class="r">'+fmtRub(workTot)+'</td></tr></tfoot></table>';
-              html+=renderGrand(matTot,workTot);
+              html+='</tbody><tfoot><tr class="subtotal"><td colspan="5" class="r">Итого работы:</td><td class="r">'+fmtRub(prepared.worksTotal)+'</td></tr></tfoot></table>';
+              html+=renderGrand(prepared.totals);
             }
             html+='</div><div class="footer"><span>MAGIC</span><span>'+nowDate+'</span></div></div></body></html>';
             setExportHtml(html);

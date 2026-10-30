@@ -57,13 +57,15 @@ function hookRenderer(component) {
     finally { React.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED.ReactCurrentDispatcher.current = null; }
   };
 }
-function harness(adjustment = { percent: 0, scope: 'all' }, edits = {}) {
+function harness(adjustment = { percent: 0, scope: 'all' }, edits = {}, exportOptions, fixture = {}) {
   CALC_STATE_REF.presets = [{ id: 'fixture', items: [material.id, work.id], options: [] }];
   CALC_STATE_REF.globalOpts = [];
   CALC_STATE_REF.customBlocks = [];
   const saved = [];
-  const renderComponent = hookRenderer(() => CalcScreen({ initRooms: rooms, initMode: 'main', initNomSnapshot: { [material.id]: 100, [work.id]: 200 },
-    initEstimateAdjustment: adjustment, initEstimateEdits: edits,
+  const savedOptions = [];
+  const renderComponent = hookRenderer(() => CalcScreen({ initRooms: fixture.rooms || rooms, initMode: 'main', initNomSnapshot: fixture.prices || { [material.id]: 100, [work.id]: 200 },
+    initEstimateAdjustment: adjustment, initEstimateEdits: edits, initEstimateExportOptions: exportOptions,
+    onEstimateExportOptionsChange: value => savedOptions.push(JSON.parse(JSON.stringify(value))),
     onEstimateAdjustmentChange: value => saved.push(JSON.parse(JSON.stringify(value))) }));
   let tree;
   const render = () => { tree = renderComponent(); return tree; };
@@ -74,7 +76,7 @@ function harness(adjustment = { percent: 0, scope: 'all' }, edits = {}) {
     render();
   };
   render();
-  return { saved, render, click, get tree() { return tree; }, get text() { return text(tree); },
+  return { saved, savedOptions, render, click, get tree() { return tree; }, get text() { return text(tree); },
     async openExport() { await click('Смета'); await click('Экспорт сметы'); },
     get html() { return nodes(tree).find(n => n.type === 'iframe')?.props.srcDoc; },
   };
@@ -141,6 +143,7 @@ test('App retains markup with the edited project through export, reopening and p
   tree = render();
   const calc = nodes(tree).find(n => n.type === CalcScreen);
   calc.props.onEstimateAdjustmentChange({ percent: 10, scope: 'works' });
+  calc.props.onEstimateExportOptionsChange({ showAdjustment: false });
   // Another edit arriving before React re-renders must preserve the markup.
   calc.props.onEstimateEditsChange({ stable: { q: 20 } });
   tree = render();
@@ -148,9 +151,11 @@ test('App retains markup with the edited project through export, reopening and p
   tree = render();
   const stored = JSON.parse(JSON.stringify(sanitizeOrdersForStorage(getHome().props.orders)));
   assert.deepEqual(stored[0].estimateAdjustment, { percent: 10, scope: 'works' });
+  assert.deepEqual(stored[0].estimateExportOptions, { showAdjustment: false });
   assert.equal(stored[0].estimateEdits.stable.q, 20);
   assert.equal(stored[0].planImage, 'existing-plan');
   assert.equal(stored[1].estimateAdjustment, undefined);
+  assert.equal(stored[1].estimateExportOptions, undefined);
   getHome().props.onOpen('second');
   tree = render();
   assert.equal(nodes(tree).find(n => n.type === CalcScreen).props.initEstimateAdjustment, undefined);
@@ -159,4 +164,75 @@ test('App retains markup with the edited project through export, reopening and p
   getHome().props.onOpen('first');
   tree = render();
   assert.deepEqual(JSON.parse(JSON.stringify(nodes(tree).find(n => n.type === CalcScreen).props.initEstimateAdjustment)), { percent: 10, scope: 'works' });
+  assert.deepEqual(JSON.parse(JSON.stringify(nodes(tree).find(n => n.type === CalcScreen).props.initEstimateExportOptions)), { showAdjustment: false });
+});
+
+
+test('export disclosure is checked by default, saved when changed and does not hide internal totals', async () => {
+  const calc = harness({ percent: 10, scope: 'works' });
+  await calc.openExport();
+  const checkbox = nodes(calc.tree).find(node => node.type === 'input' && node.props['aria-label'] === 'Показывать наценку или скидку в смете');
+  assert.ok(checkbox, 'disclosure checkbox exists');
+  assert.equal(checkbox.props.checked, true);
+  checkbox.props.onChange({ target: { checked: false } });
+  calc.render();
+  assert.deepEqual(calc.savedOptions.at(-1), { showAdjustment: false });
+  const reopened = harness({ percent: 10, scope: 'works' }, {}, calc.savedOptions.at(-1));
+  await reopened.openExport();
+  assert.equal(nodes(reopened.tree).find(node => node.type === 'input' && node.props['aria-label'] === 'Показывать наценку или скидку в смете').props.checked, false);
+  const header = nodes(reopened.tree).find(node => node.props.subtitle === 'КАЛЬКУЛЯТОР');
+  assert.match(text(header.props.right), /Наценка на работы/);
+});
+
+const amountFromHtml = html => Number(normalize(html).match(/class="grand-value">([\d ,.-]+) ₽/)[1].replaceAll(' ', '').replace(',', '.'));
+for (const mode of ['Общая смета', 'Общая + чертежи', 'По помещениям', 'Одно помещение']) {
+  for (const scope of ['works', 'mats', 'all']) {
+    for (const percent of [10, -10]) {
+      test(`embedded adjustment: ${mode}, ${scope}, ${percent}%`, async () => {
+        const hidden = harness({ percent, scope }, {}, { showAdjustment: false });
+        await hidden.openExport(); await hidden.click(mode); await hidden.click('Скачать');
+        const shown = harness({ percent, scope }, {}, { showAdjustment: true });
+        await shown.openExport(); await shown.click(mode); await shown.click('Скачать');
+        const html = normalize(hidden.html);
+        assert.doesNotMatch(html, /наценк|скидк|корректировк|без наценки|без скидки/i);
+        assert.equal(amountFromHtml(html), amountFromHtml(shown.html));
+        const materialPrice = scope === 'works' ? 100 : Math.round(100 * (1 + percent / 100));
+        const workPrice = scope === 'mats' ? 200 : Math.round(200 * (1 + percent / 100));
+        assert.ok(html.includes('<td>' + materialPrice + '</td>'), 'material unit price follows its selected scope');
+        assert.ok(html.includes('<td>' + workPrice + '</td>'), 'work unit price follows its selected scope');
+      });
+    }
+  }
+}
+
+test('per-room embedded adjustment allocates cent rounding globally', async () => {
+  const fixture = { prices: { [material.id]: 0, [work.id]: 0.05 } };
+  const exports = [];
+  for (const showAdjustment of [true, false]) {
+    const calc = harness({ percent: 10, scope: 'works' }, {}, { showAdjustment }, fixture);
+    await calc.openExport(); await calc.click('По помещениям'); await calc.click('Скачать');
+    exports.push(normalize(calc.html));
+  }
+  assert.equal(amountFromHtml(exports[0]), 0.28);
+  assert.equal(amountFromHtml(exports[1]), 0.28);
+  const rowTotals = [...exports[1].matchAll(/<tbody>(.*?)<\/tbody>/gs)]
+    .flatMap(match => [...match[1].matchAll(/<tr>(.*?)<\/tr>/gs)])
+    .map(match => Number([...match[1].matchAll(/<td>(.*?)<\/td>/gs)].at(-1)[1].replace(' ₽', '').replaceAll(' ', '').replace(',', '.')));
+  assert.equal(Math.round(rowTotals.reduce((sum, value) => sum + value, 0) * 100), 28);
+});
+
+test('embedded markup preserves fractional quantity used by the displayed line price', async () => {
+  const edits = { [JSON.stringify(['total', 'works', work.id])]: { q: 0.333 } };
+  const calc = harness({ percent: 10, scope: 'works' }, edits, { showAdjustment: false },
+    { prices: { [material.id]: 0, [work.id]: 300 } });
+  await calc.openExport(); await calc.click('Скачать');
+  const html = normalize(calc.html);
+  const workRow = [...html.matchAll(/<tr>(.*?)<\/tr>/gs)].find(match => match[1].includes(work.name))[1];
+  const cells = [...workRow.matchAll(/<td>(.*?)<\/td>/gs)].map(match => match[1]);
+  assert.equal(cells[2], '0,333');
+  assert.equal(cells[4], '330');
+  assert.equal(cells[5], '109,89 ₽');
+  const number = value => Number(value.replace(' ₽', '').replaceAll(' ', '').replace(',', '.'));
+  assert.equal(Math.round(number(cells[2]) * number(cells[4]) * 100), Math.round(number(cells[5]) * 100));
+  assert.equal(amountFromHtml(html), 109.89);
 });
