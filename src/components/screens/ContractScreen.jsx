@@ -3,6 +3,7 @@
    сохраняется в проект снапшотом (правки шаблона его не меняют). */
 import { useState, useRef } from "react";
 import { fmt } from "../../utils/helpers.js";
+import { normalizeEstimateAdjustment } from "../../utils/estimate-adjustment.js";
 import { compressImg } from "../../utils/imageUtils.js";
 import { DEFAULT_CONTRACT_TPL, CONTRACT_STYLES, contractFields, contractHtml, nextContractNumber } from "../../data/contract.js";
 import { htmlToPdf } from "../../utils/pdf.js";
@@ -22,7 +23,8 @@ export default function ContractScreen({ ord, est, total, area, tpl, onTplChange
   const logoRef = useRef(null), signRef = useRef(null);
 
   const fields = contractFields(ord, total, { number: num, prepay, area: Math.round(area * 100) / 100, installDate });
-  const html = saved?.html && mode === "preview" && !saved._stale ? saved.html : contractHtml(t, fields, est);
+  const estimateAdjustment = normalizeEstimateAdjustment(ord.estimateAdjustment);
+  const html = saved?.html && mode === "preview" && !saved._stale ? saved.html : contractHtml(t, fields, est, estimateAdjustment);
 
   const patch = p => onTplChange({ ...t, ...p });
   const patchHead = p => patch({ head: { ...t.head, ...p } });
@@ -38,7 +40,7 @@ export default function ContractScreen({ ord, est, total, area, tpl, onTplChange
   };
   const doSave = () => {
     /* снапшот в проект: номер занят — двигаем счётчик */
-    onSaveContract({ number: num, prepay, installDate, date: fields["дата"], total, html: contractHtml(t, fields, est) });
+    onSaveContract({ number: num, prepay, installDate, date: fields["дата"], total, estimateAdjustment, html: contractHtml(t, fields, est, estimateAdjustment) });
     patch({ numSeq: (t.numSeq || 1) + 1 });
   };
   const pickImg = (ref, key) => {

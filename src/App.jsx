@@ -42,6 +42,7 @@ export default function App(){
   ]);
   setT(theme);
   const fRef2=useRef(null);
+  const snapshotTsRef=useRef(0);
 
   // Auto-load/auto-save app state (orders, presets, nomenclature edits)
   useEffect(()=>{
@@ -49,13 +50,26 @@ export default function App(){
     let cancelled=false;
     (async()=>{
       try{
-        const snapFromIdb=await loadAppStateFromIdb();
-        const snap=(snapFromIdb&&typeof snapFromIdb==="object")?snapFromIdb:(()=>{
-          const raw=window.localStorage.getItem(AUTO_SAVE_KEY);
-          if(!raw)return null;
-          const s=safeJsonParse(raw);
-          return (s&&typeof s==="object")?s:null;
-        })();
+        const storedIdb=await loadAppStateFromIdb();
+        const snapFromIdb=storedIdb&&Array.isArray(storedIdb.orders)?storedIdb:null;
+        let snapFromLocal=null;
+        try{
+          const parsed=safeJsonParse(window.localStorage.getItem(AUTO_SAVE_KEY)||"");
+          if(parsed&&typeof parsed==="object"&&Array.isArray(parsed.orders))snapFromLocal=parsed;
+        }catch(e){}
+        const timestamp=snap=>Number.isFinite(snap?.ts)?snap.ts:0;
+        snapshotTsRef.current=Math.max(timestamp(snapFromIdb),timestamp(snapFromLocal));
+        let snap=snapFromIdb;
+        if(snapFromLocal&&(!snapFromIdb||timestamp(snapFromLocal)>timestamp(snapFromIdb))){
+          // The synchronous fallback may contain edits made during the last IDB
+          // write. Restore only omitted plan images from that older full copy.
+          const fullOrders=new Map((snapFromIdb?.orders||[]).map(order=>[order.id,order]));
+          snap={...snapFromLocal,orders:Array.isArray(snapFromLocal.orders)?snapFromLocal.orders.map(order=>
+            !Object.prototype.hasOwnProperty.call(order,"planImage")&&fullOrders.has(order.id)
+              ? {...order,planImage:fullOrders.get(order.id).planImage}
+              : order
+          ):snapFromLocal.orders};
+        }
         if(cancelled)return;
         if(!snap){
           // First launch — apply built-in snapshot (custom noms + edited prices)
@@ -122,14 +136,14 @@ export default function App(){
     if(!stateReady)return;
     let alive=true;
     let saving=false;
-    const save=async()=>{
-      if(!alive)return;
-      if(saving)return;
-      saving=true;
-      try{
-      const baseSnap={
+    let pendingSnapshot=null;
+    const captureSnapshot=()=>{
+      // Strictly increasing revisions distinguish multiple edits in one ms and
+      // remain newer than a recovered fallback even if the system clock moves.
+      snapshotTsRef.current=Math.max(Date.now(),snapshotTsRef.current+1);
+      return {
         v:2,
-        ts:Date.now(),
+        ts:snapshotTsRef.current,
         theme:themeRef.current,
         isProOverride:!!IS_PRO_OVERRIDE,
         contract:CONTRACT_TPL_REF.current||undefined,
@@ -147,60 +161,70 @@ export default function App(){
         },
         orders:sanitizeOrdersForStorage(ordersRef.current)
       };
-
-      // Save to IndexedDB (primary) — полные данные включая planImage
-      let okIdb=false;
-      let ordersInDb=null;
+    };
+    const writeFallback=(snap,sync)=>{
       try{
-        okIdb=await saveAppStateToIdb(baseSnap);
-        const back=await loadAppStateFromIdb();
-        ordersInDb=Array.isArray(back?.orders)?back.orders.length:null;
-        // Consider save ok only if we can read it back
-        okIdb=okIdb && !!back;
+        // Keep an explicit null when a plan was removed. Omitted images can be
+        // recovered from IDB without undoing a deliberate removal.
+        const fallback={...snap,orders:snap.orders.map(order=>order.planImage?{...order,planImage:undefined}:order)};
+        const raw=JSON.stringify(fallback);
+        window.localStorage.setItem(AUTO_SAVE_KEY,raw);
+        window.localStorage.setItem(AUTO_SAVE_META_KEY,JSON.stringify({ok:true,ts:snap.ts,bytes:raw.length,okIdb:false,sync}));
       }catch(e){
-        okIdb=false;
+        try{window.localStorage.setItem(AUTO_SAVE_META_KEY,JSON.stringify({ok:false,ts:snap.ts,err:String(e?.message||e||"save_failed")}));}catch{}
       }
-      setSaveStatus({ts:Date.now(),ok:!!okIdb,ordersInDb});
-
-      // localStorage (вторичный fallback) — БЕЗ planImage (base64 может переполнить квоту ~5MB)
+    };
+    const flush=async()=>{
+      if(saving||!alive)return;
+      saving=true;
       try{
-        const lsSnap={...baseSnap,orders:baseSnap.orders.map(o=>({...o,planImage:undefined}))};
-        const raw=JSON.stringify(lsSnap);
-        window.localStorage.setItem(AUTO_SAVE_KEY, raw);
-        window.localStorage.setItem(AUTO_SAVE_META_KEY, JSON.stringify({ok:true,ts:Date.now(),bytes:raw.length,okIdb}));
-      }catch(e){
-        try{window.localStorage.setItem(AUTO_SAVE_META_KEY, JSON.stringify({ok:false,ts:Date.now(),err:String(e?.message||e||"save_failed"),okIdb}));}catch{}
-      }
-      }catch(e){
-        /* исключение при сборке снапшота: фиксируем ошибку, но автосейв продолжает жить */
-        try{setSaveStatus({ts:Date.now(),ok:false,ordersInDb:null});}catch{}
-        try{window.localStorage.setItem(AUTO_SAVE_META_KEY, JSON.stringify({ok:false,ts:Date.now(),err:"snap: "+String(e?.message||e)}));}catch{}
+        while(alive&&pendingSnapshot){
+          const snap=pendingSnapshot;
+          pendingSnapshot=null;
+          let okIdb=false,ordersInDb=null;
+          try{
+            okIdb=await saveAppStateToIdb(snap);
+            const back=await loadAppStateFromIdb();
+            ordersInDb=Array.isArray(back?.orders)?back.orders.length:null;
+            okIdb=okIdb&&back?.ts===snap.ts;
+          }catch(e){}
+          if(!alive)break;
+          setSaveStatus({ts:Date.now(),ok:!!okIdb,ordersInDb});
+          try{
+            const meta=safeJsonParse(window.localStorage.getItem(AUTO_SAVE_META_KEY)||"");
+            if(meta?.ts===snap.ts)window.localStorage.setItem(AUTO_SAVE_META_KEY,JSON.stringify({...meta,okIdb:!!okIdb}));
+          }catch(e){}
+          // A save requested during the await replaces pendingSnapshot with the
+          // newest state. Drain it now instead of dropping the request.
+        }
       }finally{
         saving=false;
       }
     };
-    // expose manual save
-    const onSaveNow=()=>{save();};
-    try{window.addEventListener("magicapp:saveNow", onSaveNow);}catch(e){}
-    const t=setInterval(()=>{save();}, 2500);
-    // СИНХРОННОЕ сохранение при обновлении/закрытии — тоже БЕЗ planImage
-    const onUnload=()=>{
+    const save=(sync=false)=>{
+      if(!alive)return;
       try{
-        const orders=sanitizeOrdersForStorage(ordersRef.current).map(o=>({...o,planImage:undefined}));
-        const snap={
-          v:2,ts:Date.now(),theme:themeRef.current,isProOverride:!!IS_PRO_OVERRIDE,
-          contract:CONTRACT_TPL_REF.current||undefined,
-          calc:{presets:CALC_STATE_REF.presets,sharedFavs:CALC_STATE_REF.sharedFavs,globalOpts:CALC_STATE_REF.globalOpts||[],customBlocks:CALC_STATE_REF.customBlocks||[]},
-          noms:{customNoms:sanitizeCustomNoms(ALL_NOM.filter(n=>n.id&&n.id.startsWith("u"))),editedNoms:sanitizeEditedNoms(RUNTIME_EDITED_NOMS),deletedNomIds:DELETED_NOM_IDS,customBrands:RUNTIME_BRANDS},
-          orders
-        };
-        window.localStorage.setItem(AUTO_SAVE_KEY,JSON.stringify(snap));
-        window.localStorage.setItem(AUTO_SAVE_META_KEY,JSON.stringify({ok:true,ts:Date.now(),sync:true}));
-      }catch(e){}
+        pendingSnapshot=captureSnapshot();
+        // Protect edits synchronously; an older IDB completion must never
+        // overwrite this newer fallback after a quick page reload.
+        writeFallback(pendingSnapshot,sync);
+        void flush();
+      }catch(e){
+        setSaveStatus({ts:Date.now(),ok:false,ordersInDb:null});
+      }
     };
-    try{window.addEventListener("beforeunload", onUnload);}catch(e){}
+    const onSaveNow=()=>save();
+    const onUnload=()=>save(true);
+    try{window.addEventListener("magicapp:saveNow",onSaveNow);}catch(e){}
+    try{window.addEventListener("beforeunload",onUnload);}catch(e){}
+    const t=setInterval(()=>save(),2500);
     save();
-    return ()=>{alive=false;clearInterval(t);try{window.removeEventListener("beforeunload", onUnload);}catch(e){};try{window.removeEventListener("magicapp:saveNow", onSaveNow);}catch(e){};};
+    return ()=>{
+      alive=false;
+      clearInterval(t);
+      try{window.removeEventListener("beforeunload",onUnload);}catch(e){}
+      try{window.removeEventListener("magicapp:saveNow",onSaveNow);}catch(e){}
+    };
   },[stateReady]);
 
   const curOrder=orders.find(o=>o.id===curId);
@@ -360,7 +384,22 @@ export default function App(){
   </div>);
   else if(screen==="pdfPick"&&pdfData2)content=(<PdfPagePicker pdfData={pdfData2} onSelect={img=>{setPdfData2(null);setPlanImg(img);if(curId)setOrders(prev=>prev.map(o=>o.id===curId?{...o,planImage:img}:o));setScreen("calc");}} onBack={()=>{setPdfData2(null);setScreen("pickImage");}}/>);
   else if(screen==="calc"&&curOrder)content=(<CalcScreen onMenu={()=>setMenuOpen(true)}
+    key={curOrder.id}
     initRooms={curOrder.rooms}
+    initEstimateAdjustment={curOrder.estimateAdjustment}
+    onEstimateAdjustmentChange={adjustment=>{
+      if(!curId)return;
+      ordersRef.current=ordersRef.current.map(o=>o.id===curId?{...o,estimateAdjustment:adjustment}:o);
+      setOrders(ordersRef.current);
+      try{window.dispatchEvent(new Event("magicapp:saveNow"));}catch(e){}
+    }}
+    initEstimateEdits={curOrder.estimateEdits||{}}
+    onEstimateEditsChange={edits=>{
+      if(!curId)return;
+      ordersRef.current=ordersRef.current.map(o=>o.id===curId?{...o,estimateEdits:edits}:o);
+      setOrders(ordersRef.current);
+      try{window.dispatchEvent(new Event("magicapp:saveNow"));}catch(e){}
+    }}
     orderName={curOrder.name}
     onBack={()=>{
       // Only create snapshot if order doesn't have one yet

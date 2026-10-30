@@ -3,6 +3,7 @@ import { AppHeader } from "../AppHeader.jsx";
 import ContractScreen from "./ContractScreen.jsx";
 import { T, setT, THEMES, IS_PRO_OVERRIDE, setIsProOverride} from "../../theme.js";
 import { fmt, uid, deep, safeStr } from "../../utils/helpers.js";
+import { calculateEstimateTotals, adjustmentLabel } from "../../utils/estimate-adjustment.js";
 import { calcPoly, getAngles, countAngles, effectiveOq, getAutoOq } from "../../utils/geometry.js";
 import { compressImg, profSvgHtml } from "../../utils/imageUtils.js";
 import { AUTO_SAVE_KEY, AUTO_SAVE_META_KEY, idbPut, idbGet, idbDel, blobToObjectUrl, blobToDataUrl, revokeObjectUrl, persistNomPhotoToIdb, loadNomPhotoFromIdb } from "../../utils/storage.js";
@@ -139,14 +140,15 @@ function HomeScreen({onMenu,contractTpl,setContractTpl,orders,setOrders,onOpen,o
     salary:"ЗП",tools:"Инструменты",designer_bonus:"Бонус дизайнеру"};
   const EXP_CATS=["materials","transport","consumable","tools","salary","designer_bonus","other"];
   const calcFin=ord=>{
-    const est=(ord.rooms||[]).length>0?buildEst(ord.rooms,CALC_STATE_REF.presets,optsForOrder(ord),ord.nomSnapshot||null):{mats:[],works:[]};
-    const total=est.mats.reduce((s,l)=>s+l.q*l.p,0)+est.works.reduce((s,l)=>s+l.q*l.p,0);
+    const est=(ord.rooms||[]).length>0?buildEst(ord.rooms,CALC_STATE_REF.presets,optsForOrder(ord),ord.nomSnapshot||null,ord.estimateEdits):{mats:[],works:[]};
+    const totals=calculateEstimateTotals(est.mats.reduce((s,l)=>s+l.q*l.p,0),est.works.reduce((s,l)=>s+l.q*l.p,0),ord.estimateAdjustment);
+    const total=totals.adjustedTotal;
     const inc=(ord.payments||[]).filter(x=>x.type==="income").reduce((s,x)=>s+x.amount,0);
     const exp=(ord.expenses||[]).reduce((s,x)=>s+x.amount,0);
     const dExp=(ord.expenses||[]).filter(x=>x.cat==="designer_bonus").reduce((s,x)=>s+x.amount,0);
     const area=(ord.rooms||[]).reduce((s,r)=>s+gA(r),0);
     const wCost=(ord.workers||[]).reduce((s,w)=>s+(w.rateType==="pct"?total*w.rate/100:w.rate*area),0);
-    return{total,inc,exp,dExp,wCost,profit:inc-exp-wCost,debt:total-inc,area};
+    return{...totals,total,inc,exp,dExp,wCost,profit:inc-exp-wCost,debt:total-inc,area};
   };
   const desBonus=ord=>{
     const d=designers.find(x=>x.id===ord.designerId);
@@ -277,11 +279,15 @@ function HomeScreen({onMenu,contractTpl,setContractTpl,orders,setOrders,onOpen,o
         <div className="mw" style={{padding:14,paddingBottom:80}}>
           {/* ── Инфо ── */}
           {projTab==="info"&&(<div>
-            {fin.total>0&&(
+            {(fin.baseTotal>0||fin.total>0)&&(
               <div style={{background:DARK,borderRadius:16,padding:"16px 18px",marginBottom:12,display:"flex",justifyContent:"space-between",alignItems:"flex-end"}}>
                 <div>
                   <div style={{fontSize:10,color:"rgba(255,255,255,0.5)",letterSpacing:"1px",marginBottom:6,fontWeight:600}}>{"СУММА ПО СМЕТЕ"}</div>
                   <div style={{fontSize:30,fontWeight:700,color:"#fff",letterSpacing:-1,lineHeight:1}}>{ff(fin.total)+" ₽"}</div>
+                  {fin.percent!==0&&<div style={{fontSize:11,color:"rgba(255,255,255,0.7)",lineHeight:1.5,marginTop:7}}>
+                    <div>{(fin.percent>0?"Без наценки: ":"Без скидки: ")+ff(fin.baseTotal)+" ₽"}</div>
+                    <div>{adjustmentLabel(fin)}</div>
+                  </div>}
                   <div style={{height:3,background:"rgba(255,255,255,0.1)",borderRadius:3,marginTop:10,width:160,overflow:"hidden"}}>
                     <div style={{height:"100%",width:`${Math.min(pct,100)}%`,background:ACC,borderRadius:3}}/>
                   </div>
@@ -464,7 +470,7 @@ function HomeScreen({onMenu,contractTpl,setContractTpl,orders,setOrders,onOpen,o
       {/* Договор — поверх карточки проекта */}
       {showContract&&(()=>{
         const fin=calcFin(ord);
-        const est=(ord.rooms||[]).length>0?buildEst(ord.rooms,CALC_STATE_REF.presets,optsForOrder(ord),ord.nomSnapshot||null):{mats:[],works:[]};
+        const est=(ord.rooms||[]).length>0?buildEst(ord.rooms,CALC_STATE_REF.presets,optsForOrder(ord),ord.nomSnapshot||null,ord.estimateEdits):{mats:[],works:[]};
         return(<ContractScreen ord={ord} est={est} total={fin.total} area={fin.area}
           tpl={contractTpl} onTplChange={setContractTpl}
           onSaveContract={c=>setOrders(prev=>prev.map(o=>o.id===ord.id?{...o,contract:c}:o))}
@@ -668,10 +674,14 @@ function HomeScreen({onMenu,contractTpl,setContractTpl,orders,setOrders,onOpen,o
               )}
             </div>
           </div>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:fin.total>0?8:0}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:fin.baseTotal>0||fin.total>0?8:0}}>
             <div style={{fontSize:12,color:T.dim}}>{[fin.area>0?fn(fin.area)+" м²":"",ord.date?"🗓 "+ord.date:""].filter(Boolean).join(" · ")}</div>
-            {fin.total>0&&<div style={{fontSize:16,fontWeight:700,color:T.text}}>{ff(fin.total)+" ₽"}</div>}
+            {(fin.baseTotal>0||fin.total>0)&&<div style={{fontSize:16,fontWeight:700,color:T.text}}>{ff(fin.total)+" ₽"}</div>}
           </div>
+          {fin.percent!==0&&<div style={{fontSize:11,color:T.sub,lineHeight:1.45,textAlign:"right",marginTop:-3,marginBottom:8}}>
+            <div>{(fin.percent>0?"Без наценки: ":"Без скидки: ")+ff(fin.baseTotal)+" ₽"}</div>
+            <div>{adjustmentLabel(fin)}</div>
+          </div>}
           {/* Оплаты и долг показываем только после заключения договора:
               на этапах заявки/расчёта/согласования это ещё не финансы, а оценка */}
           {fin.total>0&&["contract","install","done"].includes(ord.status)&&(<div>

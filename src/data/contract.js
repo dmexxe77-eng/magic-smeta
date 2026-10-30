@@ -1,3 +1,5 @@
+import { calculateEstimateTotals, adjustmentLabel } from "../utils/estimate-adjustment.js";
+
 /* ═══ Договор: шаблон, подстановки, генерация ═══
    Шаблон один на студию (хранится в настройках приложения, попадает в бэкап).
    Сгенерированный договор сохраняется снапшотом в проект — правки шаблона
@@ -111,14 +113,25 @@ export const CONTRACT_STYLES = [
 
 /* ── HTML договора для предпросмотра и печати ──
    est: {mats:[{n,q,u,p}], works:[...]} — спецификация. */
-export function contractHtml(tpl, fields, est) {
+export function contractHtml(tpl, fields, est, estimateAdjustment) {
   const st = CONTRACT_STYLES.find(s => s.id === tpl.style) || CONTRACT_STYLES[0];
   const compact = tpl.style === "compact";
   const h = tpl.head || {};
   const esc = s => String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const money = v => (Number(v) || 0).toLocaleString("ru-RU", { maximumFractionDigits: 2 });
   const specRows = [...(est?.mats || []).map(l => ({ ...l, t: "Материалы" })), ...(est?.works || []).map(l => ({ ...l, t: "Работы" }))];
-  const specTotal = specRows.reduce((s, l) => s + l.q * l.p, 0);
+  const totals = calculateEstimateTotals(
+    (est?.mats || []).reduce((s, l) => s + l.q * l.p, 0),
+    (est?.works || []).reduce((s, l) => s + l.q * l.p, 0),
+    estimateAdjustment,
+  );
+  const summaryRow = (label, amount, bold = false) => `<tr><td colspan="4" style="border:0.5px solid #ccc;padding:4px 6px;text-align:right;${bold ? 'font-weight:700;' : ''}">${esc(label)}:</td>
+    <td style="border:0.5px solid #ccc;padding:4px 6px;text-align:right;${bold ? 'font-weight:700;' : ''}">${amount} ₽</td></tr>`;
+  const summary = totals.percent !== 0
+    ? summaryRow(totals.percent > 0 ? 'Без наценки' : 'Без скидки', money(totals.baseTotal))
+      + summaryRow(adjustmentLabel(totals), `${totals.adjustmentAmount < 0 ? '−' : '+'}${money(Math.abs(totals.adjustmentAmount))}`)
+      + summaryRow('Итого к оплате', money(totals.adjustedTotal), true)
+    : summaryRow('Итого', money(totals.baseTotal), true);
   const spec = specRows.length ? `
     <h3 class="no-split" style="margin:18px 0 6px;font-size:${compact ? 11 : 12}px;">Приложение №1 — Спецификация</h3>
     <table style="width:100%;border-collapse:collapse;font-size:${compact ? 9 : 10}px;">
@@ -136,8 +149,7 @@ export function contractHtml(tpl, fields, est) {
         <td style="border:0.5px solid #ccc;padding:3px 6px;text-align:right;">${money(l.p)}</td>
         <td style="border:0.5px solid #ccc;padding:3px 6px;text-align:right;">${money(l.q * l.p)}</td>
       </tr>`).join("")}
-      <tr><td colspan="4" style="border:0.5px solid #ccc;padding:4px 6px;text-align:right;font-weight:700;">Итого:</td>
-      <td style="border:0.5px solid #ccc;padding:4px 6px;text-align:right;font-weight:700;">${money(specTotal)} ₽</td></tr>
+      ${summary}
     </table>` : "";
   return `
   <div style="font-family:${st.font};color:#1a1a1a;font-size:${compact ? 10.5 : 12}px;line-height:1.55;max-width:720px;margin:0 auto;">

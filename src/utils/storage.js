@@ -6,7 +6,7 @@ export const AUTO_SAVE_META_KEY = "magicapp_v2_4_autosave_meta_v1";
 const IDB_DB = "magicapp_v2_4_db";
 const IDB_VER = 2;
 const IDB_STORE_NOM_PHOTOS = "nomPhotos";
-const IDB_STORE_APP_STATE = "appState";
+export const IDB_STORE_APP_STATE = "appState";
 
 function idbOpenVer(ver){
   return new Promise((resolve,reject)=>{

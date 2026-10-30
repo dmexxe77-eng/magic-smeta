@@ -1,8 +1,9 @@
 import { uid, safeJsonParse, safeStr } from "../utils/helpers.js";
-import { loadNomPhotoFromIdb, revokeObjectUrl, idbGet, idbPut } from '../utils/storage.js';
+import { loadNomPhotoFromIdb, revokeObjectUrl, idbGet, idbPut, IDB_STORE_APP_STATE } from '../utils/storage.js';
 import { NOM_V2 } from "./nomenclatureV2.js";
 import { applyKo, applyMult, baseOfSrc, legacyOptionSrc } from "./qty.js";
 import { seriesKey } from "./canvas.js";
+import { applyEstimateEdits, mergeRoomEstimates } from "../utils/estimate-edits.js";
 
 import { ALL_NOM, NOM_GEN, NOM_EXT, NB, USER_NOMS_CUSTOM, USER_NOMS_EDITED, USER_NOMS_DELETED, addNewNom, deleteNom, DELETED_NOM_IDS, RUNTIME_EDITED_NOMS, RUNTIME_BRANDS } from "./nomenclature.jsx";
 import { P, PF, LIGHT, OPT, DEFAULT_MAT, KK, PIMG } from "./profiles.js";
@@ -186,7 +187,16 @@ function getAnglesSafe(r){
     return{inner:d.filter(x=>x===90).length,outer:d.filter(x=>x===270).length};
   }catch(e){return{inner:0,outer:0};}
 }
-export function buildEst(rooms,allPresets,gOpts,priceSnap){
+export function buildEst(rooms,allPresets,gOpts,priceSnap,estimateEdits,scope='total'){
+  const raw=selected=>buildEstRaw(selected,allPresets,gOpts,priceSnap);
+  if(scope!=='total')return applyEstimateEdits(raw(rooms),estimateEdits,scope);
+  /* Room corrections are included before aggregation; total corrections are final. */
+  const hasRoomEdits=Object.keys(estimateEdits||{}).some(k=>!k.startsWith('["total",'));
+  const estimate=hasRoomEdits?mergeRoomEstimates(rooms.filter(r=>r.on).map(r=>
+    applyEstimateEdits(raw([r]),estimateEdits,r.id))):raw(rooms);
+  return applyEstimateEdits(estimate,estimateEdits);
+}
+function buildEstRaw(rooms,allPresets,gOpts,priceSnap){
   const _pr=allPresets||PRESETS_GEN;
   const _find=id=>_pr.find(x=>x.id===id);
   const mm={},ww={};
