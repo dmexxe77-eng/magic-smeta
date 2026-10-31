@@ -35,8 +35,9 @@ const METHODS = String.raw`
     const p=this.cur();if(!p)return;
     const adjustment=this.commitEstimatePercent(p.id);
     const x=this.state.exp,ed=this.ed(p.id);
-    const opts={project:p,est:est(p.rooms,ed),adjustment,showAdjustment:p.estimateExportOptions?.showAdjustment!==false,
-      cols:x.cols,type:x.type,rooms:p.rooms.filter(r=>r.on).map(r=>Object.assign({},r,{est:est([r],{})}))};
+    const exportEstimate=(rooms,edits)=>window.MagicEstimate.withEstimateImages(est(rooms,edits),NOM);
+    const opts={project:p,company:window.MagicEstimate.getCompanyDetails(this.state.profile),est:exportEstimate(p.rooms,ed),adjustment,showAdjustment:p.estimateExportOptions?.showAdjustment!==false,
+      cols:x.cols,type:x.type,rooms:p.rooms.filter(r=>r.on).map(r=>Object.assign({},r,{est:exportEstimate([r],{})}))};
     const action={download:'downloadEstimate',share:'shareEstimate',preview:'previewEstimate'}[mode];
     if(!action||typeof window.MagicEstimate[action]!=='function'){this.toast('Экспорт не загрузился. Обновите страницу');return;}
     this.setState({estimateExportBusy:true});
@@ -61,7 +62,7 @@ const EXPORT_METHOD = String.raw`
     const setX=patch=>this.setState(st=>({exp:Object.assign({},st.exp,patch)}));
     const setAdjustment=patch=>{this.commitEstimatePercent(p.id);this.setEstimateAdjustment(p.id,patch);};
     const on=b=>({border:b?ACC:'#E4E4EE',bg:b?'#E7EFFD':'#fff',color:b?ACC:'#3D4454'});
-    const types=[['total','Общая смета','Материалы, работы и оборудование'],['draw','Общая + чертежи','Плюс план каждого помещения'],['rooms','По помещениям','Отдельная таблица на каждое']].map(([id,label,sub])=>{const a=x.type===id;return{label,sub,pick:()=>setX({type:id}),border:a?ACC:'#E4E4EE',bg:a?'#E7EFFD':'#fff',dotBorder:a?ACC:'#C9C9D6',dot:a?ACC:'transparent'};});
+    const types=[['total','Общая смета','Материалы, работы и оборудование'],['draw','Общая + чертежи','Все планы на отдельных листах'],['rooms','По помещениям','Чертёж и расчёт каждого помещения']].map(([id,label,sub])=>{const a=x.type===id;return{label,sub,pick:()=>setX({type:id}),border:a?ACC:'#E4E4EE',bg:a?'#E7EFFD':'#fff',dotBorder:a?ACC:'#C9C9D6',dot:a?ACC:'transparent'};});
     const cols=[['num','#'],['name','Название'],['qty','Кол-во'],['unit','Ед.'],['price','Цена'],['total','Итого']].map(([id,label])=>Object.assign({label,toggle:()=>setX({cols:Object.assign({},this.state.exp.cols,{[id]:!this.state.exp.cols[id]})})},on(x.cols[id])));
     const pcts=[-15,-10,-5,0,5,10,15].map(value=>Object.assign({label:value===0?'0%':(value>0?'+':'−')+Math.abs(value)+'%',pick:()=>setAdjustment({percent:value})},on(adjustment.percent===value)));
     const scopes=[['all','Вся смета'],['works','Работы'],['mats','Материалы'],['equipment','Оборудование']].map(([id,label])=>Object.assign({id,label,pick:()=>setAdjustment({scope:id})},on(adjustment.scope===id)));

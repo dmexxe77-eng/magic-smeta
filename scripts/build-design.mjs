@@ -14,6 +14,7 @@ import { presetEditorTemplate } from './design-preset-editor.mjs';
 import { calculatorTemplate } from './design-calculator.mjs';
 import { equipmentTemplate } from './design-equipment.mjs';
 import { adjustmentTemplate } from './design-adjustment.mjs';
+import { companyTemplate } from './design-company.mjs';
 import { interfaceTemplate } from './design-interface.mjs';
 
 const OUT = 'public/design';
@@ -267,6 +268,7 @@ tpl = presetEditorTemplate(tpl);
 tpl = calculatorTemplate(tpl);
 tpl = equipmentTemplate(tpl);
 tpl = adjustmentTemplate(tpl);
+tpl = companyTemplate(tpl);
 tpl = interfaceTemplate(tpl, fs.readFileSync('design-src/interface.css', 'utf8'));
 /* Бренд ЗАМЕРX: знак, название, палитра — после всех правок разметки, чтобы перекрасить и их */
 tpl = brandTemplate(tpl);

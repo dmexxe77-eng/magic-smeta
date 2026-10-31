@@ -5,6 +5,8 @@ import { fitToStage } from './stage.js';
 export { estimateHtml } from '../utils/estimate-html.js';
 export { normalizeEstimateAdjustment, calculateEstimateTotals, adjustmentLabel } from '../utils/estimate-adjustment.js';
 export { prepareEstimateExport } from '../utils/estimate-export.js';
+export { getCompanyDetails, getCompanyProfile } from './company-profile.js';
+export { withEstimateImages } from './estimate-images.js';
 
 const fileName = options => `Смета_${options?.project?.name || 'Проект'}`.replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '_');
 

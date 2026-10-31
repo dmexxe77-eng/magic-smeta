@@ -23,7 +23,8 @@ const PRESETS=MAIN.presets;`, 'restore main');
     '  componentDidUpdate(pp){if(pp.startScreen!==this.props.startScreen)this.applyStart();if(pp.theme!==this.props.theme&&this.state.themeO)this.setState({themeO:null});this.themeTick();this.scheduleDesignSave();}', 'update');
   replace('  componentWillUnmount(){if(this._mo)this._mo.disconnect();}',
     '  componentWillUnmount(){this.stopDesignStorage();if(this._mo)this._mo.disconnect();}', 'unmount');
-  replace('  seed(){', `  designSnapshot(){return Object.assign({},DESIGN_SAVED||{},{version:1,blocks:BLOCKS,presets:PRESETS,nom:NOM,roomOpts:ROOM_OPTS,projects:this.state.projects,estEd:this.state.estEd});}
+  replace("  state={screen:'home'", "  state={profile:DESIGN_SAVED&&DESIGN_SAVED.profile||{},screen:'home'", 'restore profile');
+  replace('  seed(){', `  designSnapshot(){return Object.assign({},DESIGN_SAVED||{},{version:1,blocks:BLOCKS,presets:PRESETS,nom:NOM,roomOpts:ROOM_OPTS,projects:this.state.projects,estEd:this.state.estEd,profile:this.state.profile});}
   saveDesign(){clearTimeout(this._designSaveTimer);this._designSaveTimer=null;return DESIGN_STORE.save(this.designSnapshot());}
   scheduleDesignSave(){if(!this._designStorageReady)return;clearTimeout(this._designSaveTimer);this._designSaveTimer=setTimeout(()=>this.saveDesign(),120);}
   startDesignStorage(){

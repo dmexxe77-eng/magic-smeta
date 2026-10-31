@@ -3,6 +3,8 @@
    файл — без window.open и печатных диалогов (их блокируют браузеры и webview).
    Постраничная нарезка не рвёт строки таблиц (tr) и блоки .no-split. */
 
+import { keepWithNextRanges, paginatePdf } from "./pdf-pagination.js";
+
 const ensureLibs = async () => {
   const load = (src, msg) => new Promise((resolve, reject) => {
     const ex = Array.from(document.scripts || []).find(s => s.src === src);
@@ -51,7 +53,7 @@ export async function htmlToPdf(html, fileName, opts = {}) {
     const pxPerMm = canvas.width / imgW;
     const pageSlicePx = Math.max(1, Math.floor((pageH - margin * 2) * pxPerMm));
     const scaleY = canvas.height / Math.max(1, pageEl.scrollHeight);
-    /* нельзя резать между листами: строки таблиц и .no-split (заголовки) */
+    /* Строки таблиц и .no-split переносятся целиком, если помещаются на лист. */
     const pageRect0 = pageEl.getBoundingClientRect();
     const toRange = el => {
       const rc = el.getBoundingClientRect();
@@ -61,17 +63,17 @@ export async function htmlToPdf(html, fileName, opts = {}) {
       };
     };
     const avoidEls = [...pageEl.querySelectorAll(".no-split"), ...pageEl.querySelectorAll("table tr")];
-    const avoidRanges = avoidEls.map(toRange).filter(z => z.bottom > z.top).sort((a, b) => a.top - b.top);
-    let y = 0, first = true;
-    while (y < canvas.height) {
-      const targetEnd = Math.min(y + pageSlicePx, canvas.height);
-      let end = targetEnd;
-      const r = avoidRanges.find(z => z.top < targetEnd && z.bottom > targetEnd);
-      if (r) {
-        const minSlice = Math.floor(pageSlicePx * 0.45);
-        if (r.top - y >= minSlice) end = r.top;
-      }
-      const h = Math.max(1, Math.min(end - y, canvas.height - y));
+    const avoidRanges = [
+      ...avoidEls.map(toRange),
+      ...keepWithNextRanges(pageEl.querySelectorAll("[data-pdf-keep-with-next]"), toRange),
+    ];
+    const breakBefore = [...pageEl.querySelectorAll("[data-pdf-break-before]")].map(el => toRange(el).top);
+    const contentEnds = [...pageEl.querySelectorAll("[data-pdf-content-end]")].map(el => toRange(el).bottom);
+    const contentEnd = contentEnds.length ? contentEnds.reduce((last, edge) => Math.max(last, edge), 0) : undefined;
+    const slices = paginatePdf({ height: canvas.height, pageHeight: pageSlicePx, avoidRanges, breakBefore, contentEnd });
+    let first = true;
+    for (const { top: y, bottom } of slices) {
+      const h = bottom - y;
       const pageCanvas = document.createElement("canvas");
       pageCanvas.width = canvas.width;
       pageCanvas.height = h;
@@ -80,7 +82,6 @@ export async function htmlToPdf(html, fileName, opts = {}) {
       if (!first) pdf.addPage();
       first = false;
       pdf.addImage(part, "JPEG", margin, margin, imgW, h / pxPerMm, undefined, "FAST");
-      y += h;
     }
     if (opts.blob) return pdf.output("blob");
     pdf.save(String(fileName || "документ").replace(/[\\/:*?"<>|]+/g, "_") + ".pdf");

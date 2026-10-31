@@ -144,7 +144,7 @@ test('denied access to localStorage does not crash the editor and reports once',
 test('the template restores directories before state creation and saves global edits through lifecycle hooks', async () => {
   const { storageTemplate } = await import('../scripts/design-storage.mjs');
   const { runInNewContext } = await import('node:vm');
-  const saved = snapshot();
+  const saved = { ...snapshot(), profile: { company: 'Сохранённая компания' } };
   const storage = memoryStorage({ [DESIGN_STORAGE_KEY]: JSON.stringify(saved) });
   const source = `<script src="/design/main-data.js"></script>
 const MAIN=JSON.parse(JSON.stringify(window.MAGIC_MAIN));
@@ -156,7 +156,7 @@ const NOM=MAIN.nom;
 const ROOM_OPTS=MAIN.roomOpts.concat([{id:'builtin',n:'Builtin',p:1,u:'шт'}]);
 const optQty=o=>0;
 class Component extends DCLogic {
-  state={projects:this.seed(),estEd:JSON.parse(JSON.stringify(MAIN.estEd||{}))};
+  state={screen:'home',projects:this.seed(),estEd:JSON.parse(JSON.stringify(MAIN.estEd||{}))};
   seed(){return JSON.parse(JSON.stringify(MAIN.projects||[]));}
   componentDidMount(){this.applyStart();window.__zamer=this;this.themeTick();}
   componentDidUpdate(pp){if(pp.startScreen!==this.props.startScreen)this.applyStart();if(pp.theme!==this.props.theme&&this.state.themeO)this.setState({themeO:null});this.themeTick();}
@@ -182,6 +182,7 @@ globalThis.TestDirectories={BLOCKS,PRESETS,NOM,ROOM_OPTS};`;
   runInNewContext(patched.replace(/<script[^>]*><\/script>/g, ''), context);
   const component = new context.TestComponent();
   assert.deepEqual(copy(component.state.projects), saved.projects);
+  assert.deepEqual(copy(component.state.profile), saved.profile);
   assert.deepEqual(copy(context.TestDirectories.BLOCKS).map(b => b.id), saved.blocks.map(b => b.id));
   assert.deepEqual(copy(context.TestDirectories.ROOM_OPTS), saved.roomOpts);
   assert.deepEqual(copy(context.TestDirectories.NOM), saved.nom);
@@ -189,11 +190,13 @@ globalThis.TestDirectories={BLOCKS,PRESETS,NOM,ROOM_OPTS};`;
   component.componentDidMount();
   context.TestDirectories.PRESETS.custom_1[0].name = 'Новое имя';
   component.state.estEd.project1.Лента.q = 7;
+  component.state.profile.company = '';
   component.componentDidUpdate({});
   listeners.get('window:pagehide')();
   const reloaded = createDesignStorage({ storage }).load();
   assert.equal(reloaded.presets.custom_1[0].name, 'Новое имя');
   assert.equal(reloaded.estEd.project1.Лента.q, 7);
+  assert.equal(reloaded.profile.company, '');
   component.componentWillUnmount();
   assert.equal(listeners.size, 0);
 });

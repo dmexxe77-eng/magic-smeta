@@ -2,6 +2,8 @@
 
 Актуальная логика количества в мобильной версии `/design`: [QUANTITIES.md](QUANTITIES.md) (обновлено 29.10.2026).
 
+Чертежи в экспорте сметы и общий SVG-генератор для React Native: [DRAWING-EXPORT.md](DRAWING-EXPORT.md) (обновлено 31.10.2026).
+
 Пакет для интеграции дизайна в React Native (Expo Go SDK 57). Версия 6 от 08.09.2026:
 - Калькулятор: новый блок «Доп. опции помещения» в начале, перед «Полотно». Глобальный список ROOM_OPTS[] = {id, n (имя номенклатуры), p, u, m, src}; у помещения room.opts[id]=true/false (галочка своя в каждом помещении), room.optQ[id] — количество для src='manual' (inline-поле, при значении >0 галочка ставится сама). Отмеченные опции попадают в смету: q = optQty(src, geom) — area/perim/angles/inner/outer/manual; материал/работа по флагу m.
 - Экран «Опции помещения» (optEd, чип «Настроить» в шапке блока): одна строка на опцию — имя позиции (тап → выбор из базы номенклатур, одиночный выбор, target:'opt'), чип параметра «× P» (тап → шторка «Что умножать»: S, P, все углы, внутр., внешн., вручную), ×. «+ Добавить из базы» сразу открывает базу; пустые пункты удаляются при выходе.
@@ -221,6 +223,7 @@ overlay    rgba(30,37,48,.4)
 
 - Экраны — `react-navigation` native stack (slide from right) + `@gorhom/bottom-sheet` для шторок.
 - Чертёж — `react-native-svg` (полигон + circle + text), viewBox 340×150 (карта) / 340×170 (построение), масштабирование — как в `svgPoly()`.
+- Чертёж в экспорте сметы — общий `roomDrawingSvg()` из `src/utils/estimate-drawing.js`; не копировать для него `svgPoly()`. Контракт данных, модель расположения и граница нативного PDF-адаптера описаны в [DRAWING-EXPORT.md](DRAWING-EXPORT.md).
 - Горизонтальные ленты чипов — `ScrollView horizontal` с `contentContainerStyle={{paddingHorizontal:16, gap:6}}`.
 - Числовые правки в смете — `TextInput keyboardType="decimal-pad"`, запятая как разделитель.
 - Планшет — `useWindowDimensions`, breakpoint ≥ 700: центральная колонка 720, две колонки в Calc.

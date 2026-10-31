@@ -18,7 +18,7 @@ export function validateDesignSnapshot(value) {
   try {
     if (!record(value) || value.version !== 1 || !Array.isArray(value.blocks) || !record(value.presets)
       || !Array.isArray(value.nom) || !Array.isArray(value.roomOpts) || !Array.isArray(value.projects)
-      || !record(value.estEd)) return false;
+      || !record(value.estEd) || (value.profile != null && !record(value.profile))) return false;
     const ids = new Set();
     for (const block of value.blocks) {
       if (!record(block) || !safeBlockId(block.id) || ids.has(block.id) || typeof block.title !== 'string') return false;
