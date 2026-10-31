@@ -7,6 +7,19 @@ const cents = value => {
 };
 const amount = line => finite(finite(line.q) * finite(line.p));
 
+function displayQuantity(value) {
+  const quantity = finite(value);
+  const formatted = quantity.toLocaleString('ru-RU', { maximumFractionDigits: 2 });
+  const rounded = Number(formatted.replace(/\s/g, '').replace(',', '.'));
+  const tolerance = Number.EPSILON * Math.max(1, Math.abs(quantity)) * 8;
+  return {
+    exportQuantity: quantity !== 0 && rounded === 0
+      ? (quantity > 0 ? '< 0,01' : '> −0,01')
+      : formatted,
+    exportQuantityRounded: Math.abs(quantity - rounded) > tolerance,
+  };
+}
+
 // Distribute fractional kopecks instead of adding a separate rounding charge.
 function allocateCents(amounts, target) {
   if (!amounts.length) return [];
@@ -49,7 +62,7 @@ function prepareRows(lines, target, foldedPercent) {
     ...line,
     p: foldedPercent ? prices[index] : line.p,
     exportTotal: allocated[index] / 100,
-    exportQuantity: finite(line.q).toLocaleString('ru-RU', { maximumSignificantDigits: 21 }),
+    ...displayQuantity(line.q),
     exportPrice: displayPrice(finite(line.q), prices[index], allocated[index]),
   }));
 }
@@ -113,7 +126,7 @@ export function partitionEstimateExport(prepared, rooms = []) {
         remainingQuantity -= quantity;
         group[section].push({
           ...line, q: quantity, exportTotal: allocated[index] / 100,
-          exportQuantity: quantity.toLocaleString('ru-RU', { maximumSignificantDigits: 21 }),
+          ...displayQuantity(quantity),
           exportPrice: displayPrice(quantity, finite(line.p), allocated[index]),
         });
       });

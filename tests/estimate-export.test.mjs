@@ -14,7 +14,7 @@ const assertRowsAddUp = prepared => {
   assert.equal(sum(prepared.works), cents(prepared.worksTotal));
   assert.equal(sum(prepared.equipment || []), cents(prepared.equipmentTotal || 0));
   for (const line of [...prepared.mats, ...prepared.works, ...(prepared.equipment || [])]) {
-    const quantity = Number(line.exportQuantity.replace(/\s/g, '').replace(',', '.'));
+    const quantity = line.exportQuantityRounded ? line.q : Number(line.exportQuantity.replace(/\s/g, '').replace(',', '.'));
     assert.equal(cents(priceNumber(line) * quantity), cents(line.exportTotal), JSON.stringify(line));
   }
 };
@@ -114,16 +114,44 @@ test('export price precision is sufficient for long fractional quantities', () =
   assert.equal(sum(prepared.works), cents(prepared.totals.adjustedTotal));
 });
 
-test('printed quantities retain all digits needed to reproduce the line amount', () => {
+test('printed quantities use at most two decimals while preserving exact calculations', () => {
   const source = { mats: [], works: [{ q: 0.333, p: 300 }, { q: 0.123456789, p: 400 }] };
   const prepared = prepareEstimateExport(source, { percent: 10, scope: 'works' }, false);
-  assert.equal(prepared.works[0].exportQuantity, '0,333');
-  assert.equal(prepared.works[1].exportQuantity, '0,123456789');
-  for (const line of prepared.works) {
-    const printedQuantity = Number(line.exportQuantity.replace(/\s/g, '').replace(',', '.'));
-    assert.equal(cents(printedQuantity * priceNumber(line)), cents(line.exportTotal));
-  }
+  assert.equal(prepared.works[0].exportQuantity, '0,33');
+  assert.equal(prepared.works[1].exportQuantity, '0,12');
+  assert.ok(prepared.works.every(line => line.exportQuantityRounded));
+  assertRowsAddUp(prepared);
+  assert.equal(prepared.works[0].exportTotal, 109.89);
+  assert.equal(prepared.works[0].p, 330);
   assert.equal(source.works[0].q, 0.333);
+});
+
+test('room export removes floating tails and rounds allocated quantities without changing prices or amounts', () => {
+  const prepared = prepareEstimateExport({ works: [{ k: 'protection', q: 136.79, p: 365 }], mats: [{ k: 'profile', q: 109.29, p: 620 }] });
+  const groups = partitionEstimateExport(prepared, [
+    { id: 'a', est: { works: [{ k: 'protection', q: 41.19 }], mats: [{ k: 'profile', q: 35.9 }] } },
+    { id: 'b', est: { works: [{ k: 'protection', q: 95.61 }], mats: [{ k: 'profile', q: 73.39 }] } },
+  ]);
+  assert.equal(groups[0].works[0].exportQuantity, '41,19');
+  assert.equal(groups[0].works[0].exportQuantityRounded, true);
+  assert.equal(groups[0].works[0].exportPrice, '365');
+  assert.equal(groups[0].works[0].exportTotal, 15033.25);
+  assert.equal(groups[0].mats[0].exportQuantity, '35,9');
+  assert.equal(groups[0].mats[0].exportQuantityRounded, false);
+  groups.forEach(assertRowsAddUp);
+  assert.equal(groups.reduce((value, group) => value + sum(group.works), 0), cents(prepared.worksTotal));
+});
+
+test('small nonzero quantities remain distinguishable from actual zero', () => {
+  const prepared = prepareEstimateExport({ mats: [{ q: 0.001, p: 1000 }, { q: -0.001, p: 1000 }, { q: 0, p: 1000 }] });
+  assert.deepEqual(prepared.mats.map(line => line.exportQuantity), ['< 0,01', '> −0,01', '0']);
+  assert.deepEqual(prepared.mats.map(line => line.exportTotal), [1, -1, 0]);
+  assertRowsAddUp(prepared);
+});
+
+test('quantity formatting rounds decimal halves and removes unnecessary trailing zeros', () => {
+  const prepared = prepareEstimateExport({ mats: [{ q: 1.005, p: 0 }, { q: 2.675, p: 0 }, { q: 6, p: 0 }] });
+  assert.deepEqual(prepared.mats.map(line => line.exportQuantity), ['1,01', '2,68', '6']);
 });
 
 test('one global preparation preserves room identities and the whole-project cents', () => {

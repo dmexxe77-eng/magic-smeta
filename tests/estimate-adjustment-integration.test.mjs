@@ -221,7 +221,7 @@ test('per-room embedded adjustment allocates cent rounding globally', async () =
   assert.equal(Math.round(rowTotals.reduce((sum, value) => sum + value, 0) * 100), 28);
 });
 
-test('embedded markup preserves fractional quantity used by the displayed line price', async () => {
+test('embedded markup formats quantity to two decimals and preserves exact price and amount', async () => {
   const edits = { [JSON.stringify(['total', 'works', work.id])]: { q: 0.333 } };
   const calc = harness({ percent: 10, scope: 'works' }, edits, { showAdjustment: false },
     { prices: { [material.id]: 0, [work.id]: 300 } });
@@ -229,10 +229,10 @@ test('embedded markup preserves fractional quantity used by the displayed line p
   const html = normalize(calc.html);
   const workRow = [...html.matchAll(/<tr>(.*?)<\/tr>/gs)].find(match => match[1].includes(work.name))[1];
   const cells = [...workRow.matchAll(/<td>(.*?)<\/td>/gs)].map(match => match[1]);
-  assert.equal(cells[2], '0,333');
+  assert.equal(cells[2], '0,33');
   assert.equal(cells[4], '330');
   assert.equal(cells[5], '109,89 ₽');
   const number = value => Number(value.replace(' ₽', '').replaceAll(' ', '').replace(',', '.'));
-  assert.equal(Math.round(number(cells[2]) * number(cells[4]) * 100), Math.round(number(cells[5]) * 100));
+  assert.equal(Math.round(0.333 * number(cells[4]) * 100), Math.round(number(cells[5]) * 100));
   assert.equal(amountFromHtml(html), 109.89);
 });

@@ -37,6 +37,7 @@ const CSS = `
 .estimate-document .estimate-room-total{margin-top:16px}.estimate-document .estimate-empty{font-size:12px;color:#647184;padding:8px 0}.estimate-document .estimate-summary{border-top:2px solid #202532;margin-top:28px;padding-top:12px}
 .estimate-document .estimate-summary-row{display:flex;justify-content:space-between;gap:20px;margin:7px 0;font-variant-numeric:tabular-nums}
 .estimate-document .estimate-grand{font-size:21px;font-weight:700;margin-top:14px}
+.estimate-document .estimate-rounding-note{font-size:10px;color:#647184;margin-top:12px}
 .estimate-document .estimate-room{margin-top:24px;padding-top:12px}.estimate-document .estimate-room>.estimate-drawing{margin-bottom:22px}
 .estimate-document .estimate-drawings{margin-top:32px;padding-top:12px}.estimate-document .estimate-drawings-heading{text-align:center;color:#203e60;margin-bottom:18px}
 .estimate-document .estimate-drawings-heading h2{margin:0 0 5px;font-size:18px;letter-spacing:1px;text-transform:uppercase}.estimate-document .estimate-drawings-heading p{font-size:11px;color:#6d7484}
@@ -100,9 +101,12 @@ export function estimateHtml({ project = {}, company = {}, est = {}, adjustment,
   const renderSections = group => presentCategories(group).map(([key, label, total]) => sectionHtml(key, label, group[total], group[key] || [], columns)).join('');
   const byRoom = type === 'rooms' || type === 'room';
   const hasAdjustment = showAdjustment && prepared.totals.percent !== 0;
+  const hasRoundedQuantity = group => CATEGORIES.some(([key]) => (group[key] || []).some(line => line.exportQuantityRounded));
+  let quantityRounded = hasRoundedQuantity(prepared);
   let content = '';
   if (byRoom) {
     const groups = partitionEstimateExport(prepared, activeRooms);
+    if (groups.length) quantityRounded = groups.some(hasRoundedQuantity);
     content = groups.map((group, index) => `<section class="estimate-room" data-estimate-room="${escape(group.id)}"${index ? ' data-pdf-break-before' : ''}>${group.room ? roomDrawingHtml(group.room) : `<h2 class="no-split">${escape(group.name)}</h2>`}${renderSections(group)}<div class="estimate-room-total no-split"><span>Итого по помещению${hasAdjustment ? ' без корректировки' : ''}</span><span>${money(group.materialsTotal + group.worksTotal + group.equipmentTotal)}</span></div></section>`).join('');
     if (!groups.length) content = renderSections(prepared);
   } else {
@@ -110,10 +114,12 @@ export function estimateHtml({ project = {}, company = {}, est = {}, adjustment,
   }
   const summary = presentCategories(prepared).map(([, label, total]) => `<div class="estimate-summary-row"><span>${label}</span><span>${money(prepared[total])}</span></div>`).join('');
   const correction = hasAdjustment ? `<div class="estimate-summary-row"><span>До ${prepared.totals.percent > 0 ? 'наценки' : 'скидки'}</span><span>${money(prepared.totals.baseTotal)}</span></div><div class="estimate-summary-row" data-estimate-adjustment><span>${escape(adjustmentLabel(adjustment))}</span><span>${prepared.totals.adjustmentAmount > 0 ? '+' : prepared.totals.adjustmentAmount < 0 ? '−' : ''}${money(Math.abs(prepared.totals.adjustmentAmount))}</span></div>` : '';
+  const roundingNote = quantityRounded && columns.some(([id]) => id === 'qty')
+    ? '<p class="estimate-rounding-note">Количество округлено до 2 знаков. Суммы рассчитаны по точным значениям.</p>' : '';
   const drawingPairs = [];
   if (type === 'draw') for (let i = 0; i < activeRooms.length; i += 2) {
     drawingPairs.push(`<div class="estimate-drawing-pair no-split"${i + 2 >= activeRooms.length ? ' data-pdf-content-end' : ''}>${activeRooms.slice(i, i + 2).map(room => roomDrawingHtml(room, { compact: true })).join('')}</div>`);
   }
   const drawings = type === 'draw' ? `<section class="estimate-drawings" data-pdf-break-before><div class="estimate-drawings-heading no-split"><h2>Чертежи помещений</h2><p>Контуры потолков по результатам замера · размеры в сантиметрах</p></div>${drawingPairs.length ? drawingPairs.join('') : '<p class="estimate-empty" data-pdf-content-end>Помещения не добавлены</p>'}</section>` : '';
-  return `<article class="estimate-document${type === 'compact' ? ' compact' : ''}"><style>${CSS}</style>${headerHtml(project, company, activeRooms, type)}${content}<footer class="estimate-summary no-split" data-pdf-content-end>${summary}${correction}<div class="estimate-summary-row estimate-grand"><span>Итого к оплате</span><span data-estimate-grand-total>${money(prepared.totals.adjustedTotal)}</span></div></footer>${drawings}</article>`;
+  return `<article class="estimate-document${type === 'compact' ? ' compact' : ''}"><style>${CSS}</style>${headerHtml(project, company, activeRooms, type)}${content}<footer class="estimate-summary no-split" data-pdf-content-end>${summary}${correction}<div class="estimate-summary-row estimate-grand"><span>Итого к оплате</span><span data-estimate-grand-total>${money(prepared.totals.adjustedTotal)}</span></div>${roundingNote}</footer>${drawings}</article>`;
 }

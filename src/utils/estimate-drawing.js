@@ -185,6 +185,6 @@ export const ESTIMATE_DRAWING_CSS = `
 
 export function roomDrawingHtml(room = {}, { compact = false } = {}) {
   const model = roomDrawingLayout(room, { compact });
-  const metrics = model.path ? `<span class="estimate-drawing-metrics">S = ${number(model.area)} м² · P = ${number(Math.round(model.perimeter * 100))} см</span>` : '';
+  const metrics = model.path ? `<span class="estimate-drawing-metrics">S = ${number(model.area)} м² · P = ${number(model.perimeter)} м</span>` : '';
   return `<div class="estimate-drawing${compact ? ' estimate-drawing-compact' : ''} no-split"><div class="estimate-drawing-header"><strong class="estimate-drawing-name">${escape(model.name)}</strong>${metrics}</div>${model.path ? svgFromLayout(model) : '<div class="estimate-drawing-empty">Чертёж не добавлен</div>'}</div>`;
 }
