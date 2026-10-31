@@ -4,9 +4,9 @@ import './drawEditor/editor.css';
 
 /* Токены страницы дизайна (design-src/README.md, раздел 1) */
 const DESIGN_VARS = {
-  '--ground': '#F3F3FA', '--paper': '#F7F7FC', '--surface': '#FFFFFF', '--surface2': '#F3F3FA',
-  '--ink': '#0F1620', '--ink2': '#6F7688', '--ink3': '#A5A9B8', '--line': '#E4E4EE', '--grid': '#ECECF4',
-  '--fill': 'rgba(20,97,238,.10)', '--pri': '#1461EE', '--laser': '#1461EE', '--laser-soft': '#E7EFFD',
+  '--ground': '#F3F3FA', '--paper': '#F8FAFD', '--surface': '#FFFFFF', '--surface2': '#F2F5FA',
+  '--ink': '#0F1620', '--ink2': '#626D7E', '--ink3': '#737D8D', '--line': '#E3E8F0', '--grid': '#E5EBF3',
+  '--fill': 'rgba(20,97,238,.06)', '--pri': '#1461EE', '--laser': '#1461EE', '--laser-soft': '#E7EFFD',
   '--sans': "'Manrope','Inter',system-ui,sans-serif", '--mono': "'Manrope','Inter',system-ui,sans-serif",
 };
 
@@ -23,6 +23,7 @@ export function open(opts = {}) {
   const close = () => { if (ed) { ed.destroy(); ed = null; } unfit(); host.remove(); };
   ed = createDrawEditor(host, {
     roomName: opts.roomName,
+    canvasLook: opts.canvasLook,
     initial: opts.initial || null,
     onBack: () => { close(); if (opts.onBack) opts.onBack(); },
     onFinish: res => { if (opts.onFinish) opts.onFinish(res); },

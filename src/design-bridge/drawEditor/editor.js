@@ -2,19 +2,23 @@
 // Копия построителя для страниц дизайна и онлайн-версии: развивается отдельно от основной версии (внутренние вырезы и т. п.).
 // Перенесён из HTML-прототипа: императивный DOM внутри переданного корневого элемента.
 import { L,TAU,wrap,hyp,sub,add,mul,dot,cross,norm,perp,clone,cm,fmt2,turnAt,shoelace,windOf,interiorDeg,outNormal,lineX,segX,inside,isInteriorDiag,W_ANG,toPts,flat,buildCons,conRes,resid,jac,solveLin,sq,lm,rankOf,rowFor,estScale,analyze,alignPts,makeModel,solveModel,ptsOf,filletInfo,arcInfo,flatten,perimeterOf,polyStats,sideLen,holesOf,flattenHoles,opHole,opHoleDelete,withHole,checkHoles,bboxOf,bakeModel,checkFillets,opDelete,opAddPoint,opShift,opLength,opFillet,opArc,opBump,rectPoly,circumR,ovalPoly,DEG,W_PRIOR,NEED } from './geometry.js';
+import { APPEARANCES, drawDimension, drawVertex } from './canvas-appearance.js';
 
+const icon = (name, extra = '') => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ${extra}>${({ back: '<path d="m14 6-6 6 6 6"/>', undo: '<path d="M3 10a9 9 0 1 1 2.4 8.1M3 4v6h6"/>', redo: '<path d="M21 10a9 9 0 1 0-2.4 8.1M21 4v6h-6"/>', arrow: '<path d="M5 12h14m-5-5 5 5-5 5"/>', plus: '<path d="M12 5v14M5 12h14"/>', minus: '<path d="M5 12h14"/>', fit: '<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/>' })[name] || ''}</svg>`;
 const TEMPLATE = `<div class="app" id="app">
   <div class="top">
-    <button class="ib" id="bBack" title="Назад">‹</button>
-    <h1 id="title">Построение <span class="sub" id="sub"></span></h1>
-    <button class="ib" id="bUndo" title="Отменить">↶</button>
-    <button class="ib" id="bRedo" title="Повторить">↷</button>
+    <button class="ib" id="bBack" title="Назад" aria-label="Назад к помещению">${icon('back')}</button>
+    <div class="top-title"><h1 id="title">Чертёж</h1><span class="sub" id="sub"></span></div>
+    <button class="ib" id="bUndo" title="Отменить" aria-label="Отменить последнее действие">${icon('undo')}</button>
+    <button class="ib" id="bRedo" title="Повторить" aria-label="Повторить действие">${icon('redo')}</button>
     <button class="ib text" id="bNew">Заново</button>
   </div>
+  <nav class="stages" id="stages" aria-label="Этапы построения"></nav>
   <div class="cv-wrap" id="cvw">
-    <div class="stages" id="stages"></div>
-    <svg id="cv" xmlns="http://www.w3.org/2000/svg"></svg>
-    <div class="zoom"><button id="zIn" title="Крупнее">+</button><button id="zOut" title="Мельче">−</button><button id="zFit" class="fit" title="Вписать">⤢</button></div>
+    <svg id="cv" xmlns="http://www.w3.org/2000/svg" aria-label="Холст чертежа помещения"></svg>
+    <div class="canvas-looks" id="canvasLooks" role="group" aria-label="Оформление чертежа"></div>
+    <div class="canvas-meta" id="canvasMeta"></div>
+    <div class="zoom"><button id="zIn" title="Крупнее" aria-label="Увеличить чертёж">${icon('plus')}</button><button id="zOut" title="Мельче" aria-label="Уменьшить чертёж">${icon('minus')}</button><button id="zFit" class="fit" title="Вписать" aria-label="Показать весь чертёж">${icon('fit')}</button></div>
     <div class="start" id="start" hidden></div>
     <div class="hint" id="hint"></div>
     <div class="toast" id="toast"></div>
@@ -33,8 +37,24 @@ function finish() { if (!S.poly) return; const st = polyStats(S.poly), F = flatt
   const holes = flattenHoles(S.poly, 12).map(H => H.map(p => [r2(p.x - x0), r2(p.y - y0)]));
   if (opts.onFinish) opts.onFinish({ name: (S.roomName || '').trim() || opts.roomName || 'Помещение', verts: F.map(p => [r2(p.x - x0), r2(p.y - y0)]), holes, area: Math.round(st.area * 100) / 100, perim: Math.round(st.perim * 100) / 100, draw }); }
 // ───────── state & canvas ─────────
-const FRESH = () => ({ stage: 0, sk: { pts: [], mode: 'grid' }, m: null, base: null, ops: [], redoOps: [], poly: null, sel: null, op: null, pick: null, hist2: [], redo2: [], hot: null, focusReq: null, sess: 0, quick: null, origin: null, roomName: opts.roomName || 'Помещение', tab2: 'walls', dpick: null });
+const FRESH = () => ({ stage: 0, sk: { pts: [], mode: 'grid', saved: null }, m: null, base: null, ops: [], redoOps: [], poly: null, sel: null, op: null, pick: null, hist2: [], redo2: [], hot: null, focusReq: null, sess: 0, quick: null, origin: null, roomName: opts.roomName || 'Помещение', tab2: 'walls', tab3: 'walls', dpick: null });
 const S = FRESH();
+let canvasLook = opts.canvasLook === 'classic' || Object.hasOwn(APPEARANCES, opts.canvasLook) ? opts.canvasLook : 'technical';
+const canvasVars = new Set(Object.values(APPEARANCES).flatMap(look => Object.keys(look.vars)));
+function applyCanvasLook() {
+  const canvas = $('#cvw'), appearance = APPEARANCES[canvasLook];
+  canvas.dataset.look = canvasLook;
+  for (const key of canvasVars) canvas.style.removeProperty(key);
+  if (appearance) for (const [key, value] of Object.entries(appearance.vars)) canvas.style.setProperty(key, value);
+}
+$('#canvasLooks').addEventListener('click', event => {
+  const button = event.target.closest('[data-look]');
+  if (!button || (button.dataset.look !== 'classic' && !Object.hasOwn(APPEARANCES, button.dataset.look))) return;
+  canvasLook = button.dataset.look;
+  applyCanvasLook();
+  renderChrome();
+  renderCanvas();
+});
 let VT = { s: 1, tx: 0, ty: 0 }, Z = { k: 1, dx: 0, dy: 0 }, lastStage = 0, lastQuick = '';
 const svg = $('#cv'), NS = 'http://www.w3.org/2000/svg';
 function el(tag, attrs, text) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; return e; }
@@ -42,10 +62,10 @@ const toS = p => ({ x: (p.x * VT.s + VT.tx) * Z.k + Z.dx, y: (p.y * VT.s + VT.ty
 const fromS = q => ({ x: ((q.x - Z.dx) / Z.k - VT.tx) / VT.s, y: ((q.y - Z.dy) / Z.k - VT.ty) / VT.s });
 const clampK = k => Math.min(64, Math.max(0.5, k));
 function zoomAt(f, c) { const k = clampK(Z.k * f), r = k / Z.k; Z = { k, dx: c.x - (c.x - Z.dx) * r, dy: c.y - (c.y - Z.dy) * r }; renderCanvas(); }
-function fitView(pts) { const W = svg.clientWidth, H = svg.clientHeight, pad = 62; let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+function fitView(pts) { const W = Math.max(1, svg.clientWidth), H = Math.max(1, svg.clientHeight), pad = Math.min(62, W * .16, H * .18), caption = Math.min(36, H * .12); let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
   pts.forEach(p => { x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y); });
-  const w = Math.max(x1 - x0, 1e-6), h = Math.max(y1 - y0, 1e-6), s = Math.min((W - 2 * pad) / w, (H - 2 * pad - 36) / h);
-  VT = { s, tx: (W - w * s) / 2 - x0 * s, ty: (H - h * s) / 2 - y0 * s + 18 }; }
+  const w = Math.max(x1 - x0, 1e-6), h = Math.max(y1 - y0, 1e-6), s = Math.min(Math.max(1, W - 2 * pad) / w, Math.max(1, H - 2 * pad - caption) / h);
+  VT = { s, tx: (W - w * s) / 2 - x0 * s, ty: (H - h * s) / 2 - y0 * s + caption / 2 }; }
 const holeBase = (poly, h) => { if (!poly) return 0; let b = poly.v.length; const hs = holesOf(poly); for (let k = 0; k < h && k < hs.length; k++) b += hs[k].v.length; return b; };
 const HL = (h, i) => L(holeBase(S.poly, h) + i);
 function dirOut(P, i) { const n = P.length, u1 = norm(sub(P[(i - 1 + n) % n], P[i])), u2 = norm(sub(P[(i + 1) % n], P[i])), b = add(u1, u2);
@@ -60,21 +80,37 @@ function sidePts(poly, i) { const n = poly.v.length, P = ptsOf(poly), ai = arcIn
     for (let k = 0; k <= st; k++) out.push(at(sw * k / st)); return out; }
   const f0 = filletInfo(poly, i), f1 = filletInfo(poly, (i + 1) % n); return [f0 ? f0.T2 : P[i], f1 ? f1.T1 : P[(i + 1) % n]]; }
 
+function dimension(group, a, b, normal, label, active, automatic, i, { holeIndex, points } = {}) {
+  let anchor;
+  if (canvasLook === 'technical' && points && points.length > 2) {
+    const middle = (points.length - 1) / 2, before = Math.floor(middle), after = Math.ceil(middle);
+    anchor = { center: mul(add(points[before], points[after]), .5),
+      tangent: sub(points[Math.min(points.length - 1, after + 1)], points[Math.max(0, before - 1)]) };
+  } else if (canvasLook === 'technical' && points && points.length === 2) { [a, b] = points; }
+  const box = drawDimension({ group, a, b, normal, label, active, automatic, anchor, look: canvasLook, scale: 1, inside: holeIndex != null,
+    bounds: { width: svg.clientWidth, height: svg.clientHeight, top: 54, bottom: 32 } });
+  const hit = { x: box.center.x - box.width / 2 - 3, y: box.center.y - box.height / 2 - 4, width: box.width + 6, height: box.height + 8, fill: 'transparent', 'data-hit': 's', 'data-i': i };
+  if (holeIndex != null) hit['data-h'] = holeIndex;
+  group.appendChild(el('rect', hit));
+}
 function renderCanvas() { while (svg.firstChild) svg.removeChild(svg.firstChild); const g = el('g', {}); svg.appendChild(g);
+  const appearance = APPEARANCES[canvasLook], strokeWidth = appearance ? appearance.strokeWidth : 2;
   const LS = Z.k >= 20 ? 0.6 : Z.k >= 8 ? 0.7 : Z.k >= 3 ? 0.85 : 1; // при увеличении буквы и подписи мельче, чтобы не закрывать мелкие выступы
   if (S.stage === 1) { const P = S.sk.pts; VT = { s: 1, tx: 0, ty: 0 }; const Q = P.map(toS);
-    if (P.length > 1) g.appendChild(el('path', { d: pathOf(Q, false), fill: 'none', stroke: 'var(--ink)', 'stroke-width': 2, 'stroke-linejoin': 'round' }));
+    if (P.length > 1) g.appendChild(el('path', { d: pathOf(Q, false), fill: 'none', stroke: 'var(--ink)', 'stroke-width': strokeWidth, 'stroke-linejoin': 'round' }));
     if (P.length > 2) g.appendChild(el('path', { d: pathOf([Q[Q.length - 1], Q[0]], false), fill: 'none', stroke: 'var(--ink3)', 'stroke-width': 1.5, 'stroke-dasharray': '4 5' }));
     Q.forEach((p, i) => { if (i === 0 && P.length > 2) g.appendChild(el('circle', { cx: p.x, cy: p.y, r: 16, style: 'fill:var(--laser-soft)' }));
-      g.appendChild(el('circle', { cx: p.x, cy: p.y, r: 4, style: 'fill:var(--paper);stroke:' + (i === 0 && P.length > 2 ? 'var(--laser)' : 'var(--ink)') + ';stroke-width:1.5' }));
-      const o = P.length > 2 ? dirOut(P, i) : { x: 0, y: -1 }; g.appendChild(text(add(p, mul(o, 17 * LS)), L(i), { size: 13 * LS, w: 600 }));
+      const o = P.length > 2 ? dirOut(P, i) : { x: 0, y: -1 };
+      if (appearance) drawVertex({ group: g, point: p, outward: o, label: L(i), picked: i === 0 && P.length > 2, look: canvasLook });
+      else { g.appendChild(el('circle', { cx: p.x, cy: p.y, r: 4, style: 'fill:var(--paper);stroke:' + (i === 0 && P.length > 2 ? 'var(--laser)' : 'var(--ink)') + ';stroke-width:1.5' }));
+        g.appendChild(text(add(p, mul(o, 17 * LS)), L(i), { size: 13 * LS, w: 600 })); }
       g.appendChild(el('circle', { cx: p.x, cy: p.y, r: 24, fill: 'transparent', 'data-hit': 'v', 'data-i': i })); });
     return; }
   const poly = S.stage === 3 ? S.poly : S.stage === 2 ? { v: S.m.sol.map(p => ({ x: p.x, y: p.y, fillet: null, arc: null })) } : quickPoly(); if (!poly) return;
   const P = ptsOf(poly), n = P.length, F = flatten(poly); fitView(F);
   const HF = flattenHoles(poly);
-  g.appendChild(el('path', { d: [F, ...HF].map(pts => pathOf(pts.map(toS), true)).join(' '), 'fill-rule': 'evenodd', style: 'fill:var(--fill);stroke:var(--ink);stroke-width:2;stroke-linejoin:round' }));
-  HF.forEach(H => g.appendChild(el('path', { d: pathOf(H.map(toS), true), style: 'fill:var(--paper);stroke:var(--ink);stroke-width:2;stroke-linejoin:round' })));
+  g.appendChild(el('path', { class: 'drawing-outline', d: [F, ...HF].map(pts => pathOf(pts.map(toS), true)).join(' '), 'fill-rule': 'evenodd', style: `fill:var(--fill);stroke:var(--ink);stroke-width:${strokeWidth};stroke-linejoin:round` }));
+  HF.forEach(H => g.appendChild(el('path', { d: pathOf(H.map(toS), true), style: `fill:var(--paper);stroke:var(--ink);stroke-width:${strokeWidth};stroke-linejoin:round` })));
   // мелкий пунктир: исходная сторона у дуги, срезанный угол у скругления, прежнее положение стены после сдвига
   if (S.stage === 3) { const dot = 'fill:none;stroke:var(--ink3);stroke-width:1;stroke-dasharray:1.5 3;stroke-linecap:round';
     if (S.ghost) g.appendChild(el('path', { d: pathOf(flatten(S.ghost).map(toS), true), style: dot }));
@@ -96,11 +132,16 @@ function renderCanvas() { while (svg.firstChild) svg.removeChild(svg.firstChild)
     const on = (S.stage === 2 && S.hot && S.hot.t === 's' && S.hot.i === i) || (S.stage === 3 && S.sel && S.sel.t === 's' && S.sel.h == null && S.sel.i === i);
     if (on) g.appendChild(el('path', { d: pathOf(sp, false), style: 'fill:none;stroke:var(--laser);stroke-width:5;stroke-linecap:round' }));
     const mid = toS(mul(add(P[i], P[j]), .5)), nO = outNormal(P, i), lp = add(mid, mul(nO, 14 * LS)), sl = hyp(sp[0], sp[sp.length - 1]);
+    const ai = arcInfo(poly, i);
     let str, color = 'var(--ink)', italic = false;
     if (S.stage === 2) { const v = S.m.sides[i]; if (v != null) str = String(v); else { str = String(cm(hyp(P[i], P[j]))); color = 'var(--ink3)'; italic = true; } if (on) color = 'var(--laser)'; }
     else { str = String(cm(hyp(P[i], P[j]))); if (on) color = 'var(--laser)'; }
-    if (on || sl >= 26) g.appendChild(text(lp, str, { size: 12 * LS, w: 600, color, italic })); // подпись короткой стены появится при увеличении
-    const ai = arcInfo(poly, i); if (ai) g.appendChild(text(add(toS(ai.apex), mul(nO, ai.dir === 'out' ? 14 : -14)), '⌒ ' + cm(ai.len), { size: 11 * LS, color: 'var(--ink2)' }));
+    if (ai && canvasLook === 'technical') str = '⌒ ' + cm(ai.len);
+    if (on || sl >= (appearance ? 52 : 26)) {
+      if (appearance) dimension(g, toS(P[i]), toS(P[j]), nO, str, on, italic, i, { points: sp });
+      else g.appendChild(text(lp, str, { size: 12 * LS, w: 600, color, italic }));
+    } // подпись короткой стены появится при увеличении
+    if (ai && canvasLook !== 'technical') g.appendChild(text(add(toS(ai.apex), mul(nO, ai.dir === 'out' ? 14 : -14)), '⌒ ' + cm(ai.len), { size: 11 * LS, color: 'var(--ink2)' }));
     g.appendChild(el('path', { d: pathOf(sp, false), fill: 'none', stroke: 'transparent', 'stroke-width': 30, 'data-hit': 's', 'data-i': i })); }
   // vertices
   const wind = windOf(P);
@@ -114,23 +155,31 @@ function renderCanvas() { while (svg.firstChild) svg.removeChild(svg.firstChild)
       g.appendChild(el('path', { d: pathOf([a, b, c], false), style: 'fill:none;stroke:var(--ink2);stroke-width:1.2' })); }
     if (S.stage === 2 && !orthoOk && roomy) { const d = vkd, inn = mul(o, -1), vk = S.m.vert[i];
       g.appendChild(text(add(p, mul(inn, 24 * LS)), Math.round(d) + '°', { size: 10 * LS, color: vk.kind === 'ortho' ? 'var(--bad)' : vk.kind === 'deg' ? 'var(--ink)' : 'var(--ink3)', italic: vk.kind === 'free' })); }
-    if (fi) { g.appendChild(el('circle', { cx: p.x, cy: p.y, r: 3, style: 'fill:none;stroke:var(--ink3);stroke-width:1.2;stroke-dasharray:2 2' }));
-      g.appendChild(text(add(toS(fi.C), mul(o, -2)), 'R' + cm(fi.R), { size: 10 * LS, color: 'var(--ink2)' })); }
-    else g.appendChild(el('circle', { cx: p.x, cy: p.y, r: on || isPick ? 6 : 3.5 * LS, style: `fill:${on || isPick ? 'var(--laser)' : 'var(--paper)'};stroke:${on || isPick ? 'var(--laser)' : 'var(--ink)'};stroke-width:1.5` }));
-    g.appendChild(text(add(p, mul(o, 18 * LS)), L(i), { size: 13 * LS, w: 600, color: on || isPick ? 'var(--laser)' : 'var(--ink)' }));
+    if (appearance) drawVertex({ group: g, point: p, outward: o, label: L(i), active: on, picked: isPick, look: canvasLook, fillet: !!fi });
+    else { if (fi) g.appendChild(el('circle', { cx: p.x, cy: p.y, r: 3, style: 'fill:none;stroke:var(--ink3);stroke-width:1.2;stroke-dasharray:2 2' }));
+      else g.appendChild(el('circle', { cx: p.x, cy: p.y, r: on || isPick ? 6 : 3.5 * LS, style: `fill:${on || isPick ? 'var(--laser)' : 'var(--paper)'};stroke:${on || isPick ? 'var(--laser)' : 'var(--ink)'};stroke-width:1.5` }));
+      g.appendChild(text(add(p, mul(o, 18 * LS)), L(i), { size: 13 * LS, w: 600, color: on || isPick ? 'var(--laser)' : 'var(--ink)' })); }
+    if (fi) g.appendChild(text(add(toS(fi.C), mul(o, -2)), 'R' + cm(fi.R), { size: 10 * LS, color: 'var(--ink2)' }));
     g.appendChild(el('circle', { cx: p.x, cy: p.y, r: 24, fill: 'transparent', 'data-hit': 'v', 'data-i': i })); }
   // вырезы (только на этапе правки): стены и углы выбираются так же, как у помещения
   if (S.stage === 3) holesOf(poly).forEach((hole, h) => { const HP = ptsOf(hole), hn = HP.length;
     for (let i = 0; i < hn; i++) { const sp = sidePts(hole, i).map(toS), j = (i + 1) % hn, on = S.sel && S.sel.t === 's' && S.sel.h === h && S.sel.i === i;
       if (on) g.appendChild(el('path', { d: pathOf(sp, false), style: 'fill:none;stroke:var(--laser);stroke-width:5;stroke-linecap:round' }));
       const mid = toS(mul(add(HP[i], HP[j]), .5)), nO = outNormal(HP, i), sl = hyp(sp[0], sp[sp.length - 1]);
-      if (on || sl >= 26) g.appendChild(text(add(mid, mul(nO, 12 * LS)), String(cm(hyp(HP[i], HP[j]))), { size: 11 * LS, w: 600, color: on ? 'var(--laser)' : 'var(--ink2)' }));
-      const ai = arcInfo(hole, i); if (ai) g.appendChild(text(add(toS(ai.apex), mul(nO, ai.dir === 'out' ? 12 : -12)), '⌒ ' + cm(ai.len), { size: 10 * LS, color: 'var(--ink2)' }));
+      const ai = arcInfo(hole, i);
+      if (on || sl >= (appearance ? 52 : 26)) {
+        const label = ai && canvasLook === 'technical' ? '⌒ ' + cm(ai.len) : String(cm(hyp(HP[i], HP[j])));
+        if (appearance) dimension(g, toS(HP[i]), toS(HP[j]), nO, label, on, false, i, { holeIndex: h, points: sp });
+        else g.appendChild(text(add(mid, mul(nO, 12 * LS)), label, { size: 11 * LS, w: 600, color: on ? 'var(--laser)' : 'var(--ink2)' }));
+      }
+      if (ai && canvasLook !== 'technical') g.appendChild(text(add(toS(ai.apex), mul(nO, ai.dir === 'out' ? 12 : -12)), '⌒ ' + cm(ai.len), { size: 10 * LS, color: 'var(--ink2)' }));
       g.appendChild(el('path', { d: pathOf(sp, false), fill: 'none', stroke: 'transparent', 'stroke-width': 26, 'data-hit': 's', 'data-i': i, 'data-h': h })); }
     for (let i = 0; i < hn; i++) { const p = toS(HP[i]), fi = filletInfo(hole, i), o = dirOut(HP, i), on = S.sel && S.sel.t === 'v' && S.sel.h === h && S.sel.i === i;
-      if (fi) { g.appendChild(el('circle', { cx: p.x, cy: p.y, r: 3, style: 'fill:none;stroke:var(--ink3);stroke-width:1.2;stroke-dasharray:2 2' })); g.appendChild(text(add(toS(fi.C), mul(o, -2)), 'R' + cm(fi.R), { size: 10 * LS, color: 'var(--ink2)' })); }
-      else g.appendChild(el('circle', { cx: p.x, cy: p.y, r: on ? 6 : 3 * LS, style: `fill:${on ? 'var(--laser)' : 'var(--paper)'};stroke:${on ? 'var(--laser)' : 'var(--ink)'};stroke-width:1.5` }));
-      g.appendChild(text(add(p, mul(o, 15 * LS)), HL(h, i), { size: 12 * LS, w: 600, color: on ? 'var(--laser)' : 'var(--ink2)' }));
+      if (appearance) drawVertex({ group: g, point: p, outward: o, label: HL(h, i), active: on, look: canvasLook, fillet: !!fi });
+      else { if (fi) g.appendChild(el('circle', { cx: p.x, cy: p.y, r: 3, style: 'fill:none;stroke:var(--ink3);stroke-width:1.2;stroke-dasharray:2 2' }));
+        else g.appendChild(el('circle', { cx: p.x, cy: p.y, r: on ? 6 : 3 * LS, style: `fill:${on ? 'var(--laser)' : 'var(--paper)'};stroke:${on ? 'var(--laser)' : 'var(--ink)'};stroke-width:1.5` }));
+        g.appendChild(text(add(p, mul(o, 15 * LS)), HL(h, i), { size: 12 * LS, w: 600, color: on ? 'var(--laser)' : 'var(--ink2)' })); }
+      if (fi) g.appendChild(text(add(toS(fi.C), mul(o, -2)), 'R' + cm(fi.R), { size: 10 * LS, color: 'var(--ink2)' }));
       g.appendChild(el('circle', { cx: p.x, cy: p.y, r: 20, fill: 'transparent', 'data-hit': 'v', 'data-i': i, 'data-h': h })); } }); }
 
 // ───────── pointer ─────────
@@ -156,7 +205,10 @@ $('#zIn').addEventListener('click', () => zoomAt(1.5, { x: svg.clientWidth / 2, 
 $('#zOut').addEventListener('click', () => zoomAt(1 / 1.5, { x: svg.clientWidth / 2, y: svg.clientHeight / 2 }));
 $('#zFit').addEventListener('click', () => { Z = { k: 1, dx: 0, dy: 0 }; renderCanvas(); });
 $('#stages').addEventListener('click', e => { const b = e.target.closest('[data-stage]'); if (!b) return; const t = +b.dataset.stage; if (t === S.stage) return;
+  flushApply();
   if (t === 1) return act('back1', {}); if (t === 2 && S.stage === 3) return act('back2', {});
+  if (t === 2 && S.stage === 1) return closeSketch();
+  if (t === 3 && S.stage === 1 && S.poly && sketchUnchanged()) { if (S.m.status.missing) return toast('Сначала введите размеры: ' + statusInfo().h, true); return act('done', {}); }
   if (t === 3 && S.stage === 2) { if (S.m.status.missing) return toast('Сначала введите размеры: ' + statusInfo().h, true); return act('done', {}); } });
 // Куда ложится новая стена — по тому, как её нарисовали:
 //  · явно косая (длиннее ~44 px на экране и дальше 22° от обеих осей) — остаётся как есть, близко к 45° прилипает к 45°;
@@ -185,7 +237,10 @@ function onTap(p) { const P = S.sk.pts; if (S.stage === 0) return;
     else if (h.t === 'd') { S.sel = null; S.tab2 = 'diags'; S.dpick = null; S.focusReq = `input[data-in="diag"][data-k="${h.i}"]`; render(); }
     else if (h.t === 'sug') addDiag(h.i, h.j); return; }
   if (S.stage === 3) { const h = p.hit; S.op = null; S.sel = h && (h.t === 'v' || h.t === 's') ? { t: h.t, i: h.i, h: h.h } : null; blurActive(); render(); } }
+const sketchSignature = () => JSON.stringify([S.sk.mode, S.sk.pts]);
+const sketchUnchanged = () => S.sk.saved != null && S.sk.saved === sketchSignature();
 function closeSketch() { const P = S.sk.pts; if (P.length < 3) return;
+  if (S.m && sketchUnchanged()) { S.stage = 2; S.sel = null; S.op = null; return render(); }
   // Замыкание по сетке: у прямоугольного контура стены чередуются (горизонталь/вертикаль), число стен чётное.
   // Последняя стена и стена A→B на разных осях → замыкающая стена перпендикулярна обеим: ставим последнюю точку на ряд/колонку A.
   // На одной оси → нужен ещё один угол, добавляем точку X сами; если точка оказалась лишней (на прямой) — убираем её.
@@ -195,7 +250,7 @@ function closeSketch() { const P = S.sk.pts; if (P.length < 3) return;
     else if (lastH && abH) last.x = A.x;
     else if (lastV && abH) { if (eq(last.x, A.x)) P.pop(); else if (eq(last.y, A.y)) P.shift(); else if (n < 200) P.push({ x: A.x, y: last.y }); }
     else if (lastH && abV) { if (eq(last.y, A.y)) P.pop(); else if (eq(last.x, A.x)) P.shift(); else if (n < 200) P.push({ x: last.x, y: A.y }); } }
-  S.m = solveModel(makeModel(P, S.sk.mode)); S.stage = 2; S.sel = null; S.hist2 = []; S.redo2 = []; S.tab2 = 'walls'; S.dpick = null; render();
+  S.m = solveModel(makeModel(P, S.sk.mode)); S.sk.saved = sketchSignature(); S.base = null; S.poly = null; S.ops = []; S.redoOps = []; S.ghost = null; S.stage = 2; S.sel = null; S.hist2 = []; S.redo2 = []; S.tab2 = 'walls'; S.dpick = null; render();
   if (S.sk.mode === 'free') toast('Углы не заданы: после длин понадобятся диагонали. Прямые можно отметить во вкладке «Углы»'); else if (S.m.vert.every(v => v.kind === 'ortho')) toast('Все углы прямые. Введите длины стен'); else toast('Углы без маркера — свободные. Их можно уточнить'); }
 let toastT = null;
 function toast(msg, bad) { const t = $('#toast'); t.textContent = msg; t.className = 'toast show' + (bad ? ' bad' : ''); clearTimeout(toastT); toastT = setTimeout(() => t.className = 'toast', 2600); }
@@ -204,7 +259,7 @@ function toast(msg, bad) { const t = $('#toast'); t.textContent = msg; t.classNa
 const sheet = $('#sheet'); let sheetKey = '', applyT = null;
 const plural = (n, a, b, c) => { const m = n % 10, h = n % 100; return (h > 10 && h < 20) ? c : m === 1 ? a : (m > 1 && m < 5) ? b : c; };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const numIn = (name, extra, val, hint) => `<input class="in" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="next" data-in="${name}" ${extra} value="${esc(val ?? '')}" placeholder="${esc(hint ?? '')}">`;
+const numIn = (name, extra, val, hint, label) => `<input class="in" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="next" aria-label="${esc(label || 'Размер в сантиметрах')}" data-in="${name}" ${extra} value="${esc(val ?? '')}" placeholder="${esc(hint ?? '')}">`;
 const parseNum = str => { const v = parseFloat(String(str).replace(',', '.')); return isFinite(v) && v > 0 ? v : null; };
 function statusInfo() { const st = S.m.status, n = S.m.n;
   if (st.missing === 0) { const w = st.worst, a = w ? Math.abs(w.v) : 0, wn = st.worstAng, wa = wn ? Math.abs(wn.v) : 0;
@@ -218,37 +273,39 @@ function statusInfo() { const st = S.m.status, n = S.m.n;
   const sug = st.sug.diags.map(([i, j]) => 'диагональ ' + L(i) + '–' + L(j)); if (st.sug.angs.length) sug.push('угол ' + st.sug.angs.map(L).join(' / '));
   return { cls: 'warn', h: `Нужно ещё ${st.missing} ${plural(st.missing, 'измерение', 'измерения', 'измерений')}`, s: sug.length ? 'Например: ' + sug.join(' или ') : 'Добавьте диагональ или угол' }; }
 function sheet1() { const n = S.sk.pts.length;
-  return `<div class="status info"><span class="dot"></span><div>${n < 3 ? 'Ставьте точки по углам комнаты по порядку обхода' : 'Замкните фигуру: тап по точке A или кнопка ниже'}<small>${S.sk.mode === 'free' ? 'Углы любые, как нарисуете. Потом длины, диагонали или градусы' : 'Стены ложатся по сетке, косую стену просто рисуйте под углом. Мелкие выступы ставьте при увеличении'}</small></div></div>
-  <div class="btns"><button class="btn sm ghost" data-act="home">← Назад</button><button class="btn ghost" data-act="undoPt" ${n ? '' : 'disabled'}>← Точку</button><button class="btn pri" data-act="close" ${n >= 3 ? '' : 'disabled'}>Замкнуть</button></div>`; }
+  return `<div class="sketch-head"><div class="sketch-copy"><h3>${n ? 'Обойдите комнату по углам' : 'Поставьте первый угол'}</h3><p>${n >= 3 ? 'Нажмите на A или замкните контур кнопкой.' : 'Касайтесь холста в местах углов. Размеры введём после.'}</p></div><span class="point-count">${n} ${plural(n, 'точка', 'точки', 'точек')}</span></div>
+  <div class="btns sketch-actions"><button class="btn ghost" data-act="home">Способ</button><button class="btn pri" data-act="close" ${n >= 3 ? '' : 'disabled'}>Замкнуть контур${icon('arrow')}</button></div>`; }
 const vertexNote = vt => vt.kind === 'ortho' ? 'Держится ровно 90° или 270°. Снимите, если стена косая.' : vt.kind === 'free' ? 'Угол не задан: его определят длины, диагонали или градусы.' : 'Угол задан вручную, заменяет одну диагональ.';
 function sheet2() { const m = S.m, n = m.n, tab = S.tab2 || 'walls';
-  let h = `<div class="status" id="st2"><span class="dot"></span><div id="st2t"></div></div>`;
+  let h = `<div class="measure-progress"><div><b>Размеры комнаты</b><span id="measureProgress"></span></div><div class="measure-track"><span id="measureBar"></span></div></div><div class="status" id="st2"><span class="dot"></span><div id="st2t"></div></div>`;
   if (S.sel && S.sel.t === 'v') { const i = S.sel.i, vt = m.vert[i];
     h += `<div class="card"><h3><span class="m">${L(i)}</span> угол <small id="vcur"></small></h3>
     <div class="seg"><button class="${vt.kind === 'ortho' ? 'on' : ''}" data-act="vkind" data-k="ortho">Прямой</button><button class="${vt.kind === 'free' ? 'on' : ''}" data-act="vkind" data-k="free">Свободный</button><button class="${vt.kind === 'deg' ? 'on' : ''}" data-act="vkind" data-k="deg">Градусы</button></div>
-    ${vt.kind === 'deg' ? `<div class="fld"><span class="k">Внутренний угол</span>${numIn('ang', `data-i="${i}"`, vt.deg ?? '', '')}<span class="u">°</span></div>` : ''}
+    ${vt.kind === 'deg' ? `<div class="fld"><span class="k">Внутренний угол</span>${numIn('ang', `data-i="${i}"`, vt.deg ?? '', '', `Внутренний угол ${L(i)}, градусов`)}<span class="u">°</span></div>` : ''}
     <div class="note">${vertexNote(vt)}</div>
     <div class="btns"><button class="btn ghost" data-act="deselect">Закрыть</button></div></div>`; return h; }
   h += `<div class="seg tabs"><button class="${tab === 'walls' ? 'on' : ''}" data-act="tab2" data-v="walls">Стены</button><button class="${tab === 'diags' ? 'on' : ''}" data-act="tab2" data-v="diags">Диагонали${m.diags.length ? ' · ' + m.diags.length : ''}</button><button class="${tab === 'angles' ? 'on' : ''}" data-act="tab2" data-v="angles">Углы</button></div>`;
-  const kbBtns = `<button class="next" data-act="nextField" type="button">Далее ▸</button><button class="done" data-act="blur" type="button" title="Готово">✓</button>`;
+  const kbBtns = `<button class="next" data-act="nextField" type="button" aria-label="Следующий размер">Далее</button><button class="done" data-act="blur" type="button" title="Готово" aria-label="Завершить ввод размера">✓</button>`;
   if (tab === 'walls') { h += '<div class="rows">';
-    for (let i = 0; i < n; i++) h += `<div class="row"><span class="lbl">${L(i)}${L((i + 1) % n)}</span>${numIn('side', `data-i="${i}"`, m.sides[i] ?? '', '')}${kbBtns}</div>`;
+    for (let i = 0; i < n; i++) h += `<div class="row"><span class="lbl">${L(i)}${L((i + 1) % n)}</span>${numIn('side', `data-i="${i}"`, m.sides[i] ?? '', '', `Длина стены ${L(i)}${L((i + 1) % n)}, сантиметров`)}<span class="row-unit">см</span>${kbBtns}</div>`;
     h += '</div>'; }
   else if (tab === 'diags') { h += `<div class="note" id="dnote"></div>`;
     if (m.diags.length) { h += '<div class="sec">Введённые</div><div class="rows">';
-      m.diags.forEach((d, k) => { h += `<div class="row"><span class="lbl">${L(d.i)}–${L(d.j)}</span>${numIn('diag', `data-k="${k}"`, d.cm ?? '', '')}<button class="x" data-act="rmDiag" data-i="${k}">✕</button>${kbBtns}</div>`; }); h += '</div>'; }
+      m.diags.forEach((d, k) => { h += `<div class="row"><span class="lbl">${L(d.i)}–${L(d.j)}</span>${numIn('diag', `data-k="${k}"`, d.cm ?? '', '', `Длина диагонали ${L(d.i)}${L(d.j)}, сантиметров`)}<span class="row-unit">см</span><button class="x" data-act="rmDiag" data-i="${k}" aria-label="Удалить диагональ ${L(d.i)}${L(d.j)}">✕</button>${kbBtns}</div>`; }); h += '</div>'; }
     h += `<div class="sec">Подсказка</div><div id="sugList" class="rows one"></div>`;
     h += `<div class="sec">Другая диагональ</div><div class="note">${S.dpick ? 'Первая вершина ' + L(S.dpick.a) + ' — теперь вторая' : 'Нажмите две вершины по буквам'}</div><div class="letters">`;
     for (let i = 0; i < n; i++) h += `<button class="lt ${S.dpick && S.dpick.a === i ? 'on' : ''}" data-act="dpk" data-i="${i}">${L(i)}</button>`;
     h += '</div>'; }
   else { h += '<div class="rows one">';
     for (let i = 0; i < n; i++) { const vt = m.vert[i];
-      h += `<div class="row vrow"><span class="lbl">${L(i)}</span><span class="cur" data-cur="${i}"></span><div class="seg mini"><button class="${vt.kind === 'ortho' ? 'on' : ''}" data-act="vk" data-i="${i}" data-k="ortho">прямой</button><button class="${vt.kind === 'free' ? 'on' : ''}" data-act="vk" data-i="${i}" data-k="free">свободный</button><button class="${vt.kind === 'deg' ? 'on' : ''}" data-act="vk" data-i="${i}" data-k="deg">°</button></div>${vt.kind === 'deg' ? numIn('ang', `data-i="${i}"`, vt.deg ?? '', '') + kbBtns : ''}</div>`; }
+      h += `<div class="row vrow"><span class="lbl">${L(i)}</span><span class="cur" data-cur="${i}"></span><div class="seg mini"><button class="${vt.kind === 'ortho' ? 'on' : ''}" data-act="vk" data-i="${i}" data-k="ortho" aria-label="Сделать угол ${L(i)} прямым">прямой</button><button class="${vt.kind === 'free' ? 'on' : ''}" data-act="vk" data-i="${i}" data-k="free" aria-label="Сделать угол ${L(i)} свободным">свободный</button><button class="${vt.kind === 'deg' ? 'on' : ''}" data-act="vk" data-i="${i}" data-k="deg" aria-label="Задать угол ${L(i)} в градусах">°</button></div>${vt.kind === 'deg' ? numIn('ang', `data-i="${i}"`, vt.deg ?? '', '', `Внутренний угол ${L(i)}, градусов`) + kbBtns : ''}</div>`; }
     h += '</div>'; }
-  h += `<div class="btns"><button class="btn pri" id="doneBtn" data-act="done">${S.ops.length ? 'Перестроить ✓' : 'Построить ✓'}</button></div>`;
+  h += `<div class="btns"><button class="btn pri" id="doneBtn" data-act="done">К деталям ${icon('arrow')}</button></div>`;
   if (S.ops.length) h += `<div class="note">После перестроения заново применятся правки этапа 3: ${S.ops.map(opLabel).join(', ')}</div>`;
   return h; }
 function updateSheet2() { const m = S.m, n = m.n, st = m.status, si = statusInfo(), box = $('#st2');
+  const progress = $('#measureProgress'), bar = $('#measureBar'), count = m.sides.filter(v => v != null).length;
+  if (progress) progress.textContent = `${count} из ${n} стен`; if (bar) bar.style.width = `${count / n * 100}%`;
   if (box) { box.className = 'status ' + si.cls; $('#st2t').innerHTML = `${esc(si.h)}<small>${esc(si.s)}</small>`; }
   const vc = $('#vcur'); if (vc && S.sel) vc.textContent = 'сейчас ' + Math.round(interiorDeg(m.sol, S.sel.i, m.wind)) + '°';
   const ac = document.activeElement;
@@ -398,27 +455,39 @@ function opNote() { const o = S.op, num = k => parseNum(o.f[k]) / 100, T = opTar
     return `Сейчас ${cm(sideLen(T, o.i))} см. ${mv ? B : A} уедет вдоль стены, стена ${mv ? B + C : Z + A} сдвинется за ним параллельно. ${mv ? A : B} останется на месте`; }
   if (o.kind === 'add' || o.kind === 'bump') return `Длина стены ${cm(sideLen(T, o.i))} см`;
   if (o.kind === 'shift') return 'Соседние стены удлинятся или укоротятся'; return ''; }
-function sheet3() { const poly = S.poly, n = poly.v.length, st = polyStats(poly);
-  if (S.op) { const o = S.op; let h = `<div class="card op"><h3><span>${esc(o.spec.title)}</span>${opPic(o)}</h3>`;
+function drawingFinish() { return `<div class="drawing-finish"><label for="roomName">Название помещения</label><div class="finish-row"><input class="inName" id="roomName" aria-label="Название помещения" value="${esc(S.roomName)}" placeholder="Например, кухня" maxlength="40"><button class="btn pri" data-act="finish" ${S.op ? 'disabled title="Сначала примените правку или вернитесь назад"' : ''}>${opts.initial ? 'Сохранить' : 'В расчёт'}${icon('arrow')}</button></div></div>`; }
+function sheet3() { return `<div class="sheet-content">${sheet3Content()}</div>${drawingFinish()}`; }
+function sheet3Content() { const poly = S.poly, n = poly.v.length, st = polyStats(poly);
+  if (S.op) { const o = S.op; let h = `<div class="card op"><button class="context-back" data-act="cancel">${icon('back')}<span>${S.sel ? 'К инструментам' : 'К деталям'}</span></button><h3><span>${esc(o.spec.title)}</span>${opPic(o)}</h3>`;
     if (o.kind === 'hole') h += holeScheme(o);
     if (o.spec.segLabel) h += `<div class="sec">${esc(o.spec.segLabel)}</div>`;
-    o.spec.segs.forEach(([name, opts, label]) => { if (label) h += `<div class="sec">${esc(label)}</div>`; h += '<div class="seg' + (opts.length > 4 ? ' wrap' : '') + '">' + opts.map(([v, lbl]) => `<button class="${o.seg[name] === v ? 'on' : ''}" data-act="seg" data-n="${name}" data-v="${v}">${esc(lbl)}</button>`).join('') + '</div>'; });
-    h += '<div class="fields">' + o.spec.fields.map(([k, lbl, u]) => `<div class="fld"><span class="k">${esc(lbl)}</span>${numIn('op', `data-k="${k}"`, o.f[k] ?? '', '')}<span class="u">${u}</span></div>`).join('') + '</div>';
-    h += `<div class="note" id="opnote"></div><div class="btns"><button class="btn ghost" data-act="cancel">Отмена</button><button class="btn laser" data-act="apply">Применить</button></div></div>`; return h; }
+    o.spec.segs.forEach(([name, options, label]) => { if (label) h += `<div class="sec">${esc(label)}</div>`; h += '<div class="seg' + (options.length > 4 ? ' wrap' : '') + '">' + options.map(([v, lbl]) => `<button class="${o.seg[name] === v ? 'on' : ''}" data-act="seg" data-n="${name}" data-v="${v}" aria-pressed="${o.seg[name] === v}">${esc(lbl)}</button>`).join('') + '</div>'; });
+    h += '<div class="fields">' + o.spec.fields.map(([k, lbl, u]) => `<div class="fld"><span class="k">${esc(lbl)}</span>${numIn('op', `data-k="${k}"`, o.f[k] ?? '', '', `${o.spec.title}: ${lbl}, ${u === 'см' ? 'сантиметров' : u}`)}<span class="u">${u}</span></div>`).join('') + '</div>';
+    h += `<div class="note" id="opnote"></div><div class="btns op-actions"><button class="btn ghost" data-act="cancel">Отмена</button><button class="btn laser" data-act="apply">Применить</button></div></div>`; return h; }
   const inHole = S.sel && S.sel.h != null, T = inHole ? holesOf(poly)[S.sel.h] : poly, tn = T ? T.v.length : 0, NL = i => (inHole ? HL(S.sel.h, i) : L(i));
   const holeBtn = inHole ? '<button class="btn danger" data-act="holeDel">Удалить вырез</button>' : '';
+  const back = `<button class="context-back" data-act="deselect">${icon('back')}<span>Все стены и углы</span></button>`;
   if (S.sel && S.sel.t === 'v' && T) { const i = S.sel.i, P = ptsOf(T), d = interiorDeg(P, i, windOf(P)), fl = T.v[i].fillet;
-    return `<div class="card"><h3><span class="m">${NL(i)}</span> угол${inHole ? ' выреза' : ''} <small>${Math.round(d)}°${fl ? ' · скруглён R ' + cm(fl) : ''}</small></h3>
-    <div class="acts"><button class="btn" data-act="op" data-k="fillet">${GL.fillet()}<span>${fl ? 'Изменить радиус' : 'Скруглить'}</span></button>${fl ? '<button class="btn" data-act="unfillet">Убрать скругление</button>' : ''}<button class="btn danger" data-act="del">${GL.del()}<span>Удалить угол</span></button>${holeBtn}<button class="btn ghost" data-act="deselect">Закрыть</button></div></div>`; }
+    return `<div class="card selection-card">${back}<div class="context-heading"><h3>Угол <span class="m">${NL(i)}</span>${inHole ? ' выреза' : ''}</h3><span>${Math.round(d)}°${fl ? ' · R ' + cm(fl) + ' см' : ''}</span></div>
+    <div class="acts"><button class="btn" data-act="op" data-k="fillet">${GL.fillet()}<span>${fl ? 'Изменить радиус' : 'Скруглить'}</span></button>${fl ? '<button class="btn" data-act="unfillet">Убрать скругление</button>' : ''}<button class="btn danger" data-act="del">${GL.del()}<span>Удалить угол</span></button>${holeBtn}</div></div>`; }
   if (S.sel && S.sel.t === 's' && T) { const i = S.sel.i, ai = arcInfo(T, i);
-    return `<div class="card"><h3><span class="m">${NL(i)}${NL((i + 1) % tn)}</span> стена${inHole ? ' выреза' : ''} <small>${cm(sideLen(T, i))} см${ai ? ' · дуга ' + cm(ai.len) : ''}</small></h3>
-    <div class="acts"><button class="btn" data-act="op" data-k="len">${GL.len('end')}<span>Длина</span></button><button class="btn" data-act="op" data-k="shift">${GL.shift('out')}<span>Сдвинуть</span></button><button class="btn" data-act="op" data-k="add">${GL.add('start')}<span>Точка на стене</span></button><button class="btn" data-act="op" data-k="bump">${GL.bump('in')}<span>Выступ / ниша</span></button><button class="btn" data-act="op" data-k="arc">${GL.arc('out')}<span>${ai ? 'Изменить дугу' : 'Дуга'}</span></button>${ai ? '<button class="btn" data-act="unarc">Убрать дугу</button>' : ''}${holeBtn}<button class="btn ghost" data-act="deselect">Закрыть</button></div></div>`; }
-  const oval = S.origin && S.origin.kind === 'oval', back = oval ? '<button class="btn sm ghost" data-act="editQuick">← Радиусы</button>' : '';
-  const shape = oval ? (S.origin.mode === 'circle' ? `Окружность R <b>${S.origin.f.r}</b> см` : `Эллипс <b>${S.origin.f.rx}</b> × <b>${S.origin.f.ry}</b> см`) : `Углов <b>${n}</b>: внутр. <b>${st.inner}</b>, наруж. <b>${st.outer}</b>${st.fillets ? `, скруглений <b>${st.fillets}</b>` : ''}${st.arcs ? `, дуг <b>${st.arcs}</b>` : ''}`;
-  return `<div class="res"><div class="t"><div class="k">Площадь</div><div class="v">${fmt2(st.area)}<small>м²</small></div></div><div class="t"><div class="k">Периметр</div><div class="v">${fmt2(st.perim)}<small>м</small></div></div>${back}</div>
-  <div class="meta">${shape}${st.holes ? `, вырезов <b>${st.holes}</b>` : ''}${S.ops.length ? `, правок <b>${S.ops.length}</b>` : ''} · тап по углу или стене — действия</div>
-  <div class="btns"><button class="btn sm" data-act="hole">＋ Внутренний вырез</button></div>
-  <div class="btns fin"><input class="inName" id="roomName" value="${esc(S.roomName)}" placeholder="Название помещения" maxlength="40"><button class="btn pri" data-act="finish">${opts.initial ? 'Сохранить изменения' : 'Добавить в расчёт'}</button></div>`; }
+    return `<div class="card selection-card">${back}<div class="context-heading"><h3>Стена <span class="m">${NL(i)}${NL((i + 1) % tn)}</span>${inHole ? ' выреза' : ''}</h3><span>${cm(sideLen(T, i))} см${ai ? ' · дуга ' + cm(ai.len) + ' см' : ''}</span></div>
+    <div class="acts"><button class="btn" data-act="op" data-k="len">${GL.len('end')}<span>Длина</span></button><button class="btn" data-act="op" data-k="shift">${GL.shift('out')}<span>Сдвинуть</span></button><button class="btn" data-act="op" data-k="add">${GL.add('start')}<span>Добавить точку</span></button><button class="btn" data-act="op" data-k="bump">${GL.bump('in')}<span>Ниша / выступ</span></button><button class="btn" data-act="op" data-k="arc">${GL.arc('out')}<span>${ai ? 'Изменить дугу' : 'Дуга'}</span></button>${ai ? '<button class="btn" data-act="unarc">Убрать дугу</button>' : ''}${holeBtn}</div></div>`; }
+  const oval = S.origin && S.origin.kind === 'oval', tab = S.tab3 || 'walls', total = n + holesOf(poly).reduce((count, hole) => count + hole.v.length, 0);
+  let h = `<div class="drawing-summary"><span>S <b>${fmt2(st.area)}</b> м²</span><span>P <b>${fmt2(st.perim)}</b> м</span>${st.holes ? `<span>${st.holes} ${plural(st.holes, 'вырез', 'выреза', 'вырезов')}</span>` : ''}${oval ? '<button data-act="editQuick">Радиусы</button>' : ''}</div>`;
+  h += `<div class="seg detail-tabs"><button class="${tab === 'walls' ? 'on' : ''}" data-act="tab3" data-v="walls">Стены <span>${total}</span></button><button class="${tab === 'angles' ? 'on' : ''}" data-act="tab3" data-v="angles">Углы <span>${total}</span></button></div><div class="element-list" aria-label="${tab === 'walls' ? 'Выбор стены' : 'Выбор угла'}">`;
+  const P = ptsOf(poly), wind = windOf(P);
+  for (let i = 0; i < n; i++) h += tab === 'walls'
+    ? `<button class="element-chip" data-act="selectSide" data-i="${i}" aria-label="Изменить стену ${L(i)}${L((i + 1) % n)}, ${cm(sideLen(poly, i))} сантиметров"><b>${L(i)}${L((i + 1) % n)}</b><span>${cm(sideLen(poly, i))}<small>см</small></span></button>`
+    : `<button class="element-chip" data-act="selectVertex" data-i="${i}" aria-label="Изменить угол ${L(i)}, ${Math.round(interiorDeg(P, i, wind))} градусов"><b>${L(i)}</b><span>${Math.round(interiorDeg(P, i, wind))}°</span></button>`;
+  holesOf(poly).forEach((hole, holeIndex) => { const HP = ptsOf(hole), holeWind = windOf(HP);
+    for (let i = 0; i < HP.length; i++) { const A = HL(holeIndex, i), B = HL(holeIndex, (i + 1) % HP.length);
+      h += tab === 'walls'
+        ? `<button class="element-chip" data-act="selectSide" data-i="${i}" data-h="${holeIndex}" aria-label="Изменить стену выреза ${A}${B}, ${cm(sideLen(hole, i))} сантиметров"><b>${A}${B}</b><span>${cm(sideLen(hole, i))}<small>см · вырез</small></span></button>`
+        : `<button class="element-chip" data-act="selectVertex" data-i="${i}" data-h="${holeIndex}" aria-label="Изменить угол выреза ${A}, ${Math.round(interiorDeg(HP, i, holeWind))} градусов"><b>${A}</b><span>${Math.round(interiorDeg(HP, i, holeWind))}°<small>вырез</small></span></button>`;
+    } });
+  h += `</div><div class="drawing-tools"><span class="detail-help">${tab === 'walls' ? 'Выберите стену для изменения' : 'Выберите угол для изменения'}</span><button class="btn sm ghost" data-act="hole">${icon('plus')}Вырез</button></div>`;
+  return h; }
 function updateSheet3() { const nn = $('#opnote'); if (nn && S.op) nn.textContent = opNote(); const sc = sheet.querySelector('svg.scheme'); if (sc && S.op && S.op.kind === 'hole') sc.outerHTML = holeScheme(S.op); }
 function updateSheet() { if (S.stage === 0) updateSheet0(); else if (S.stage === 2 && S.m) updateSheet2(); else if (S.stage === 3) updateSheet3(); }
 function runOp(poly, op) { let q = null;
@@ -463,20 +532,21 @@ function act(a, d) {
   if (a === 'finish') return finish();
   if (a === 'q-rect') { S.quick = { kind: 'rect', f: { a: '', b: '' } }; S.focusReq = 'input[data-in="q"]'; return render(); }
   if (a === 'q-oval') { S.quick = { kind: 'oval', mode: 'circle', f: { r: '', rx: '', ry: '' } }; S.focusReq = 'input[data-in="q"]'; return render(); }
+  if (a === 'q-resume') { S.stage = 1; S.quick = null; return render(); }
   if (a === 'q-poly') { S.stage = 1; S.sk.mode = 'grid'; S.origin = { kind: 'poly' }; return render(); }
   if (a === 'q-polyfree') { S.stage = 1; S.sk.mode = 'free'; S.origin = { kind: 'poly' }; return render(); }
   if (a === 'qmode') { S.quick.mode = d.v; S.focusReq = 'input[data-in="q"]'; return render(); }
   if (a === 'quickCancel') { if (S.quick.edit) { S.quick = null; S.stage = 3; } else S.quick = null; return render(); }
   if (a === 'quickBuild') return quickBuild();
   if (a === 'editQuick') { const o = S.origin; S.quick = { kind: 'oval', mode: o.mode, f: { ...o.f }, edit: true }; S.stage = 0; S.sel = null; S.op = null; S.focusReq = 'input[data-in="q"]'; return render(); }
-  if (a === 'home') { const had = S.sk.pts.length; Object.assign(S, FRESH()); render(); if (had) toast('Контур сброшен'); return; }
-  if (a === 'freeWall') { S.sk.free = !S.sk.free; return render(); }
-  if (a === 'tab2') { S.tab2 = d.v; S.dpick = null; S.sel = null; blurActive(); return render(); }
+  if (a === 'home') { S.stage = 0; S.quick = null; S.sel = null; S.op = null; blurActive(); return render(); }
+  if (a === 'tab2') { flushApply(); S.tab2 = d.v; S.dpick = null; S.sel = null; blurActive(); return render(); }
+  if (a === 'tab3') { S.tab3 = d.v; S.sel = null; S.op = null; blurActive(); return render(); }
+  if (a === 'selectSide' || a === 'selectVertex') { S.sel = { t: a === 'selectSide' ? 's' : 'v', i: +d.i, h: d.h != null ? +d.h : undefined }; S.op = null; blurActive(); return render(); }
   if (a === 'dpk') { const i = +d.i; if (!S.dpick) { S.dpick = { a: i }; return render(); } const a0 = S.dpick.a; S.dpick = null; if (a0 === i) return render();
     const lo = Math.min(a0, i), hi = Math.max(a0, i), n = S.m.n; if (!((lo + 1) % n === hi || (hi + 1) % n === lo) && !isInteriorDiag(S.m.sol, lo, hi)) { render(); return toast('Эта линия выходит за стены комнаты', true); } return addDiag(a0, i); }
   if (a === 'addSug') return addDiag(+d.i, +d.j);
   if (a === 'vk') return setVKindAt(+d.i, d.k);
-  if (a === 'undoPt') { S.sk.pts.pop(); return render(); }
   if (a === 'close') return closeSketch();
   if (a === 'rmDiag') { withSnap(() => S.m.diags.splice(+d.i, 1)); solveModel(S.m); return render(); }
   if (a === 'pickDiag') { S.sel = null; S.pick = { mode: 'diag', a: null }; blurActive(); return render(); }
@@ -484,9 +554,9 @@ function act(a, d) {
   if (a === 'pickCancel') { S.pick = null; return render(); }
   if (a === 'vkind') return setVKind(d.k);
   if (a === 'deselect') { S.sel = null; S.op = null; return render(); }
-  if (a === 'back1') { const had = S.ops.length; Object.assign(S, { stage: 1, m: null, base: null, ops: [], redoOps: [], poly: null, sel: null, pick: null, hist2: [], redo2: [] }); render(); if (had) toast('Правки этапа 3 сброшены вместе с размерами'); return; }
-  if (a === 'back2') { if (!S.m) S.m = modelFromPoly(S.base); S.stage = 2; S.sel = null; S.op = null; S.pick = null; return render(); }
-  if (a === 'done') { if (S.m.status.missing) return; S.base = bakeModel(S.m); S.stage = 3; S.sel = null; blurActive(); rebuild(); return render(); }
+  if (a === 'back1') { flushApply(); if (!S.sk.pts.length) return; S.stage = 1; S.sel = null; S.op = null; S.pick = null; blurActive(); return render(); }
+  if (a === 'back2') { flushApply(); if (!S.m) S.m = modelFromPoly(S.base); else if (!S.m.sol || !S.m.status) solveModel(S.m); S.stage = 2; S.sel = null; S.op = null; S.pick = null; return render(); }
+  if (a === 'done') { flushApply(); if (S.m.status.missing) return; S.base = bakeModel(S.m); S.stage = 3; S.sel = null; blurActive(); rebuild(); return render(); }
   if (a === 'op') { makeOp(d.k, S.sel.i, S.sel.h); return render(); }
   if (a === 'hole') { S.sel = null; makeOp('hole'); return render(); }
   if (a === 'holeDel') return commitOp({ kind: 'holeDel', h: S.sel.h });
@@ -496,19 +566,19 @@ function act(a, d) {
   if (a === 'del') return commitOp({ kind: 'del', i: S.sel.i, h: S.sel.h });
   if (a === 'unfillet') return commitOp({ kind: 'fillet', i: S.sel.i, h: S.sel.h, r: null });
   if (a === 'unarc') return commitOp({ kind: 'arc', i: S.sel.i, h: S.sel.h, mode: 'h', val: 0, dir: 'out' }); }
-sheet.addEventListener('input', e => { if (e.target && e.target.id === 'roomName') S.roomName = e.target.value; });
+sheet.addEventListener('input', e => { if (e.target && e.target.id === 'roomName') { S.roomName = e.target.value; $('#sub').textContent = S.roomName || 'Помещение'; } });
 sheet.addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (!b || !sheet.contains(b)) return; if ((b.dataset.act === 'nextField' || b.dataset.act === 'blur') && Date.now() - kbActAt < 600) return; act(b.dataset.act, b.dataset); });
 $('#start').addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b) act(b.dataset.act, b.dataset); });
 $('#bBack').addEventListener('click', () => { if (opts.onBack) opts.onBack(); });
 $('#bUndo').addEventListener('click', () => { if (S.stage === 1) { S.sk.pts.pop(); render(); } else if (S.stage === 2) undo2(); else if (S.stage === 3 && S.ops.length) { S.redoOps.push(S.ops.pop()); rebuild(); S.sel = null; S.op = null; render(); } });
 $('#bRedo').addEventListener('click', () => { if (S.stage === 2) redo2(); else if (S.stage === 3 && S.redoOps.length) { S.ops.push(S.redoOps.pop()); rebuild(); S.sel = null; S.op = null; render(); } });
 let newArm = null;
-function disarmNew() { clearTimeout(newArm); newArm = null; const b = $('#bNew'); b.textContent = 'Новый'; b.style.color = ''; }
+function disarmNew() { clearTimeout(newArm); newArm = null; const b = $('#bNew'); b.textContent = 'Заново'; b.style.color = ''; }
 $('#bNew').addEventListener('click', () => { if (S.stage === 0) { S.quick = null; return render(); } if (S.stage === 1 && !S.sk.pts.length) return;
-  if (!newArm) { const b = $('#bNew'); b.textContent = 'Стереть?'; b.style.color = 'var(--laser)'; newArm = setTimeout(disarmNew, 3000); toast('Ещё раз, чтобы начать новый чертёж'); return; }
+  if (!newArm) { const b = $('#bNew'); b.textContent = 'Сбросить?'; b.style.color = 'var(--laser)'; newArm = setTimeout(disarmNew, 3000); toast('Ещё раз, чтобы начать новый чертёж'); return; }
   disarmNew(); Object.assign(S, FRESH()); render(); });
 function viewKey() { const m = S.m; return [S.stage, S.quick ? S.quick.kind + S.quick.mode + (S.quick.edit ? 'e' : '') : '', S.origin ? S.origin.kind : '', S.sel ? S.sel.t + S.sel.i + (S.sel.h != null ? 'h' + S.sel.h : '') : '', S.pick ? S.pick.mode + (S.pick.a ?? '') : '', S.op ? S.op.kind + S.op.i + JSON.stringify(S.op.seg) : '',
-  m ? m.n + ':' + m.diags.length + ':' + m.vert.map(v => v.kind[0]).join('') + ':' + (S.sel && S.sel.t === 'v' ? m.vert[S.sel.i].kind : '') : '', S.tab2, S.dpick ? S.dpick.a : '', S.ops.length, S.poly ? S.poly.v.length : 0, S.sk.pts.length, S.sk.free ? 'f' : ''].join('|'); }
+  m ? m.n + ':' + m.diags.length + ':' + m.vert.map(v => v.kind[0]).join('') + ':' + (S.stage === 2 && S.sel && S.sel.t === 'v' ? m.vert[S.sel.i].kind : '') : '', S.tab2, S.tab3, S.dpick ? S.dpick.a : '', S.ops.length, S.poly ? S.poly.v.length : 0, S.sk.pts.length].join('|'); }
 function renderSheet() { const key = viewKey(); if (key === sheetKey) { updateSheet(); return; }
   const startOnly = S.stage === 0 && !S.quick; const start = $('#start'); // выбор способа — вверху холста, чтобы не тянуться вниз
   start.hidden = !startOnly; sheet.hidden = startOnly;
@@ -521,37 +591,43 @@ function quickPoly() { const q = S.quick; if (!q) return null; const n = k => pa
   const rx = n('rx'), ry = n('ry'); return rx && ry ? ovalPoly(rx / 100, ry / 100) : null; }
 function quickSpec() { const q = S.quick; if (q.kind === 'rect') return { title: 'Прямоугольник', fields: [['a', 'Сторона AB (ширина)', 'см'], ['b', 'Сторона BC (глубина)', 'см']] };
   return q.mode === 'circle' ? { title: 'Окружность', fields: [['r', 'Радиус', 'см']] } : { title: 'Эллипс', fields: [['rx', 'Радиус по ширине', 'см'], ['ry', 'Радиус по высоте', 'см']] }; }
-const glyph = k => k === 'rect' ? '<svg viewBox="0 0 36 36"><rect x="4" y="8" width="28" height="20" rx="1.5" fill="var(--fill)" stroke="var(--ink)" stroke-width="2"/></svg>'
-  : k === 'oval' ? '<svg viewBox="0 0 36 36"><ellipse cx="18" cy="18" rx="14" ry="10" fill="var(--fill)" stroke="var(--ink)" stroke-width="2"/></svg>'
-  : k === 'free' ? '<svg viewBox="0 0 36 36"><path d="M5 30L9 6H27L32 20L26 30Z" fill="var(--fill)" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round"/><path d="M9 6L26 30" stroke="var(--ink3)" stroke-width="1.5" stroke-dasharray="3 2"/></svg>'
-  : '<svg viewBox="0 0 36 36"><path d="M4 6H22V16H32V30H4Z" fill="var(--fill)" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round"/></svg>';
+const glyph = k => k === 'rect' ? '<svg class="shape-preview" viewBox="0 0 36 36" aria-hidden="true"><rect x="4" y="8" width="28" height="20" rx="1.5" fill="var(--fill)" stroke="var(--ink)" stroke-width="2"/></svg>'
+  : k === 'oval' ? '<svg class="shape-preview" viewBox="0 0 36 36" aria-hidden="true"><ellipse cx="18" cy="18" rx="14" ry="10" fill="var(--fill)" stroke="var(--ink)" stroke-width="2"/></svg>'
+  : k === 'free' ? '<svg class="shape-preview" viewBox="0 0 36 36" aria-hidden="true"><path d="M5 30L9 6H27L32 20L26 30Z" fill="var(--fill)" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round"/><path d="M9 6L26 30" stroke="var(--ink3)" stroke-width="1.5" stroke-dasharray="3 2"/></svg>'
+  : '<svg class="shape-preview" viewBox="0 0 88 72" aria-hidden="true"><path d="M15 12H51V31H73V59H15Z" fill="var(--fill)" stroke="var(--pri)" stroke-width="2" stroke-linejoin="round"/><path d="M15 5H51M8 12V59" stroke="var(--ink3)" stroke-width="1" stroke-dasharray="2 3"/><g fill="var(--surface)" stroke="var(--pri)" stroke-width="1.5"><circle cx="15" cy="12" r="3"/><circle cx="51" cy="12" r="3"/><circle cx="51" cy="31" r="3"/><circle cx="73" cy="31" r="3"/><circle cx="73" cy="59" r="3"/><circle cx="15" cy="59" r="3"/></g></svg>';
 function sheet0() { const q = S.quick;
-  if (!q) return `<div class="sec">Как строить</div><div class="opts">
-    <button class="opt" data-act="q-rect">${glyph('rect')}<div><b>Прямоугольник</b><span>Две стороны, готовый чертёж сразу</span></div></button>
-    <button class="opt" data-act="q-poly">${glyph('poly')}<div><b>Многоугольник · автоматически</b><span>Все углы прямые</span></div></button>
-    <button class="opt" data-act="q-polyfree">${glyph('free')}<div><b>Сложный многоугольник</b><span>Углы неизвестны: длины, диагонали или градусы</span></div></button>
-    <button class="opt" data-act="q-oval">${glyph('oval')}<div><b>Окружность / эллипс</b><span>Радиус или два радиуса</span></div></button></div>`;
+  if (!q) return `<div class="start-intro"><h2>С чего начнём?</h2><p>Выберите форму комнаты или нарисуйте её по углам.</p></div><div class="opts">
+    <button class="opt opt-primary" data-act="${S.sk.pts.length ? 'q-resume' : 'q-poly'}">${glyph(S.sk.pts.length && S.sk.mode === 'free' ? 'free' : 'poly')}<div class="opt-copy"><b>${S.sk.pts.length ? 'Продолжить контур' : 'Нарисовать контур'}</b><span>Отметьте углы пальцем,<br>затем добавьте размеры</span></div><span class="opt-arrow">${icon('arrow')}</span></button>
+    <div class="quick-shapes"><button class="opt opt-compact" data-act="q-rect">${glyph('rect')}<div class="opt-copy"><b>Прямоугольник</b><span>Ширина и длина</span></div></button>
+    <button class="opt opt-compact" data-act="q-oval">${glyph('oval')}<div class="opt-copy"><b>Круг / овал</b><span>Один или два радиуса</span></div></button></div>
+    <button class="opt opt-free" data-act="q-polyfree">${glyph('free')}<div class="opt-copy"><b>Контур с косыми стенами</b><span>Произвольные углы и диагонали</span></div><span class="opt-arrow">${icon('arrow')}</span></button></div>`;
   const sp = quickSpec(); let h = `<div class="card op"><h3>${esc(sp.title)}${q.edit ? ' · изменить' : ''}</h3>`;
   if (q.kind === 'oval') h += `<div class="seg"><button class="${q.mode === 'circle' ? 'on' : ''}" data-act="qmode" data-v="circle">Окружность</button><button class="${q.mode === 'ellipse' ? 'on' : ''}" data-act="qmode" data-v="ellipse">Эллипс</button></div>`;
-  h += '<div class="fields">' + sp.fields.map(([k, lbl, u]) => `<div class="fld"><span class="k">${esc(lbl)}</span>${numIn('q', `data-k="${k}"`, q.f[k] ?? '', '')}<span class="u">${u}</span></div>`).join('') + '</div>';
-  h += `<div class="note" id="qnote"></div><div class="btns"><button class="btn ghost" data-act="quickCancel">${q.edit ? 'Отмена' : '← Назад'}</button><button class="btn pri" id="qbuild" data-act="quickBuild">${q.edit ? 'Перестроить ✓' : 'Построить ✓'}</button></div></div>`;
+  h += '<div class="fields">' + sp.fields.map(([k, lbl, u]) => `<div class="fld"><span class="k">${esc(lbl)}</span>${numIn('q', `data-k="${k}"`, q.f[k] ?? '', '', `${sp.title}: ${lbl}, сантиметров`)}<span class="u">${u}</span></div>`).join('') + '</div>';
+  h += `<div class="note" id="qnote"></div><div class="btns"><button class="btn ghost" data-act="quickCancel">${q.edit ? 'Отмена' : 'Назад'}</button><button class="btn pri" id="qbuild" data-act="quickBuild">${q.edit ? 'Перестроить' : 'Построить'}${icon('arrow')}</button></div></div>`;
   return h; }
 function updateSheet0() { const nn = $('#qnote'); if (!nn) return; const poly = quickPoly(), b = $('#qbuild'); if (b) b.disabled = !poly;
   if (!poly) { nn.textContent = 'Введите размеры, чертёж появится сверху'; return; } const st = polyStats(poly); nn.textContent = `Площадь ${fmt2(st.area)} м² · периметр ${fmt2(st.perim)} м`; }
 function quickBuild() { const poly = quickPoly(); if (!poly) return toast('Введите размеры', true); const q = S.quick;
   S.origin = q.kind === 'rect' ? { kind: 'rect' } : { kind: 'oval', mode: q.mode, f: { ...q.f } };
   S.base = poly; if (!q.edit) { S.ops = []; S.redoOps = []; S.m = null; S.hist2 = []; S.redo2 = []; } S.quick = null; S.stage = 3; S.sel = null; S.op = null; blurActive(); rebuild(); render(); }
-function renderChrome() { const names = ['Контур', 'Размеры', 'Правка'], isRect = S.origin && S.origin.kind === 'rect', isOval = S.origin && S.origin.kind === 'oval';
-  // пилюли этапов кликабельные: назад на контур или размеры, вперёд на правку, если размеров хватает
-  $('#stages').innerHTML = S.stage === 0 ? '' : isOval ? '<span class="pill on"><b>✓</b>Правка</span>' : names.map((nm, k) => (isRect && k === 0) ? '' : `<button class="pill ${k + 1 === S.stage ? 'on' : k + 1 < S.stage ? 'done' : ''}" data-stage="${k + 1}"><b>${k + 1}</b>${nm}</button>`).join('');
-  $('#hint').textContent = S.stage === 0 ? (S.quick ? 'Чертёж появится по мере ввода размеров' : '') : S.stage === 1 ? (S.sk.pts.length ? 'Следующий угол по порядку обхода, стены по сетке. Замкнуть — тап по A' : 'Тап по экрану ставит первый угол A') : S.stage === 2 ? 'Тап по стене — ввести длину. Тап по углу — прямой, свободный или градусы' : 'Тап по углу или стене — редактировать';
+function renderChrome() { const names = ['Контур', 'Размеры', 'Детали'], isRect = S.origin && S.origin.kind === 'rect', isOval = S.origin && S.origin.kind === 'oval', app = $('#app');
+  applyCanvasLook();
+  const looks = $('#canvasLooks'); looks.hidden = S.stage === 0 && !S.quick;
+  if (!looks.children.length) looks.innerHTML = [['classic', 'Было'], ...Object.entries(APPEARANCES).map(([key, value]) => [key, value.label])].map(([key, label]) => `<button type="button" data-look="${key}" aria-pressed="false" aria-label="Оформление: ${label}">${label}</button>`).join('');
+  for (const button of looks.querySelectorAll('[data-look]')) button.setAttribute('aria-pressed', String(button.dataset.look === canvasLook));
+  app.dataset.stage = S.stage; app.classList.toggle('choosing', S.stage === 0 && !S.quick); app.classList.toggle('quick', !!S.quick); app.classList.toggle('has-selection', !!S.sel); app.classList.toggle('has-operation', !!S.op);
+  // Клик по пройденному этапу сохраняет размеры и правки. Новый контур применяется только после замыкания.
+  $('#stages').innerHTML = isOval && S.stage > 0 ? '<span class="pill on"><b>3</b>Детали</span>' : names.map((nm, k) => ((isRect || (S.stage > 1 && !S.sk.pts.length)) && k === 0) ? '' : `<button class="pill ${k + 1 === (S.stage || 1) ? 'on' : k + 1 < S.stage ? 'done' : ''}" data-stage="${k + 1}" ${S.stage === 0 || (S.stage === 1 && ((k === 1 && S.sk.pts.length < 3) || (k === 2 && (!S.poly || !sketchUnchanged())))) ? 'disabled' : ''} ${k + 1 === (S.stage || 1) ? 'aria-current="step"' : ''}><b>${k + 1}</b>${nm}</button>`).join('');
+  $('#hint').textContent = S.stage === 0 ? (S.quick ? 'Чертёж появится по мере ввода размеров' : '') : S.stage === 1 ? (S.sk.pts.length ? 'Точки можно перетаскивать · сведите пальцы для масштаба' : 'Коснитесь холста, чтобы поставить угол A') : S.stage === 2 ? 'Размеры в сантиметрах · стена подсвечивается при вводе' : S.op ? 'Проверьте параметры и примените правку' : S.sel ? 'Выбранный элемент подсвечен синим' : 'Выберите элемент на чертеже или в списке';
   $('#hint').style.display = S.stage === 1 && S.sk.pts.length > 5 ? 'none' : '';
-  $('#sub').textContent = S.stage === 0 || S.stage === 1 ? '' : `${S.stage === 2 ? S.m.n : S.poly.v.length} углов`;
+  $('#sub').textContent = S.roomName || 'Помещение';
+  $('#canvasMeta').textContent = S.stage === 2 ? `${S.m.n} ${plural(S.m.n, 'угол', 'угла', 'углов')}` : S.stage === 3 ? `${S.poly.v.length} ${plural(S.poly.v.length, 'угол', 'угла', 'углов')}` : '';
   $('#bUndo').disabled = S.stage === 0 ? true : S.stage === 1 ? !S.sk.pts.length : S.stage === 2 ? !S.hist2.length : !S.ops.length; $('#bRedo').disabled = S.stage === 2 ? !S.redo2.length : !(S.stage === 3 && S.redoOps.length);
   $('#bNew').style.visibility = S.stage === 0 && !S.quick ? 'hidden' : ''; $('.zoom').style.display = S.stage === 0 && !S.quick ? 'none' : ''; }
 function save() { }
 function render() { const qk = S.quick ? S.quick.kind + (S.quick.mode || '') : '';
-  if (S.stage !== lastStage || qk !== lastQuick) { Z = { k: 1, dx: 0, dy: 0 }; lastStage = S.stage; lastQuick = qk; sheetKey = ''; } renderChrome(); renderCanvas(); renderSheet(); save();
+  if (S.stage !== lastStage || qk !== lastQuick) { Z = { k: 1, dx: 0, dy: 0 }; lastStage = S.stage; lastQuick = qk; sheetKey = ''; } renderChrome(); renderSheet(); renderCanvas(); save();
   if (S.focusReq) { const el = sheet.querySelector(S.focusReq); S.focusReq = null; if (el) { focusIn(el); el.scrollIntoView({ block: 'nearest' });
     S.hot = el.dataset.in === 'side' ? { t: 's', i: +el.dataset.i } : el.dataset.in === 'diag' ? { t: 'd', k: +el.dataset.k } : null; renderCanvas(); } } }
 function commit() { render(); }
@@ -560,10 +636,15 @@ let vvFit = null;
 if (window.visualViewport) { const vv = window.visualViewport, app = $('#app'); vvFit = () => { if (window.innerWidth < 640) { app.style.height = vv.height + 'px'; app.style.transform = vv.offsetTop ? `translateY(${vv.offsetTop}px)` : ''; } else { app.style.height = ''; app.style.transform = ''; } renderCanvas(); }; vv.addEventListener('resize', vvFit); vv.addEventListener('scroll', vvFit); }
 document.fonts && document.fonts.ready.then(() => { if (alive) renderCanvas(); });
 // правка готового контура: сразу этап «Правка» с переданными вершинами (метры)
+function validSavedModel(m, n) { const point = p => p && Number.isFinite(p.x) && Number.isFinite(p.y), size = v => v == null || (Number.isFinite(v) && v > 0);
+  return m && m.n === n && (m.wind === 1 || m.wind === -1) && Array.isArray(m.prior) && m.prior.length === n && m.prior.every(point)
+    && Array.isArray(m.vert) && m.vert.length === n && m.vert.every(v => v && ['ortho', 'free', 'deg'].includes(v.kind) && (v.deg == null || Number.isFinite(v.deg)))
+    && Array.isArray(m.sides) && m.sides.length === n && m.sides.every(size) && Array.isArray(m.diags)
+    && m.diags.every(d => d && Number.isInteger(d.i) && Number.isInteger(d.j) && d.i >= 0 && d.j >= 0 && d.i < n && d.j < n && d.i !== d.j && size(d.cm)); }
 if (opts.initial && Array.isArray(opts.initial.verts) && opts.initial.verts.length >= 3) {
   // если помещение построено этим же редактором, восстанавливаем базовую фигуру, правки и размеры — их можно продолжить
   const d = opts.initial.draw, okDraw = d && d.base && Array.isArray(d.base.v) && d.base.v.length >= 3 && d.base.v.every(q => q && isFinite(q.x) && isFinite(q.y));
-  if (okDraw) { S.base = clone(d.base); S.ops = Array.isArray(d.ops) ? clone(d.ops) : []; S.origin = d.origin || { kind: 'poly' }; S.m = d.m && d.m.n === d.base.v.length ? clone(d.m) : null; }
+  if (okDraw) { S.base = clone(d.base); S.ops = Array.isArray(d.ops) ? clone(d.ops) : []; S.origin = d.origin || { kind: 'poly' }; S.m = validSavedModel(d.m, d.base.v.length) ? solveModel(clone(d.m)) : null; }
   else { S.base = { v: opts.initial.verts.map(([x, y]) => ({ x, y, fillet: null, arc: null })) }; S.origin = { kind: 'poly' }; S.ops = []; }
   S.stage = 3; const rr = replay(S.base, S.ops); if (rr.failedAt != null) { S.ops = []; } rebuild(); }
 render();
