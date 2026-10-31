@@ -4,11 +4,11 @@ import { roomDrawingHtml, roomDrawingSvg, roomDrawingLayout, ESTIMATE_DRAWING_CS
 
 const rectangle = [[0, 0], [4.2, 0], [4.2, 3.1], [0, 3.1]];
 
-test('drawing shows actual area, perimeter and edge dimensions in centimetres', () => {
+test('drawing shows perimeter in metres and edge dimensions in centimetres', () => {
   const html = roomDrawingHtml({ name: 'Кухня', v: rectangle }, { compact: true });
   assert.match(html, /estimate-drawing-compact/);
   assert.match(html, /viewBox="0 0 340 160" width="340" height="160"/);
-  assert.match(html, /S = 13,02 м² · P = 1\s460 см/);
+  assert.match(html, /S = 13,02 м² · P = 14,6 м/);
   assert.equal((html.match(/>420<\/text>/g) || []).length, 2);
   assert.equal((html.match(/>310<\/text>/g) || []).length, 2);
   assert.equal((html.match(/<circle /g) || []).length, 4);
@@ -20,7 +20,7 @@ test('drawing shows actual area, perimeter and edge dimensions in centimetres', 
 
 test('drawing subtracts holes from area and includes their boundaries in the perimeter', () => {
   const html = roomDrawingHtml({ name: 'С отверстием', v: [[0, 0], [4, 0], [4, 3], [0, 3]], holes: [[[1, 1], [2, 1], [2, 2], [1, 2]]] });
-  assert.match(html, /S = 11 м² · P = 1\s800 см/);
+  assert.match(html, /S = 11 м² · P = 18 м/);
   const shape = html.match(/<path d="([^"]+)" fill="#dee8f1" fill-rule="evenodd"/);
   assert.ok(shape);
   assert.equal((shape[1].match(/M/g) || []).length, 2);
@@ -31,7 +31,7 @@ test('drawing subtracts holes from area and includes their boundaries in the per
 test('orientation does not change measurements and labels stay within the canvas', () => {
   for (const v of [rectangle, rectangle.toReversed()]) {
     const html = roomDrawingHtml({ v }, { compact: true });
-    assert.match(html, /S = 13,02 м² · P = 1\s460 см/);
+    assert.match(html, /S = 13,02 м² · P = 14,6 м/);
     const positions = [...html.matchAll(/translate\(([-\d.]+) ([-\d.]+)\)/g)];
     assert.equal(positions.length, 4);
     for (const [, x, y] of positions) {
@@ -67,7 +67,7 @@ test('invalid and degenerate contours render a safe empty card', () => {
 
 test('duplicate adjacent and closing points do not create zero length dimensions', () => {
   const html = roomDrawingHtml({ v: [[0, 0], [4, 0], [4, 0], [4, 3], [0, 3], [0, 0]] });
-  assert.match(html, /S = 12 м² · P = 1\s400 см/);
+  assert.match(html, /S = 12 м² · P = 14 м/);
   assert.equal((html.match(/<text /g) || []).length, 4);
   assert.doesNotMatch(html, />0<\/text>/);
 });
@@ -87,6 +87,7 @@ test('dense notched room retains every real dimension without overlapping labels
   const v = [[1.01, 6.81], [1.01, 1.1], [0, 1.1], [0, 0], [2.89, 0.02], [2.88, 1.1], [2.32, 1.1], [2.29, 5.15], [4.31, 5.16], [4.31, 4.55], [9, 4.59], [8.96, 9.86], [8.76, 9.85], [8.76, 10.03], [5.43, 10], [5.44, 6.39], [3.13, 6.37], [3.13, 6.82]];
   for (const compact of [true, false]) {
     const html = roomDrawingHtml({ name: 'Прихожая/Кухня/Гостиная', v }, { compact });
+    assert.match(html, /P = 41,19 м/);
     const { labels } = roomDrawingLayout({ v }, { compact });
     assert.equal(labels.length, v.length, 'Every physical edge retains its dimension');
     assert.ok(labels.some(label => label.text === '18'));

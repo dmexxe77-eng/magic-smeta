@@ -76,12 +76,32 @@ test('draw option exports actual room contours, holes, measurements and room tit
   assert.match(drawing, /<svg/);
   assert.match(drawing, /fill-rule="evenodd"/);
   assert.match(drawing, /11 м²/);
-  assert.match(drawing, /1(?:\s|&nbsp;)?800 см/);
+  assert.match(drawing, /P = 18 м/);
   assert.match(drawing, />400<\/text>/);
   const html = estimateHtml({ est, type: 'draw', rooms: [room] });
   assert.match(html, /Чертежи помещений/);
   assert.match(html, /Кухня &lt;1&gt;/);
   assert.doesNotMatch(estimateHtml({ est, type: 'total', rooms: [room] }), /<svg/);
+});
+
+test('rounded quantities explain exact sums only when the quantity column is visible', () => {
+  const options = {
+    est: { works: [{ k: 'protection', n: 'Защита стен', q: 136.79, p: 365 }] },
+    rooms: [
+      { id: 'a', est: { works: [{ k: 'protection', q: 41.19 }] } },
+      { id: 'b', est: { works: [{ k: 'protection', q: 95.61 }] } },
+    ],
+    type: 'rooms',
+  };
+  const html = clean(estimateHtml(options));
+  assert.match(html, />41,19<\/td>/);
+  assert.match(html, /Суммы рассчитаны по точным значениям/);
+  assert.match(html, /data-estimate-grand-total>49 928,35 ₽/);
+  assert.doesNotMatch(html, /41,186989/);
+  assert.doesNotMatch(estimateHtml({ ...options, cols: { qty: false } }), /Суммы рассчитаны по точным значениям/);
+  const tailOnly = estimateHtml({ est: { mats: [{ q: 35.900000000000006, p: 620 }] } });
+  assert.match(tailOnly, />35,9<\/td>/);
+  assert.doesNotMatch(tailOnly, /Суммы рассчитаны по точным значениям/);
 });
 
 test('drawing appendix pairs active room plans on a new PDF page without changing totals', () => {

@@ -83,10 +83,10 @@ test('hidden discounts lower client prices and preserve the payable contract amo
   assert.doesNotMatch(actual, /наценк|скидк|Без корректировки/i);
 });
 
-test('the contract prints fractional quantity accurately alongside its adjusted price', () => {
+test('the contract formats quantity to two decimals while retaining its adjusted price and total', () => {
   const actual = text(contractHtml(DEFAULT_CONTRACT_TPL, contractFields({}, 109.89),
     { mats: [], works: [{ n: 'Монтаж', q: 0.333, p: 300, u: 'м²' }] },
     { percent: 10, scope: 'works' }, { showAdjustment: false }));
-  assert.match(actual, /Монтаж 0,333 м² 330 109,89/);
+  assert.match(actual, /Монтаж 0,33 м² 330 109,89/);
   assert.match(actual, /Итого: 109,89 ₽/);
 });
