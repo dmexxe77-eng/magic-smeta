@@ -1,4 +1,4 @@
-const SCOPES = new Set(['all', 'works', 'mats']);
+const SCOPES = new Set(['all', 'works', 'mats', 'equipment']);
 
 export function normalizeEstimateAdjustment(value) {
   return {
@@ -15,15 +15,16 @@ const roundMoney = value => {
   return Math.round((value + Math.sign(value) * tolerance) * 100) / 100;
 };
 
-export function calculateEstimateTotals(materials, works, adjustment) {
+export function calculateEstimateTotals(materials, works, adjustment, equipment = 0) {
   const { percent, scope } = normalizeEstimateAdjustment(adjustment);
   const materialsTotal = roundMoney(materials);
   const worksTotal = roundMoney(works);
-  const baseTotal = roundMoney(materialsTotal + worksTotal);
-  const adjustmentBase = scope === 'mats' ? materialsTotal : scope === 'works' ? worksTotal : baseTotal;
+  const equipmentTotal = roundMoney(equipment);
+  const baseTotal = roundMoney(materialsTotal + worksTotal + equipmentTotal);
+  const adjustmentBase = { mats: materialsTotal, works: worksTotal, equipment: equipmentTotal, all: baseTotal }[scope];
   const adjustmentAmount = roundMoney(adjustmentBase * percent / 100);
   return {
-    materialsTotal, worksTotal, baseTotal, adjustmentAmount,
+    materialsTotal, worksTotal, equipmentTotal, baseTotal, adjustmentAmount,
     adjustedTotal: roundMoney(baseTotal + adjustmentAmount), percent, scope,
   };
 }
@@ -31,7 +32,7 @@ export function calculateEstimateTotals(materials, works, adjustment) {
 export function adjustmentLabel(adjustment) {
   const { percent, scope } = normalizeEstimateAdjustment(adjustment);
   if (!percent) return 'Без корректировки';
-  const subject = { all: 'всю смету', works: 'работы', mats: 'материалы' }[scope];
+  const subject = { all: 'всю смету', works: 'работы', mats: 'материалы', equipment: 'оборудование' }[scope];
   const amount = Math.abs(percent).toLocaleString('ru-RU', { maximumFractionDigits: 10 });
   return `${percent > 0 ? 'Наценка' : 'Скидка'} на ${subject} ${percent > 0 ? '+' : '−'}${amount}%`;
 }

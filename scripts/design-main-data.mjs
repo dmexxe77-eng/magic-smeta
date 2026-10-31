@@ -16,6 +16,7 @@ const readMain = () => JSON.parse(fs.readFileSync(SOURCE, 'utf8'));
 
 const nomForDesign = n => {
   const out = { n: n.n, p: n.p, u: n.u, m: n.m ? 1 : 0, br: n.br || 'Прочее' };
+  if (n.category === 'equipment') out.category = 'equipment';
   if (n.img) out.img = n.img;
   if (n.mult > 0) out.mult = n.mult;
   if (n.note) out.note = n.note;

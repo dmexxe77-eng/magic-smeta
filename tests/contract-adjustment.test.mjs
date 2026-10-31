@@ -7,6 +7,15 @@ const estimate = {
   mats: [{ n: 'Полотно', q: 1, p: 1808118, u: 'м²' }],
   works: [{ n: 'Монтаж', q: 1, p: 2243016.45, u: 'м²' }],
 };
+
+test('equipment appears in the contract specification and shares its adjusted total', () => {
+  const est = { mats: [{ n: 'Полотно', q: 1, p: 100, u: 'м²' }], works: [], equipment: [{ n: 'Контроллер', q: 2, p: 250, u: 'шт' }] };
+  const adjustment = { percent: 10, scope: 'equipment' };
+  const actual = text(contractHtml(DEFAULT_CONTRACT_TPL, contractFields({}, 650), est, adjustment, { showAdjustment: false }));
+  assert.match(actual, /Контроллер 2 шт 275 550/);
+  assert.match(actual, /Итого: 650 ₽/);
+  assert.doesNotMatch(actual, /наценк|скидк/i);
+});
 const text = html => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 const generate = (adjustment, exportOptions) => {
   const totals = calculateEstimateTotals(1808118, 2243016.45, adjustment);

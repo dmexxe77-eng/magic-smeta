@@ -111,7 +111,7 @@ export function instanceLines(def, instance, preset, room, g, defs) {
   return (preset?.items || []).map(item => {
     const variants = Array.isArray(item.variants) ? item.variants : [];
     const selected = variants.find(option => option.n === instance?.variants?.[item.n]) || variants[0];
-    const effective = selected ? { ...item, n: selected.n, p: selected.p, u: selected.u, m: selected.m, key: item.n } : item;
+    const effective = selected ? { ...item, n: selected.n, p: selected.p, u: selected.u, m: selected.m, category: selected.category, key: item.n } : item;
     const q = itemQuantity(effective, instance, block, g);
     const on = instance?.off?.[item.n] !== true;
     const price = Number(effective.p);

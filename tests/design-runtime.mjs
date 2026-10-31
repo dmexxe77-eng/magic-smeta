@@ -29,7 +29,7 @@ export async function runtime({ saved, storageError = false, mainDataPatch } = {
     addEventListener:()=>{},removeEventListener:()=>{},
   });
   vm.runInContext('window=globalThis;', ctx);
-  for (const file of ['main-data.js','quantity.js','storage.js']) {
+  for (const file of ['main-data.js','quantity.js','storage.js','estimate.js']) {
     const filePath = 'public/design/' + file;
     if (fs.existsSync(filePath)) vm.runInContext(fs.readFileSync(filePath,'utf8'),ctx);
   }

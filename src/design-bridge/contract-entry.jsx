@@ -67,7 +67,7 @@ function Shell({ title, sub, onClose, children }) {
 }
 
 /* ── Договор проекта ── */
-function ProjectContract({ project, total, area, est, contract, installDate: ins0, onSaveContract, onProjectPatch, onClose }) {
+function ProjectContract({ project, total, area, est, estimateAdjustment, estimateExportOptions, contract, installDate: ins0, onSaveContract, onProjectPatch, onClose }) {
   const tpl = loadTpl();
   const saved = contract || null;
   const [num, setNum] = useState(saved?.number || nextContractNumber(tpl));
@@ -78,7 +78,7 @@ function ProjectContract({ project, total, area, est, contract, installDate: ins
   const numTaken = useRef(!!saved);
 
   const fields = contractFields(party, total, { number: num, prepay, area: Math.round(area * 100) / 100, installDate });
-  const html = contractHtml(tpl, fields, est);
+  const html = contractHtml(tpl, fields, est, estimateAdjustment, estimateExportOptions);
   const fileName = 'Договор_' + num + '_' + (project.name || '');
   const rest = Math.round((total - prepay) * 100) / 100;
 

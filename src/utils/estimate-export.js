@@ -57,26 +57,73 @@ function prepareRows(lines, target, foldedPercent) {
 export function prepareEstimateExport(est, adjustment, showAdjustment = true) {
   const mats = Array.isArray(est?.mats) ? est.mats : [];
   const works = Array.isArray(est?.works) ? est.works : [];
+  const equipment = Array.isArray(est?.equipment) ? est.equipment : [];
   const totals = calculateEstimateTotals(
     mats.reduce((sum, line) => sum + amount(line), 0),
     works.reduce((sum, line) => sum + amount(line), 0),
     adjustment,
+    equipment.reduce((sum, line) => sum + amount(line), 0),
   );
-  let targets = [cents(totals.materialsTotal), cents(totals.worksTotal)];
+  let targets = [cents(totals.materialsTotal), cents(totals.worksTotal), cents(totals.equipmentTotal)];
   const fold = !showAdjustment && totals.percent !== 0;
   if (fold) {
     if (totals.scope === 'all') {
       const factor = 1 + totals.percent / 100;
-      targets = allocateCents([totals.materialsTotal * factor, totals.worksTotal * factor], cents(totals.adjustedTotal));
+      targets = allocateCents([totals.materialsTotal * factor, totals.worksTotal * factor, totals.equipmentTotal * factor], cents(totals.adjustedTotal));
     } else {
-      targets[totals.scope === 'mats' ? 0 : 1] += cents(totals.adjustmentAmount);
+      targets[{ mats: 0, works: 1, equipment: 2 }[totals.scope]] += cents(totals.adjustmentAmount);
     }
   }
+  const foldedPercent = scope => fold && (totals.scope === 'all' || totals.scope === scope) ? totals.percent : 0;
   return {
-    mats: prepareRows(mats, targets[0], fold && totals.scope !== 'works' ? totals.percent : 0),
-    works: prepareRows(works, targets[1], fold && totals.scope !== 'mats' ? totals.percent : 0),
+    mats: prepareRows(mats, targets[0], foldedPercent('mats')),
+    works: prepareRows(works, targets[1], foldedPercent('works')),
+    equipment: prepareRows(equipment, targets[2], foldedPercent('equipment')),
     materialsTotal: targets[0] / 100,
     worksTotal: targets[1] / 100,
+    equipmentTotal: targets[2] / 100,
     totals,
   };
+}
+
+// Partition already-priced project rows, so room subtotals keep the project's
+// quantity overrides and kopecks instead of applying an adjustment per room.
+export function partitionEstimateExport(prepared, rooms = []) {
+  const sections = ['mats', 'works', 'equipment'];
+  const groups = rooms.map((room, index) => ({
+    id: room.id ?? String(index), name: room.name || 'Помещение', room,
+    mats: [], works: [], equipment: [],
+  }));
+  const unassigned = { id: 'unassigned', name: 'Общие позиции', mats: [], works: [], equipment: [] };
+  const key = line => String(line.k ?? line._k ?? line.nomId ?? `${line.n || ''}|${line.u || ''}`);
+  sections.forEach(section => {
+    (prepared[section] || []).forEach(line => {
+      const matches = groups.map(group => ({
+        group,
+        weight: (group.room.est?.[section] || [])
+          .filter(source => key(source) === key(line))
+          .reduce((sum, source) => sum + Math.max(0, finite(source.q)), 0),
+      })).filter(match => match.weight > 0);
+      if (!matches.length) { unassigned[section].push({ ...line }); return; }
+      const weightTotal = matches.reduce((sum, match) => sum + match.weight, 0);
+      const allocated = allocateCents(matches.map(match => match.weight), cents(line.exportTotal));
+      let remainingQuantity = finite(line.q);
+      matches.forEach(({ group, weight }, index) => {
+        const quantity = index === matches.length - 1 ? remainingQuantity : finite(line.q) * weight / weightTotal;
+        remainingQuantity -= quantity;
+        group[section].push({
+          ...line, q: quantity, exportTotal: allocated[index] / 100,
+          exportQuantity: quantity.toLocaleString('ru-RU', { maximumSignificantDigits: 21 }),
+          exportPrice: displayPrice(quantity, finite(line.p), allocated[index]),
+        });
+      });
+    });
+  });
+  if (sections.some(section => unassigned[section].length)) groups.push(unassigned);
+  return groups.map(group => ({
+    ...group,
+    materialsTotal: (group.mats || []).reduce((sum, line) => sum + cents(line.exportTotal), 0) / 100,
+    worksTotal: (group.works || []).reduce((sum, line) => sum + cents(line.exportTotal), 0) / 100,
+    equipmentTotal: (group.equipment || []).reduce((sum, line) => sum + cents(line.exportTotal), 0) / 100,
+  }));
 }

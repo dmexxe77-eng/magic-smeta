@@ -9,6 +9,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { blockQuantity } from '../src/design-bridge/quantity-model.js';
+import { normalizeEstimateAdjustment } from '../src/utils/estimate-adjustment.js';
 
 const OUT = path.resolve('design-src/main-data.json');
 const bundle = path.join(os.tmpdir(), 'magic-main-data-' + process.pid + '.cjs');
@@ -60,7 +61,7 @@ const twinOf = old => { const t = activeByName.get(normName(old.name)); return t
 const lookup = id => { const a = activeById.get(id); if (a) return a; const old = M.NB(id); return old ? (twinOf(old) || old) : null; };
 const nomOut = n => {
   const archived = archiveUsed.has(n.id);
-  const o = { id: n.id, n: String(n.name || '').trim(), p: Number(n.price) || 0, u: unitOf(n.unit), m: n.type === 'work' ? 0 : 1, br: archived ? ARCHIVE_BRAND : (n.brandName || 'Другое') };
+  const o = { id: n.id, n: String(n.name || '').trim(), p: Number(n.price) || 0, u: unitOf(n.unit), m: n.type === 'work' ? 0 : 1, ...(n.type === 'equipment' || n.category === 'equipment' ? { category: 'equipment' } : {}), br: archived ? ARCHIVE_BRAND : (n.brandName || 'Другое') };
   if (archived) o.bc = ARCHIVE_COLOR; else if (n.brandColor) o.bc = n.brandColor;
   if (n.type === 'canvas') o.cv = 1;
   if (n.img && imgExt(n.img)) o.img = n.img + '.' + imgExt(n.img);
@@ -109,7 +110,7 @@ SOURCE.presets.forEach(pr => {
   const items = [];
   (pr.items || []).forEach(id => {
     const n = resolve(id, where); if (!n) return;
-    const it = { n: String(n.name).trim(), p: Number(n.price) || 0, u: unitOf(n.unit), m: n.type === 'work' ? 0 : 1, nid: n.id };
+    const it = { n: String(n.name).trim(), p: Number(n.price) || 0, u: unitOf(n.unit), m: n.type === 'work' ? 0 : 1, ...(n.type === 'equipment' || n.category === 'equipment' ? { category: 'equipment' } : {}), nid: n.id };
     const k = pr.ko && pr.ko[id]; if (k != null && k !== '' && Number(k) && Number(k) !== 1) it.k = Number(k);
     if (pr.mu && pr.mu[id] && n.mult > 0) it.mult = n.mult;
     items.push(it);
@@ -117,7 +118,7 @@ SOURCE.presets.forEach(pr => {
   (pr.options || []).forEach(id => {
     const n = resolve(id, where); if (!n) return;
     const src = SRC[(pr.src && pr.src[id]) || legacySrc(id)] || 'manual';
-    items.push({ n: String(n.name).trim(), p: Number(n.price) || 0, u: unitOf(n.unit), m: n.type === 'work' ? 0 : 1, nid: n.id, src });
+    items.push({ n: String(n.name).trim(), p: Number(n.price) || 0, u: unitOf(n.unit), m: n.type === 'work' ? 0 : 1, ...(n.type === 'equipment' || n.category === 'equipment' ? { category: 'equipment' } : {}), nid: n.id, src });
   });
   const out = { id: pr.id, name: pr.name, items };
   /* параметр кнопки — откуда берётся её количество; пишем только отличия от умолчаний блока */
@@ -136,7 +137,7 @@ Object.values(presets).forEach(list => list.sort((a, b) => (b.fav || 0) - (a.fav
 const roomOpts = [];
 SOURCE.globalOpts.forEach(go => {
   const n = go.nomId ? resolve(go.nomId, 'опция «' + go.name + '»') : null; if (!n) return;
-  roomOpts.push({ id: go.id, title: String(go.name || n.name).trim().replace(/[\s.]+$/, ''), n: String(n.name).trim(), p: Number(n.price) || 0, u: unitOf(n.unit), m: n.type === 'work' ? 0 : 1, src: go.param === 'area' ? 'area' : 'perim', nid: n.id });
+  roomOpts.push({ id: go.id, title: String(go.name || n.name).trim().replace(/[\s.]+$/, ''), n: String(n.name).trim(), p: Number(n.price) || 0, u: unitOf(n.unit), m: n.type === 'work' ? 0 : 1, ...(n.type === 'equipment' || n.category === 'equipment' ? { category: 'equipment' } : {}), src: go.param === 'area' ? 'area' : 'perim', nid: n.id });
 });
 
 /* ── проекты ── */
@@ -191,9 +192,9 @@ function convertRoom(r, where, optsOn) {
     const bid = blocks.some(b => b.id === id) ? id : 'other';
     list.forEach(i => room[bid].push(convertInstance(i, where)));
   });
-  (r.extraItems || []).forEach(x => { const n = resolve(x.nomId, where + ' · доп. позиция'); if (!n || !(x.qty > 0)) return; const it = { id: x.id, n: String(n.name).trim(), p: Number(n.price) || 0, u: unitOf(n.unit), m: n.type === 'work' ? 0 : 1, qty: Number(x.qty), nid: n.id }; if (n.img && imgExt(n.img)) it.img = n.img + '.' + imgExt(n.img); room.extraItems.push(it); });
+  (r.extraItems || []).forEach(x => { const n = resolve(x.nomId, where + ' · доп. позиция'); if (!n || !(x.qty > 0)) return; const it = { id: x.id, n: String(n.name).trim(), p: Number(n.price) || 0, u: unitOf(n.unit), m: n.type === 'work' ? 0 : 1, ...(n.type === 'equipment' || n.category === 'equipment' ? { category: 'equipment' } : {}), qty: Number(x.qty), nid: n.id }; if (n.img && imgExt(n.img)) it.img = n.img + '.' + imgExt(n.img); room.extraItems.push(it); });
   /* доп. полотна: отдельного блока в модели нет — переносим строками */
-  (r.extraCanvas || []).forEach(ec => { const meta = presetById.get(ec.btnId); if (!meta || !(ec.qty > 0)) return; meta.out.items.forEach(it => { if (it.src) return; room.extraItems.push({ id: ec.id + '_' + room.extraItems.length, n: it.n + ' (доп. полотно)', p: it.p, u: it.u, m: it.m, qty: round2(ec.qty), nid: it.nid }); }); });
+  (r.extraCanvas || []).forEach(ec => { const meta = presetById.get(ec.btnId); if (!meta || !(ec.qty > 0)) return; meta.out.items.forEach(it => { if (it.src) return; room.extraItems.push({ id: ec.id + '_' + room.extraItems.length, n: it.n + ' (доп. полотно)', p: it.p, u: it.u, m: it.m, ...(it.category ? { category: it.category } : {}), qty: round2(ec.qty), nid: it.nid }); }); });
   if (r.imgPts) room.imgPts = r.imgPts;
   if (r.draw) room.draw = r.draw;
   return room;
@@ -211,6 +212,8 @@ const projects = SOURCE.orders.map(o => {
   return {
     id: o.id, name: o.name || 'Без названия', client: o.client || '', phone: o.phone || '', address: o.address || '', designer: o.designer || '', notes: o.notes || '',
     status: STATUS[o.status] || 'order', date: ruDate(o.date), paid: ops.filter(x => x.kind === 'in').reduce((s, x) => s + x.sum, 0), ops, events: [], contract: o.contract || null,
+    estimateAdjustment: normalizeEstimateAdjustment(o.estimateAdjustment),
+    estimateExportOptions: { showAdjustment: o.estimateExportOptions?.showAdjustment !== false },
     rooms: (o.rooms || []).map(r => convertRoom(r, where, optsOn)), _snap: o.nomSnapshot || null, _src: o,
   };
 });

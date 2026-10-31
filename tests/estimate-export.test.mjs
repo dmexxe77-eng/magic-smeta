@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { prepareEstimateExport } from '../src/utils/estimate-export.js';
+import { partitionEstimateExport, prepareEstimateExport } from '../src/utils/estimate-export.js';
 
 const estimate = () => ({
   mats: [{ _k: 'material', n: 'Полотно', q: 2, p: 100, exportRoomId: 'room-a' }],
@@ -12,7 +12,8 @@ const sum = rows => rows.reduce((value, line) => value + cents(line.exportTotal)
 const assertRowsAddUp = prepared => {
   assert.equal(sum(prepared.mats), cents(prepared.materialsTotal));
   assert.equal(sum(prepared.works), cents(prepared.worksTotal));
-  for (const line of [...prepared.mats, ...prepared.works]) {
+  assert.equal(sum(prepared.equipment || []), cents(prepared.equipmentTotal || 0));
+  for (const line of [...prepared.mats, ...prepared.works, ...(prepared.equipment || [])]) {
     const quantity = Number(line.exportQuantity.replace(/\s/g, '').replace(',', '.'));
     assert.equal(cents(priceNumber(line) * quantity), cents(line.exportTotal), JSON.stringify(line));
   }
@@ -26,6 +27,46 @@ test('showing an adjustment retains base prices while exposing authoritative bas
   assert.equal(prepared.worksTotal, 150);
   assert.equal(prepared.totals.adjustedTotal, 365);
   assertRowsAddUp(prepared);
+});
+
+test('equipment is priced separately and all three sections reconcile for every scope', () => {
+  const est = { ...estimate(), equipment: [{ k: 'driver', n: 'Блок питания', q: 3, p: 75.55 }] };
+  for (const scope of ['all', 'works', 'mats', 'equipment']) {
+    for (const percent of [10, -5, 2.5, -100]) {
+      const shown = prepareEstimateExport(est, { percent, scope }, true);
+      const hidden = prepareEstimateExport(est, { percent, scope }, false);
+      assertRowsAddUp(shown);
+      assertRowsAddUp(hidden);
+      assert.equal(hidden.totals.adjustedTotal, shown.totals.adjustedTotal);
+      assert.equal(sum(hidden.mats) + sum(hidden.works) + sum(hidden.equipment), cents(hidden.totals.adjustedTotal));
+      if (scope === 'equipment') {
+        assert.equal(hidden.mats[0].p, 100);
+        assert.equal(hidden.works[0].p, 50);
+      } else if (scope !== 'all') assert.equal(hidden.equipment[0].p, 75.55);
+    }
+  }
+});
+
+test('room partition uses edited global quantities once and preserves global kopecks', () => {
+  const source = { mats: [], works: [{ k: 'install', q: 10, p: .055 }], equipment: [{ k: 'driver', q: 1, p: 1 }] };
+  const rooms = [1, 2, 3].map(id => ({ id, name: `Комната ${id}`, est: {
+    mats: [], works: [{ k: 'install', q: id, p: .05 }], equipment: [{ k: 'driver', q: 1, p: 1 }],
+  } }));
+  const prepared = prepareEstimateExport(source, { percent: 10, scope: 'all' }, false);
+  const groups = partitionEstimateExport(prepared, rooms);
+  assert.equal(groups.length, 3);
+  groups.forEach(assertRowsAddUp);
+  assert.equal(groups.reduce((total, group) => total + sum(group.works) + sum(group.equipment), 0), cents(prepared.totals.adjustedTotal));
+  assert.equal(groups.reduce((total, group) => total + group.works[0].q, 0), 10);
+  assert.equal(groups.reduce((total, group) => total + group.equipment[0].q, 0), 1);
+  assert.equal(source.works[0].q, 10);
+});
+
+test('unmatched estimate lines remain visible in a common section', () => {
+  const prepared = prepareEstimateExport({ mats: [{ k: 'unknown', q: 1, p: 100 }], works: [] });
+  const groups = partitionEstimateExport(prepared, [{ id: 'a', est: { mats: [] } }]);
+  assert.equal(groups.at(-1).name, 'Общие позиции');
+  assert.equal(groups.at(-1).mats[0].exportTotal, 100);
 });
 
 test('hiding markup folds it into only the selected types and keeps the same grand total', () => {

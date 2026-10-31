@@ -12,6 +12,9 @@ import { quantitiesTemplate } from './design-quantities.mjs';
 import { storageTemplate } from './design-storage.mjs';
 import { presetEditorTemplate } from './design-preset-editor.mjs';
 import { calculatorTemplate } from './design-calculator.mjs';
+import { equipmentTemplate } from './design-equipment.mjs';
+import { adjustmentTemplate } from './design-adjustment.mjs';
+import { interfaceTemplate } from './design-interface.mjs';
 
 const OUT = 'public/design';
 fs.mkdirSync(OUT + '/vendor', { recursive: true });
@@ -31,6 +34,7 @@ await build({ entryPoints: ['src/design-bridge/ec-entry.js'], bundle: true, form
 
 await build({ entryPoints: ['src/design-bridge/quantity-model.js'], bundle: true, format: 'iife', globalName: 'MagicQuantity', outfile: OUT + '/quantity.js', minify: true, charset: 'utf8', logLevel: 'error' });
 await build({ entryPoints: ['src/design-bridge/design-storage.js'], bundle: true, format: 'iife', globalName: 'MagicDesignStorage', outfile: OUT + '/storage.js', minify: true, charset: 'utf8', logLevel: 'error' });
+await build({ entryPoints: ['src/design-bridge/estimate-entry.js'], bundle: true, format: 'iife', globalName: 'MagicEstimate', outfile: OUT + '/estimate.js', minify: true, charset: 'utf8', logLevel: 'error' });
 
 const src = fs.readFileSync('design-src/prototype.html', 'utf8');
 const grab = type => src.match(new RegExp('<script type="__bundler/' + type + '">([\\s\\S]*?)</script>'))[1];
@@ -54,7 +58,7 @@ const rep = (a, b, label) => { const n = tpl.split(a).length - 1; if (n !== 1) t
 rep('<meta name="viewport" content="width=device-width, initial-scale=1">',
   '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n<meta name="theme-color" content="#0b1119">\n<link rel="icon" href="' + FAVICON + '">\n<title>' + BRAND.title + '</title>\n' +
   '<link rel="stylesheet" href="/design/draw.css">\n<script src="/design/vendor/react.js"></script>\n<script src="/design/vendor/react-dom.js"></script>\n' +
-  '<script src="/design/draw.js"></script>\n<script src="/design/trace.js"></script>\n<script src="/design/contract.js"></script>\n<script src="/design/ec.js"></script>\n' + MOBILE_CSS, 'head');
+  '<script src="/design/draw.js"></script>\n<script src="/design/trace.js"></script>\n<script src="/design/contract.js"></script>\n<script src="/design/ec.js"></script>\n<script src="/design/estimate.js"></script>\n' + MOBILE_CSS, 'head');
 
 /* Вводное описание прототипа (карточка над рамкой телефона) на сайт не идёт */
 {
@@ -87,7 +91,7 @@ const METHODS = [
   "      onDone:()=>{h.close();if(last)self.go('calc',{tab:last});}});};",
   "    inp.click();}",
   "  openContract(){const p=this.cur();if(!p||!window.MagicContract){this.toast('Договор не загрузился');return;}const self=this;const e=est(p.rooms,this.ed(p.id));const ins=this.installStart(p);const fmtD=iso=>iso?String(iso).split('-').reverse().join('.'):'';",
-  "    const h=window.MagicContract.open({project:{id:p.id,name:p.name,client:p.client,phone:p.phone,address:p.address},total:e.total,area:this.pArea(p),est:e,contract:p.contract||null,installDate:fmtD(ins),",
+  "    const h=window.MagicContract.open({project:{id:p.id,name:p.name,client:p.client,phone:p.phone,address:p.address},total:this.pSum(p),area:this.pArea(p),est:e,estimateAdjustment:p.estimateAdjustment,estimateExportOptions:p.estimateExportOptions,contract:p.contract||null,installDate:fmtD(ins),",
   "      onProjectPatch:patch=>self.upd(p.id,x=>Object.assign({},x,patch)),",
   "      onSaveContract:c=>self.upd(p.id,x=>Object.assign({},x,{contract:c})),",
   "      onClose:()=>{h.close();}});}",
@@ -261,6 +265,9 @@ tpl = quantitiesTemplate(tpl);
 tpl = storageTemplate(tpl);
 tpl = presetEditorTemplate(tpl);
 tpl = calculatorTemplate(tpl);
+tpl = equipmentTemplate(tpl);
+tpl = adjustmentTemplate(tpl);
+tpl = interfaceTemplate(tpl, fs.readFileSync('design-src/interface.css', 'utf8'));
 /* Бренд ЗАМЕРX: знак, название, палитра — после всех правок разметки, чтобы перекрасить и их */
 tpl = brandTemplate(tpl);
 

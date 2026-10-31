@@ -122,7 +122,7 @@ export function contractHtml(tpl, fields, est, estimateAdjustment, estimateExpor
   const money = v => (Number(v) || 0).toLocaleString("ru-RU", { maximumFractionDigits: 2 });
   const showAdjustment = estimateExportOptions?.showAdjustment !== false;
   const prepared = prepareEstimateExport(est, estimateAdjustment, showAdjustment);
-  const specRows = [...prepared.mats, ...prepared.works];
+  const specRows = [...prepared.mats, ...prepared.works, ...(prepared.equipment || [])];
   const totals = prepared.totals;
   const summaryRow = (label, amount, bold = false) => `<tr><td colspan="4" style="border:0.5px solid #ccc;padding:4px 6px;text-align:right;${bold ? 'font-weight:700;' : ''}">${esc(label)}:</td>
     <td style="border:0.5px solid #ccc;padding:4px 6px;text-align:right;${bold ? 'font-weight:700;' : ''}">${amount} ₽</td></tr>`;

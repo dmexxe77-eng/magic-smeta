@@ -37,6 +37,34 @@ const exportBackup = (dir, data) => {
   run(dir, 'scripts/export-main-data.mjs', [file]);
   return JSON.parse(fs.readFileSync(path.join(dir, 'design-src/main-data.json'), 'utf8'));
 };
+
+test('project export retains adjustment scope and disclosure across the design payload', () => {
+  const dir = fixture();
+  try {
+    const input = backup();
+    input.orders[0].estimateAdjustment = { percent: 10, scope: 'works' };
+    input.orders[0].estimateExportOptions = { showAdjustment: false };
+    const output = exportBackup(dir, input);
+    assert.deepEqual(output.projects[0].estimateAdjustment, input.orders[0].estimateAdjustment);
+    assert.deepEqual(output.projects[0].estimateExportOptions, { showAdjustment: false });
+    const payload = writePayload(dir, output);
+    assert.deepEqual(payload.projects[0].estimateAdjustment, input.orders[0].estimateAdjustment);
+    assert.deepEqual(payload.projects[0].estimateExportOptions, { showAdjustment: false });
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('equipment classification survives conversion to the design catalogue', () => {
+  const dir = fixture();
+  try {
+    const input = backup();
+    input.customNoms[0].type = 'equipment';
+    const output = exportBackup(dir, input);
+    assert.equal(output.nom.find(n => n.id === 'nom_export_test').category, 'equipment');
+    assert.equal(output.presets.cst_decor[0].items[0].category, 'equipment');
+    const payload = writePayload(dir, output);
+    assert.equal(payload.nom.find(n => n.n === input.customNoms[0].name).category, 'equipment');
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
 const writePayload = (dir, data) => {
   fs.writeFileSync(path.join(dir, 'design-src/main-data.json'), JSON.stringify(data));
   const out = path.join(dir, 'out');

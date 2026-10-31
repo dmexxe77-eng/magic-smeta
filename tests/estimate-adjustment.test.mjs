@@ -7,7 +7,7 @@ import { normalizeEstimateAdjustment, calculateEstimateTotals, adjustmentLabel }
 test('projects without a saved adjustment retain their base total', () => {
   assert.deepEqual(normalizeEstimateAdjustment(), { percent: 0, scope: 'all' });
   assert.deepEqual(calculateEstimateTotals(100, 200), {
-    materialsTotal: 100, worksTotal: 200, baseTotal: 300,
+    materialsTotal: 100, worksTotal: 200, equipmentTotal: 0, baseTotal: 300,
     adjustedTotal: 300, adjustmentAmount: 0, percent: 0, scope: 'all',
   });
 });
@@ -76,4 +76,15 @@ test('labels state both the percentage and the affected part of the estimate', (
   assert.equal(adjustmentLabel({ percent: 10, scope: 'all' }), 'Наценка на всю смету +10%');
   assert.equal(adjustmentLabel({ percent: -2.5, scope: 'mats' }), 'Скидка на материалы −2,5%');
   assert.equal(adjustmentLabel({ percent: 0, scope: 'works' }), 'Без корректировки');
+  assert.equal(adjustmentLabel({ percent: 10, scope: 'equipment' }), 'Наценка на оборудование +10%');
+});
+
+test('equipment is a separate adjustment base and remains part of the whole estimate', () => {
+  const all = calculateEstimateTotals(100, 200, { percent: 10, scope: 'all' }, 300);
+  assert.equal(all.baseTotal, 600);
+  assert.equal(all.equipmentTotal, 300);
+  assert.equal(all.adjustedTotal, 660);
+  assert.equal(calculateEstimateTotals(100, 200, { percent: 10, scope: 'equipment' }, 300).adjustedTotal, 630);
+  assert.equal(calculateEstimateTotals(100, 200, { percent: 10, scope: 'works' }, 300).adjustedTotal, 620);
+  assert.equal(calculateEstimateTotals(100, 200, { percent: -100, scope: 'equipment' }, 300).adjustedTotal, 300);
 });
