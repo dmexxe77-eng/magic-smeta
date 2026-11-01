@@ -126,9 +126,9 @@ export function contractHtml(tpl, fields, est, estimateAdjustment, estimateExpor
   const totals = prepared.totals;
   const summaryRow = (label, amount, bold = false) => `<tr><td colspan="4" style="border:0.5px solid #ccc;padding:4px 6px;text-align:right;${bold ? 'font-weight:700;' : ''}">${esc(label)}:</td>
     <td style="border:0.5px solid #ccc;padding:4px 6px;text-align:right;${bold ? 'font-weight:700;' : ''}">${amount} ₽</td></tr>`;
-  const summary = showAdjustment && totals.percent !== 0
-    ? summaryRow(totals.percent > 0 ? 'Без наценки' : 'Без скидки', money(totals.baseTotal))
-      + summaryRow(adjustmentLabel(totals), `${totals.adjustmentAmount < 0 ? '−' : '+'}${money(Math.abs(totals.adjustmentAmount))}`)
+  const summary = showAdjustment && totals.hasAdjustment
+    ? summaryRow(totals.adjustments.length > 1 ? 'Без корректировки' : totals.adjustments[0].percent > 0 ? 'Без наценки' : 'Без скидки', money(totals.baseTotal))
+      + totals.adjustments.map(entry => summaryRow(adjustmentLabel(entry), `${entry.amount < 0 ? '−' : '+'}${money(Math.abs(entry.amount))}`)).join('')
       + summaryRow('Итого к оплате', money(totals.adjustedTotal), true)
     : summaryRow('Итого', money(totals.adjustedTotal), true);
   const spec = specRows.length ? `

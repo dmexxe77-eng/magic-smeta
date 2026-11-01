@@ -90,3 +90,20 @@ test('the contract formats quantity to two decimals while retaining its adjusted
   assert.match(actual, /Монтаж 0,33 м² 330 109,89/);
   assert.match(actual, /Итого: 109,89 ₽/);
 });
+
+test('a contract uses every saved group rate regardless of the last selected group', () => {
+  const est = { mats: [{ n: 'Материал', q: 1, p: 10000, u: 'шт' }], works: [{ n: 'Работа', q: 1, p: 20000, u: 'шт' }], equipment: [{ n: 'Контроллер', q: 1, p: 5000, u: 'шт' }] };
+  const adjustment = { scope: 'all', rates: { mats: -5, works: 10, equipment: -10 } };
+  const fields = contractFields({}, 36000);
+  const shown = text(contractHtml(DEFAULT_CONTRACT_TPL, fields, est, adjustment));
+  const hidden = text(contractHtml(DEFAULT_CONTRACT_TPL, fields, est, adjustment, { showAdjustment: false }));
+  assert.match(shown, /Скидка на материалы −5%: −500 ₽/);
+  assert.match(shown, /Наценка на работы \+10%: \+2 000 ₽/);
+  assert.match(shown, /Скидка на оборудование −10%: −500 ₽/);
+  assert.match(shown, /Итого к оплате: 36 000 ₽/);
+  assert.match(hidden, /Материал 1 шт 9 500 9 500/);
+  assert.match(hidden, /Работа 1 шт 22 000 22 000/);
+  assert.match(hidden, /Контроллер 1 шт 4 500 4 500/);
+  assert.match(hidden, /Итого: 36 000 ₽/);
+  assert.doesNotMatch(hidden, /Скидка|Наценка|корректиров/);
+});

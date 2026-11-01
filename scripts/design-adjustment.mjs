@@ -5,7 +5,7 @@ const METHODS = String.raw`
     return window.MagicEstimate.calculateEstimateTotals(value.mt,value.wt,p.estimateAdjustment,value.et||0);
   }
   setEstimateAdjustment(pid,patch){
-    this.upd(pid,p=>Object.assign({},p,{estimateAdjustment:window.MagicEstimate.normalizeEstimateAdjustment(Object.assign({},p.estimateAdjustment,patch))}));
+    this.upd(pid,p=>Object.assign({},p,{estimateAdjustment:window.MagicEstimate.updateEstimateAdjustment(p.estimateAdjustment,patch)}));
   }
   commitEstimatePercent(pid){
     const p=this.state.projects.find(project=>project.id===pid);if(!p)return null;
@@ -13,15 +13,16 @@ const METHODS = String.raw`
     const buf=(this.state.estimatePctBuffers||{})[pid];if(buf==null)return current;
     const text=String(buf).trim().replace(/\s/g,'').replace(',','.');
     const number=text===''?0:Number(text);
-    const next=window.MagicEstimate.normalizeEstimateAdjustment(Object.assign({},current,{percent:Number.isFinite(number)?number:current.percent}));
-    this.setEstimateAdjustment(pid,next);
+    const patch={scope:current.scope,percent:Number.isFinite(number)?number:current.percent};
+    const next=window.MagicEstimate.updateEstimateAdjustment(current,patch);
+    if(Number.isFinite(number))this.setEstimateAdjustment(pid,patch);
     this.setState(s=>({estimatePctBuffers:Object.assign({},s.estimatePctBuffers,{[pid]:null})}));
-    return next;
+    return Number.isFinite(number)?next:current;
   }
   estimateAdjustmentVals(){
     const p=this.cur();if(!p)return{};
     const totals=this.estimateTotals(p),label=window.MagicEstimate.adjustmentLabel(p.estimateAdjustment);
-    const adjustment={hasEstimateAdjustment:!!totals.percent,estimateBaseTxt:'Без корректировки '+RUB(totals.baseTotal),estimateAdjustmentTxt:label};
+    const adjustment={hasEstimateAdjustment:totals.hasAdjustment,estimateBaseTxt:'Без корректировки '+RUB(totals.baseTotal),estimateAdjustmentTxt:label};
     if(this.state.sheet==='estimate'){
       const r=p.rooms.find(room=>room.id===this.state.tab)||p.rooms[0];
       const e=est(this.state.estTab==='all'||!r?p.rooms:[r],this.ed(p.id));
@@ -59,23 +60,27 @@ const EXPORT_METHOD = String.raw`
     const s=this.state;if(s.sheet!=='export')return{};
     const p=this.cur();if(!p)return{};
     const x=s.exp,adjustment=window.MagicEstimate.normalizeEstimateAdjustment(p.estimateAdjustment),totals=this.estimateTotals(p);
+    const rates=window.MagicEstimate.estimateAdjustmentRates(adjustment),uniform=rates.mats===rates.works&&rates.works===rates.equipment,mixed=adjustment.scope==='all'&&!uniform;
+    const pct=value=>(value>0?'+':value<0?'−':'')+Math.abs(value).toLocaleString('ru-RU',{maximumFractionDigits:10})+'%';
     const setX=patch=>this.setState(st=>({exp:Object.assign({},st.exp,patch)}));
     const setAdjustment=patch=>{this.commitEstimatePercent(p.id);this.setEstimateAdjustment(p.id,patch);};
     const on=b=>({border:b?ACC:'#E4E4EE',bg:b?'#E7EFFD':'#fff',color:b?ACC:'#3D4454'});
     const types=[['total','Общая смета','Материалы, работы и оборудование'],['draw','Общая + чертежи','Все планы на отдельных листах'],['rooms','По помещениям','Чертёж и расчёт каждого помещения']].map(([id,label,sub])=>{const a=x.type===id;return{label,sub,pick:()=>setX({type:id}),border:a?ACC:'#E4E4EE',bg:a?'#E7EFFD':'#fff',dotBorder:a?ACC:'#C9C9D6',dot:a?ACC:'transparent'};});
     const cols=[['num','#'],['name','Название'],['qty','Кол-во'],['unit','Ед.'],['price','Цена'],['total','Итого']].map(([id,label])=>Object.assign({label,toggle:()=>setX({cols:Object.assign({},this.state.exp.cols,{[id]:!this.state.exp.cols[id]})})},on(x.cols[id])));
-    const pcts=[-15,-10,-5,0,5,10,15].map(value=>Object.assign({label:value===0?'0%':(value>0?'+':'−')+Math.abs(value)+'%',pick:()=>setAdjustment({percent:value})},on(adjustment.percent===value)));
-    const scopes=[['all','Вся смета'],['works','Работы'],['mats','Материалы'],['equipment','Оборудование']].map(([id,label])=>Object.assign({id,label,pick:()=>setAdjustment({scope:id})},on(adjustment.scope===id)));
+    const pcts=[-15,-10,-5,0,5,10,15].map(value=>Object.assign({label:pct(value),pick:()=>setAdjustment({percent:value})},on(!mixed&&adjustment.percent===value)));
+    const scopes=[['all','Вся смета'],['mats','Материалы'],['works','Работы'],['equipment','Оборудование']].map(([id,label])=>{const value=id==='all'?(uniform?pct(rates.mats):'Разные'):pct(rates[id]);return Object.assign({id,label,value,aria:label+' '+value,selected:adjustment.scope===id,pick:()=>setAdjustment({scope:id})},on(adjustment.scope===id));});
     const showPct=p.estimateExportOptions?.showAdjustment!==false,isCustom=![-15,-10,-5,0,5,10,15].includes(adjustment.percent);
     const buffer=(s.estimatePctBuffers||{})[p.id],customVal=buffer!=null?buffer:(isCustom?String(adjustment.percent).replace('.',','):'');
     return{expTypes:types,expCols:cols,expPcts:pcts,expScopes:scopes,
+      expScopeHint:adjustment.scope==='all'?'Задать один процент всем группам':'Свой процент для каждой группы · сохраняется автоматически',
+      expAdjustmentRows:totals.adjustments.map(entry=>({label:window.MagicEstimate.adjustmentLabel(entry),amount:(entry.amount>0?'+':entry.amount<0?'−':'')+RUB(Math.abs(entry.amount))})),
       expCustomVal:customVal,expCustomBorder:isCustom?ACC:'#E4E4EE',expCustomBg:isCustom?'#E7EFFD':'#fff',expCustomColor:customVal?INK:'#A5A9B8',
       expCustomChange:e=>{const value=e.target.value;this.setState(st=>({estimatePctBuffers:Object.assign({},st.estimatePctBuffers,{[p.id]:value})}));},
       expCustomBlur:()=>this.commitEstimatePercent(p.id),
       expToggleShowPct:()=>this.upd(p.id,project=>Object.assign({},project,{estimateExportOptions:Object.assign({},project.estimateExportOptions,{showAdjustment:project.estimateExportOptions?.showAdjustment===false})})),
       expShowPct:showPct,expShowPctBg:showPct?ACC:'#fff',expShowPctBorder:showPct?ACC:'#D6D6E2',expShowPctOpacity:1,
-      expShowPctSub:showPct?'Отдельная строка с процентом и суммой':'Процент включён в цены позиций',
-      expFinalTxt:RUB(totals.adjustedTotal),expDeltaLabel:window.MagicEstimate.adjustmentLabel(adjustment)+(adjustment.percent?' · '+RUB(totals.adjustmentAmount):''),expBaseLine:'Без корректировки '+RUB(totals.baseTotal),
+      expShowPctSub:showPct?'Отдельные строки с процентами и суммами':'Проценты включены в цены позиций',
+      expFinalTxt:RUB(totals.adjustedTotal),expDeltaLabel:totals.hasAdjustment?'С учётом корректировок':'Без корректировки',expBaseLine:'Без корректировки '+RUB(totals.baseTotal),
       expBusy:!!s.estimateExportBusy,expDownloadLabel:s.estimateExportBusy?'Подготовка…':'Скачать PDF',
       expDownload:()=>this.runEstimateExport('download'),expSend:()=>this.runEstimateExport('share'),expPreview:()=>this.runEstimateExport('preview'),expEC:()=>this.exportEC()};
   }
@@ -104,8 +109,10 @@ export function adjustmentTemplate(source) {
   rep('{{ pSumTxt }}</div>', '{{ pSumTxt }}</div>' + adjustmentLines('estimateBaseTxt','estimateAdjustmentTxt'), 'project adjustment');
   rep('{{ estGrand }}</div>', '{{ estGrand }}</div>' + adjustmentLines('estBaseTxt','estAdjustmentTxt'), 'estimate adjustment');
 
-  const scopeMarkup = '<div role="group" aria-label="К чему применить процент" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"><sc-for list="{{ expScopes }}" as="scope" hint-placeholder-count="4"><button sc-camel-on-click="{{ scope.pick }}" style="min-height:32px;padding:0 10px;border-radius:9px;border:1.5px solid {{ scope.border }};background:{{ scope.bg }};color:{{ scope.color }};font-size:12px;font-weight:700;cursor:pointer">{{ scope.label }}</button></sc-for></div>';
+  const scopeMarkup = '<div role="group" aria-label="К чему применить процент" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin-bottom:8px"><sc-for list="{{ expScopes }}" as="scope" hint-placeholder-count="4"><button aria-label="{{ scope.aria }}" aria-pressed="{{ scope.selected }}" sc-camel-on-click="{{ scope.pick }}" style="min-width:0;min-height:44px;padding:5px 2px;border-radius:9px;border:1.5px solid {{ scope.border }};background:{{ scope.bg }};color:{{ scope.color }};font-weight:700;cursor:pointer"><span style="display:block;font-size:10px;line-height:1.4">{{ scope.label }}</span><span style="display:block;font-size:13px;margin-top:2px;font-variant-numeric:tabular-nums">{{ scope.value }}</span></button></sc-for></div><div style="font-size:10.5px;line-height:1.4;color:#6F7688;margin-bottom:10px">{{ expScopeHint }}</div>';
   rep('Корректировка стоимости</div>', 'Наценка или скидка</div>' + scopeMarkup, 'scope control');
+  rep('<div style="font-size:11.5px;color:#6F7688;font-weight:700">{{ expDeltaLabel }}</div>', '<div style="font-size:11.5px;color:#6F7688;font-weight:700">{{ expDeltaLabel }}</div><sc-for list="{{ expAdjustmentRows }}" as="row" hint-placeholder-count="0"><div style="display:flex;justify-content:space-between;gap:10px;font-size:11px;line-height:1.5;margin-top:3px"><span>{{ row.label }}</span><span style="white-space:nowrap;font-variant-numeric:tabular-nums">{{ row.amount }}</span></div></sc-for>', 'saved group summary');
+  rep('background:#F7F7FC;border-radius:16px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px', 'background:#F7F7FC;border-radius:16px;padding:10px 12px;display:flex;flex-direction:column;align-items:stretch;gap:8px;margin-bottom:14px', 'summary layout');
   rep('<input value="{{ expCustomVal }}"', '<input aria-label="Процент наценки или скидки" value="{{ expCustomVal }}"', 'percent field label');
   rep('<div sc-camel-on-click="{{ expToggleShowPct }}"', '<button type="button" role="checkbox" aria-checked="{{ expShowPct }}" sc-camel-on-click="{{ expToggleShowPct }}"', 'checkbox semantics');
   rep('cursor:pointer;opacity:{{ expShowPctOpacity }}"', 'cursor:pointer;opacity:{{ expShowPctOpacity }};width:100%;border:0;background:transparent;text-align:left;color:inherit"', 'checkbox button reset');

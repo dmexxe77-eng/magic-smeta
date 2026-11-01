@@ -100,7 +100,7 @@ export function estimateHtml({ project = {}, company = {}, est = {}, adjustment,
   const presentCategories = group => CATEGORIES.filter(([key]) => key !== 'equipment' || group.equipment?.length);
   const renderSections = group => presentCategories(group).map(([key, label, total]) => sectionHtml(key, label, group[total], group[key] || [], columns)).join('');
   const byRoom = type === 'rooms' || type === 'room';
-  const hasAdjustment = showAdjustment && prepared.totals.percent !== 0;
+  const hasAdjustment = showAdjustment && prepared.totals.hasAdjustment;
   const hasRoundedQuantity = group => CATEGORIES.some(([key]) => (group[key] || []).some(line => line.exportQuantityRounded));
   let quantityRounded = hasRoundedQuantity(prepared);
   let content = '';
@@ -113,7 +113,7 @@ export function estimateHtml({ project = {}, company = {}, est = {}, adjustment,
     content = renderSections(prepared);
   }
   const summary = presentCategories(prepared).map(([, label, total]) => `<div class="estimate-summary-row"><span>${label}</span><span>${money(prepared[total])}</span></div>`).join('');
-  const correction = hasAdjustment ? `<div class="estimate-summary-row"><span>До ${prepared.totals.percent > 0 ? 'наценки' : 'скидки'}</span><span>${money(prepared.totals.baseTotal)}</span></div><div class="estimate-summary-row" data-estimate-adjustment><span>${escape(adjustmentLabel(adjustment))}</span><span>${prepared.totals.adjustmentAmount > 0 ? '+' : prepared.totals.adjustmentAmount < 0 ? '−' : ''}${money(Math.abs(prepared.totals.adjustmentAmount))}</span></div>` : '';
+  const correction = hasAdjustment ? `<div class="estimate-summary-row"><span>Без корректировки</span><span>${money(prepared.totals.baseTotal)}</span></div>` + prepared.totals.adjustments.map(entry => `<div class="estimate-summary-row" data-estimate-adjustment><span>${escape(adjustmentLabel(entry))}</span><span>${entry.amount > 0 ? '+' : entry.amount < 0 ? '−' : ''}${money(Math.abs(entry.amount))}</span></div>`).join('') : '';
   const roundingNote = quantityRounded && columns.some(([id]) => id === 'qty')
     ? '<p class="estimate-rounding-note">Количество округлено до 2 знаков. Суммы рассчитаны по точным значениям.</p>' : '';
   const drawingPairs = [];

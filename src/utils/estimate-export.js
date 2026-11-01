@@ -1,4 +1,4 @@
-import { calculateEstimateTotals } from './estimate-adjustment.js';
+import { calculateEstimateTotals, estimateAdjustmentRates } from './estimate-adjustment.js';
 
 const finite = value => typeof value === 'number' && Number.isFinite(value) ? value : 0;
 const cents = value => {
@@ -78,16 +78,17 @@ export function prepareEstimateExport(est, adjustment, showAdjustment = true) {
     equipment.reduce((sum, line) => sum + amount(line), 0),
   );
   let targets = [cents(totals.materialsTotal), cents(totals.worksTotal), cents(totals.equipmentTotal)];
-  const fold = !showAdjustment && totals.percent !== 0;
+  const fold = !showAdjustment && totals.hasAdjustment;
   if (fold) {
-    if (totals.scope === 'all') {
-      const factor = 1 + totals.percent / 100;
+    if (totals.adjustments[0].scope === 'all') {
+      const factor = 1 + totals.adjustments[0].percent / 100;
       targets = allocateCents([totals.materialsTotal * factor, totals.worksTotal * factor, totals.equipmentTotal * factor], cents(totals.adjustedTotal));
     } else {
-      targets[{ mats: 0, works: 1, equipment: 2 }[totals.scope]] += cents(totals.adjustmentAmount);
+      for (const entry of totals.adjustments) targets[{ mats: 0, works: 1, equipment: 2 }[entry.scope]] += cents(entry.amount);
     }
   }
-  const foldedPercent = scope => fold && (totals.scope === 'all' || totals.scope === scope) ? totals.percent : 0;
+  const rates = estimateAdjustmentRates(adjustment);
+  const foldedPercent = scope => fold ? rates[scope] : 0;
   return {
     mats: prepareRows(mats, targets[0], foldedPercent('mats')),
     works: prepareRows(works, targets[1], foldedPercent('works')),

@@ -184,3 +184,22 @@ test('source estimates remain unchanged and empty or zero-quantity lines are saf
   assert.equal(zeros.mats[0].exportTotal, 0);
   assertRowsAddUp(zeros);
 });
+
+test('mixed adjustments are disclosed or folded by group with identical project and room totals', () => {
+  const source = { mats: [{ k: 'm', q: 1, p: 10000 }], works: [{ k: 'w', q: 1, p: 20000 }], equipment: [{ k: 'e', q: 1, p: 5000 }] };
+  const rates = { scope: 'all', rates: { mats: -5, works: 10, equipment: -10 } };
+  const shown = prepareEstimateExport(source, rates, true);
+  const folded = prepareEstimateExport(source, rates, false);
+  assert.equal(shown.totals.adjustedTotal, 36000);
+  assert.equal(folded.totals.adjustedTotal, 36000);
+  assert.deepEqual([folded.materialsTotal, folded.worksTotal, folded.equipmentTotal], [9500, 22000, 4500]);
+  assert.deepEqual([folded.mats[0].p, folded.works[0].p, folded.equipment[0].p], [9500, 22000, 4500]);
+  assertRowsAddUp(shown); assertRowsAddUp(folded);
+  const rooms = [1, 2, 3].map(id => ({ id, est: {
+    mats: [{ k: 'm', q: id }], works: [{ k: 'w', q: id }], equipment: [{ k: 'e', q: id }],
+  } }));
+  const groups = partitionEstimateExport(folded, rooms);
+  groups.forEach(assertRowsAddUp);
+  assert.equal(groups.reduce((total, group) => total + sum(group.mats) + sum(group.works) + sum(group.equipment), 0), 3600000);
+  assert.equal(source.mats[0].p, 10000);
+});

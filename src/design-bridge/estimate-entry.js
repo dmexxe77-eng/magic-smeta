@@ -3,7 +3,7 @@ import { estimateHtml } from '../utils/estimate-html.js';
 import { fitToStage } from './stage.js';
 
 export { estimateHtml } from '../utils/estimate-html.js';
-export { normalizeEstimateAdjustment, calculateEstimateTotals, adjustmentLabel } from '../utils/estimate-adjustment.js';
+export { normalizeEstimateAdjustment, estimateAdjustmentRates, updateEstimateAdjustment, calculateEstimateTotals, adjustmentLabel } from '../utils/estimate-adjustment.js';
 export { prepareEstimateExport } from '../utils/estimate-export.js';
 export { getCompanyDetails, getCompanyProfile } from './company-profile.js';
 export { withEstimateImages } from './estimate-images.js';

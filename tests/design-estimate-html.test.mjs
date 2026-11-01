@@ -224,3 +224,19 @@ test('row photos and logos accept only encoded local catalogue images or raster 
     assert.doesNotMatch(rejected, /<img/);
   }
 });
+
+test('mixed percentages get separate visible rows and all disappear when folded into prices', () => {
+  const adjustment = { scope: 'all', rates: { mats: -5, works: 10, equipment: -10 } };
+  for (const type of ['total', 'rooms', 'draw']) {
+    const shown = clean(estimateHtml({ est, adjustment, type }));
+    const hidden = clean(estimateHtml({ est, adjustment, type, showAdjustment: false }));
+    assert.equal((shown.match(/data-estimate-adjustment/g) || []).length, 3);
+    assert.match(shown, /Скидка на материалы −5%/);
+    assert.match(shown, /Наценка на работы \+10%/);
+    assert.match(shown, /Скидка на оборудование −10%/);
+    assert.match(shown, /data-estimate-grand-total>422,5 ₽/);
+    assert.match(hidden, /data-estimate-grand-total>422,5 ₽/);
+    assert.doesNotMatch(hidden, /Наценка|Скидка|корректиров|data-estimate-adjustment/);
+    for (const price of ['95', '55', '67,5']) assert.ok(hidden.includes(`>${price}</td>`));
+  }
+});

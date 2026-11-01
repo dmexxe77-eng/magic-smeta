@@ -9,6 +9,7 @@ test('projects without a saved adjustment retain their base total', () => {
   assert.deepEqual(calculateEstimateTotals(100, 200), {
     materialsTotal: 100, worksTotal: 200, equipmentTotal: 0, baseTotal: 300,
     adjustedTotal: 300, adjustmentAmount: 0, percent: 0, scope: 'all',
+    adjustments: [], hasAdjustment: false,
   });
 });
 
@@ -87,4 +88,41 @@ test('equipment is a separate adjustment base and remains part of the whole esti
   assert.equal(calculateEstimateTotals(100, 200, { percent: 10, scope: 'equipment' }, 300).adjustedTotal, 630);
   assert.equal(calculateEstimateTotals(100, 200, { percent: 10, scope: 'works' }, 300).adjustedTotal, 620);
   assert.equal(calculateEstimateTotals(100, 200, { percent: -100, scope: 'equipment' }, 300).adjustedTotal, 300);
+});
+
+test('independent group discounts and markup combine once and keep all base totals', () => {
+  const rates = { mats: -5, works: 10, equipment: -10 };
+  const result = calculateEstimateTotals(10000, 20000, { scope: 'mats', rates }, 5000);
+  assert.equal(result.baseTotal, 35000);
+  assert.equal(result.adjustmentAmount, 1000);
+  assert.equal(result.adjustedTotal, 36000);
+  assert.equal(result.hasAdjustment, true);
+  assert.deepEqual(result.adjustments.map(({ scope, percent, amount }) => [scope, percent, amount]), [
+    ['mats', -5, -500], ['works', 10, 2000], ['equipment', -10, -500],
+  ]);
+  assert.deepEqual(rates, { mats: -5, works: 10, equipment: -10 });
+});
+
+test('opposite adjustments remain disclosed even when they cancel each other out', () => {
+  const result = calculateEstimateTotals(100, 100, { scope: 'equipment', rates: { mats: -10, works: 10, equipment: 0 } });
+  assert.equal(result.adjustedTotal, 200);
+  assert.equal(result.adjustmentAmount, 0);
+  assert.equal(result.hasAdjustment, true);
+  assert.equal(result.adjustments.length, 2);
+  assert.match(adjustmentLabel(result), /Скидка на материалы −10%.*Наценка на работы \+10%/);
+});
+
+test('group updates migrate old settings and never move or duplicate another group rate', async () => {
+  const { updateEstimateAdjustment } = await import('../src/utils/estimate-adjustment.js');
+  const migrated = updateEstimateAdjustment({ scope: 'works', percent: 10 }, { scope: 'mats' });
+  assert.deepEqual(migrated.rates, { mats: 0, works: 10, equipment: 0 });
+  assert.equal(migrated.percent, 0);
+  const changed = updateEstimateAdjustment(migrated, { percent: -5 });
+  assert.deepEqual(changed.rates, { mats: -5, works: 10, equipment: 0 });
+  const all = updateEstimateAdjustment(changed, { scope: 'all', percent: 5 });
+  assert.deepEqual(all.rates, { mats: 5, works: 5, equipment: 5 });
+  const selected = updateEstimateAdjustment(all, { scope: 'equipment' });
+  assert.equal(selected.percent, 5);
+  assert.equal(calculateEstimateTotals(.05, .05, all, .05).adjustedTotal,
+    calculateEstimateTotals(.05, .05, { percent: 5, scope: 'all' }, .05).adjustedTotal);
 });
