@@ -4,63 +4,7 @@ import { createDrawEditor as bridgeEditor } from '../src/design-bridge/drawEdito
 import { createDrawEditor as mainEditor } from '../src/components/builders/drawEditor/editor.js';
 import { ovalPoly, flatten } from '../src/design-bridge/drawEditor/geometry.js';
 
-// A small DOM adapter exercises the real editor's input, build and save handlers.
-class Element {
-  innerHTML = '';
-  textContent = '';
-  children = [];
-  dataset = {};
-  listeners = new Map();
-  attributes = new Map();
-  style = { setProperty() {}, removeProperty() {} };
-  classList = { toggle() {}, add() {}, remove() {}, contains: () => false };
-  clientWidth = 800;
-  clientHeight = 600;
-  scrollTop = 0;
-  get firstChild() { return this.children[0]; }
-  appendChild(child) { this.children.push(child); return child; }
-  removeChild(child) { this.children.splice(this.children.indexOf(child), 1); }
-  setAttribute(key, value) { this.attributes.set(key, String(value)); }
-  addEventListener(type, fn) {
-    this.listeners.set(type, [...(this.listeners.get(type) || []), fn]);
-  }
-  dispatch(type, target) { for (const fn of this.listeners.get(type) || []) fn({ target }); }
-  querySelector() { return null; }
-  querySelectorAll() { return []; }
-  contains() { return true; }
-}
-
-function mount(t, createEditor, initial) {
-  const previous = { document: globalThis.document, window: globalThis.window };
-  globalThis.document = { createElementNS: () => new Element(), activeElement: null };
-  globalThis.window = { addEventListener() {}, removeEventListener() {} };
-  const root = new Element(), nodes = new Map();
-  root.querySelector = selector => {
-    const id = selector.slice(1);
-    if (selector !== '.zoom' && ![root, ...nodes.values()].some(node => node.innerHTML.includes(`id="${id}"`))) return null;
-    if (!nodes.has(selector)) nodes.set(selector, new Element());
-    return nodes.get(selector);
-  };
-  let result;
-  const editor = createEditor(root, { initial, canvasLook: 'classic', hideAppearance: true, onFinish: value => { result = value; } });
-  t.after(() => {
-    editor.destroy();
-    for (const key of ['document', 'window']) {
-      if (previous[key] === undefined) delete globalThis[key];
-      else globalThis[key] = previous[key];
-    }
-  });
-  const node = selector => root.querySelector(selector);
-  const click = (act, data = {}) => {
-    const target = { dataset: { act, ...data }, closest() { return this; } };
-    node('#sheet').dispatch('click', target);
-  };
-  const fill = (key, value) => node('#sheet').dispatch('input', {
-    dataset: { in: 'q', k: key }, value, matches: selector => selector === 'input.in',
-  });
-  const save = () => { click('finish'); return result; };
-  return { click, fill, node, save };
-}
+import { mount } from './drawing-editor-runtime.mjs';
 
 function assertSize(result, width, height, area) {
   const xs = result.verts.map(p => p[0]), ys = result.verts.map(p => p[1]);
