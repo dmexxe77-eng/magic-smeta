@@ -2,6 +2,8 @@
 // Перенесён из HTML-прототипа: императивный DOM внутри переданного корневого элемента.
 import { L,TAU,wrap,hyp,sub,add,mul,dot,cross,norm,perp,clone,cm,fmt2,turnAt,shoelace,windOf,interiorDeg,outNormal,lineX,segX,inside,isInteriorDiag,W_ANG,toPts,flat,buildCons,conRes,resid,jac,solveLin,sq,lm,rankOf,rowFor,estScale,analyze,alignPts,makeModel,solveModel,ptsOf,filletInfo,arcInfo,flatten,perimeterOf,polyStats,sideLen,bakeModel,checkFillets,opDelete,opAddPoint,opShift,opLength,opFillet,opArc,opBump,rectPoly,circumR,ovalPoly,DEG,W_PRIOR,NEED } from './geometry.js';
 
+import { operationGuide, operationFieldHelp } from '../operation-guide.js';
+
 const TEMPLATE = `<div class="app" id="app">
   <div class="top">
     <button class="ib" id="bBack" title="Назад">‹</button>
@@ -186,7 +188,7 @@ const sheet = $('#sheet'); let sheetKey = '', applyT = null;
 const plural = (n, a, b, c) => { const m = n % 10, h = n % 100; return (h > 10 && h < 20) ? c : m === 1 ? a : (m > 1 && m < 5) ? b : c; };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const numIn = (name, extra, val, hint) => `<input class="in" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="next" data-in="${name}" ${extra} value="${esc(val ?? '')}" placeholder="${esc(hint ?? '')}">`;
-const parseNum = str => { const v = parseFloat(String(str).replace(',', '.')); return isFinite(v) && v > 0 ? v : null; };
+const parseNum = (str, allowZero = false) => { const v = parseFloat(String(str).replace(',', '.')); return isFinite(v) && (v > 0 || (allowZero && v === 0)) ? v : null; };
 const scaleOvalFields = (fields, factor) => Object.fromEntries(Object.entries(fields).map(([key, value]) => {
   const n = parseNum(value); return [key, n == null ? '' : String(n * factor)];
 }));
@@ -319,10 +321,11 @@ const GL = {
 };
 function opPic(o) { const k = o.kind, sg = o.seg;
   return k === 'len' ? GL.len(sg.end) : k === 'add' ? GL.add(sg.from) : k === 'shift' ? GL.shift(sg.dir) : k === 'arc' ? GL.arc(sg.dir) : k === 'bump' ? GL.bump(sg.dir) : k === 'fillet' ? GL.fillet() : ''; }
+function opGuideContext(o) { return { a: L(o.i), b: L((o.i + 1) % S.poly.v.length), lengthCm: sideLen(S.poly, o.i) * 100 }; }
 function makeOp(kind, i) { const n = S.poly.v.length, A = L(i), B = L((i + 1) % n), seg = {}, spec = { fields: [], segs: [] };
   if (kind === 'len') { spec.title = 'Длина стены ' + A + B; spec.segLabel = 'Какой угол сместить'; spec.fields = [['len', 'Новая длина', 'см']]; spec.segs = [['end', [['end', 'Угол ' + B], ['start', 'Угол ' + A]]]]; seg.end = 'end'; }
-  if (kind === 'add') { spec.title = 'Точка на стене ' + A + B; spec.fields = [['d', 'Расстояние', 'см']]; spec.segs = [['from', [['start', 'от ' + A], ['end', 'от ' + B]]]]; seg.from = 'start'; }
-  if (kind === 'shift') { spec.title = 'Сдвиг стены ' + A + B; spec.fields = [['d', 'На сколько', 'см']]; spec.segs = [['dir', [['out', 'Наружу'], ['in', 'Внутрь']]]]; seg.dir = 'out'; }
+  if (kind === 'add') { spec.title = 'Точка на стене ' + A + B; spec.fields = [['d', 'Отступ от угла', 'см']]; spec.segs = [['from', [['start', 'от ' + A], ['end', 'от ' + B]]]]; seg.from = 'start'; }
+  if (kind === 'shift') { spec.title = 'Сдвиг стены ' + A + B; spec.fields = [['d', 'Расстояние сдвига', 'см']]; spec.segs = [['dir', [['out', 'Наружу'], ['in', 'Внутрь']]]]; seg.dir = 'out'; }
   if (kind === 'arc') { spec.title = 'Дуга на стене ' + A + B; spec.segs = [['mode', [['h', 'Стрела'], ['s', 'Длина дуги']]], ['dir', [['out', 'Наружу'], ['in', 'Внутрь']]]]; seg.mode = 'h'; seg.dir = 'out';
     const a = S.poly.v[i].arc; if (a) seg.dir = a.dir; }
   if (kind === 'bump') { spec.title = 'Выступ или ниша на ' + A + B; spec.fields = [['off', 'Отступ от угла', 'см'], ['w', 'Ширина', 'см'], ['dp', 'Глубина', 'см']];
@@ -346,7 +349,11 @@ function sheet3() { const poly = S.poly, n = poly.v.length, st = polyStats(poly)
   if (S.op) { const o = S.op; let h = `<div class="card op"><h3><span>${esc(o.spec.title)}</span>${opPic(o)}</h3>`;
     if (o.spec.segLabel) h += `<div class="sec">${esc(o.spec.segLabel)}</div>`;
     o.spec.segs.forEach(([name, opts]) => { h += '<div class="seg">' + opts.map(([v, lbl]) => `<button class="${o.seg[name] === v ? 'on' : ''}" data-act="seg" data-n="${name}" data-v="${v}">${esc(lbl)}</button>`).join('') + '</div>'; });
-    h += '<div class="fields">' + o.spec.fields.map(([k, lbl, u]) => `<div class="fld"><span class="k">${esc(lbl)}</span>${numIn('op', `data-k="${k}"`, o.f[k] ?? '', '')}<span class="u">${u}</span></div>`).join('') + '</div>';
+    const guideContext = opGuideContext(o);
+    h += `<div id="opguide">${operationGuide(o, guideContext)}</div>`;
+    h += '<div class="fields">' + o.spec.fields.map(([k, lbl, u]) => { const help = operationFieldHelp(o, k, guideContext);
+      return `<div class="fld"><span class="k">${esc(lbl)}</span>${numIn('op', `data-k="${k}" aria-label="${esc(o.spec.title + ': ' + lbl + ', сантиметров')}"${help ? ` aria-describedby="op-help-${k}"` : ''}`, o.f[k] ?? '', '')}<span class="u">${u}</span>${help ? `<small class="operation-field-help" id="op-help-${k}">${esc(help)}</small>` : ''}</div>`;
+    }).join('') + '</div>';
     h += `<div class="note" id="opnote"></div><div class="btns"><button class="btn ghost" data-act="cancel">Отмена</button><button class="btn laser" data-act="apply">Применить</button></div></div>`; return h; }
   if (S.sel && S.sel.t === 'v') { const i = S.sel.i, P = ptsOf(poly), d = interiorDeg(P, i, windOf(P)), fl = poly.v[i].fillet;
     return `<div class="card"><h3><span class="m">${L(i)}</span> угол <small>${Math.round(d)}°${fl ? ' · скруглён R ' + cm(fl) : ''}</small></h3>
@@ -360,12 +367,12 @@ function sheet3() { const poly = S.poly, n = poly.v.length, st = polyStats(poly)
   return `<div class="res"><div class="t"><div class="k">Площадь</div><div class="v">${fmt2(st.area)}<small>м²</small></div></div><div class="t"><div class="k">Периметр</div><div class="v">${fmt2(st.perim)}<small>м</small></div></div>${back}</div>
   <div class="meta">${shape}${S.ops.length ? `, правок <b>${S.ops.length}</b>` : ''} · тап по углу или стене — действия</div>
   <div class="btns fin"><input class="inName" id="roomName" value="${esc(S.roomName)}" placeholder="Название помещения" maxlength="40"><button class="btn pri" data-act="finish">${opts.initial ? 'Сохранить изменения' : 'Добавить в расчёт'}</button></div>`; }
-function updateSheet3() { const nn = $('#opnote'); if (nn && S.op) nn.textContent = opNote(); }
+function updateSheet3() { const nn = $('#opnote'); if (nn && S.op) nn.textContent = opNote(); const guide = $('#opguide'); if (guide && S.op) guide.innerHTML = operationGuide(S.op, opGuideContext(S.op)); }
 function updateSheet() { if (S.stage === 0) updateSheet0(); else if (S.stage === 2 && S.m) updateSheet2(); else if (S.stage === 3) updateSheet3(); }
 function runOp(poly, op) { let q = null;
   if (op.kind === 'len') q = opLength(poly, op.i, op.end, op.len); else if (op.kind === 'add') q = opAddPoint(poly, op.i, op.from, op.d);
   else if (op.kind === 'shift') q = opShift(poly, op.i, op.off); else if (op.kind === 'arc') q = opArc(poly, op.i, op.mode, op.val, op.dir);
-  else if (op.kind === 'bump') q = opBump(poly, op.i, op.from, op.off, op.w, op.dp, op.dir); else if (op.kind === 'fillet') q = opFillet(poly, op.i, op.r);
+  else if (op.kind === 'bump') q = opBump(poly, op.i, op.from, op.off, op.w, op.dp, op.dir, op.topologyVersion ?? 1); else if (op.kind === 'fillet') q = opFillet(poly, op.i, op.r);
   else if (op.kind === 'del') q = opDelete(poly, op.i);
   if (!q) throw new Error('Неизвестная правка'); if (Math.abs(shoelace(flatten(q))) < 1e-6) throw new Error('Фигура вырождается');
   return { q, dropped: checkFillets(q) }; }
@@ -381,14 +388,14 @@ function rebuild() { const r = replay(S.base, S.ops);
   S.poly = r.poly; updateGhost(); }
 function commitOp(op) { try { const { q, dropped } = runOp(S.poly, op); S.ops.push(op); S.redoOps = []; S.ghost = (op.kind === 'shift' || op.kind === 'len') ? S.poly : null; S.poly = q; S.op = null; S.sel = null; blurActive(); render();
   if (dropped.length) toast('Скругление снято у ' + dropped.join(', ') + ': не помещается'); } catch (e) { toast(e.message, true); } }
-function applyOp() { const o = S.op; if (!o) return; const num = k => { const v = parseNum(o.f[k]); return v == null ? NaN : v / 100; };
+function applyOp() { const o = S.op; if (!o) return; const num = k => { const v = parseNum(o.f[k], o.kind === 'bump' && k === 'off'); return v == null ? NaN : v / 100; };
   for (const [k, lbl] of o.spec.fields) if (!isFinite(num(k))) return toast('Введите: ' + lbl.toLowerCase(), true);
   const op = { kind: o.kind, i: o.i };
   if (o.kind === 'len') Object.assign(op, { end: o.seg.end, len: num('len') });
   else if (o.kind === 'add') Object.assign(op, { from: o.seg.from, d: num('d') });
   else if (o.kind === 'shift') Object.assign(op, { off: (o.seg.dir === 'out' ? 1 : -1) * num('d') });
   else if (o.kind === 'arc') Object.assign(op, { mode: o.seg.mode, val: o.seg.mode === 'h' ? num('h') : num('s'), dir: o.seg.dir });
-  else if (o.kind === 'bump') Object.assign(op, { from: o.seg.from, off: num('off'), w: num('w'), dp: num('dp'), dir: o.seg.dir });
+  else if (o.kind === 'bump') Object.assign(op, { from: o.seg.from, off: num('off'), w: num('w'), dp: num('dp'), dir: o.seg.dir, topologyVersion: 2 });
   else if (o.kind === 'fillet') Object.assign(op, { r: num('r') });
   commitOp(op); }
 function modelFromPoly(poly) { const P = ptsOf(poly), n = P.length, wind = windOf(P), m = makeModel(P.map(p => ({ x: p.x * 80, y: p.y * 80 })));

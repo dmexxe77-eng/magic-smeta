@@ -3,6 +3,7 @@
 // Перенесён из HTML-прототипа: императивный DOM внутри переданного корневого элемента.
 import { L,TAU,wrap,hyp,sub,add,mul,dot,cross,norm,perp,clone,cm,fmt2,turnAt,shoelace,windOf,interiorDeg,outNormal,lineX,segX,inside,isInteriorDiag,W_ANG,toPts,flat,buildCons,conRes,resid,jac,solveLin,sq,lm,rankOf,rowFor,estScale,analyze,alignPts,makeModel,solveModel,ptsOf,filletInfo,arcInfo,flatten,perimeterOf,polyStats,sideLen,holesOf,flattenHoles,opHole,opHoleDelete,withHole,checkHoles,bboxOf,bakeModel,checkFillets,opDelete,opAddPoint,opShift,opLength,opFillet,opArc,opBump,rectPoly,circumR,ovalPoly,DEG,W_PRIOR,NEED } from './geometry.js';
 import { APPEARANCES, drawDimension, drawVertex } from './canvas-appearance.js';
+import { operationGuide, operationFieldHelp } from '../../components/builders/operation-guide.js';
 
 const icon = (name, extra = '') => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ${extra}>${({ back: '<path d="m14 6-6 6 6 6"/>', undo: '<path d="M3 10a9 9 0 1 1 2.4 8.1M3 4v6h6"/>', redo: '<path d="M21 10a9 9 0 1 0-2.4 8.1M21 4v6h-6"/>', arrow: '<path d="M5 12h14m-5-5 5 5-5 5"/>', plus: '<path d="M12 5v14M5 12h14"/>', minus: '<path d="M5 12h14"/>', fit: '<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/>' })[name] || ''}</svg>`;
 const TEMPLATE = `<div class="app" id="app">
@@ -260,7 +261,7 @@ const sheet = $('#sheet'); let sheetKey = '', applyT = null;
 const plural = (n, a, b, c) => { const m = n % 10, h = n % 100; return (h > 10 && h < 20) ? c : m === 1 ? a : (m > 1 && m < 5) ? b : c; };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const numIn = (name, extra, val, hint, label) => `<input class="in" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="next" aria-label="${esc(label || 'Размер в сантиметрах')}" data-in="${name}" ${extra} value="${esc(val ?? '')}" placeholder="${esc(hint ?? '')}">`;
-const parseNum = str => { const v = parseFloat(String(str).replace(',', '.')); return isFinite(v) && v > 0 ? v : null; };
+const parseNum = (str, allowZero = false) => { const v = parseFloat(String(str).replace(',', '.')); return isFinite(v) && (v > 0 || (allowZero && v === 0)) ? v : null; };
 function statusInfo() { const st = S.m.status, n = S.m.n;
   if (st.missing === 0) { const w = st.worst, a = w ? Math.abs(w.v) : 0, wn = st.worstAng, wa = wn ? Math.abs(wn.v) : 0;
     if (a > 3) return { cls: 'bad', h: `Не сходится: ${w.label} на ${a.toFixed(0)} см`, s: 'Проверьте это измерение или соседние с ним' };
@@ -394,6 +395,8 @@ const GL = {
 function opPic(o) { const k = o.kind, sg = o.seg;
   return k === 'len' ? GL.len(sg.end) : k === 'add' ? GL.add(sg.from) : k === 'shift' ? GL.shift(sg.dir) : k === 'arc' ? GL.arc(sg.dir) : k === 'bump' ? GL.bump(sg.dir) : k === 'fillet' ? GL.fillet() : k === 'hole' ? GL.hole() : ''; }
 function opTarget(h) { return h != null ? holesOf(S.poly)[h] : S.poly; }
+function opGuideContext(o) { const T = opTarget(o.h), n = T.v.length, label = i => o.h != null ? HL(o.h, i) : L(i);
+  return { a: label(o.i), b: label((o.i + 1) % n), inHole: o.h != null, lengthCm: sideLen(T, o.i) * 100 }; }
 function makeOp(kind, i, h) { const T = opTarget(h), inHole = h != null, n = T.v.length, A = inHole ? HL(h, i) : L(i), B = inHole ? HL(h, (i + 1) % n) : L((i + 1) % n), seg = {}, spec = { fields: [], segs: [] };
   if (kind === 'hole') { spec.title = 'Внутренний вырез'; const P = ptsOf(S.poly), wind = windOf(P);
     /* опорный угол — любой внутренний угол помещения; от наружного (270°) отступы ушли бы за стены */
@@ -401,8 +404,8 @@ function makeOp(kind, i, h) { const T = opTarget(h), inHole = h != null, n = T.v
     spec.segs = [['c', corners, 'От какого угла отступать']]; seg.c = corners[0][0];
     S.op = { kind, i: 0, spec, seg, f: {} }; opFields(); S.focusReq = 'input[data-in="op"][data-k="d1"]'; return; }
   if (kind === 'len') { spec.title = 'Длина стены ' + A + B; spec.segLabel = 'Какой угол сместить'; spec.fields = [['len', 'Новая длина', 'см']]; spec.segs = [['end', [['end', 'Угол ' + B], ['start', 'Угол ' + A]]]]; seg.end = 'end'; }
-  if (kind === 'add') { spec.title = 'Точка на стене ' + A + B; spec.fields = [['d', 'Расстояние', 'см']]; spec.segs = [['from', [['start', 'от ' + A], ['end', 'от ' + B]]]]; seg.from = 'start'; }
-  if (kind === 'shift') { spec.title = 'Сдвиг стены ' + A + B; spec.fields = [['d', 'На сколько', 'см']]; spec.segs = [['dir', inHole ? [['out', 'Расширить вырез'], ['in', 'Сузить вырез']] : [['out', 'Наружу'], ['in', 'Внутрь']]]]; seg.dir = 'out'; }
+  if (kind === 'add') { spec.title = 'Точка на стене ' + A + B; spec.fields = [['d', 'Отступ от угла', 'см']]; spec.segs = [['from', [['start', 'от ' + A], ['end', 'от ' + B]]]]; seg.from = 'start'; }
+  if (kind === 'shift') { spec.title = 'Сдвиг стены ' + A + B; spec.fields = [['d', 'Расстояние сдвига', 'см']]; spec.segs = [['dir', inHole ? [['out', 'Расширить вырез'], ['in', 'Сузить вырез']] : [['out', 'Наружу'], ['in', 'Внутрь']]]]; seg.dir = 'out'; }
   if (kind === 'arc') { spec.title = 'Дуга на стене ' + A + B; spec.segs = [['mode', [['h', 'Стрела'], ['s', 'Длина дуги']]], ['dir', [['out', 'Наружу'], ['in', 'Внутрь']]]]; seg.mode = 'h'; seg.dir = 'out';
     const a = T.v[i].arc; if (a) seg.dir = a.dir; }
   if (kind === 'bump') { spec.title = 'Выступ или ниша на ' + A + B; spec.fields = [['off', 'Отступ от угла', 'см'], ['w', 'Ширина', 'см'], ['dp', 'Глубина', 'см']];
@@ -462,7 +465,11 @@ function sheet3Content() { const poly = S.poly, n = poly.v.length, st = polyStat
     if (o.kind === 'hole') h += holeScheme(o);
     if (o.spec.segLabel) h += `<div class="sec">${esc(o.spec.segLabel)}</div>`;
     o.spec.segs.forEach(([name, options, label]) => { if (label) h += `<div class="sec">${esc(label)}</div>`; h += '<div class="seg' + (options.length > 4 ? ' wrap' : '') + '">' + options.map(([v, lbl]) => `<button class="${o.seg[name] === v ? 'on' : ''}" data-act="seg" data-n="${name}" data-v="${v}" aria-pressed="${o.seg[name] === v}">${esc(lbl)}</button>`).join('') + '</div>'; });
-    h += '<div class="fields">' + o.spec.fields.map(([k, lbl, u]) => `<div class="fld"><span class="k">${esc(lbl)}</span>${numIn('op', `data-k="${k}"`, o.f[k] ?? '', '', `${o.spec.title}: ${lbl}, ${u === 'см' ? 'сантиметров' : u}`)}<span class="u">${u}</span></div>`).join('') + '</div>';
+    const guideContext = opGuideContext(o);
+    h += `<div id="opguide">${operationGuide(o, guideContext)}</div>`;
+    h += '<div class="fields">' + o.spec.fields.map(([k, lbl, u]) => { const help = operationFieldHelp(o, k, guideContext);
+      return `<div class="fld"><span class="k">${esc(lbl)}</span>${numIn('op', `data-k="${k}"${help ? ` aria-describedby="op-help-${k}"` : ''}`, o.f[k] ?? '', '', `${o.spec.title}: ${lbl}, ${u === 'см' ? 'сантиметров' : u}`)}<span class="u">${u}</span>${help ? `<small class="operation-field-help" id="op-help-${k}">${esc(help)}</small>` : ''}</div>`;
+    }).join('') + '</div>';
     h += `<div class="note" id="opnote"></div><div class="btns op-actions"><button class="btn ghost" data-act="cancel">Отмена</button><button class="btn laser" data-act="apply">Применить</button></div></div>`; return h; }
   const inHole = S.sel && S.sel.h != null, T = inHole ? holesOf(poly)[S.sel.h] : poly, tn = T ? T.v.length : 0, NL = i => (inHole ? HL(S.sel.h, i) : L(i));
   const holeBtn = inHole ? '<button class="btn danger" data-act="holeDel">Удалить вырез</button>' : '';
@@ -488,7 +495,7 @@ function sheet3Content() { const poly = S.poly, n = poly.v.length, st = polyStat
     } });
   h += `</div><div class="drawing-tools"><span class="detail-help">${tab === 'walls' ? 'Выберите стену для изменения' : 'Выберите угол для изменения'}</span><button class="btn sm ghost" data-act="hole">${icon('plus')}Вырез</button></div>`;
   return h; }
-function updateSheet3() { const nn = $('#opnote'); if (nn && S.op) nn.textContent = opNote(); const sc = sheet.querySelector('svg.scheme'); if (sc && S.op && S.op.kind === 'hole') sc.outerHTML = holeScheme(S.op); }
+function updateSheet3() { const nn = $('#opnote'); if (nn && S.op) nn.textContent = opNote(); const guide = $('#opguide'); if (guide && S.op) guide.innerHTML = operationGuide(S.op, opGuideContext(S.op)); const sc = sheet.querySelector('svg.scheme'); if (sc && S.op && S.op.kind === 'hole') sc.outerHTML = holeScheme(S.op); }
 function updateSheet() { if (S.stage === 0) updateSheet0(); else if (S.stage === 2 && S.m) updateSheet2(); else if (S.stage === 3) updateSheet3(); }
 function runOp(poly, op) { let q = null;
   if (op.kind === 'hole') return { q: opHole(poly, op), dropped: [] };
@@ -496,7 +503,7 @@ function runOp(poly, op) { let q = null;
   if (op.h != null) { let dropped = []; q = withHole(poly, op.h, hole => { const r = runOp(hole, { ...op, h: undefined }); dropped = r.dropped.map(l => HL(op.h, l.charCodeAt(0) - 65)); return r.q; }); return { q, dropped }; }
   if (op.kind === 'len') q = opLength(poly, op.i, op.end, op.len); else if (op.kind === 'add') q = opAddPoint(poly, op.i, op.from, op.d);
   else if (op.kind === 'shift') q = opShift(poly, op.i, op.off); else if (op.kind === 'arc') q = opArc(poly, op.i, op.mode, op.val, op.dir);
-  else if (op.kind === 'bump') q = opBump(poly, op.i, op.from, op.off, op.w, op.dp, op.dir); else if (op.kind === 'fillet') q = opFillet(poly, op.i, op.r);
+  else if (op.kind === 'bump') q = opBump(poly, op.i, op.from, op.off, op.w, op.dp, op.dir, op.topologyVersion ?? 1); else if (op.kind === 'fillet') q = opFillet(poly, op.i, op.r);
   else if (op.kind === 'del') q = opDelete(poly, op.i);
   if (!q) throw new Error('Неизвестная правка'); if (Math.abs(shoelace(flatten(q))) < 1e-6) throw new Error('Фигура вырождается');
   checkHoles(q); return { q, dropped: checkFillets(q) }; }
@@ -512,7 +519,7 @@ function rebuild() { const r = replay(S.base, S.ops);
   S.poly = r.poly; updateGhost(); }
 function commitOp(op) { try { const { q, dropped } = runOp(S.poly, op); S.ops.push(op); S.redoOps = []; S.ghost = (op.kind === 'shift' || op.kind === 'len') && op.h == null ? S.poly : null; S.poly = q; S.op = null; S.sel = null; blurActive(); render();
   if (dropped.length) toast('Скругление снято у ' + dropped.join(', ') + ': не помещается'); } catch (e) { toast(e.message, true); } }
-function applyOp() { const o = S.op; if (!o) return; const num = k => { const v = parseNum(o.f[k]); return v == null ? NaN : v / 100; };
+function applyOp() { const o = S.op; if (!o) return; const num = k => { const v = parseNum(o.f[k], o.kind === 'bump' && k === 'off'); return v == null ? NaN : v / 100; };
   for (const [k, lbl] of o.spec.fields) if (!isFinite(num(k))) return toast('Введите: ' + lbl.toLowerCase(), true);
   const op = { kind: o.kind, i: o.i }; if (o.h != null) op.h = o.h;
   if (o.kind === 'hole') Object.assign(op, { c: holeCorner(o).i, d1: num('d1'), d2: num('d2'), w: num('w'), hh: num('hh') });
@@ -520,7 +527,7 @@ function applyOp() { const o = S.op; if (!o) return; const num = k => { const v 
   else if (o.kind === 'add') Object.assign(op, { from: o.seg.from, d: num('d') });
   else if (o.kind === 'shift') Object.assign(op, { off: (o.seg.dir === 'out' ? 1 : -1) * num('d') });
   else if (o.kind === 'arc') Object.assign(op, { mode: o.seg.mode, val: o.seg.mode === 'h' ? num('h') : num('s'), dir: o.seg.dir });
-  else if (o.kind === 'bump') Object.assign(op, { from: o.seg.from, off: num('off'), w: num('w'), dp: num('dp'), dir: o.seg.dir });
+  else if (o.kind === 'bump') Object.assign(op, { from: o.seg.from, off: num('off'), w: num('w'), dp: num('dp'), dir: o.seg.dir, topologyVersion: 2 });
   else if (o.kind === 'fillet') Object.assign(op, { r: num('r') });
   commitOp(op); }
 function modelFromPoly(poly) { const P = ptsOf(poly), n = P.length, wind = windOf(P), m = makeModel(P.map(p => ({ x: p.x * 80, y: p.y * 80 })));

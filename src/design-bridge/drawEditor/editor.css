@@ -1,4 +1,6 @@
 /* Mobile drawing workspace. All rules are isolated from the calculator. */
+@import '../../components/builders/operation-guide.css';
+
 .zd {
  --ground:#F3F3FA;--paper:#F8FAFD;--grid:#E5EBF3;--surface:#fff;--surface2:#F2F5FA;
  --ink:#0F1620;--ink2:#626D7E;--ink3:#737D8D;--line:#E3E8F0;--fill:rgba(20,97,238,.06);

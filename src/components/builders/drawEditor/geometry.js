@@ -199,15 +199,25 @@ export function opArc(poly, i, mode, val, dir) { const n = poly.v.length; if (po
     for (let k = 0; k < 80; k++) { const x = (lo + hi) / 2; if (Math.sin(x) / x > r) lo = x; else hi = x; }
     const x = (lo + hi) / 2; if (x > Math.PI / 2 + 1e-6) throw new Error('Больше полукруга. Уменьшите длину дуги'); const R = c / (2 * Math.sin(x)); h = R * (1 - Math.cos(x)); }
   q.v[i].arc = { h, dir }; return q; }
-export function opBump(poly, i, fromEnd, off, width, depth, dir) { const P = ptsOf(poly), n = P.length, A = P[i], B = P[(i + 1) % n], len = hyp(A, B);
-  if (!(width > 0) || !(depth > 0)) throw new Error('Ширина и глубина должны быть больше нуля');
-  if (off < 0 || off + width > len + 1e-9) throw new Error(`Не помещается на стене. Отступ + ширина не больше ${cm(len)} см`);
+export function opBump(poly, i, fromEnd, off, width, depth, dir, topologyVersion = 2) { const P = ptsOf(poly), n = P.length, A = P[i], B = P[(i + 1) % n], len = hyp(A, B);
+  if (!(width > 0) || !(depth > 0) || !Number.isFinite(width) || !Number.isFinite(depth)) throw new Error('Ширина и глубина должны быть больше нуля');
+  if (!Number.isFinite(off) || off < 0 || off + width > len + 1e-9) throw new Error(`Не помещается на стене. Отступ + ширина не больше ${cm(len)} см`);
   const u = norm(sub(B, A)), d = mul(outNormal(P, i), dir === 'niche' ? 1 : -1);
   const p1 = fromEnd === 'start' ? add(A, mul(u, off)) : sub(B, mul(u, off + width)), p4 = add(p1, mul(u, width));
   const seq = [p1, add(p1, mul(d, depth)), add(p4, mul(d, depth)), p4];
+  const atStart = hyp(p1, A) <= 1e-9, atEnd = hyp(p4, B) <= 1e-9;
+  if (topologyVersion !== 1 && atStart && atEnd) { const q = opShift(poly, i, dir === 'niche' ? depth : -depth); q.v[i].arc = null; return q; }
   const vA = clone(poly.v[i]), vB = clone(poly.v[(i + 1) % n]); vA.arc = null;
   const mid = seq.map(p => ({ x: p.x, y: p.y, fillet: null, arc: null }));
-  if (hyp(mid[0], A) <= 0.004) mid.shift(); if (hyp(mid[mid.length - 1], B) <= 0.004) mid.pop();
+  // Old saved operations must retain their vertex indices for subsequent operations.
+  if (topologyVersion === 1) { if (hyp(mid[0], A) <= 0.004) mid.shift(); if (hyp(mid[mid.length - 1], B) <= 0.004) mid.pop(); }
+  // New corner bumps join the neighboring wall, leaving only the opposite shoulder.
+  else if (atStart) { const previous = P[(i - 1 + n) % n], join = lineX(previous, sub(A, previous), seq[1], u);
+    if (!join || dot(sub(join, previous), sub(A, previous)) <= 0 || dot(sub(seq[2], join), u) <= 1e-9) throw new Error('Глубина больше соседней стены или ширины выступа');
+    Object.assign(vA, { x: join.x, y: join.y }); mid.splice(0, 2); }
+  if (topologyVersion !== 1 && atEnd) { const next = P[(i + 2) % n], join = lineX(next, sub(B, next), seq[2], u);
+    if (!join || dot(sub(join, next), sub(B, next)) <= 0 || dot(sub(join, seq[1]), u) <= 1e-9) throw new Error('Глубина больше соседней стены или ширины выступа');
+    Object.assign(vB, { x: join.x, y: join.y }); mid.splice(-2, 2); }
   const list = [vA, ...mid, vB];
   const q = clone(poly);
   if (i === n - 1) { q.v.splice(n - 1, 1); q.v.splice(0, 1); q.v.push(...list); } else q.v.splice(i, 2, ...list);

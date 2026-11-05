@@ -1,4 +1,5 @@
 /* Редактор ручного построения потолка. Все правила изолированы под .zd; цвета темы задаются переменными из React-обёртки. */
+@import '../operation-guide.css';
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 .zd{
   --ground:#E9EDF2; --paper:#F6F8FB; --grid:#DCE2E9; --surface:#FFFFFF; --surface2:#F0F3F7;

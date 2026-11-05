@@ -1,0 +1,24 @@
+/* Geometry guides use the same tokens in the two drawing editors. */
+.zd .operation-guide{margin:0;padding:7px 9px 9px;border-radius:8px;background:var(--surface2);min-width:0}
+.zd .operation-guide svg.operation-diagram{display:block;width:100%;height:auto;max-height:132px;overflow:visible}
+.zd .operation-guide .guide-room{fill:var(--fill);stroke:none}
+.zd .operation-guide .guide-result,.zd .operation-guide .guide-wall,.zd .operation-guide .guide-before,.zd .operation-guide .guide-measure,.zd .operation-guide .guide-extension,.zd .operation-guide .guide-center{fill:none;stroke-linecap:round;stroke-linejoin:round}
+.zd .operation-guide .guide-result{stroke:var(--pri);stroke-width:2.7}
+.zd .operation-guide .guide-wall{stroke:var(--ink);stroke-width:2.3}
+.zd .operation-guide .guide-before{stroke:var(--ink2);stroke-width:1.6;stroke-dasharray:5 4}
+.zd .operation-guide .guide-measure{stroke:var(--pri);stroke-width:1.2}
+.zd .operation-guide .guide-extension{stroke:var(--ink2);stroke-width:1;stroke-dasharray:2 3;opacity:.65}
+.zd .operation-guide .guide-center{stroke:var(--ink2);stroke-width:1.2}
+.zd .operation-guide .guide-point{fill:var(--surface);stroke:var(--pri);stroke-width:2}
+.zd .operation-guide .guide-point-fixed{fill:var(--ink);stroke:var(--ink)}
+.zd .operation-guide .guide-label,.zd .operation-guide .guide-corner,.zd .operation-guide .guide-muted{font-family:var(--sans);font-size:12px;font-weight:650;fill:var(--pri);paint-order:stroke;stroke:var(--surface2);stroke-width:4px;stroke-linejoin:round}
+.zd .operation-guide .guide-corner{fill:var(--ink);font-size:12px;font-weight:750}
+.zd .operation-guide .guide-muted{fill:var(--ink2);font-size:11px;font-weight:500}
+.zd .operation-guide figcaption{margin-top:6px;color:var(--ink2);font-size:10.5px;line-height:1.5;text-wrap:pretty}
+.zd .operation-guide-legend{display:flex;align-items:center;gap:12px;min-width:0;color:var(--ink2);font-size:9.5px;line-height:1.4}
+.zd .operation-guide-legend>span{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.zd .operation-guide-legend .guide-legend-before::before,.zd .operation-guide-legend .guide-legend-after::before{content:'';width:16px;border-top:1.5px dashed var(--ink2)}
+.zd .operation-guide-legend .guide-legend-after::before{border-top:2px solid var(--pri)}
+.zd .operation-guide-legend .guide-not-scale{margin-left:auto;font-size:9px}
+.zd .operation-field-help{display:block;grid-column:1/-1;margin:0 0 6px;color:var(--ink2);font-size:10px;font-weight:500;line-height:1.5;text-wrap:pretty}
+.zd .app.has-operation .drawing-finish{display:none}
