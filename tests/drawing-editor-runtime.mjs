@@ -46,20 +46,35 @@ export function mount(t, createEditor, initial) {
     }
   });
   const node = selector => root.querySelector(selector);
-  const click = (act, data = {}) => {
+  const dispatchAction = (selector, act, data = {}) => {
     const target = { dataset: { act, ...data }, closest() { return this; } };
-    node('#sheet').dispatch('click', target);
+    const container = node(selector);
+    if (!container) throw new Error(`Missing editor action container: ${selector}`);
+    container.dispatch('click', target);
   };
-  const fill = (key, value, kind = 'q') => node('#sheet').dispatch('input', {
-    dataset: { in: kind, k: key }, value, matches: selector => selector === 'input.in',
+  const click = (act, data = {}) => dispatchAction('#sheet', act, data);
+  const chooseTool = (act, data = {}) => dispatchAction('#measureTools', act, data);
+  const input = (key, value, kind) => ({
+    dataset: { in: kind, k: String(key), i: String(key) }, value,
+    matches: selector => selector === 'input.in',
+    blur() { globalThis.document.activeElement = null; },
   });
+  const fill = (key, value, kind = 'q') => node('#sheet').dispatch('input', {
+    ...input(key, value, kind),
+  });
+  const enter = (key, kind) => node('#sheet').dispatch('keydown', input(key, '', kind), { key: 'Enter' });
   const save = () => { click('finish'); return result; };
-  const selectSide = (index = 0) => {
-    const target = { dataset: { hit: 's', i: String(index) }, closest() { return this; } };
-    const event = { clientX: 100, clientY: 100, pointerId: 1 };
+  const tap = (type, index, x = 100, y = 100) => {
+    const target = { dataset: { hit: type, i: String(index) }, closest() { return type ? this : null; } };
+    const event = { clientX: x, clientY: y, pointerId: 1 };
     node('#cv').dispatch('pointerdown', target, event);
     node('#cv').dispatch('pointerup', target, event);
   };
-  return { click, fill, node, save, selectSide };
+  const selectSide = (index = 0) => tap('s', index);
+  const selectVertex = (index = 0) => tap('v', index);
+  const tapAngle = (index = 0) => tap('ang', index);
+  const sketchPoint = (x, y) => tap(null, null, x, y);
+  const history = direction => node(direction === 'redo' ? '#bRedo' : '#bUndo').dispatch('click', {});
+  return { click, chooseTool, fill, enter, node, save, selectSide, selectVertex, tapAngle, sketchPoint, history };
 }
 
