@@ -23,6 +23,7 @@ for (const [name, editor] of [['desktop/mobile', bridgeEditor], ['main', mainEdi
       assert.equal(result.draw.ops[0].off, 0);
       assert.equal(result.draw.ops[0].from, from);
       assert.equal(result.draw.ops[0].kind, 'bump');
+      assert.equal(result.draw.ops[0].topologyVersion, 2);
       assert.equal(result.draw.base.v.length, 4);
       assert.equal(result.verts.length, 6, 'one shoulder gives six corners');
     });
@@ -41,5 +42,18 @@ for (const [name, editor] of [['desktop/mobile', bridgeEditor], ['main', mainEdi
       assert.equal(result.area, 12);
       assert.equal(result.draw.ops.length, 0);
     }
+  });
+
+  test(`${name}: legacy bumps retain wall indices for the following saved operations`, t => {
+    const base = { v: rectangle.verts.map(([x, y]) => ({ x, y, fillet: null, arc: null })) };
+    const ops = [
+      { kind: 'bump', i: 0, from: 'start', off: 3, w: 1, dp: .5, dir: 'in' },
+      { kind: 'shift', i: 5, off: .2 },
+    ];
+    const ui = mount(t, editor, { ...rectangle, draw: { base, ops, origin: { kind: 'rect' } } });
+    const result = ui.save();
+    assert.equal(result.area, 12.3, 'the bottom wall retains the original saved shift');
+    assert.deepEqual(result.draw.ops, ops, 'legacy operations are not rewritten or dropped');
+    assert.equal(Math.max(...result.verts.map(point => point[1])), 3.2);
   });
 }
