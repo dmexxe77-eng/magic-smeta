@@ -187,6 +187,9 @@ const plural = (n, a, b, c) => { const m = n % 10, h = n % 100; return (h > 10 &
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const numIn = (name, extra, val, hint) => `<input class="in" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="next" data-in="${name}" ${extra} value="${esc(val ?? '')}" placeholder="${esc(hint ?? '')}">`;
 const parseNum = str => { const v = parseFloat(String(str).replace(',', '.')); return isFinite(v) && v > 0 ? v : null; };
+const scaleOvalFields = (fields, factor) => Object.fromEntries(Object.entries(fields).map(([key, value]) => {
+  const n = parseNum(value); return [key, n == null ? '' : String(n * factor)];
+}));
 function statusInfo() { const st = S.m.status, n = S.m.n;
   if (st.missing === 0) { const w = st.worst, a = w ? Math.abs(w.v) : 0, wn = st.worstAng, wa = wn ? Math.abs(wn.v) : 0;
     if (a > 3) return { cls: 'bad', h: `Не сходится: ${w.label} на ${a.toFixed(0)} см`, s: 'Проверьте это измерение или соседние с ним' };
@@ -351,8 +354,9 @@ function sheet3() { const poly = S.poly, n = poly.v.length, st = polyStats(poly)
   if (S.sel && S.sel.t === 's') { const i = S.sel.i, ai = arcInfo(poly, i);
     return `<div class="card"><h3><span class="m">${L(i)}${L((i + 1) % n)}</span> стена <small>${cm(sideLen(poly, i))} см${ai ? ' · дуга ' + cm(ai.len) : ''}</small></h3>
     <div class="acts"><button class="btn" data-act="op" data-k="len">${GL.len('end')}<span>Длина</span></button><button class="btn" data-act="op" data-k="shift">${GL.shift('out')}<span>Сдвинуть</span></button><button class="btn" data-act="op" data-k="add">${GL.add('start')}<span>Точка на стене</span></button><button class="btn" data-act="op" data-k="bump">${GL.bump('in')}<span>Выступ / ниша</span></button><button class="btn" data-act="op" data-k="arc">${GL.arc('out')}<span>${ai ? 'Изменить дугу' : 'Дуга'}</span></button>${ai ? '<button class="btn" data-act="unarc">Убрать дугу</button>' : '<button class="btn ghost" data-act="deselect">Закрыть</button>'}</div></div>`; }
-  const oval = S.origin && S.origin.kind === 'oval', back = oval ? '<button class="btn sm ghost" data-act="editQuick">← Радиусы</button>' : '';
-  const shape = oval ? (S.origin.mode === 'circle' ? `Окружность R <b>${S.origin.f.r}</b> см` : `Эллипс <b>${S.origin.f.rx}</b> × <b>${S.origin.f.ry}</b> см`) : `Углов <b>${n}</b>: внутр. <b>${st.inner}</b>, наруж. <b>${st.outer}</b>${st.fillets ? `, скруглений <b>${st.fillets}</b>` : ''}${st.arcs ? `, дуг <b>${st.arcs}</b>` : ''}`;
+  const oval = S.origin && S.origin.kind === 'oval', back = oval ? '<button class="btn sm ghost" data-act="editQuick">← Диаметры</button>' : '';
+  const diameters = oval ? scaleOvalFields(S.origin.f, 2) : null;
+  const shape = oval ? (S.origin.mode === 'circle' ? `Окружность Ø <b>${diameters.r}</b> см` : `Эллипс <b>${diameters.rx}</b> × <b>${diameters.ry}</b> см`) : `Углов <b>${n}</b>: внутр. <b>${st.inner}</b>, наруж. <b>${st.outer}</b>${st.fillets ? `, скруглений <b>${st.fillets}</b>` : ''}${st.arcs ? `, дуг <b>${st.arcs}</b>` : ''}`;
   return `<div class="res"><div class="t"><div class="k">Площадь</div><div class="v">${fmt2(st.area)}<small>м²</small></div></div><div class="t"><div class="k">Периметр</div><div class="v">${fmt2(st.perim)}<small>м</small></div></div>${back}</div>
   <div class="meta">${shape}${S.ops.length ? `, правок <b>${S.ops.length}</b>` : ''} · тап по углу или стене — действия</div>
   <div class="btns fin"><input class="inName" id="roomName" value="${esc(S.roomName)}" placeholder="Название помещения" maxlength="40"><button class="btn pri" data-act="finish">${opts.initial ? 'Сохранить изменения' : 'Добавить в расчёт'}</button></div>`; }
@@ -401,7 +405,7 @@ function act(a, d) {
   if (a === 'qmode') { S.quick.mode = d.v; S.focusReq = 'input[data-in="q"]'; return render(); }
   if (a === 'quickCancel') { if (S.quick.edit) { S.quick = null; S.stage = 3; } else S.quick = null; return render(); }
   if (a === 'quickBuild') return quickBuild();
-  if (a === 'editQuick') { const o = S.origin; S.quick = { kind: 'oval', mode: o.mode, f: { ...o.f }, edit: true }; S.stage = 0; S.sel = null; S.op = null; S.focusReq = 'input[data-in="q"]'; return render(); }
+  if (a === 'editQuick') { const o = S.origin; S.quick = { kind: 'oval', mode: o.mode, f: scaleOvalFields(o.f, 2), edit: true }; S.stage = 0; S.sel = null; S.op = null; S.focusReq = 'input[data-in="q"]'; return render(); }
   if (a === 'home') { const had = S.sk.pts.length; Object.assign(S, FRESH()); render(); if (had) toast('Контур сброшен'); return; }
   if (a === 'freeWall') { S.sk.free = !S.sk.free; return render(); }
   if (a === 'tab2') { S.tab2 = d.v; S.dpick = null; S.sel = null; blurActive(); return render(); }
@@ -448,10 +452,10 @@ function renderSheet() { const key = viewKey(); if (key === sheetKey) { updateSh
 // ───────── stage 0: quick commands (rectangle, circle/ellipse, polygon) ─────────
 function quickPoly() { const q = S.quick; if (!q) return null; const n = k => parseNum(q.f[k]);
   if (q.kind === 'rect') { const a = n('a'), b = n('b'); return a && b ? rectPoly(a / 100, b / 100) : null; }
-  if (q.mode === 'circle') { const r = n('r'); return r ? ovalPoly(r / 100, r / 100) : null; }
-  const rx = n('rx'), ry = n('ry'); return rx && ry ? ovalPoly(rx / 100, ry / 100) : null; }
+  if (q.mode === 'circle') { const r = n('r'); return r ? ovalPoly(r / 200, r / 200) : null; }
+  const rx = n('rx'), ry = n('ry'); return rx && ry ? ovalPoly(rx / 200, ry / 200) : null; }
 function quickSpec() { const q = S.quick; if (q.kind === 'rect') return { title: 'Прямоугольник', fields: [['a', 'Сторона AB (ширина)', 'см'], ['b', 'Сторона BC (глубина)', 'см']] };
-  return q.mode === 'circle' ? { title: 'Окружность', fields: [['r', 'Радиус', 'см']] } : { title: 'Эллипс', fields: [['rx', 'Радиус по ширине', 'см'], ['ry', 'Радиус по высоте', 'см']] }; }
+  return q.mode === 'circle' ? { title: 'Окружность', fields: [['r', 'Диаметр', 'см']] } : { title: 'Эллипс', fields: [['rx', 'Диаметр по ширине', 'см'], ['ry', 'Диаметр по высоте', 'см']] }; }
 const glyph = k => k === 'rect' ? '<svg viewBox="0 0 36 36"><rect x="4" y="8" width="28" height="20" rx="1.5" fill="var(--fill)" stroke="var(--ink)" stroke-width="2"/></svg>'
   : k === 'oval' ? '<svg viewBox="0 0 36 36"><ellipse cx="18" cy="18" rx="14" ry="10" fill="var(--fill)" stroke="var(--ink)" stroke-width="2"/></svg>'
   : k === 'free' ? '<svg viewBox="0 0 36 36"><path d="M5 30L9 6H27L32 20L26 30Z" fill="var(--fill)" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round"/><path d="M9 6L26 30" stroke="var(--ink3)" stroke-width="1.5" stroke-dasharray="3 2"/></svg>'
@@ -461,7 +465,7 @@ function sheet0() { const q = S.quick;
     <button class="opt" data-act="q-rect">${glyph('rect')}<div><b>Прямоугольник</b><span>Две стороны, готовый чертёж сразу</span></div></button>
     <button class="opt" data-act="q-poly">${glyph('poly')}<div><b>Многоугольник · автоматически</b><span>Все углы прямые</span></div></button>
     <button class="opt" data-act="q-polyfree">${glyph('free')}<div><b>Сложный многоугольник</b><span>Углы неизвестны: длины, диагонали или градусы</span></div></button>
-    <button class="opt" data-act="q-oval">${glyph('oval')}<div><b>Окружность / эллипс</b><span>Радиус или два радиуса</span></div></button></div>`;
+    <button class="opt" data-act="q-oval">${glyph('oval')}<div><b>Окружность / эллипс</b><span>Один или два диаметра</span></div></button></div>`;
   const sp = quickSpec(); let h = `<div class="card op"><h3>${esc(sp.title)}${q.edit ? ' · изменить' : ''}</h3>`;
   if (q.kind === 'oval') h += `<div class="seg"><button class="${q.mode === 'circle' ? 'on' : ''}" data-act="qmode" data-v="circle">Окружность</button><button class="${q.mode === 'ellipse' ? 'on' : ''}" data-act="qmode" data-v="ellipse">Эллипс</button></div>`;
   h += '<div class="fields">' + sp.fields.map(([k, lbl, u]) => `<div class="fld"><span class="k">${esc(lbl)}</span>${numIn('q', `data-k="${k}"`, q.f[k] ?? '', '')}<span class="u">${u}</span></div>`).join('') + '</div>';
@@ -470,7 +474,7 @@ function sheet0() { const q = S.quick;
 function updateSheet0() { const nn = $('#qnote'); if (!nn) return; const poly = quickPoly(), b = $('#qbuild'); if (b) b.disabled = !poly;
   if (!poly) { nn.textContent = 'Введите размеры, чертёж появится сверху'; return; } const st = polyStats(poly); nn.textContent = `Площадь ${fmt2(st.area)} м² · периметр ${fmt2(st.perim)} м`; }
 function quickBuild() { const poly = quickPoly(); if (!poly) return toast('Введите размеры', true); const q = S.quick;
-  S.origin = q.kind === 'rect' ? { kind: 'rect' } : { kind: 'oval', mode: q.mode, f: { ...q.f } };
+  S.origin = q.kind === 'rect' ? { kind: 'rect' } : { kind: 'oval', mode: q.mode, f: scaleOvalFields(q.f, .5) };
   S.base = poly; if (!q.edit) { S.ops = []; S.redoOps = []; S.m = null; S.hist2 = []; S.redo2 = []; } S.quick = null; S.stage = 3; S.sel = null; S.op = null; blurActive(); rebuild(); render(); }
 function renderChrome() { const names = ['Контур', 'Размеры', 'Правка'], isRect = S.origin && S.origin.kind === 'rect', isOval = S.origin && S.origin.kind === 'oval';
   // пилюли этапов кликабельные: назад на контур или размеры, вперёд на правку, если размеров хватает

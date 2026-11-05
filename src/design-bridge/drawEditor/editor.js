@@ -474,7 +474,7 @@ function sheet3Content() { const poly = S.poly, n = poly.v.length, st = polyStat
     return `<div class="card selection-card">${back}<div class="context-heading"><h3>Стена <span class="m">${NL(i)}${NL((i + 1) % tn)}</span>${inHole ? ' выреза' : ''}</h3><span>${cm(sideLen(T, i))} см${ai ? ' · дуга ' + cm(ai.len) + ' см' : ''}</span></div>
     <div class="acts"><button class="btn" data-act="op" data-k="len">${GL.len('end')}<span>Длина</span></button><button class="btn" data-act="op" data-k="shift">${GL.shift('out')}<span>Сдвинуть</span></button><button class="btn" data-act="op" data-k="add">${GL.add('start')}<span>Добавить точку</span></button><button class="btn" data-act="op" data-k="bump">${GL.bump('in')}<span>Ниша / выступ</span></button><button class="btn" data-act="op" data-k="arc">${GL.arc('out')}<span>${ai ? 'Изменить дугу' : 'Дуга'}</span></button>${ai ? '<button class="btn" data-act="unarc">Убрать дугу</button>' : ''}${holeBtn}</div></div>`; }
   const oval = S.origin && S.origin.kind === 'oval', tab = S.tab3 || 'walls', total = n + holesOf(poly).reduce((count, hole) => count + hole.v.length, 0);
-  let h = `<div class="drawing-summary"><span>S <b>${fmt2(st.area)}</b> м²</span><span>P <b>${fmt2(st.perim)}</b> м</span>${st.holes ? `<span>${st.holes} ${plural(st.holes, 'вырез', 'выреза', 'вырезов')}</span>` : ''}${oval ? '<button data-act="editQuick">Радиусы</button>' : ''}</div>`;
+  let h = `<div class="drawing-summary"><span>S <b>${fmt2(st.area)}</b> м²</span><span>P <b>${fmt2(st.perim)}</b> м</span>${st.holes ? `<span>${st.holes} ${plural(st.holes, 'вырез', 'выреза', 'вырезов')}</span>` : ''}${oval ? '<button data-act="editQuick">Диаметры</button>' : ''}</div>`;
   h += `<div class="seg detail-tabs"><button class="${tab === 'walls' ? 'on' : ''}" data-act="tab3" data-v="walls">Стены <span>${total}</span></button><button class="${tab === 'angles' ? 'on' : ''}" data-act="tab3" data-v="angles">Углы <span>${total}</span></button></div><div class="element-list" aria-label="${tab === 'walls' ? 'Выбор стены' : 'Выбор угла'}">`;
   const P = ptsOf(poly), wind = windOf(P);
   for (let i = 0; i < n; i++) h += tab === 'walls'
@@ -538,7 +538,7 @@ function act(a, d) {
   if (a === 'qmode') { S.quick.mode = d.v; S.focusReq = 'input[data-in="q"]'; return render(); }
   if (a === 'quickCancel') { if (S.quick.edit) { S.quick = null; S.stage = 3; } else S.quick = null; return render(); }
   if (a === 'quickBuild') return quickBuild();
-  if (a === 'editQuick') { const o = S.origin; S.quick = { kind: 'oval', mode: o.mode, f: { ...o.f }, edit: true }; S.stage = 0; S.sel = null; S.op = null; S.focusReq = 'input[data-in="q"]'; return render(); }
+  if (a === 'editQuick') { const o = S.origin; S.quick = { kind: 'oval', mode: o.mode, f: scaleOvalFields(o.f, 2), edit: true }; S.stage = 0; S.sel = null; S.op = null; S.focusReq = 'input[data-in="q"]'; return render(); }
   if (a === 'home') { S.stage = 0; S.quick = null; S.sel = null; S.op = null; blurActive(); return render(); }
   if (a === 'tab2') { flushApply(); S.tab2 = d.v; S.dpick = null; S.sel = null; blurActive(); return render(); }
   if (a === 'tab3') { S.tab3 = d.v; S.sel = null; S.op = null; blurActive(); return render(); }
@@ -585,12 +585,16 @@ function renderSheet() { const key = viewKey(); if (key === sheetKey) { updateSh
   if (startOnly) { sheetKey = key; start.innerHTML = sheet0(); sheet.innerHTML = ''; return; }
   const top = sheet.scrollTop; sheetKey = key; sheet.innerHTML = S.stage === 0 ? sheet0() : S.stage === 1 ? sheet1() : S.stage === 2 ? sheet2() : sheet3(); updateSheet(); sheet.scrollTop = top; }
 // ───────── stage 0: quick commands (rectangle, circle/ellipse, polygon) ─────────
+// Saved origin fields remain radii in centimetres; the form uses full diameters.
+function scaleOvalFields(fields, factor) { return Object.fromEntries(Object.entries(fields).map(([key, value]) => {
+  const n = parseNum(value); return [key, n == null ? '' : String(n * factor)];
+})); }
 function quickPoly() { const q = S.quick; if (!q) return null; const n = k => parseNum(q.f[k]);
   if (q.kind === 'rect') { const a = n('a'), b = n('b'); return a && b ? rectPoly(a / 100, b / 100) : null; }
-  if (q.mode === 'circle') { const r = n('r'); return r ? ovalPoly(r / 100, r / 100) : null; }
-  const rx = n('rx'), ry = n('ry'); return rx && ry ? ovalPoly(rx / 100, ry / 100) : null; }
+  if (q.mode === 'circle') { const d = n('r'); return d ? ovalPoly(d / 200, d / 200) : null; }
+  const dx = n('rx'), dy = n('ry'); return dx && dy ? ovalPoly(dx / 200, dy / 200) : null; }
 function quickSpec() { const q = S.quick; if (q.kind === 'rect') return { title: 'Прямоугольник', fields: [['a', 'Сторона AB (ширина)', 'см'], ['b', 'Сторона BC (глубина)', 'см']] };
-  return q.mode === 'circle' ? { title: 'Окружность', fields: [['r', 'Радиус', 'см']] } : { title: 'Эллипс', fields: [['rx', 'Радиус по ширине', 'см'], ['ry', 'Радиус по высоте', 'см']] }; }
+  return q.mode === 'circle' ? { title: 'Окружность', fields: [['r', 'Диаметр', 'см']] } : { title: 'Эллипс', fields: [['rx', 'Диаметр по ширине', 'см'], ['ry', 'Диаметр по высоте', 'см']] }; }
 const glyph = k => k === 'rect' ? '<svg class="shape-preview" viewBox="0 0 36 36" aria-hidden="true"><rect x="4" y="8" width="28" height="20" rx="1.5" fill="var(--fill)" stroke="var(--ink)" stroke-width="2"/></svg>'
   : k === 'oval' ? '<svg class="shape-preview" viewBox="0 0 36 36" aria-hidden="true"><ellipse cx="18" cy="18" rx="14" ry="10" fill="var(--fill)" stroke="var(--ink)" stroke-width="2"/></svg>'
   : k === 'free' ? '<svg class="shape-preview" viewBox="0 0 36 36" aria-hidden="true"><path d="M5 30L9 6H27L32 20L26 30Z" fill="var(--fill)" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round"/><path d="M9 6L26 30" stroke="var(--ink3)" stroke-width="1.5" stroke-dasharray="3 2"/></svg>'
@@ -599,7 +603,7 @@ function sheet0() { const q = S.quick;
   if (!q) return `<div class="start-intro"><h2>С чего начнём?</h2><p>Выберите форму комнаты или нарисуйте её по углам.</p></div><div class="opts">
     <button class="opt opt-primary" data-act="${S.sk.pts.length ? 'q-resume' : 'q-poly'}">${glyph(S.sk.pts.length && S.sk.mode === 'free' ? 'free' : 'poly')}<div class="opt-copy"><b>${S.sk.pts.length ? 'Продолжить контур' : 'Нарисовать контур'}</b><span>Отметьте углы пальцем,<br>затем добавьте размеры</span></div><span class="opt-arrow">${icon('arrow')}</span></button>
     <div class="quick-shapes"><button class="opt opt-compact" data-act="q-rect">${glyph('rect')}<div class="opt-copy"><b>Прямоугольник</b><span>Ширина и длина</span></div></button>
-    <button class="opt opt-compact" data-act="q-oval">${glyph('oval')}<div class="opt-copy"><b>Круг / овал</b><span>Один или два радиуса</span></div></button></div>
+    <button class="opt opt-compact" data-act="q-oval">${glyph('oval')}<div class="opt-copy"><b>Круг / овал</b><span>Один или два диаметра</span></div></button></div>
     <button class="opt opt-free" data-act="q-polyfree">${glyph('free')}<div class="opt-copy"><b>Контур с косыми стенами</b><span>Произвольные углы и диагонали</span></div><span class="opt-arrow">${icon('arrow')}</span></button></div>`;
   const sp = quickSpec(); let h = `<div class="card op"><h3>${esc(sp.title)}${q.edit ? ' · изменить' : ''}</h3>`;
   if (q.kind === 'oval') h += `<div class="seg"><button class="${q.mode === 'circle' ? 'on' : ''}" data-act="qmode" data-v="circle">Окружность</button><button class="${q.mode === 'ellipse' ? 'on' : ''}" data-act="qmode" data-v="ellipse">Эллипс</button></div>`;
@@ -609,7 +613,7 @@ function sheet0() { const q = S.quick;
 function updateSheet0() { const nn = $('#qnote'); if (!nn) return; const poly = quickPoly(), b = $('#qbuild'); if (b) b.disabled = !poly;
   if (!poly) { nn.textContent = 'Введите размеры, чертёж появится сверху'; return; } const st = polyStats(poly); nn.textContent = `Площадь ${fmt2(st.area)} м² · периметр ${fmt2(st.perim)} м`; }
 function quickBuild() { const poly = quickPoly(); if (!poly) return toast('Введите размеры', true); const q = S.quick;
-  S.origin = q.kind === 'rect' ? { kind: 'rect' } : { kind: 'oval', mode: q.mode, f: { ...q.f } };
+  S.origin = q.kind === 'rect' ? { kind: 'rect' } : { kind: 'oval', mode: q.mode, f: scaleOvalFields(q.f, .5) };
   S.base = poly; if (!q.edit) { S.ops = []; S.redoOps = []; S.m = null; S.hist2 = []; S.redo2 = []; } S.quick = null; S.stage = 3; S.sel = null; S.op = null; blurActive(); rebuild(); render(); }
 function renderChrome() { const names = ['Контур', 'Размеры', 'Детали'], isRect = S.origin && S.origin.kind === 'rect', isOval = S.origin && S.origin.kind === 'oval', app = $('#app');
   applyCanvasLook();
