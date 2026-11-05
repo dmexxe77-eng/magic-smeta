@@ -3,6 +3,7 @@
 import { L,TAU,wrap,hyp,sub,add,mul,dot,cross,norm,perp,clone,cm,fmt2,turnAt,shoelace,windOf,interiorDeg,outNormal,lineX,segX,inside,isInteriorDiag,W_ANG,toPts,flat,buildCons,conRes,resid,jac,solveLin,sq,lm,rankOf,rowFor,estScale,analyze,alignPts,makeModel,solveModel,ptsOf,filletInfo,arcInfo,flatten,perimeterOf,polyStats,sideLen,bakeModel,checkFillets,opDelete,opAddPoint,opShift,opLength,opFillet,opArc,opBump,rectPoly,circumR,ovalPoly,DEG,W_PRIOR,NEED } from './geometry.js';
 
 import { operationGuide, operationFieldHelp } from '../operation-guide.js';
+import { measurementToolbar } from '../measurement-tools.js';
 
 const TEMPLATE = `<div class="app" id="app">
   <div class="top">
@@ -15,6 +16,7 @@ const TEMPLATE = `<div class="app" id="app">
   <div class="cv-wrap" id="cvw">
     <div class="stages" id="stages"></div>
     <svg id="cv" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div class="measure-tools" id="measureTools" hidden></div>
     <div class="zoom"><button id="zIn" title="Крупнее">+</button><button id="zOut" title="Мельче">−</button><button id="zFit" class="fit" title="Вписать">⤢</button></div>
     <div class="start" id="start" hidden></div>
     <div class="hint" id="hint"></div>
@@ -42,10 +44,10 @@ const toS = p => ({ x: (p.x * VT.s + VT.tx) * Z.k + Z.dx, y: (p.y * VT.s + VT.ty
 const fromS = q => ({ x: ((q.x - Z.dx) / Z.k - VT.tx) / VT.s, y: ((q.y - Z.dy) / Z.k - VT.ty) / VT.s });
 const clampK = k => Math.min(64, Math.max(0.5, k));
 function zoomAt(f, c) { const k = clampK(Z.k * f), r = k / Z.k; Z = { k, dx: c.x - (c.x - Z.dx) * r, dy: c.y - (c.y - Z.dy) * r }; renderCanvas(); }
-function fitView(pts) { const W = svg.clientWidth, H = svg.clientHeight, pad = 62; let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+function fitView(pts) { const W = Math.max(1, svg.clientWidth), fullH = Math.max(1, svg.clientHeight), H = Math.max(1, fullH - (S.stage === 2 ? Math.min(96, fullH * .3) : 0)), pad = Math.min(62, W * .16, H * .18), caption = Math.min(36, H * .12); let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
   pts.forEach(p => { x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y); });
-  const w = Math.max(x1 - x0, 1e-6), h = Math.max(y1 - y0, 1e-6), s = Math.min((W - 2 * pad) / w, (H - 2 * pad - 36) / h);
-  VT = { s, tx: (W - w * s) / 2 - x0 * s, ty: (H - h * s) / 2 - y0 * s + 18 }; }
+  const w = Math.max(x1 - x0, 1e-6), h = Math.max(y1 - y0, 1e-6), s = Math.min(Math.max(1, W - 2 * pad) / w, Math.max(1, H - 2 * pad - caption) / h);
+  VT = { s, tx: (W - w * s) / 2 - x0 * s, ty: (H - h * s) / 2 - y0 * s + caption / 2 }; }
 function dirOut(P, i) { const n = P.length, u1 = norm(sub(P[(i - 1 + n) % n], P[i])), u2 = norm(sub(P[(i + 1) % n], P[i])), b = add(u1, u2);
   if (Math.hypot(b.x, b.y) < 1e-6) return outNormal(P, i); const bis = norm(b); return interiorDeg(P, i, windOf(P)) < 180 ? mul(bis, -1) : bis; }
 const TXT = 'paint-order:stroke;stroke:var(--paper);stroke-width:4px;stroke-linejoin:round;';
@@ -85,8 +87,11 @@ function renderCanvas() { while (svg.firstChild) svg.removeChild(svg.firstChild)
       g.appendChild(el('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, stroke: 'transparent', 'stroke-width': 26, 'data-hit': 'sug', 'data-i': i, 'data-j': j })); });
     S.m.diags.forEach((d, k) => { const a = toS(P[d.i]), b = toS(P[d.j]), on = S.hot && S.hot.t === 'd' && S.hot.k === k;
       g.appendChild(el('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, style: `stroke:${on ? 'var(--laser)' : 'var(--ink2)'};stroke-width:1.5;stroke-dasharray:6 4` }));
-      g.appendChild(text(mul(add(a, b), .5), d.cm != null ? String(d.cm) : '?', { size: 12, color: on ? 'var(--laser)' : 'var(--ink2)' }));
-      g.appendChild(el('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, stroke: 'transparent', 'stroke-width': 26, 'data-hit': 'd', 'data-i': k })); }); }
+      const label = d.cm != null ? String(d.cm) : '?', at = mul(add(a, b), .5);
+      g.appendChild(text(at, label, { size: 12, color: on ? 'var(--laser)' : 'var(--ink2)' }));
+      g.appendChild(el('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, stroke: 'transparent', 'stroke-width': 26, 'data-hit': 'd', 'data-i': k }));
+      const width = Math.max(36, label.length * 7);
+      g.appendChild(el('rect', { x: at.x - width / 2, y: at.y - 13, width, height: 26, fill: 'transparent', 'data-hit': 'd', 'data-i': k, 'aria-label': `Изменить диагональ ${L(d.i)}${L(d.j)}, сантиметров` })); }); }
   // sides
   for (let i = 0; i < n; i++) { const sp = sidePts(poly, i).map(toS), j = (i + 1) % n;
     const on = (S.stage === 2 && S.hot && S.hot.t === 's' && S.hot.i === i) || (S.stage === 3 && S.sel && S.sel.t === 's' && S.sel.i === i);
@@ -108,13 +113,19 @@ function renderCanvas() { while (svg.firstChild) svg.removeChild(svg.firstChild)
     if (orthoOk && roomy) { const n_ = P.length, u1 = norm(sub(P[(i - 1 + n_) % n_], P[i])), u2 = norm(sub(P[(i + 1) % n_], P[i])), s = 9 * LS;
       const a = add(p, mul(u1, s)), b = add(p, mul(add(u1, u2), s)), c = add(p, mul(u2, s));
       g.appendChild(el('path', { d: pathOf([a, b, c], false), style: 'fill:none;stroke:var(--ink2);stroke-width:1.2' })); }
-    if (S.stage === 2 && !orthoOk && roomy) { const d = vkd, inn = mul(o, -1), vk = S.m.vert[i];
-      g.appendChild(text(add(p, mul(inn, 24 * LS)), Math.round(d) + '°', { size: 10 * LS, color: vk.kind === 'ortho' ? 'var(--bad)' : vk.kind === 'deg' ? 'var(--ink)' : 'var(--ink3)', italic: vk.kind === 'free' })); }
     if (fi) { g.appendChild(el('circle', { cx: p.x, cy: p.y, r: 3, style: 'fill:none;stroke:var(--ink3);stroke-width:1.2;stroke-dasharray:2 2' }));
       g.appendChild(text(add(toS(fi.C), mul(o, -2)), 'R' + cm(fi.R), { size: 10 * LS, color: 'var(--ink2)' })); }
     else g.appendChild(el('circle', { cx: p.x, cy: p.y, r: on || isPick ? 6 : 3.5 * LS, style: `fill:${on || isPick ? 'var(--laser)' : 'var(--paper)'};stroke:${on || isPick ? 'var(--laser)' : 'var(--ink)'};stroke-width:1.5` }));
     g.appendChild(text(add(p, mul(o, 18 * LS)), L(i), { size: 13 * LS, w: 600, color: on || isPick ? 'var(--laser)' : 'var(--ink)' }));
-    g.appendChild(el('circle', { cx: p.x, cy: p.y, r: 24, fill: 'transparent', 'data-hit': 'v', 'data-i': i })); } }
+    g.appendChild(el('circle', { cx: p.x, cy: p.y, r: 24, fill: 'transparent', 'data-hit': 'v', 'data-i': i }));
+    if (S.stage === 2 && roomy) { const vk = S.m.vert[i], at = add(p, mul(o, -28 * LS));
+      const label = vk.kind === 'deg' ? (vk.deg != null ? String(vk.deg).replace('.', ',') + '°' : '?°')
+        : vk.kind === 'ortho' ? String(vk.deg ?? (vkd > 180 ? 270 : 90)) + '°'
+        : st.missing === 0 ? '≈' + Math.round(vkd) + '°' : '?°';
+      g.appendChild(text(at, label, { size: 10 * LS, color: on ? 'var(--laser)' : vk.kind === 'ortho' && !orthoOk ? 'var(--bad)' : vk.kind === 'free' ? 'var(--ink3)' : 'var(--ink2)', italic: vk.kind === 'free' }));
+      const width = Math.max(32, label.length * 6 * LS);
+      g.appendChild(el('rect', { x: at.x - width / 2, y: at.y - 12, width, height: 24, fill: 'transparent', 'data-hit': 'ang', 'data-i': i, 'aria-label': `Изменить угол ${L(i)}, градусов` }));
+    } } }
 
 // ───────── pointer ─────────
 let ptr = null, pinch = null; const pointers = new Map();
@@ -161,9 +172,10 @@ function onTap(p) { const P = S.sk.pts; if (S.stage === 0) return;
     if (p.moved) return; if (P.length >= 200) return toast('Слишком много точек', true);
     const q = snapPt(fromS({ x: p.x, y: p.y }), P[P.length - 1], P, S.sk.mode === 'free', P[P.length - 2]); if (P.some(o => hyp(o, q) < 14 / Z.k)) return; P.push(q); commit(); return; }
   if (S.stage === 2) { const h = p.hit;
-    if (S.pick) { if (h && h.t === 'v') pickVertex(h.i); return; }
+    if (S.pick) { if (h && (h.t === 'v' || h.t === 'ang')) pickVertex(h.i); return; }
     if (!h) { S.sel = null; blurActive(); render(); return; }
     if (h.t === 'v') { S.sel = { t: 'v', i: h.i }; blurActive(); render(); }
+    else if (h.t === 'ang') { S.sel = { t: 'v', i: h.i }; setVKind('deg'); }
     else if (h.t === 's') { S.sel = null; S.tab2 = 'walls'; S.dpick = null; S.focusReq = `input[data-in="side"][data-i="${h.i}"]`; render(); }
     else if (h.t === 'd') { S.sel = null; S.tab2 = 'diags'; S.dpick = null; S.focusReq = `input[data-in="diag"][data-k="${h.i}"]`; render(); }
     else if (h.t === 'sug') addDiag(h.i, h.j); return; }
@@ -289,11 +301,13 @@ sheet.addEventListener('pointerdown', e => { const b = kbBtn(e); if (!b) return;
 sheet.addEventListener('mousedown', e => { if (kbBtn(e)) e.preventDefault(); });
 sheet.addEventListener('touchstart', e => { if (kbBtn(e)) e.preventDefault(); }, { passive: false });
 const blurActive = () => { const a = document.activeElement; if (a && a.blur && a !== document.body) a.blur(); };
-function addDiag(i, j) { if (i > j) [i, j] = [j, i]; const n = S.m.n; if (i === j || (i + 1) % n === j || (j + 1) % n === i) return toast('Это соседние вершины, тут сторона', true);
-  let k = S.m.diags.findIndex(d => d.i === i && d.j === j); if (k < 0) { withSnap(() => S.m.diags.push({ i, j, cm: null })); k = S.m.diags.length - 1; }
+function addDiag(i, j) { if (i > j) [i, j] = [j, i]; const n = S.m.n; if (i === j || (i + 1) % n === j || (j + 1) % n === i) { render(); return toast('Это соседние вершины, тут сторона', true); }
+  let k = S.m.diags.findIndex(d => d.i === i && d.j === j);
+  if (k < 0 && !isInteriorDiag(S.m.sol, i, j)) { render(); return toast('Эта линия выходит за стены комнаты', true); }
+  if (k < 0) { withSnap(() => S.m.diags.push({ i, j, cm: null })); k = S.m.diags.length - 1; }
   S.pick = null; S.sel = null; S.tab2 = 'diags'; S.dpick = null; S.focusReq = `input[data-in="diag"][data-k="${k}"]`; render(); }
 function pickVertex(i) { const p = S.pick; if (p.mode === 'ang') { S.pick = null; S.sel = { t: 'v', i }; setVKind('deg'); return; }
-  if (p.a == null) { p.a = i; render(); return; } if (p.a === i) return toast('Выберите другую вершину', true); const a = p.a; S.pick = null; addDiag(a, i); }
+  if (p.a == null) { p.a = i; render(); return; } if (p.a === i) return toast('Выберите другую вершину', true); const a = p.a; addDiag(a, i); }
 function setVKind(k) { return setVKindAt(S.sel.i, k); }
 function setVKindAt(i, k) { const vt = S.m.vert[i];
   withSnap(() => { if (k === 'ortho') { const d = interiorDeg(S.m.sol, i, S.m.wind); vt.kind = 'ortho'; vt.deg = Math.abs(d - 270) < Math.abs(d - 90) ? 270 : 90; vt.user = true; }
@@ -423,14 +437,14 @@ function act(a, d) {
   if (a === 'undoPt') { S.sk.pts.pop(); return render(); }
   if (a === 'close') return closeSketch();
   if (a === 'rmDiag') { withSnap(() => S.m.diags.splice(+d.i, 1)); solveModel(S.m); return render(); }
-  if (a === 'pickDiag') { S.sel = null; S.pick = { mode: 'diag', a: null }; blurActive(); return render(); }
-  if (a === 'pickAng') { S.sel = null; S.pick = { mode: 'ang' }; blurActive(); return render(); }
+  if (a === 'pickDiag') { if (S.stage !== 2 || !S.m) return; flushApply(); S.sel = null; S.pick = { mode: 'diag', a: null }; blurActive(); return render(); }
+  if (a === 'pickAng') { if (S.stage !== 2 || !S.m) return; flushApply(); S.sel = null; S.pick = { mode: 'ang' }; blurActive(); return render(); }
   if (a === 'pickCancel') { S.pick = null; return render(); }
   if (a === 'vkind') return setVKind(d.k);
   if (a === 'deselect') { S.sel = null; S.op = null; return render(); }
   if (a === 'back1') { const had = S.ops.length; Object.assign(S, { stage: 1, m: null, base: null, ops: [], redoOps: [], poly: null, sel: null, pick: null, hist2: [], redo2: [] }); render(); if (had) toast('Правки этапа 3 сброшены вместе с размерами'); return; }
-  if (a === 'back2') { if (!S.m) S.m = modelFromPoly(S.base); S.stage = 2; S.sel = null; S.op = null; S.pick = null; return render(); }
-  if (a === 'done') { if (S.m.status.missing) return; S.base = bakeModel(S.m); S.stage = 3; S.sel = null; blurActive(); rebuild(); return render(); }
+  if (a === 'back2') { flushApply(); if (!S.m) S.m = modelFromPoly(S.base); else if (!S.m.sol || !S.m.status) solveModel(S.m); S.stage = 2; S.sel = null; S.op = null; S.pick = null; return render(); }
+  if (a === 'done') { flushApply(); if (S.m.status.missing) return; S.base = bakeModel(S.m); S.stage = 3; S.sel = null; S.pick = null; S.dpick = null; blurActive(); rebuild(); return render(); }
   if (a === 'op') { makeOp(d.k, S.sel.i); return render(); }
   if (a === 'seg') { S.op.seg[d.n] = d.v; opFields(); return render(); }
   if (a === 'apply') return applyOp();
@@ -440,6 +454,7 @@ function act(a, d) {
   if (a === 'unarc') return commitOp({ kind: 'arc', i: S.sel.i, mode: 'h', val: 0, dir: 'out' }); }
 sheet.addEventListener('input', e => { if (e.target && e.target.id === 'roomName') S.roomName = e.target.value; });
 sheet.addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (!b || !sheet.contains(b)) return; if ((b.dataset.act === 'nextField' || b.dataset.act === 'blur') && Date.now() - kbActAt < 600) return; act(b.dataset.act, b.dataset); });
+$('#measureTools').addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b && $('#measureTools').contains(b)) act(b.dataset.act, b.dataset); });
 $('#start').addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b) act(b.dataset.act, b.dataset); });
 $('#bBack').addEventListener('click', () => { if (opts.onBack) opts.onBack(); });
 $('#bUndo').addEventListener('click', () => { if (S.stage === 1) { S.sk.pts.pop(); render(); } else if (S.stage === 2) undo2(); else if (S.stage === 3 && S.ops.length) { S.redoOps.push(S.ops.pop()); rebuild(); S.sel = null; S.op = null; render(); } });
@@ -470,8 +485,8 @@ const glyph = k => k === 'rect' ? '<svg viewBox="0 0 36 36"><rect x="4" y="8" wi
 function sheet0() { const q = S.quick;
   if (!q) return `<div class="sec">Как строить</div><div class="opts">
     <button class="opt" data-act="q-rect">${glyph('rect')}<div><b>Прямоугольник</b><span>Две стороны, готовый чертёж сразу</span></div></button>
-    <button class="opt" data-act="q-poly">${glyph('poly')}<div><b>Многоугольник · автоматически</b><span>Все углы прямые</span></div></button>
-    <button class="opt" data-act="q-polyfree">${glyph('free')}<div><b>Сложный многоугольник</b><span>Углы неизвестны: длины, диагонали или градусы</span></div></button>
+    <button class="opt" data-act="q-poly">${glyph('poly')}<div><b>Автоматическое построение</b><span>Для помещений, где все углы прямые. Отметьте контур и введите длины стен.</span></div></button>
+    <button class="opt" data-act="q-polyfree">${glyph('free')}<div><b>Ручное построение</b><span>Введите длины стен, диагонали или углы в градусах.</span></div></button>
     <button class="opt" data-act="q-oval">${glyph('oval')}<div><b>Окружность / эллипс</b><span>Один или два диаметра</span></div></button></div>`;
   const sp = quickSpec(); let h = `<div class="card op"><h3>${esc(sp.title)}${q.edit ? ' · изменить' : ''}</h3>`;
   if (q.kind === 'oval') h += `<div class="seg"><button class="${q.mode === 'circle' ? 'on' : ''}" data-act="qmode" data-v="circle">Окружность</button><button class="${q.mode === 'ellipse' ? 'on' : ''}" data-act="qmode" data-v="ellipse">Эллипс</button></div>`;
@@ -484,6 +499,8 @@ function quickBuild() { const poly = quickPoly(); if (!poly) return toast('Вв�
   S.origin = q.kind === 'rect' ? { kind: 'rect' } : { kind: 'oval', mode: q.mode, f: scaleOvalFields(q.f, .5) };
   S.base = poly; if (!q.edit) { S.ops = []; S.redoOps = []; S.m = null; S.hist2 = []; S.redo2 = []; } S.quick = null; S.stage = 3; S.sel = null; S.op = null; blurActive(); rebuild(); render(); }
 function renderChrome() { const names = ['Контур', 'Размеры', 'Правка'], isRect = S.origin && S.origin.kind === 'rect', isOval = S.origin && S.origin.kind === 'oval';
+  $('#app').dataset.stage = S.stage;
+  const tools = $('#measureTools'); tools.hidden = S.stage !== 2; tools.innerHTML = S.stage === 2 ? measurementToolbar(S.pick, L) : '';
   // пилюли этапов кликабельные: назад на контур или размеры, вперёд на правку, если размеров хватает
   $('#stages').innerHTML = S.stage === 0 ? '' : isOval ? '<span class="pill on"><b>✓</b>Правка</span>' : names.map((nm, k) => (isRect && k === 0) ? '' : `<button class="pill ${k + 1 === S.stage ? 'on' : k + 1 < S.stage ? 'done' : ''}" data-stage="${k + 1}"><b>${k + 1}</b>${nm}</button>`).join('');
   $('#hint').textContent = S.stage === 0 ? (S.quick ? 'Чертёж появится по мере ввода размеров' : '') : S.stage === 1 ? (S.sk.pts.length ? 'Следующий угол по порядку обхода, стены по сетке. Замкнуть — тап по A' : 'Тап по экрану ставит первый угол A') : S.stage === 2 ? 'Тап по стене — ввести длину. Тап по углу — прямой, свободный или градусы' : 'Тап по углу или стене — редактировать';

@@ -47,6 +47,30 @@ test('the chooser explains automatic right-angle and manual measured constructio
 });
 
 for (const [name, editor, geometry] of [['desktop/mobile', bridgeEditor, bridgeGeometry], ['main', mainEditor, mainGeometry]]) {
+  test(`${name}: measurement tools keep the contour visible and upright on a 400×200 canvas`, t => {
+    const ui = mount(t, editor, savedRoom(geometry));
+    const canvas = ui.node('#cv');
+    canvas.clientWidth = 400;
+    canvas.clientHeight = 200;
+    ui.click('back2');
+    requireTools(ui);
+    const vertices = canvas.firstChild.children
+      .filter(element => element.attributes.get('data-hit') === 'v')
+      .sort((a, b) => Number(a.attributes.get('data-i')) - Number(b.attributes.get('data-i')))
+      .map(element => ({ x: Number(element.attributes.get('cx')), y: Number(element.attributes.get('cy')) }));
+    assert.equal(vertices.length, 4, 'all four corners are rendered');
+    for (const { x, y } of vertices) {
+      assert.ok(Number.isFinite(x) && x >= 0 && x <= canvas.clientWidth, 'each corner is inside the canvas horizontally');
+      assert.ok(Number.isFinite(y) && y >= 0 && y <= canvas.clientHeight, 'each corner is inside the canvas vertically');
+    }
+    assert.ok(vertices[1].x > vertices[0].x, 'the left-to-right wall keeps a positive horizontal scale');
+    assert.ok(vertices[3].y > vertices[0].y, 'the top-to-bottom wall keeps a positive vertical scale');
+    const width = Math.max(...vertices.map(p => p.x)) - Math.min(...vertices.map(p => p.x));
+    const height = Math.max(...vertices.map(p => p.y)) - Math.min(...vertices.map(p => p.y));
+    assert.ok(width >= canvas.clientWidth * .2, 'the contour occupies a usable width');
+    assert.ok(height >= canvas.clientHeight * .3, 'the contour occupies a usable height');
+  });
+
   test(`${name}: a diagonal selected on the canvas determines the free room and survives reopening`, async t => {
     const ui = freeRectangle(t, editor);
     requireTools(ui);
@@ -95,6 +119,19 @@ for (const [name, editor, geometry] of [['desktop/mobile', bridgeEditor, bridgeG
     const ui = freeRectangle(t, editor);
     ui.tapAngle(2);
     assert.match(ui.node('#sheet').innerHTML, /data-in="ang"[^>]*data-i="2"/);
+  });
+
+  test(`${name}: tapping an existing diagonal edits its length without duplicating the measurement`, t => {
+    const ui = mount(t, editor, savedRoom(geometry, rectangle, { free: true, diagonal: true }));
+    ui.click('back2');
+    ui.selectDiagonal(0);
+    assert.match(ui.node('#sheet').innerHTML, /data-in="diag"[^>]*data-k="0"[^>]*value="500"/);
+    ui.fill(0, '450', 'diag');
+    ui.enter(0, 'diag');
+    ui.click('done');
+    const result = ui.save();
+    assert.deepEqual(result.draw.m.diags, [{ i: 0, j: 2, cm: 450 }]);
+    assert.equal(result.area, 11.76, 'the new diagonal changes the solved geometry');
   });
 
   test(`${name}: cancelling a partially selected diagonal leaves measurements unchanged`, t => {

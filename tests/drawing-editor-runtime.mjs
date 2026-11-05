@@ -72,9 +72,10 @@ export function mount(t, createEditor, initial) {
   };
   const selectSide = (index = 0) => tap('s', index);
   const selectVertex = (index = 0) => tap('v', index);
+  const selectDiagonal = (index = 0) => tap('d', index);
   const tapAngle = (index = 0) => tap('ang', index);
   const sketchPoint = (x, y) => tap(null, null, x, y);
   const history = direction => node(direction === 'redo' ? '#bRedo' : '#bUndo').dispatch('click', {});
-  return { click, chooseTool, fill, enter, node, save, selectSide, selectVertex, tapAngle, sketchPoint, history };
+  return { click, chooseTool, fill, enter, node, save, selectSide, selectVertex, selectDiagonal, tapAngle, sketchPoint, history };
 }
 
