@@ -1,0 +1,21 @@
+{
+  "name": "zamer-pro",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "design": "node scripts/build-design.mjs",
+    "test": "node --test tests/mobile-drawing-workflow.test.mjs tests/mobile-drawing-panels.test.mjs tests/mobile-drawing-ruler.test.mjs tests/ruler-work-view.test.mjs tests/design-drawing-preview.test.mjs tests/design-tablet.test.mjs tests/design-device-preview.test.mjs"
+  },
+  "dependencies": {
+    "fflate": "0.8.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.3",
+    "esbuild": "^0.21.5",
+    "playwright": "1.62.1",
+    "vite": "^5.4.10"
+  }
+}

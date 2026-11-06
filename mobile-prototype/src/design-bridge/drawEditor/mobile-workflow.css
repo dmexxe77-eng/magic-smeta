@@ -1,0 +1,185 @@
+/* The phone workflow opts in explicitly; embedded Online editors keep their layout. */
+.zd .app.mobile-workflow{--surface2:#F7F7FC;--line:#ECECF4;--paper:#F3F3FA;--ink:#0F1620;--ink2:#707789;--ink3:#858B9C}
+.zd .app.mobile-workflow.choosing .cv-wrap{background:var(--ground)}
+.zd .mobile-workflow.choosing .stages{display:none}
+.zd .mobile-workflow .top{min-height:54px;padding:6px 10px;padding-top:max(6px,env(safe-area-inset-top));gap:4px}
+.zd .mobile-workflow .stages{padding:0 12px 8px;gap:5px}
+.zd .mobile-workflow .cv-wrap{min-height:100px}
+.zd .mobile-workflow .canvas-looks,.zd .mobile-workflow .zoom{display:none}
+.zd .mobile-workflow .canvas-meta{top:14px;left:14px;font-size:11px}
+.zd .mobile-workflow .canvas-meta.with-stats{display:flex;flex-wrap:wrap;gap:2px 10px;max-width:calc(100% - 104px);padding:4px 6px;background:var(--paper);border-radius:5px;font-size:10px;line-height:1.4;color:var(--ink2)}
+.zd .mobile-workflow .canvas-meta.with-stats span{white-space:nowrap}
+.zd .mobile-workflow .canvas-meta.with-stats b{color:var(--ink);font-weight:700}
+.zd .mobile-workflow .canvas-meta.with-stats .closure-warning{flex-basis:100%;white-space:normal;color:var(--warn);font-weight:600}
+.zd .mobile-workflow .hint{bottom:12px;font-size:12px}
+.zd .mobile-workflow .sheet{padding:12px 14px max(12px,env(safe-area-inset-bottom));gap:9px;overscroll-behavior:contain}
+.zd .mobile-workflow[data-stage="2"] .sheet{max-height:46%;overflow:auto;gap:8px}
+.zd .mobile-workflow .measurement-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.zd .mobile-workflow .measurement-head b{font-size:13px}
+.zd .mobile-workflow .measurement-head button{display:inline-flex;align-items:center;gap:5px;min-height:30px;padding:4px 8px;border-radius:7px;color:var(--pri);background:var(--laser-soft);font-size:10.5px;font-weight:700}
+.zd .mobile-workflow .angle-mode-action{align-self:flex-start;min-height:30px;padding:3px 0;color:var(--pri);font-size:11px;font-weight:600;text-align:left}
+.zd .mobile-workflow .measurement-tabs button{min-height:34px;font-size:12px}
+.zd .mobile-workflow .measurement-chips{display:flex;align-items:center;gap:6px;flex:none;overflow-x:auto;overscroll-behavior-x:contain;padding:1px 1px 4px;scroll-snap-type:x proximity}
+.zd .mobile-workflow .measurement-chips button{flex:none;display:flex;align-items:center;justify-content:center;gap:6px;min-width:44px;min-height:32px;padding:5px 9px;border:1px solid var(--line);border-radius:8px;font-size:11px;font-weight:700;scroll-snap-align:center;white-space:nowrap}
+.zd .mobile-workflow .measurement-chips button.on,.zd .mobile-workflow .measurement-chips button[aria-pressed="true"]{color:var(--pri);border-color:var(--pri);background:var(--laser-soft)}
+.zd .mobile-workflow .measurement-chips small{font-size:10px;color:var(--ink2);font-weight:500}
+.zd .mobile-workflow .measurement-chips svg{width:15px;height:15px;flex:none}
+.zd .mobile-workflow .measurement-empty,.zd .mobile-workflow .measurement-help{font-size:11px;line-height:1.5;color:var(--ink2)}
+.zd .mobile-workflow .mobile-measurements{display:block}
+.zd .mobile-workflow .mobile-measurements .row{display:none}
+.zd .mobile-workflow .mobile-measurements .row.mobile-current{display:flex;align-items:center;gap:8px;min-height:52px;padding:6px 10px}
+.zd .mobile-workflow .mobile-measurements .row .lbl{min-width:32px;flex:none;font-size:14px}
+.zd .mobile-workflow .mobile-measurements .row .in{width:auto;flex:1;min-width:0;height:40px;font-size:20px;font-weight:700}
+.zd .mobile-workflow .mobile-measurements .row .row-unit{font-size:12px}
+.zd .mobile-workflow .mobile-measurements .row .next,.zd .mobile-workflow .mobile-measurements .row .done{display:none}
+.zd .mobile-workflow .mobile-measurements .vrow{flex-wrap:wrap}
+.zd .mobile-workflow .mobile-measurements .vrow .seg{flex:1}
+.zd .mobile-workflow .mobile-measurements .vrow .in{flex-basis:80px}
+.zd .mobile-workflow .angle-ortho,.zd .mobile-workflow .angle-free{min-height:34px;padding:4px 8px;border-radius:7px;font-size:11px;color:var(--pri);background:var(--surface)}
+.zd .mobile-workflow .mobile-input-nav,.zd .mobile-workflow .input-accessory{display:flex;align-items:center;gap:7px;flex:none}
+.zd .mobile-workflow .input-accessory button,.zd .mobile-workflow .mobile-input-nav button{display:flex;align-items:center;justify-content:center;gap:5px;min-height:38px;padding:0 12px;border:1px solid var(--line);border-radius:9px;font-size:12px;font-weight:700;background:var(--surface)}
+.zd .mobile-workflow .input-accessory button[data-act="nextField"],.zd .mobile-workflow .mobile-input-nav button[data-act="nextField"]{flex:1;color:#fff;background:var(--pri);border-color:var(--pri)}
+.zd .mobile-workflow .input-accessory button svg,.zd .mobile-workflow .mobile-input-nav button svg{width:16px;height:16px}
+.zd .mobile-workflow .mobile-input-nav>span{font-size:11px;color:var(--ink2);white-space:nowrap}
+.zd .app.mobile-workflow .mobile-input-nav{display:none}
+.zd .mobile-workflow>.input-accessory{padding:8px 12px max(8px,env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--surface);z-index:7}
+.zd .mobile-workflow .input-accessory>span{flex:1;min-width:0;font-size:11px;line-height:1.35;font-weight:700}
+.zd .mobile-workflow .input-accessory>span small{display:block;font-size:10px;color:var(--ink2);font-weight:500;margin-top:2px}
+.zd .mobile-workflow .input-accessory .accessory-prev,.zd .mobile-workflow .input-accessory .accessory-done{width:36px;padding:0;flex:none}
+.zd .mobile-workflow .input-accessory button.accessory-next{flex:none;min-width:86px;min-height:40px;padding:0 10px}
+.zd .mobile-workflow .input-accessory .accessory-progress{flex:none;min-width:44px;text-align:center;font-size:11px;font-weight:600;color:var(--ink2)}
+.zd .mobile-workflow .input-accessory button.accessory-next{flex:1}
+.zd .mobile-workflow .input-accessory button.accessory-done{width:auto;min-width:58px;padding:0 9px;font-size:11px}
+.zd .mobile-workflow #st2{padding:3px 0;background:transparent;border-radius:0;font-size:11px;gap:7px}
+.zd .mobile-workflow #st2 small{font-size:10.5px;margin-top:1px}
+.zd .mobile-workflow .mobile-done-row{display:flex;align-items:center;gap:8px}
+.zd .mobile-workflow .mobile-done-row .btn{min-height:40px}
+.zd .mobile-workflow .measure-tools{display:none}
+.zd .mobile-workflow.has-pick .measure-tools{display:block;bottom:12px;max-width:calc(100% - 24px);padding:8px 10px}
+.zd .mobile-workflow.has-pick .measure-tool-buttons button:not(.measure-cancel){display:none}
+.zd .mobile-workflow.has-pick .measure-tool-buttons{float:right;margin-left:8px}
+.zd .mobile-workflow.has-pick .measure-tool-prompt{font-size:11px;margin:0;min-height:30px;display:flex;align-items:center}
+.zd .mobile-workflow .view-toggle{position:absolute;right:12px;top:10px;z-index:3;display:flex;align-items:center;gap:6px;min-height:36px;padding:0 11px;border-radius:9px;border:1px solid var(--line);background:var(--surface);font-size:12px;font-weight:700;color:var(--ink2)}
+.zd .mobile-workflow .view-toggle svg{width:17px;height:17px}
+.zd .mobile-workflow .view-toggle[aria-expanded="true"]{color:var(--pri);background:var(--laser-soft);border-color:var(--pri)}
+.zd .mobile-workflow .view-panel{position:absolute;z-index:6;right:12px;top:54px;width:224px;max-width:calc(100% - 24px);max-height:calc(100% - 66px);overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:4px;padding:8px;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.zd .mobile-workflow .view-panel button{display:flex;align-items:center;gap:8px;text-align:left;min-height:38px;padding:7px 9px;border-radius:7px;font-size:12px;font-weight:600}
+.zd .mobile-workflow .view-panel button svg{width:18px;height:18px}
+.zd .mobile-workflow .view-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-left:8px;font-size:12px}
+.zd .mobile-workflow .view-heading button{justify-content:center;min-width:34px;min-height:32px;padding:4px}
+.zd .mobile-workflow .view-actions{display:flex;flex-direction:column;gap:2px}
+.zd .mobile-workflow .alignment-hint{padding:0 9px 4px;font-size:10px;line-height:1.4;color:var(--ink2)}
+.zd .mobile-workflow .view-zoom{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-top:6px;margin-top:4px;border-top:1px solid var(--line);font-size:11px;color:var(--ink2)}
+.zd .mobile-workflow .view-zoom button{justify-content:center;min-width:40px;background:var(--surface2)}
+.zd .mobile-workflow .view-panel p{margin:5px 8px 3px;font-size:10.5px;line-height:1.5;color:var(--ink2)}
+.zd .mobile-workflow .view-rotation{padding:8px 8px 5px;margin-top:3px;border-top:1px solid var(--line)}
+.zd .mobile-workflow .rotation-heading{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--ink2)}
+.zd .mobile-workflow .rotation-heading output{color:var(--ink);font-weight:700}
+.zd .mobile-workflow .rotation-buttons{display:flex;gap:8px;margin:7px 0 2px}
+.zd .mobile-workflow .rotation-buttons button{flex:1;justify-content:center;background:var(--surface2);min-height:36px}
+.zd .mobile-workflow .rotation-buttons button:first-child svg{transform:scaleX(-1)}
+.zd .mobile-workflow #viewRotation{display:block;width:100%;height:28px;margin:2px 0;accent-color:var(--pri);cursor:pointer}
+.zd .mobile-workflow .view-rotation small{display:block;font-size:10px;color:var(--ink2)}
+.zd .mobile-workflow .view-panel .seg{padding:3px}
+.zd .mobile-workflow .view-panel .seg button{justify-content:center;padding:4px}
+.zd .mobile-workflow[data-stage="3"] .sheet{max-height:55%;padding-bottom:0;overflow:hidden}
+.zd .mobile-workflow.has-operation .sheet,.zd .mobile-workflow.quick .sheet{flex-shrink:1}
+.zd .mobile-workflow .mobile-tools-toggle{display:flex;align-items:center;justify-content:center;gap:7px;min-height:38px;padding:0 12px;border-radius:9px;background:var(--surface2);font-size:12px;font-weight:700;color:var(--pri)}
+.zd .mobile-workflow .mobile-tools-toggle svg{width:18px;height:18px}
+.zd .mobile-workflow .mobile-tools-content{min-height:0;overflow:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:10px}
+.zd .mobile-workflow .mobile-operation-menu,.zd .mobile-workflow .mobile-tool-pick{display:flex;flex-direction:column;gap:9px;min-width:0}
+.zd .mobile-workflow .mobile-operation-menu h3,.zd .mobile-workflow .tool-pick-heading h3{margin:0;font-size:14px;line-height:1.4;font-weight:800}
+.zd .mobile-workflow .operation-menu-heading{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.zd .mobile-workflow .operation-menu-heading .btn{flex:none;min-height:44px}
+.zd .mobile-workflow .operation-menu-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.zd .mobile-workflow .operation-menu-item{display:flex;align-items:center;gap:8px;min-width:0;min-height:46px;padding:7px 9px;border:1px solid var(--line);border-radius:10px;background:var(--surface2);text-align:left;font-size:11.5px;font-weight:700;line-height:1.35;color:var(--ink)}
+.zd .mobile-workflow .operation-menu-item svg{width:28px;height:23px;flex:none}
+.zd .mobile-workflow .operation-menu-item span{min-width:0}
+.zd .mobile-workflow .operation-menu-item[data-act="hole"]{grid-column:1/-1}
+.zd .mobile-workflow .operation-menu-item:active{background:var(--laser-soft);border-color:var(--pri);color:var(--pri)}
+.zd .mobile-workflow .operation-menu-item:focus-visible{outline:2px solid var(--pri);outline-offset:2px}
+.zd .mobile-workflow .tool-pick-heading{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.zd .mobile-workflow .tool-pick-heading .context-back{flex:none;min-height:44px;padding:0 5px;color:var(--pri)}
+.zd .mobile-workflow .tool-pick-help{margin:0;font-size:11px;line-height:1.45;color:var(--ink2)}
+.zd .mobile-workflow .mobile-tool-pick .element-list{margin-top:1px;padding-bottom:max(10px,env(safe-area-inset-bottom));scroll-snap-type:x proximity}
+.zd .mobile-workflow .mobile-tool-pick .element-chip{min-height:44px;scroll-snap-align:center}
+.zd .mobile-workflow .mobile-finish{flex:none}
+.zd .mobile-workflow .mobile-drawing-finish{border-top:0;padding-top:0;gap:8px}
+.zd .mobile-workflow .mobile-drawing-finish>.inName{height:40px;padding:0 11px;font-size:16px;font-weight:600}
+.zd .mobile-workflow .finish-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.zd .mobile-workflow .finish-actions>.btn{min-width:0;min-height:44px;padding:0 12px;font-size:12px}
+.zd .mobile-workflow .finish-actions>.mobile-tools-toggle{color:var(--pri);background:var(--surface2)}
+.zd .mobile-workflow .finish-actions>.mobile-tools-toggle svg{width:16px;height:16px}
+.zd .mobile-workflow .mobile-operation{display:flex;flex-direction:column;min-height:0;overflow:hidden;gap:10px}
+.zd .mobile-workflow .operation-scroll{display:flex;flex-direction:column;flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;gap:7px;padding-bottom:2px}
+.zd .mobile-workflow .operation-title{margin:0;font-size:15px;font-weight:800;line-height:1.4}
+.zd .mobile-workflow .operation-heading{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px 8px}
+.zd .mobile-workflow .operation-diagram{flex:none}
+.zd .mobile-workflow .operation-diagram svg.scheme{display:block;width:100%;max-height:112px;max-width:240px;margin:0 auto}
+.zd .mobile-workflow .mobile-operation .operation-guide{padding:4px 8px 5px}
+.zd .mobile-workflow .mobile-operation .operation-guide svg.operation-diagram{max-height:112px}
+.zd .mobile-workflow .mobile-operation .operation-guide figcaption{display:none}
+.zd .mobile-workflow .operation-controls{display:flex;flex-direction:column;gap:7px}
+.zd .mobile-workflow .operation-controls:empty{display:none}
+.zd .mobile-workflow .operation-controls.paired{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.zd .mobile-workflow .operation-controls .seg{min-width:0;padding:2px;gap:2px}
+.zd .mobile-workflow .operation-controls .seg button{min-width:0;min-height:32px;padding:3px 5px;line-height:1.3}
+.zd .mobile-workflow .operation-setting{display:flex;flex-direction:column;gap:5px}
+.zd .mobile-workflow .operation-setting .sec{margin:0}
+.zd .mobile-workflow .operation-fields{gap:0}
+.zd .mobile-workflow .operation-fields .fld{grid-template-columns:minmax(0,1fr) 84px 18px;min-height:44px;gap:7px}
+.zd .mobile-workflow .operation-fields .fld .in{width:100%;height:34px;border-radius:8px;font-size:16px}
+.zd .mobile-workflow .operation-fields .fld,.zd .mobile-workflow.quick .fld{scroll-margin-block:6px}
+.zd .mobile-workflow .operation-note{font-size:10.5px}
+.zd .mobile-workflow .operation-help{flex:none;min-width:0;color:var(--ink2);font-size:11px;line-height:1.5}
+.zd .mobile-workflow .operation-help summary{min-height:30px;align-content:center;cursor:pointer;color:var(--pri);font-weight:600}
+.zd .mobile-workflow .operation-help-content{padding:3px 0 5px}
+.zd .mobile-workflow .operation-help-content p{margin:0 0 7px}
+.zd .mobile-workflow .operation-help-content dl{display:flex;flex-direction:column;gap:7px;margin:0}
+.zd .mobile-workflow .operation-help-content dt{font-weight:700;color:var(--ink)}
+.zd .mobile-workflow .operation-help-content .operation-field-help{margin:1px 0 0;font-size:11px}
+.zd .mobile-workflow .mobile-operation>.op-actions{flex:none;padding:9px 0 max(12px,env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--surface)}
+.zd .mobile-workflow .drawing-summary{gap:14px}
+.zd .mobile-workflow .drawing-summary>span>b{font-size:18px}
+.zd .mobile-workflow .start{padding:28px 18px;max-width:460px}
+.zd .mobile-workflow .start-intro{margin-bottom:22px}
+.zd .mobile-workflow .start-intro h2{font-size:23px}
+.zd .mobile-workflow .start-intro p{font-size:12px;max-width:34ch}
+.zd .mobile-workflow .opts{gap:10px}
+.zd .mobile-workflow .opt-primary,.zd .mobile-workflow .opt-free{flex-wrap:nowrap;min-height:116px;padding:16px;background:var(--surface);border:1px solid var(--line);border-radius:20px;color:var(--ink)}
+.zd .mobile-workflow .opt-primary{--ink:#fff;--ink2:#DBE7FF;--ink3:#C0D4FF;--pri:#fff;--fill:rgba(255,255,255,.08);background:var(--laser);border-color:transparent;color:#fff}
+.zd .mobile-workflow .opt-primary>svg,.zd .mobile-workflow .opt-free>svg{width:52px;height:52px}
+.zd .mobile-workflow .opt-primary>svg{padding:6px;border-radius:14px;background:rgba(255,255,255,.15)}
+.zd .mobile-workflow .opt-free>svg{padding:6px;border-radius:14px;background:var(--laser-soft)}
+.zd .mobile-workflow .opt-free .opt-arrow{color:var(--ink3)}
+.zd .mobile-workflow .opt-primary b,.zd .mobile-workflow .opt-free b{font-size:15px;margin-bottom:5px}
+.zd .mobile-workflow .opt-primary .opt-copy>span,.zd .mobile-workflow .opt-free .opt-copy>span{font-size:11.5px;line-height:1.55;color:var(--ink2)}
+.zd .mobile-workflow .opt-compact{min-height:94px;padding:12px;gap:7px;background:var(--surface);border:1px solid var(--line);border-radius:20px}
+.zd .mobile-workflow .opt-compact svg{width:32px;height:26px}
+.zd .mobile-workflow .sketch-entry button{min-height:34px;font-size:12px}
+.zd .mobile-workflow .ruler-readout{display:flex;align-items:center;justify-content:space-between;min-height:44px;gap:8px;font-size:11px;font-weight:700}
+.zd .mobile-workflow .ruler-readout>span,.zd .mobile-workflow .ruler-readout b{white-space:nowrap}
+.zd .mobile-workflow .ruler-readout b{font-size:22px;letter-spacing:-.02em;color:var(--pri)}
+.zd .mobile-workflow .ruler-fine{display:flex;align-items:center;gap:6px;flex:none;margin-left:auto}
+.zd .mobile-workflow .ruler-fine button{flex:none;min-width:44px;min-height:44px;padding:0 7px;gap:3px;border:1px solid var(--line);border-radius:9px;font-size:12px;font-weight:700;background:var(--surface2)}
+.zd .mobile-workflow .ruler-fine button svg{width:14px;height:14px;flex:none}
+.zd .mobile-workflow .ruler-fine button:active{color:var(--pri);background:var(--laser-soft)}
+.zd .mobile-workflow .ruler-candidate{display:flex;flex-direction:column;gap:8px}
+.zd .mobile-workflow.kb .top{min-height:44px;padding-top:4px;padding-bottom:4px}
+.zd .mobile-workflow.kb .top .sub,.zd .mobile-workflow.kb .stages{display:none}
+.zd .mobile-workflow.kb .sheet{max-height:64%;padding:8px 12px max(8px,env(safe-area-inset-bottom));gap:6px;overflow:auto}
+.zd .mobile-workflow.kb .measurement-head,.zd .mobile-workflow.kb .measurement-tabs,.zd .mobile-workflow.kb .measurement-chips,.zd .mobile-workflow.kb .measurement-status,.zd .mobile-workflow.kb .mobile-done-row{display:none}
+.zd .mobile-workflow.kb .mobile-measurements .row.mobile-current{display:flex;min-height:48px}
+.zd .mobile-workflow.kb .measurement-help,.zd .mobile-workflow.kb .measurement-empty{display:none}
+.zd .mobile-workflow.kb .angle-mode-action{display:none}
+.zd .mobile-workflow.kb .fld:not(.mobile-current){display:none}
+.zd .mobile-workflow.kb .card.op>h3,.zd .mobile-workflow.kb .card.op>.seg,.zd .mobile-workflow.kb .card.op>.operation-guide,.zd .mobile-workflow.kb .card.op>svg,.zd .mobile-workflow.kb .card.op>.note,.zd .mobile-workflow.kb .card.op>.op-field-help{display:none}
+.zd .mobile-workflow.kb #opguide,.zd .mobile-workflow.kb .mobile-input-nav{display:none}
+.zd .mobile-workflow.kb .mobile-finish,.zd .mobile-workflow.kb .drawing-finish,.zd .mobile-workflow.kb .context-back{display:none}
+.zd .mobile-workflow.kb .operation-heading,.zd .mobile-workflow.kb .operation-diagram,.zd .mobile-workflow.kb .operation-controls,.zd .mobile-workflow.kb .operation-help,.zd .mobile-workflow.kb .mobile-operation #opnote,.zd .mobile-workflow.kb .mobile-operation>.op-actions{display:none}
+.zd .mobile-workflow.kb .mobile-operation,.zd .mobile-workflow.kb .operation-scroll{overflow:visible}
+.zd .mobile-workflow.kb .input-accessory{display:flex}
+.zd .mobile-workflow.kb .view-toggle,.zd .mobile-workflow.kb .view-panel,.zd .mobile-workflow.kb .measure-tools{display:none}
+@media(max-height:570px){.zd .mobile-workflow .start{padding:18px}.zd .mobile-workflow .start-intro{margin-bottom:14px}.zd .mobile-workflow .opt-primary,.zd .mobile-workflow .opt-free{min-height:90px;padding:12px}.zd .mobile-workflow .opt-compact{min-height:76px}.zd .mobile-workflow .sheet{max-height:58%}.zd .mobile-workflow .stages{padding-bottom:5px}}
+@media(max-height:380px){.zd .mobile-workflow.kb .top{display:none}.zd .mobile-workflow.kb .cv-wrap{min-height:64px}.zd .mobile-workflow.kb .input-accessory>span{font-size:10px}}
+@media(hover:hover) and (pointer:fine){.zd .mobile-workflow .view-panel button:hover,.zd .mobile-workflow .measurement-chips button:hover{background:var(--surface2)}.zd .mobile-workflow .operation-menu-item:hover{border-color:var(--pri);color:var(--pri)}}

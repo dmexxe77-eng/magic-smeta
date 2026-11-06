@@ -1,0 +1,11 @@
+node_modules/
+.DS_Store
+.env
+.env.*
+!.env.example
+tmp/
+logs/
+*.log
+
+# Ignore duplicate image directories created by Finder/cloud sync.
+public/design/nom */

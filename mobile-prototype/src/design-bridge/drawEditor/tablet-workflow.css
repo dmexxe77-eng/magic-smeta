@@ -1,0 +1,66 @@
+/* The same drawing workflow expands into the tablet workspace. */
+@media (min-width:701px){
+ .zd .app.mobile-workflow{max-width:none}
+ .zd .app.mobile-workflow .top{min-height:64px;padding:10px 20px;gap:8px}
+ .zd .app.mobile-workflow .top h1{font-size:18px}
+ .zd .app.mobile-workflow .top .sub{font-size:12px}
+ .zd .app.mobile-workflow .ib,.zd .app.mobile-workflow #bBack{width:44px;height:44px}
+ .zd .app.mobile-workflow .ib.text{width:auto;padding:0 10px;font-size:12px}
+ .zd .app.mobile-workflow .stages{padding:0 20px 12px;gap:10px}
+ .zd .app.mobile-workflow .pill{min-height:40px;font-size:13px}
+ .zd .app.mobile-workflow .pill b{width:20px;height:20px;font-size:11px}
+ .zd .app.mobile-workflow .cv-wrap{min-height:160px}
+ .zd .app.mobile-workflow.kb .cv-wrap{min-height:64px}
+ .zd .app.mobile-workflow .start{width:100%;max-width:700px;padding:32px 24px;margin:auto}
+ .zd .app.mobile-workflow .start-intro h2{font-size:28px}
+ .zd .app.mobile-workflow .start-intro p{font-size:14px;max-width:none}
+ .zd .app.mobile-workflow .mobile-methods{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+ .zd .app.mobile-workflow .mobile-methods>.sec,.zd .app.mobile-workflow .mobile-methods>.quick-shapes{grid-column:1/-1}
+ .zd .app.mobile-workflow .opt-primary,.zd .app.mobile-workflow .opt-free{min-height:150px;padding:18px}
+ .zd .app.mobile-workflow .opt-primary b,.zd .app.mobile-workflow .opt-free b{font-size:16px}
+ .zd .app.mobile-workflow .opt-primary .opt-copy>span,.zd .app.mobile-workflow .opt-free .opt-copy>span{font-size:12px}
+ .zd .app.mobile-workflow .sheet,.zd .app.mobile-workflow[data-stage="2"] .sheet,.zd .app.mobile-workflow[data-stage="3"] .sheet{max-height:38%;padding:14px 20px max(14px,env(safe-area-inset-bottom));gap:12px}
+ .zd .app.mobile-workflow .sheet>*,.zd .app.mobile-workflow>.input-accessory>*{min-width:0}
+ .zd .app.mobile-workflow .sheet>*{width:100%;max-width:720px;margin-inline:auto}
+ .zd .app.mobile-workflow .measurement-tabs button,.zd .app.mobile-workflow .measurement-chips button{min-height:44px;font-size:12px}
+ .zd .app.mobile-workflow .mobile-tools-toggle{min-height:44px}
+ .zd .app.mobile-workflow .operation-menu-item{min-height:48px;font-size:12px}
+ .zd .app.mobile-workflow .operation-title{font-size:17px}
+ .zd .app.mobile-workflow .operation-diagram svg.scheme{max-width:280px;max-height:144px}
+ .zd .app.mobile-workflow .mobile-operation .operation-guide svg.operation-diagram{max-height:144px}
+ .zd .app.mobile-workflow .operation-fields .fld{min-height:50px;grid-template-columns:minmax(0,1fr) 104px 22px}
+ .zd .app.mobile-workflow .operation-fields .fld .in{height:40px}
+ .zd .app.mobile-workflow>.input-accessory{padding-inline:20px}
+}
+@media(min-width:701px) and (max-width:959px) and (max-height:600px){
+ .zd .app.mobile-workflow .top{min-height:54px;padding-block:5px}
+ .zd .app.mobile-workflow .cv-wrap{min-height:80px}
+ .zd .app.mobile-workflow .sheet,.zd .app.mobile-workflow[data-stage="2"] .sheet,.zd .app.mobile-workflow[data-stage="3"] .sheet{max-height:58%;flex-shrink:1}
+}
+@media (min-width:960px){
+ .zd .app.mobile-workflow{display:grid;grid-template-columns:minmax(0,1fr) clamp(320px,32vw,380px);grid-template-rows:auto auto minmax(0,1fr) auto}
+ .zd .app.mobile-workflow>.top{grid-column:1/-1;grid-row:1}
+ .zd .app.mobile-workflow>.stages{grid-column:1/-1;grid-row:2}
+ .zd .app.mobile-workflow>.cv-wrap{grid-column:1;grid-row:3/5;min-width:0;min-height:0}
+ .zd .app.mobile-workflow>.sheet,.zd .app.mobile-workflow[data-stage="2"]>.sheet,.zd .app.mobile-workflow[data-stage="3"]>.sheet{grid-column:2;grid-row:3;min-width:0;min-height:0;max-height:none;height:100%;padding:18px 16px max(16px,env(safe-area-inset-bottom));border-top:0;border-left:1px solid var(--line);overflow:auto}
+ .zd .app.mobile-workflow>.sheet>*{max-width:none}
+ .zd .app.mobile-workflow>.input-accessory{grid-column:2;grid-row:4;min-width:0;padding:10px 12px max(10px,env(safe-area-inset-bottom));border-left:1px solid var(--line)}
+ .zd .app.mobile-workflow.choosing>.cv-wrap{grid-column:1/-1}
+ .zd .app.mobile-workflow[data-stage="3"]>.sheet{overflow:hidden}
+ .zd .app.mobile-workflow[data-stage="3"] .mobile-tools-content{flex:1}
+ .zd .app.mobile-workflow[data-stage="3"] .mobile-drawing-finish{margin-top:auto}
+ .zd .app.mobile-workflow .mobile-operation{height:100%;flex:1}
+ .zd .app.mobile-workflow .operation-scroll{flex:1;overflow:auto}
+ .zd .app.mobile-workflow .operation-heading{align-items:flex-start}
+ .zd .app.mobile-workflow .operation-controls.paired{grid-template-columns:1fr}
+ .zd .app.mobile-workflow .mobile-operation>.op-actions{padding-bottom:0}
+ .zd .app.mobile-workflow .element-list{flex-wrap:wrap;overflow:visible;max-height:40vh;overflow-y:auto}
+ .zd .app.mobile-workflow .element-chip{min-height:44px}
+ .zd .app.mobile-workflow .mobile-tool-pick{min-height:0}
+ .zd .app.mobile-workflow .mobile-tool-pick .element-list{min-height:0;flex:1;max-height:none}
+ .zd .app.mobile-workflow .mobile-measurements .row.mobile-current{min-height:60px}
+ .zd .app.mobile-workflow .mobile-measurements .row .in{height:44px}
+ .zd .app.mobile-workflow.kb>.top{display:flex;min-height:54px;padding-block:5px}
+ .zd .app.mobile-workflow.kb>.cv-wrap{min-height:0}
+ .zd .app.mobile-workflow.kb>.sheet{max-height:none;padding:12px 16px;overflow:auto}
+}
