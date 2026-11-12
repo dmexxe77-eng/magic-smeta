@@ -53,7 +53,7 @@ const rep = (a, b, label) => { const n = tpl.split(a).length - 1; if (n !== 1) t
 
 rep('<meta name="viewport" content="width=device-width, initial-scale=1">',
   '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n<meta name="theme-color" content="#0b1119">\n<link rel="icon" href="' + FAVICON + '">\n<title>' + BRAND.title + '</title>\n' +
-  '<link rel="stylesheet" href="/design/draw.css">\n<script src="/design/vendor/react.js"></script>\n<script src="/design/vendor/react-dom.js"></script>\n' +
+  '<link rel="stylesheet" href="/design/draw.css">\n<link rel="stylesheet" href="/design/trace.css">\n<script src="/design/vendor/react.js"></script>\n<script src="/design/vendor/react-dom.js"></script>\n' +
   '<script src="/design/draw.js"></script>\n<script src="/design/trace.js"></script>\n<script src="/design/contract.js"></script>\n<script src="/design/ec.js"></script>\n' + MOBILE_CSS, 'head');
 
 /* Вводное описание прототипа (карточка над рамкой телефона) на сайт не идёт */

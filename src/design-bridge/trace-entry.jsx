@@ -35,9 +35,9 @@ function TraceApp({ file, roomCount, onRoom, onDone }) {
     onRoom({ name, verts: rm.v, area: rm.aO, perim: rm.pO, imgPts: rm.imgPts });
   };
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ background: '#fff', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-        <button onClick={onDone} style={{ background: '#F3F3FA', border: 'none', borderRadius: 12, width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
+    <div className="z-trace-shell" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <div className="z-trace-header" style={{ background: '#fff', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+        <button onClick={onDone} aria-label="Закрыть обводку чертежа" style={{ background: '#F3F3FA', border: 'none', borderRadius: 12, width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
           <svg width="16" height="16" fill="none" stroke="#0F1620" strokeWidth="2" strokeLinecap="round"><path d="M10 4L6 8l4 4"/></svg>
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -45,10 +45,10 @@ function TraceApp({ file, roomCount, onRoom, onDone }) {
           <div style={{ fontSize: 11.5, fontWeight: 600, color: '#6F7688', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{rooms.length ? 'Обведено: ' + rooms.length : (file.name || 'план')}</div>
         </div>
       </div>
-      <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+      <div className="z-trace-workspace" style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
         <TracingCanvas image={image} completedRooms={rooms} initScale={scale} onScaleChange={setScale} onFinish={finish} />
       </div>
-      <div style={{ padding: '8px 14px', background: '#fff', borderTop: '1px solid #ECECF4', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+      <div className="z-trace-footer" style={{ padding: '8px 14px', background: '#fff', borderTop: '1px solid #ECECF4', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
         <span style={{ fontSize: 12, color: '#6F7688' }}>Обведено: <b style={{ color: '#0F1620' }}>{rooms.length}</b></span>
         <button style={btn} onClick={onDone}>{rooms.length ? 'Готово (' + rooms.length + ')' : 'Отмена'}</button>
       </div>

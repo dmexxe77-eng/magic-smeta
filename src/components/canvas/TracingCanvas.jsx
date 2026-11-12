@@ -1,18 +1,19 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { btnS } from "../ui.jsx";
 import { T } from "../../theme.js";
-import { P } from "../../data/profiles.js";
-import { fmt, uid, L, COLORS, deep } from "../../utils/helpers.js";
-import { calcPoly, getAngles, countAngles, snapOrthogonal } from "../../utils/geometry.js";
-import { compressImg } from "../../utils/imageUtils.js";
+import { fmt } from "../../utils/helpers.js";
+import { L as pointLabel } from "../../design-bridge/drawEditor/geometry.js";
+import { calcPoly, getAngles } from "../../utils/geometry.js";
 
 import { newR } from "../../utils/roomUtils.js";
-import PolyEditorFull from "./PolyEditorFull.jsx";
-import PolyMini from "./PolyMini.jsx";
+import TracingViewControls from "./TracingViewControls.jsx";
+import TracingGeometry from "./TracingGeometry.jsx";
+import TraceRoomLabel from "./TraceRoomLabel.jsx";
+import { TRACE, DEFAULT_TRACE_VIEW } from "./tracing-appearance.js";
+import { projectOrthogonalPoint } from "./trace-orthogonal.js";
 function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChange }) {
-  /* Стиль страницы дизайна (design-src/README.md): чипы 34px, поля 14px, primary индиго */
-  const chipS = (c, on) => ({ background: on ? "#EEEDFC" : "#fff", border: "1px solid " + (on ? "#4F46E5" : "#E4E4EE"), borderRadius: 10, padding: "0 12px", height: 34, color: c || "#1E2530", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" });
-  const fieldS = { background: "#F7F7FC", border: "1px solid #E4E4EE", borderRadius: 14, padding: "10px 12px", color: "#1E2530", fontSize: 16, fontWeight: 600, fontFamily: "inherit", outline: "none" };
+  const chipS = (c, on) => ({ background: on ? TRACE.soft : "#fff", border: "1px solid " + (on ? TRACE.accent : TRACE.line), borderRadius: 10, padding: "0 12px", height: 34, color: c || TRACE.text, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" });
+  const fieldS = { background: "#F7F7FC", border: "1px solid " + TRACE.line, borderRadius: 13, padding: "10px 12px", color: TRACE.text, fontSize: 16, fontWeight: 600, fontFamily: "inherit" };
+  const [view, setView] = useState(() => ({ ...DEFAULT_TRACE_VIEW }));
   const [pts, setPts] = useState([]);
   const [closed, setClosed] = useState(false);
   const [zoom, setZoom] = useState(1);
@@ -27,7 +28,6 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
   
   const containerRef = useRef(null);
   const gestureRef = useRef({ isPan: false, startDist: 0, startZoom: 1, startPan: { x: 0, y: 0 }, lastTouch: null, moved: false });
-  const imgDataRef = useRef(null);
   const imgElRef = useRef(null); /* загруженный Image объект для лупы */
   const dragStartRef = useRef(null); /* для определения drag vs click на ЛКМ */
   const isDragPanRef = useRef(false); /* флаг: ЛКМ-drag перешёл в pan */
@@ -42,11 +42,33 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
   const closedRef = useRef(false);
   useEffect(() => { closedRef.current = closed; }, [closed]);
   const zoomRef = useRef(1);
+  useEffect(() => {
+    const surface = containerRef.current;
+    if (!surface?.closest('.z-trace-shell') || typeof ResizeObserver !== 'function') return;
+    let active = true;
+    let previous = { width: surface.clientWidth, height: surface.clientHeight };
+    const observer = new ResizeObserver(() => {
+      if (!active) return;
+      const current = { width: surface.clientWidth, height: surface.clientHeight };
+      if (current.width > 0 && current.height > 0 && previous.width > 0 && previous.height > 0) {
+        const dx = (current.width - previous.width) / 2, dy = (current.height - previous.height) / 2;
+        if (dx || dy) setPan(p => ({ x: p.x + dx, y: p.y + dy }));
+      }
+      previous = current;
+    });
+    observer.observe(surface);
+    return () => { active = false; observer.disconnect(); };
+  }, []);
   /* Обновляем loupe + ref синхронно */
   const setLoupeSync = useCallback((val) => {
+    if (val) {
+      const rawImgX = val.rawImgX ?? val.imgX, rawImgY = val.rawImgY ?? val.imgY;
+      const point = view.rightAngles ? projectOrthogonalPoint(pts, [rawImgX, rawImgY]) : [rawImgX, rawImgY];
+      val = { ...val, rawImgX, rawImgY, imgX: point[0], imgY: point[1] };
+    }
     loupeRef.current = val;
     setLoupe(val);
-  }, []);
+  }, [pts, view.rightAngles]);
   /* Держим zoomRef актуальным — нужен для pinch-zoom startZoom */
   useEffect(() => { zoomRef.current = zoom; }, [zoom]);
   useEffect(() => {
@@ -56,17 +78,10 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
       const nw = img.naturalWidth, nh = img.naturalHeight;
       imgElRef.current = img; /* сохраняем для лупы */
       setImgSize({ w: nw, h: nh });
-      const cw = window.innerWidth, ch = window.innerHeight - 200;
+      const cw = containerRef.current?.clientWidth || window.innerWidth, ch = containerRef.current?.clientHeight || Math.max(1, window.innerHeight - 200);
       const fz = Math.min(cw / nw, ch / nh, 1);
       setZoom(fz);
       setPan({ x: (cw - nw * fz) / 2, y: Math.max(0, (ch - nh * fz) / 2) });
-      try {
-        const c = document.createElement("canvas");
-        c.width = nw; c.height = nh;
-        const ctx = c.getContext("2d");
-        ctx.drawImage(img, 0, 0, nw, nh);
-        imgDataRef.current = ctx.getImageData(0, 0, nw, nh);
-      } catch (e) {}
     };
     img.src = image;
   }, [image]);
@@ -95,46 +110,17 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
     const dh = sh * (sz / (viewR * 2));
     ctx.drawImage(imgElRef.current, sx, sy, sw, sh, dx, dy, dw, dh);
     /* Перекрестие */
-    ctx.strokeStyle = "rgba(79,70,229,0.7)";
+    ctx.strokeStyle = TRACE.crosshair;
     ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(sz / 2, 0); ctx.lineTo(sz / 2, sz); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(0, sz / 2); ctx.lineTo(sz, sz / 2); ctx.stroke();
-    /* Зелёная точка snap-позиции в центре */
-    ctx.strokeStyle = "rgba(79,70,229,0.9)";
+    /* Прицел точной постановки в центре лупы. */
+    ctx.strokeStyle = TRACE.stroke;
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(sz / 2, sz / 2, 5, 0, Math.PI * 2); ctx.stroke();
-    ctx.fillStyle = "rgba(79,70,229,0.85)";
+    ctx.fillStyle = TRACE.target;
     ctx.beginPath(); ctx.arc(sz / 2, sz / 2, 1.5, 0, Math.PI * 2); ctx.fill();
   }, [loupe, zoom]);
-  const snapToCorner = useCallback((ix, iy, mode) => {
-    try {
-      const id = imgDataRef.current;
-      if (!id) return [ix, iy];
-      const w = id.width, h = id.height, d = id.data;
-      const gray = (x, y) => {
-        const cx = Math.max(0, Math.min(w - 1, Math.round(x)));
-        const cy = Math.max(0, Math.min(h - 1, Math.round(y)));
-        const idx = (cy * w + cx) * 4;
-        return (d[idx] + d[idx + 1] + d[idx + 2]) / 3;
-      };
-      /* tap = маленький радиус (до 10px), loupe = средний (до 20px) */
-      const R = mode === "loupe" ? Math.min(20, Math.max(8, Math.round(15 / zoom))) : Math.min(10, Math.max(5, Math.round(8 / zoom)));
-      let bx = ix, by = iy, bs = -1;
-      for (let y = Math.max(1, iy - R); y <= Math.min(h - 2, iy + R); y++)
-        for (let x = Math.max(1, ix - R); x <= Math.min(w - 2, ix + R); x++) {
-          const gx = gray(x+1,y-1)+2*gray(x+1,y)+gray(x+1,y+1)-gray(x-1,y-1)-2*gray(x-1,y)-gray(x-1,y+1);
-          const gy = gray(x-1,y+1)+2*gray(x,y+1)+gray(x+1,y+1)-gray(x-1,y-1)-2*gray(x,y-1)-gray(x+1,y-1);
-          const cornerScore = Math.min(Math.abs(gx), Math.abs(gy));
-          if (cornerScore < 40) continue;
-          const dist = Math.hypot(x - ix, y - iy);
-          const distPenalty = dist / R;
-          const score = cornerScore * (1 - distPenalty * 0.7);
-          if (score > bs) { bs = score; bx = x; by = y; }
-        }
-      return [bx, by];
-    } catch (e) { return [ix, iy]; }
-  }, [zoom]);
-  const screen2img = useCallback((sx, sy) => [Math.round((sx - pan.x) / zoom), Math.round((sy - pan.y) / zoom)], [zoom, pan]);
   const img2screen = useCallback((ix, iy) => [ix * zoom + pan.x, iy * zoom + pan.y], [zoom, pan]);
   /* DOM-версии — читают позицию img элемента напрямую из браузера.
      Никаких closures, refs, zoom, pan — берём getBoundingClientRect.
@@ -146,43 +132,42 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
     const ir = el.getBoundingClientRect();
     if (ir.width < 1) return [0, 0];
     return [
-      Math.round((clientX - ir.left) * (el.naturalWidth / ir.width)),
-      Math.round((clientY - ir.top) * (el.naturalHeight / ir.height))
+      (clientX - ir.left) * (el.naturalWidth / ir.width),
+      (clientY - ir.top) * (el.naturalHeight / ir.height)
     ];
   };
-  const i2sDOM = (ix, iy) => {
-    const el = imgRef.current;
-    if (!el) return [0, 0];
-    const ir = el.getBoundingClientRect();
-    return [
-      ir.left + ix * (ir.width / el.naturalWidth),
-      ir.top + iy * (ir.height / el.naturalHeight)
-    ];
+  const closeContour = () => {
+    if (closed || pts.length < 3) return;
+    setClosed(true);
+    setScaleSide(0);
+    setScaleConfirmed(false);
+    setNamePrompt(true);
+    setRoomName("Помещение " + (completedRooms.length + 1));
   };
   /* ═══ PLACE POINT — ref-обёртка, всегда свежие closed/pts ═══ */
   const placePointRef = useRef(null);
   placePointRef.current = (ix, iy) => {
     if (closed) return;
+    // A tap on the starting marker closes the contour without moving any vertex.
+    // Use the actual pointer coordinate, so touch-target retargeting cannot pull it in.
+    const imageElement = imgRef.current;
+    if (pts.length >= 3 && imageElement) {
+      const bounds = imageElement.getBoundingClientRect();
+      const dx = (ix - pts[0][0]) * bounds.width / imageElement.naturalWidth;
+      const dy = (iy - pts[0][1]) * bounds.height / imageElement.naturalHeight;
+      if (Math.hypot(dx, dy) <= 10) { closeContour(); return; }
+    }
     /* Guard: не более одной точки за 500мс */
     if (Date.now() - pointGuardRef.current < 500) return;
+    const point = view.rightAngles ? projectOrthogonalPoint(pts, [ix, iy]) : [ix, iy];
+    const last = pts[pts.length - 1];
+    if (view.rightAngles && last && Math.hypot(point[0] - last[0], point[1] - last[1]) < 1e-7) return;
+    // A constrained endpoint may coincide with A even when the raw pointer does not.
+    if (view.rightAngles && pts.length >= 3 && Math.hypot(point[0] - pts[0][0], point[1] - pts[0][1]) < 1e-7) { closeContour(); return; }
     pointGuardRef.current = Date.now();
-    if (pts.length >= 3) {
-      const [fsx, fsy] = i2sDOM(pts[0][0], pts[0][1]);
-      const [sx, sy] = i2sDOM(ix, iy);
-      if (Math.hypot(sx - fsx, sy - fsy) < 30) {
-        /* Выравниваем углы к 90° перед замыканием */
-        setPts(prev=>{try{const r=snapOrthogonal(prev);return(r&&r.length>=3&&r.every(p=>Array.isArray(p)&&p.length===2))?r:prev;}catch(e){return prev;}});
-        setClosed(true);
-        setScaleSide(0);
-        setScaleConfirmed(false);
-        setNamePrompt(true);
-        setRoomName("Помещение " + (completedRooms.length + 1));
-        return;
-      }
-    }
-    setPts(prev => [...prev, [ix, iy]]);
+    setPts(prev => [...prev, point]);
   };
-  /* handleTap — быстрый тап/клик, БЕЗ snap, точно куда ткнул */
+  /* handleTap — свободная постановка или мягкая угловая привязка по настройке. */
   const handleTap = useCallback((sx, sy) => {
     const [ix, iy] = s2iDOM(sx, sy);
     placePointRef.current(ix, iy);
@@ -197,6 +182,27 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
     setPan(prev => ({ x: mx - (mx - prev.x) * (nz / zoom), y: my - (my - prev.y) * (nz / zoom) }));
     setZoom(nz);
   }, [zoom]);
+  const zoomBy = useCallback(factor => {
+    const surface = containerRef.current;
+    if (!surface || !Number.isFinite(factor) || factor <= 0) return;
+    const current = zoomRef.current;
+    if (!Number.isFinite(current) || current <= 0 || surface.clientWidth <= 0 || surface.clientHeight <= 0) return;
+    const next = Math.max(0.05, Math.min(15, current * factor));
+    const cx = surface.clientWidth / 2, cy = surface.clientHeight / 2;
+    setPan(previous => ({ x: cx - (cx - previous.x) * next / current, y: cy - (cy - previous.y) * next / current }));
+    zoomRef.current = next;
+    setZoom(next);
+  }, []);
+  const fitPlan = useCallback(() => {
+    const surface = containerRef.current;
+    if (!surface) return;
+    const cw = surface.clientWidth, ch = surface.clientHeight;
+    if (cw <= 0 || ch <= 0) return;
+    const next = Math.max(0.05, Math.min(cw / imgSize.w, ch / imgSize.h, 1));
+    zoomRef.current = next;
+    setZoom(next);
+    setPan({ x: (cw - imgSize.w * next) / 2, y: Math.max(0, (ch - imgSize.h * next) / 2) });
+  }, [imgSize]);
   /* ═══ TOUCH С ЛУПОЙ ═══ */
   const onTouchStart = useCallback(e => {
     const g = gestureRef.current;
@@ -216,13 +222,12 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
       holdTimerRef.current = setTimeout(() => {
         if (!gestureRef.current.moved && !closedRef.current) {
           loupeActiveRef.current = true;
-          const [rawIx, rawIy] = s2iDOM(tx, ty);
-          const [ix, iy] = snapToCorner(rawIx, rawIy, "loupe");
+          const [ix, iy] = s2iDOM(tx, ty);
           setLoupeSync({ imgX: ix, imgY: iy, fingerX: tx, fingerY: ty });
         }
       }, 250);
     }
-  }, [snapToCorner, setLoupeSync]);
+  }, [setLoupeSync]);
   const onTouchMove = useCallback(e => {
     e.preventDefault();
     const g = gestureRef.current;
@@ -243,8 +248,7 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
       const dx = e.touches[0].clientX - g.lastTouch.x, dy = e.touches[0].clientY - g.lastTouch.y;
       if (loupeActiveRef.current) {
         g.moved = true;
-        const [rawIx, rawIy] = s2iDOM(e.touches[0].clientX, e.touches[0].clientY);
-        const [ix, iy] = snapToCorner(rawIx, rawIy, "loupe");
+        const [ix, iy] = s2iDOM(e.touches[0].clientX, e.touches[0].clientY);
         setLoupeSync({ imgX: ix, imgY: iy, fingerX: e.touches[0].clientX, fingerY: e.touches[0].clientY });
       } else {
         if (Math.abs(dx) > 5 || Math.abs(dy) > 5 || g.moved) {
@@ -255,7 +259,7 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
         }
       }
     }
-  }, [snapToCorner, setLoupeSync]);
+  }, [setLoupeSync]);
   const onTouchEnd = useCallback(e => {
     const g = gestureRef.current;
     if (holdTimerRef.current) { clearTimeout(holdTimerRef.current); holdTimerRef.current = null; }
@@ -265,7 +269,7 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
         loupeActiveRef.current = false;
         setLoupeSync(null);
         lastTouchTimeRef.current = Date.now();
-        placePointRef.current(lp.imgX, lp.imgY);
+        placePointRef.current(lp.rawImgX ?? lp.imgX, lp.rawImgY ?? lp.imgY);
       } else if (!g.moved && g.lastTouch) {
         lastTouchTimeRef.current = Date.now();
         handleTap(g.lastTouch.x, g.lastTouch.y);
@@ -294,12 +298,11 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
         if (isDragPanRef.current) return; // не активировать лупу если уже панируем
         mouseLoupeRef.current = true;
         loupeActiveRef.current = true;
-        const [rawIx, rawIy] = s2iDOM(tx, ty);
-        const [ix, iy] = snapToCorner(rawIx, rawIy, "loupe");
+        const [ix, iy] = s2iDOM(tx, ty);
         setLoupeSync({ imgX: ix, imgY: iy, fingerX: tx, fingerY: ty });
       }, 250);
     }
-  }, [pan, closed, snapToCorner, setLoupeSync]);
+  }, [pan, closed, setLoupeSync]);
   const onMouseMove = useCallback(e => {
     if (mPan) {
       setPan({ x: e.clientX - mPan.sx, y: e.clientY - mPan.sy });
@@ -318,11 +321,10 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
       }
     }
     if (mouseLoupeRef.current && loupeActiveRef.current) {
-      const [rawIx, rawIy] = s2iDOM(e.clientX, e.clientY);
-      const [ix, iy] = snapToCorner(rawIx, rawIy, "loupe");
+      const [ix, iy] = s2iDOM(e.clientX, e.clientY);
       setLoupeSync({ imgX: ix, imgY: iy, fingerX: e.clientX, fingerY: e.clientY });
     }
-  }, [mPan, pan, snapToCorner, setLoupeSync]);
+  }, [mPan, pan, setLoupeSync]);
   const onMouseUp = useCallback(e => {
     if (holdTimerRef.current) { clearTimeout(holdTimerRef.current); holdTimerRef.current = null; }
     dragStartRef.current = null;
@@ -332,7 +334,7 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
       mouseLoupeRef.current = false;
       loupeActiveRef.current = false;
       setLoupeSync(null);
-      if (lp) placePointRef.current(lp.imgX, lp.imgY);
+      if (lp) placePointRef.current(lp.rawImgX ?? lp.imgX, lp.rawImgY ?? lp.imgY);
     }
     mouseLoupeRef.current = false;
   }, [mPan, setLoupeSync]);
@@ -347,7 +349,9 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
     }
   }, [mPan, zoom, pan]);
   const undo = () => {
-    if (closed) { setClosed(false); setNamePrompt(false); setScaleSide(null); }
+    if (closed) {
+      setClosed(false); setNamePrompt(false); setScaleSide(null);
+    }
     else setPts(p => p.slice(0, -1));
   };
   const scale = useMemo(() => {
@@ -388,28 +392,26 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
     setRoomName("Помещение " + (completedRooms.length + 2));
   };
   return (
-    <div style={{ background: "#F7F7FC", height: "100%", minHeight: "100%", display: "flex", flexDirection: "column" }}>
+    <div className="trace-canvas-layout" style={{ background: "#F7F7FC", height: "100%", minHeight: "100%", display: "flex", flexDirection: "column" }}>
       {/* Верхняя панель */}
-      <div style={{ padding: "10px 14px", background: "#fff", borderBottom: "1px solid #ECECF4", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexShrink: 0, zIndex: 5 }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: "#6F7688", lineHeight: 1.25 }}>
+      <div className="trace-canvas-toolbar" style={{ padding: "10px 14px", background: "#fff", borderBottom: "1px solid #ECECF4", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexShrink: 0, zIndex: 5 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: "#6F7688", lineHeight: 1.4, flex: 1, minWidth: 0 }}>
           {loupe ? "Удержание — лупа, отпустите для точки" :
            closed ? "Укажите размер и название" :
            pts.length === 0 ? "Нажимайте по углам (удержание = лупа)" :
-           String(pts.length + " точек")}
+           pts.length + (pts.length % 100 >= 11 && pts.length % 100 <= 14 ? " точек" : pts.length % 10 === 1 ? " точка" : pts.length % 10 >= 2 && pts.length % 10 <= 4 ? " точки" : " точек")}
         </div>
         <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-          {pts.length > 0 && <button onClick={undo} style={chipS("#FF3B30")}>{"Отмена"}</button>}
-          <button onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }} style={chipS()}>{"1:1"}</button>
-          <button onClick={() => {
-            const cw = window.innerWidth, ch = window.innerHeight - 200;
-            const fz = Math.min(cw / imgSize.w, ch / imgSize.h, 1);
-            setZoom(fz);
-            setPan({ x: (cw - imgSize.w * fz) / 2, y: Math.max(0, (ch - imgSize.h * fz) / 2) });
-          }} style={chipS()}>{"Вписать"}</button>
+          {pts.length > 0 && <button onClick={undo} aria-label="Отменить последнюю точку" style={chipS("#C7322C")}>{"Отмена"}</button>}
+          {pts.length >= 3 && !closed && <button type="button" aria-label="Замкнуть контур" onClick={closeContour} style={chipS(TRACE.accent, true)}>Замкнуть</button>}
+          <TracingViewControls view={view} onViewChange={patch => {
+            setView(current => ({ ...current, ...patch }));
+          }}
+            zoom={zoom} onZoom={zoomBy} onFit={fitPlan} onActualSize={() => zoomBy(1 / zoomRef.current)} />
         </div>
       </div>
       {/* Канвас */}
-      <div ref={containerRef}
+      <div className="trace-canvas-surface" ref={containerRef}
         style={{ flex: 1, overflow: "hidden", position: "relative", cursor: mPan ? "grabbing" : (closed ? "default" : "crosshair"), touchAction: "none", WebkitUserSelect: "none", userSelect: "none", WebkitTouchCallout: "none" }}
         onClick={onClick} onWheel={handleWheel}
         onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
@@ -419,86 +421,35 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
         {/* Изображение */}
         {image && <img ref={imgRef} src={image} alt="" draggable={false}
           width={imgSize.w} height={imgSize.h}
-          style={{ position: "absolute", left: pan.x, top: pan.y, transform: `scale(${zoom})`, transformOrigin: "0 0", pointerEvents: "none", opacity: 0.75, maxWidth: "none", maxHeight: "none" }} />}
-        {/* SVG оверлей */}
-        <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}>
-          {/* Завершённые комнаты */}
-          {completedRooms.map((rm, ri) => {
+          style={{ position: "absolute", left: pan.x, top: pan.y, transform: `scale(${zoom})`, transformOrigin: "0 0", pointerEvents: "none", opacity: view.opacity, maxWidth: "none", maxHeight: "none" }} />}
+        {/* The manual builder and PDF tracer share the same technical rendering. */}
+        <svg className="trace-overlay" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}>
+          {view.completed && completedRooms.map(rm => {
             if (!rm.imgPts || rm.imgPts.length < 3) return null;
-            const col = COLORS[ri % COLORS.length];
-            const n = rm.imgPts.length;
-            return (
-              <g key={rm.id}>
-                <polygon points={rm.imgPts.map(p => { const [sx, sy] = img2screen(p[0], p[1]); return sx + "," + sy; }).join(" ")}
-                  fill={col.replace("0.8", "0.12")} stroke={col} strokeWidth="2" />
-                {/* Размеры сторон */}
-                {rm.v && rm.v.length >= 3 && rm.imgPts.map((p, i) => {
-                  const j = (i + 1) % n;
-                  const [sx1, sy1] = img2screen(p[0], p[1]);
-                  const [sx2, sy2] = img2screen(rm.imgPts[j][0], rm.imgPts[j][1]);
-                  const mx = (sx1 + sx2) / 2, my = (sy1 + sy2) / 2;
-                  const sideLen = Math.hypot(rm.v[j][0] - rm.v[i][0], rm.v[j][1] - rm.v[i][1]);
-                  const label = sideLen.toFixed(2);
-                  const tw = label.length * 6 + 8;
-                  return (<g key={"sl" + i}>
-                    <rect x={mx - tw / 2} y={my - 8} width={tw} height={14} rx="3" fill="rgba(0,0,0,0.65)" />
-                    <text x={mx} y={my + 2} textAnchor="middle" fill={col} fontSize="9" fontWeight="600" fontFamily="Manrope, Inter, sans-serif">{label}</text>
-                  </g>);
-                })}
-                {/* Название */}
-                {(() => {
-                  const cx2 = rm.imgPts.reduce((s, p) => s + p[0], 0) / rm.imgPts.length;
-                  const cy2 = rm.imgPts.reduce((s, p) => s + p[1], 0) / rm.imgPts.length;
-                  const [sx2, sy2] = img2screen(cx2, cy2);
-                  const label = rm.name + " " + fmt(rm.aO) + "m\u00B2";
-                  const tw2 = label.length * 5.5 + 12;
-                  return (<g>
-                    <rect x={sx2 - tw2 / 2} y={sy2 - 9} width={tw2} height={18} rx="4" fill="rgba(0,0,0,0.7)" />
-                    <text x={sx2} y={sy2 + 4} textAnchor="middle" fill="#fff" fontSize={Math.max(10, 12 * zoom)} fontWeight="bold" fontFamily="Manrope, Inter, sans-serif">{label}</text>
-                  </g>);
-                })()}
-              </g>
-            );
+            const screenPoints = rm.imgPts.map(p => img2screen(p[0], p[1]));
+            const lengths = rm.v && rm.v.length === rm.imgPts.length ? rm.v.map((p, i) => {
+              const next = rm.v[(i + 1) % rm.v.length];
+              return Math.hypot(next[0] - p[0], next[1] - p[1]);
+            }) : [];
+            return <g key={rm.id} className="trace-completed-room">
+              <path className="trace-outline-halo" d={screenPoints.map((p, i) => (i ? "L" : "M") + p.join(" ")).join(" ") + "Z"}
+                fill="none" stroke="#fff" strokeWidth={TRACE.outlineWidth + 2.2} strokeLinejoin="round" />
+              <polygon points={screenPoints.map(p => p.join(",")).join(" ")} fill={TRACE.fill} stroke={TRACE.contour} strokeWidth={TRACE.outlineWidth} strokeLinejoin="round" />
+              <TracingGeometry points={screenPoints} closed lengths={lengths} showDimensions={view.dimensions} completed />
+              {view.roomNames && <TraceRoomLabel points={rm.imgPts} zoom={zoom} pan={pan} name={rm.name || "Помещение"} area={fmt(rm.aO) + " м²"} />}
+            </g>;
           })}
-          {/* Текущий контур */}
-          {pts.length >= 2 && <polyline
-            points={[...pts, ...(closed ? [pts[0]] : [])].map(p => { const [sx, sy] = img2screen(p[0], p[1]); return sx + "," + sy; }).join(" ")}
-            fill={closed ? "rgba(79,70,229,0.10)" : "none"} stroke="rgba(79,70,229,0.9)" strokeWidth="2.5"
-            strokeDasharray={closed ? "none" : "8,4"} />}
-          {/* Размеры сторон (после замыкания) */}
-          {closed && pts.map((p, i) => {
-            const j = (i + 1) % pts.length;
-            const [sx1, sy1] = img2screen(p[0], p[1]);
-            const [sx2, sy2] = img2screen(pts[j][0], pts[j][1]);
-            const mx = (sx1 + sx2) / 2, my = (sy1 + sy2) / 2;
-            const rLen = realSides[i];
-            const isSel = scaleSide === i;
-            return (<text key={"s" + i} x={mx} y={my - 8} textAnchor="middle"
-              fill={isSel ? "#4F46E5" : "#1E2530"} fontSize={isSel ? "12" : "10"}
-              fontWeight={isSel ? "bold" : "normal"} fontFamily="Manrope, Inter, sans-serif">
-              {L[i]}{L[j % 26]}{rLen !== undefined ? ": " + rLen.toFixed(2) + " м" : ""}</text>);
-          })}
+          {pts.length >= 2 && <>
+            <polyline className="trace-outline-halo" points={[...pts, ...(closed ? [pts[0]] : [])].map(p => img2screen(p[0], p[1]).join(",")).join(" ")}
+              fill="none" stroke="#fff" strokeWidth={TRACE.outlineWidth + 2.2} strokeLinejoin="round" strokeDasharray={closed ? "none" : "8,4"} />
+            <polyline className="trace-active-contour"
+              points={[...pts, ...(closed ? [pts[0]] : [])].map(p => img2screen(p[0], p[1]).join(",")).join(" ")}
+              fill={closed ? TRACE.fill : "none"} stroke={TRACE.contour} strokeWidth={TRACE.outlineWidth} strokeLinejoin="round"
+              strokeDasharray={closed ? "none" : "8,4"} />
+          </>}
+          <TracingGeometry points={pts.map(p => img2screen(p[0], p[1]))} closed={closed} lengths={realSides}
+            selectedSide={closed ? scaleSide : null} showDimensions={view.dimensions} />
         </svg>
-        {/* Вершины */}
-        {pts.map((p, i) => {
-          const [sx, sy] = img2screen(p[0], p[1]);
-          return (<div key={"v" + i} style={{
-            position: "absolute", left: sx - 6, top: sy - 6, width: 12, height: 12, borderRadius: "50%",
-            background: i === 0 && !closed ? "#FF9F0A" : "#4F46E5",
-            border: "1.5px solid #fff", display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 7, fontWeight: 700, color: "#fff", pointerEvents: "none",
-            boxShadow: "0 1px 4px rgba(30,37,48,0.35)"
-          }}>{L[i]}</div>);
-        })}
-        {/* Метка "Замкнуть" */}
-        {pts.length >= 3 && !closed && (() => {
-          const [sx, sy] = img2screen(pts[0][0], pts[0][1]);
-          return (<div style={{
-            position: "absolute", left: sx - 22, top: sy - 22,
-            background: "#FF9F0A", borderRadius: 8, padding: "3px 8px",
-            fontSize: 10, color: "#fff", fontWeight: 700, pointerEvents: "none", whiteSpace: "nowrap"
-          }}>{"Замкнуть"}</div>);
-        })()}
         {/* ═══ ЛУПА (canvas) ═══ */}
         {loupe && (() => {
           const sz = 160;
@@ -506,8 +457,8 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
           const cTop = rect ? rect.top : 0;
           const cH = rect ? rect.height : window.innerHeight;
           const fingerRelY = loupe.fingerY - cTop;
-          const fingerRelX = loupe.fingerX;
-          const scrW = window.innerWidth;
+          const fingerRelX = loupe.fingerX - (rect?.left || 0);
+          const scrW = rect?.width || window.innerWidth;
           /* Лупа в противоположном углу от пальца */
           const lTop = fingerRelY < cH * 0.5 ? (cH - sz - 30) : 30;
           const lLeft = fingerRelX < scrW * 0.5 ? (scrW - sz - 20) : 20;
@@ -515,7 +466,7 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
             <div style={{
               position: "absolute", left: lLeft, top: lTop, width: sz, height: sz,
               borderRadius: "50%", overflow: "hidden",
-              border: "3px solid rgba(79,70,229,0.9)",
+              border: "3px solid " + TRACE.stroke,
               boxShadow: "0 8px 24px rgba(30,37,48,0.35)",
               pointerEvents: "none", zIndex: 50, background: T.bg
             }}>
@@ -533,18 +484,18 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
         })()}
       </div>
       {/* Нижняя панель */}
-      <div style={{ padding: "12px 16px", background: "#fff", borderTop: "1px solid #ECECF4", flexShrink: 0 }}>
+      <div className="trace-canvas-controls" style={{ padding: "12px 16px", background: "#fff", borderTop: "1px solid #ECECF4", flexShrink: 0 }}>
         {!closed ? (
           <div style={{ fontSize: 12, color: "#6F7688", fontWeight: 600 }}>
             {pts.length === 0 ? "Тап = точка, удержание = лупа для точной постановки" :
              pts.length < 3 ? String("Минимум 3 точки (сейчас " + pts.length + ")") :
-             "Нажмите на A для замыкания"}
+             "Нажмите на начальную точку A или «Замкнуть»"}
           </div>
         ) : !scale ? (
           <div>
             {namePrompt && <div style={{ display: "flex", gap: 4, alignItems: "center", marginBottom: 6 }}>
               <span style={{ color: "#6F7688", fontSize: 12, fontWeight: 700 }}>{"Название:"}</span>
-              <input value={roomName} onChange={e => setRoomName(e.target.value)} autoFocus
+              <input aria-label="Название помещения" value={roomName} onChange={e => setRoomName(e.target.value)} autoFocus
                 style={{ ...fieldS, flex: 1, minWidth: 0 }} />
             </div>}
             <div style={{ fontSize: 12, color: "#6F7688", fontWeight: 700, marginBottom: 6 }}>{"Выберите сторону и введите её длину:"}</div>
@@ -553,19 +504,19 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
                 const j = (i + 1) % pts.length;
                 const sel = scaleSide === i;
                 return (<button key={i} onClick={() => { setScaleSide(i); setScaleConfirmed(false); }}
-                  style={chipS(sel ? "#4F46E5" : "#1E2530", sel)}>{L[i]}{L[j % 26]}</button>);
+                  aria-pressed={sel} style={chipS(sel ? TRACE.accent : TRACE.text, sel)}>{pointLabel(i)}{pointLabel(j)}</button>);
               })}
             </div>
             {scaleSide !== null && <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <span style={{ color: "#1E2530", fontSize: 14, fontWeight: 800 }}>{L[scaleSide]}{L[(scaleSide + 1) % pts.length]}:</span>
-              <input type="number" value={scaleCm}
+              <span style={{ color: "#1E2530", fontSize: 14, fontWeight: 800 }}>{pointLabel(scaleSide)}{pointLabel((scaleSide + 1) % pts.length)}:</span>
+              <input aria-label="Длина выбранной стороны, см" type="number" inputMode="decimal" value={scaleCm}
                 onChange={e => { setScaleCm(e.target.value); setScaleConfirmed(false); }}
                 onKeyDown={e => { if (e.key === "Enter" && scaleCm) setScaleConfirmed(true); }}
                 placeholder={"длина в см"} autoFocus
                 style={{ ...fieldS, width: 120, textAlign: "center", fontWeight: 700 }} />
               <span style={{ color: "#A5A9B8", fontSize: 12, fontWeight: 600 }}>{"см"}</span>
               <button onClick={() => { if (scaleCm) setScaleConfirmed(true); }}
-                style={{ background: scaleCm ? "#4F46E5" : "#F3F3FA", border: "none", borderRadius: 14, padding: "0 18px", height: 44, cursor: scaleCm ? "pointer" : "default", color: scaleCm ? "#fff" : "#A5A9B8", fontSize: 14, fontWeight: 700, fontFamily: "inherit" }}>{"OK"}</button>
+                style={{ background: scaleCm ? TRACE.accent : "#F3F3FA", border: "none", borderRadius: 14, padding: "0 18px", height: 44, cursor: scaleCm ? "pointer" : "default", color: scaleCm ? "#fff" : "#A5A9B8", fontSize: 14, fontWeight: 700, fontFamily: "inherit" }}>{"OK"}</button>
             </div>}
           </div>
         ) : (
@@ -573,7 +524,7 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
             {/* Название — редактируемое */}
             <div style={{ display: "flex", gap: 4, alignItems: "center", marginBottom: 6 }}>
               <span style={{ color: "#6F7688", fontSize: 12, fontWeight: 700 }}>{"Название:"}</span>
-              <input value={roomName} onChange={e => setRoomName(e.target.value)} autoFocus
+              <input aria-label="Название помещения" value={roomName} onChange={e => setRoomName(e.target.value)} autoFocus
                 style={{ ...fieldS, flex: 1, minWidth: 0 }} />
             </div>
             <div style={{ fontSize: 15, fontWeight: 800, color: "#1E2530", marginBottom: 6 }}>
@@ -581,19 +532,19 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
             </div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
               {realSides.map((s, i) => (
-                <span key={i} style={{ background: "#EEEDFC", borderRadius: 8, padding: "3px 8px", fontSize: 11, fontWeight: 700, color: "#4F46E5" }}>
-                  {L[i]}{L[(i + 1) % pts.length]}:{s.toFixed(2)}{"м"}</span>))}
+                <span key={i} style={{ background: TRACE.soft, borderRadius: 8, padding: "3px 8px", fontSize: 11, fontWeight: 700, color: TRACE.accent }}>
+                  {pointLabel(i)}{pointLabel((i + 1) % pts.length)}: {Math.round(s * 100)}{" см"}</span>))}
             </div>
             {savedScale && (
               <div style={{ fontSize: 11, color: "#6F7688", marginBottom: 6 }}>
                 {"Масштаб сохранён с 1-й комнаты · "}
                 <span onClick={() => { setSavedScale(null); setScaleConfirmed(false); }}
-                  style={{ color: T.accent, cursor: "pointer", textDecoration: "underline" }}>{"Ввести заново"}</span>
+                  style={{ color: TRACE.accent, cursor: "pointer", textDecoration: "underline" }}>{"Ввести заново"}</span>
               </div>
             )}
             {!savedScale && <button onClick={() => setScaleConfirmed(false)} style={{ ...chipS(), marginBottom: 8 }}>{"Изменить размер"}</button>}
             <button onClick={doFinish}
-              style={{ background: "#4F46E5", border: "none", borderRadius: 16, padding: "0 20px", height: 50, cursor: "pointer", width: "100%", color: "#fff", fontSize: 15, fontWeight: 800, fontFamily: "inherit" }}>
+              style={{ background: TRACE.accent, border: "none", borderRadius: 14, padding: "0 20px", height: 50, cursor: "pointer", width: "100%", color: "#fff", fontSize: 15, fontWeight: 800, fontFamily: "inherit" }}>
               {"Добавить " + roomName}</button>
           </div>
         )}
