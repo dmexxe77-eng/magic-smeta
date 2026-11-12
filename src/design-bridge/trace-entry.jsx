@@ -2,17 +2,19 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import TracingCanvas from '../components/canvas/TracingCanvas.jsx';
 import PdfPagePicker from '../components/builders/PdfPagePicker.jsx';
+import { recalibrateTraceRooms } from '../components/canvas/trace-measurements.js';
 import { fitToStage } from './stage.js';
 
 /* Обводка чертежа для страницы дизайна: тот же TracingCanvas, что в веб-версии,
    в полноэкранном оверлее. Помещения отдаются наружу по одному через onRoom. */
-function TraceApp({ file, roomCount, onRoom, onDone }) {
+function TraceApp({ file, roomCount, onRoom, onRoomsChange, onDone }) {
   const [pdfData, setPdfData] = useState(null);
   const [image, setImage] = useState(null);
   const [rooms, setRooms] = useState([]);
   const [scale, setScale] = useState(null);
   const [err, setErr] = useState(null);
   const added = useRef(0);
+  const roomsRef = useRef([]);
 
   useEffect(() => {
     const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '');
@@ -31,8 +33,17 @@ function TraceApp({ file, roomCount, onRoom, onDone }) {
     added.current += 1;
     const auto = /^Помещение \d+$/.test(rm.name || '');
     const name = auto ? 'Помещение ' + (roomCount + added.current) : rm.name;
-    setRooms(list => [...list, rm]);
-    onRoom({ name, verts: rm.v, area: rm.aO, perim: rm.pO, imgPts: rm.imgPts });
+    const room = { ...rm, name };
+    roomsRef.current = [...roomsRef.current, room];
+    setRooms(roomsRef.current);
+    onRoom({ traceId: room.id, name, verts: room.v, area: room.aO, perim: room.pO, imgPts: room.imgPts });
+  };
+  const recalibrate = nextScale => {
+    const next = recalibrateTraceRooms(roomsRef.current, nextScale);
+    roomsRef.current = next;
+    setRooms(next);
+    setScale(nextScale);
+    onRoomsChange(next.map(room => ({ traceId: room.id, name: room.name, verts: room.v, area: room.aO, perim: room.pO, imgPts: room.imgPts })));
   };
   return (
     <div className="z-trace-shell" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -46,7 +57,7 @@ function TraceApp({ file, roomCount, onRoom, onDone }) {
         </div>
       </div>
       <div className="z-trace-workspace" style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-        <TracingCanvas image={image} completedRooms={rooms} initScale={scale} onScaleChange={setScale} onFinish={finish} />
+        <TracingCanvas image={image} completedRooms={rooms} initScale={scale} onScaleChange={setScale} onRecalibrateScale={recalibrate} onFinish={finish} />
       </div>
       <div className="z-trace-footer" style={{ padding: '8px 14px', background: '#fff', borderTop: '1px solid #ECECF4', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
         <span style={{ fontSize: 12, color: '#6F7688' }}>Обведено: <b style={{ color: '#0F1620' }}>{rooms.length}</b></span>
@@ -56,7 +67,7 @@ function TraceApp({ file, roomCount, onRoom, onDone }) {
   );
 }
 
-/* MagicTrace.open({ file, roomCount, onRoom(res), onDone }) → { close } */
+/* MagicTrace.open({ file, roomCount, onRoom(res), onRoomsChange(rooms), onDone }) → { close } */
 export function open(opts) {
   const host = document.createElement('div');
   Object.assign(host.style, { position: 'fixed', inset: '0', zIndex: '9000', background: '#fff', overflow: 'hidden', fontFamily: "'Manrope','Inter',system-ui,sans-serif" });
@@ -64,6 +75,6 @@ export function open(opts) {
   const unfit = fitToStage(host);
   const root = ReactDOM.createRoot(host);
   const close = () => { root.unmount(); unfit(); host.remove(); };
-  root.render(<TraceApp file={opts.file} roomCount={opts.roomCount || 0} onRoom={opts.onRoom || (() => {})} onDone={() => { if (opts.onDone) opts.onDone(); }} />);
+  root.render(<TraceApp file={opts.file} roomCount={opts.roomCount || 0} onRoom={opts.onRoom || (() => {})} onRoomsChange={opts.onRoomsChange || (() => {})} onDone={() => { if (opts.onDone) opts.onDone(); }} />);
   return { close };
 }

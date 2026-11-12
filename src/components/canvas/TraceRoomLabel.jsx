@@ -10,7 +10,7 @@ function measureText(text, size, weight) {
   return textContext.measureText(text).width;
 }
 
-export default function TraceRoomLabel({ points, zoom, pan, name, area }) {
+export default function TraceRoomLabel({ points, zoom, pan, name, area, obstacles = [] }) {
   const [fontVersion, setFontVersion] = useState(0);
   useEffect(() => {
     let active = true;
@@ -18,16 +18,16 @@ export default function TraceRoomLabel({ points, zoom, pan, name, area }) {
     return () => { active = false; };
   }, []);
   const scaledPoints = useMemo(() => points.map(([x, y]) => [x * zoom, y * zoom]), [points, zoom]);
-  const layout = useMemo(() => layoutRoomLabel(scaledPoints, name, area, measureText), [scaledPoints, name, area, fontVersion]);
+  const layout = useMemo(() => layoutRoomLabel(scaledPoints, name, area, measureText, obstacles), [scaledPoints, name, area, fontVersion, obstacles]);
   if (!layout) return null;
-  const { x, y, height, lines, fontSize, lineHeight, areaSize } = layout;
+  const { x, y, height, lines, fontSize, lineHeight, areaSize, areaGap, haloWidth } = layout;
   const top = y - height / 2;
-  const textStyle = { paintOrder: 'stroke', stroke: '#fff', strokeWidth: 3, strokeLinejoin: 'round' };
+  const textStyle = { paintOrder: 'stroke', stroke: '#fff', strokeWidth: haloWidth, strokeLinejoin: 'round' };
   return <g className="trace-room-label" transform={`translate(${pan.x} ${pan.y})`} aria-label={`${name}, ${area}`} pointerEvents="none">
     <title>{name + ' · ' + area}</title>
     {lines.map((line, index) => <text key={index} className="trace-room-name" x={x} y={top + fontSize + index * lineHeight}
       textAnchor="middle" fill={TRACE.ink} fontSize={fontSize} fontWeight="650" fontFamily="Manrope, system-ui, sans-serif" style={textStyle}>{line}</text>)}
-    <text className="trace-room-area" x={x} y={top + lines.length * lineHeight + areaSize + 3}
+    <text className="trace-room-area" x={x} y={top + lines.length * lineHeight + areaSize + areaGap}
       textAnchor="middle" fill={TRACE.ink} fontSize={areaSize} fontWeight="650" fontFamily="Manrope, system-ui, sans-serif" style={textStyle}>{area}</text>
   </g>;
 }

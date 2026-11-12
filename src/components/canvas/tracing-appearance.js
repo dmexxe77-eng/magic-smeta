@@ -14,12 +14,23 @@ export const TRACE = Object.freeze({
 });
 
 export const DEFAULT_TRACE_VIEW = Object.freeze({
-  rightAngles: false,
+  rightAngles: true,
   opacity: 0.75,
   dimensions: true,
   roomNames: true,
   completed: true,
 });
+
+const ROOM_FILLS = [
+  TRACE.fill,
+  'rgba(20,97,238,0.065)',
+  'rgba(20,97,238,0.09)',
+];
+
+/** Keep each room's soft blue shade consistent while drawing and after adding it. */
+export function traceRoomFill(index) {
+  return ROOM_FILLS[index % ROOM_FILLS.length];
+}
 
 /** Screen-space sizing keeps a distant overview free of crowded vertex marks. */
 export function traceNodeScale(points = [], closed = true) {

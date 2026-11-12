@@ -56,8 +56,8 @@ function nameVariants(name) {
   return variants;
 }
 
-/** Position a complete, readable caption inside the room, never across a wall. */
-export function layoutRoomLabel(points, name, area, measureText) {
+/** Keep the complete caption inside the room, shrinking it for an overview. */
+export function layoutRoomLabel(points, name, area, measureText, obstacles = []) {
   if (points.length < 3 || !points.every(p => p.length === 2 && p.every(Number.isFinite))) return null;
   const center = areaCenter(points);
   if (!center) return null;
@@ -90,15 +90,54 @@ export function layoutRoomLabel(points, name, area, measureText) {
   }
   candidates.sort((a, b) => b.score - a.score);
   const variants = nameVariants(name || 'Помещение');
+  const measureCaption = (lines, fontSize, scale = 1) => {
+    const lineHeight = (fontSize + 3) * scale, areaSize = (fontSize - 1) * scale;
+    return {
+      lines, fontSize: fontSize * scale, lineHeight, areaSize,
+      width: Math.max(...lines.map(line => measureText(line, fontSize * scale, 650)), measureText(area, areaSize, 650)),
+      height: lines.length * lineHeight + areaSize + 3 * scale,
+      margin: 9 * scale, areaGap: 3 * scale, haloWidth: 3 * scale,
+    };
+  };
+  const findCandidate = (caption, avoidDimensions = false) => candidates.find(point => point.clearance >= caption.height / 2 + caption.margin
+    && labelFitsRoom(points, { ...point, ...caption }, caption.margin)
+    && (!avoidDimensions || obstacles.every(box => Math.abs(point.x - box.x) >= (caption.width + box.width) / 2 + caption.margin
+      || Math.abs(point.y - box.y) >= (caption.height + box.height) / 2 + caption.margin)));
+  const place = (point, caption) => ({ x: point.x, y: point.y, ...caption });
   for (const fontSize of [11.5, 11, 10.5, 10]) {
-    const lineHeight = fontSize + 3, areaSize = fontSize - 1;
     for (const lines of variants) {
-      const width = Math.max(...lines.map(line => measureText(line, fontSize, 650)), measureText(area, areaSize, 650));
-      const height = lines.length * lineHeight + areaSize + 3;
-      const candidate = candidates.find(point => point.clearance >= height / 2 + 9 && labelFitsRoom(points, { ...point, width, height }, 9));
-      if (candidate) return { x: candidate.x, y: candidate.y, width, height, lines, fontSize, lineHeight, areaSize };
+      const caption = measureCaption(lines, fontSize);
+      const candidate = findCandidate(caption);
+      if (candidate) return place(candidate, caption);
     }
   }
-  // Like very short wall dimensions, captions appear when zoom leaves readable space.
-  return null;
+  // Scale the spacing and halo with the text, so small rooms keep their names
+  // without the caption crossing a wall or a concave notch.
+  const clearance = Math.max(0, ...candidates.map(point => Math.min(point.clearance, ...obstacles.map(box => Math.hypot(
+    Math.max(0, Math.abs(point.x - box.x) - box.width / 2),
+    Math.max(0, Math.abs(point.y - box.y) - box.height / 2),
+  )))));
+  // A tiny contour still keeps its caption if dimension boxes cover every
+  // sampled interior point; containment takes precedence over the extra gap.
+  if (clearance <= EPSILON) return obstacles.length ? layoutRoomLabel(points, name, area, measureText) : null;
+  let best = null;
+  for (const lines of variants) {
+    const base = measureCaption(lines, 10);
+    const radius = Math.hypot(base.width / 2 + base.margin, base.height / 2 + base.margin);
+    let low = Math.min(1, clearance / radius * 0.98), high = 1;
+    let caption = measureCaption(lines, 10, low), candidate = findCandidate(caption, true);
+    if (!candidate) continue;
+    let layout = place(candidate, caption);
+    // Fit as large as possible; the inscribed-circle seed above also supports
+    // very small contours without an arbitrary minimum font size.
+    for (let i = 0; i < 10; i++) {
+      const scale = (low + high) / 2;
+      caption = measureCaption(lines, 10, scale);
+      candidate = findCandidate(caption, true);
+      if (candidate) { low = scale; layout = place(candidate, caption); }
+      else high = scale;
+    }
+    if (!best || layout.fontSize > best.fontSize) best = layout;
+  }
+  return best;
 }

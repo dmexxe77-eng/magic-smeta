@@ -1,22 +1,25 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { T } from "../../theme.js";
 import { fmt } from "../../utils/helpers.js";
+import { fmtCentimetres } from "../../utils/measurement-format.js";
 import { L as pointLabel } from "../../design-bridge/drawEditor/geometry.js";
-import { calcPoly, getAngles } from "../../utils/geometry.js";
+import { getAngles } from "../../utils/geometry.js";
 
 import { newR } from "../../utils/roomUtils.js";
 import TracingViewControls from "./TracingViewControls.jsx";
 import TracingGeometry from "./TracingGeometry.jsx";
-import TraceRoomLabel from "./TraceRoomLabel.jsx";
-import { TRACE, DEFAULT_TRACE_VIEW } from "./tracing-appearance.js";
+import { TRACE, DEFAULT_TRACE_VIEW, traceRoomFill } from "./tracing-appearance.js";
 import { projectOrthogonalPoint } from "./trace-orthogonal.js";
-function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChange }) {
+import { measureTracePoints } from "./trace-measurements.js";
+const LOUPE_IMAGE_SPEED = 0.65;
+function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChange, onRecalibrateScale }) {
   const chipS = (c, on) => ({ background: on ? TRACE.soft : "#fff", border: "1px solid " + (on ? TRACE.accent : TRACE.line), borderRadius: 10, padding: "0 12px", height: 34, color: c || TRACE.text, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" });
   const fieldS = { background: "#F7F7FC", border: "1px solid " + TRACE.line, borderRadius: 13, padding: "10px 12px", color: TRACE.text, fontSize: 16, fontWeight: 600, fontFamily: "inherit" };
   const [view, setView] = useState(() => ({ ...DEFAULT_TRACE_VIEW }));
   const [pts, setPts] = useState([]);
   const [closed, setClosed] = useState(false);
   const [zoom, setZoom] = useState(1);
+  const loupeMagnification = Math.max(zoom * 2, 2);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [imgSize, setImgSize] = useState({ w: 800, h: 600 });
   const [scaleSide, setScaleSide] = useState(null);
@@ -25,6 +28,7 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
   const [scaleConfirmed, setScaleConfirmed] = useState(false);
   const [namePrompt, setNamePrompt] = useState(false);
   const [savedScale, setSavedScale] = useState(initScale||null); /* масштаб м/px, сохраняется после первой комнаты */
+  const [editingScale, setEditingScale] = useState(false);
   
   const containerRef = useRef(null);
   const gestureRef = useRef({ isPan: false, startDist: 0, startZoom: 1, startPan: { x: 0, y: 0 }, lastTouch: null, moved: false });
@@ -34,6 +38,7 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
   /* ЛУПА — state и refs */
   const [loupe, setLoupe] = useState(null);
   const loupeRef = useRef(null); /* всегда актуальное значение для touch-обработчиков */
+  const loupeMotionRef = useRef(null);
   const holdTimerRef = useRef(null);
   const loupeActiveRef = useRef(false);
   const loupeCanvasRef = useRef(null);
@@ -62,13 +67,23 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
   /* Обновляем loupe + ref синхронно */
   const setLoupeSync = useCallback((val) => {
     if (val) {
-      const rawImgX = val.rawImgX ?? val.imgX, rawImgY = val.rawImgY ?? val.imgY;
-      const point = view.rightAngles ? projectOrthogonalPoint(pts, [rawImgX, rawImgY]) : [rawImgX, rawImgY];
+      let rawImgX = val.rawImgX ?? val.imgX, rawImgY = val.rawImgY ?? val.imgY;
+      const previous = loupeMotionRef.current;
+      if (previous) {
+        // Keep precision movement equally slow inside the loupe at every plan zoom.
+        const gain = LOUPE_IMAGE_SPEED / loupeMagnification;
+        rawImgX = previous.rawImgX + (val.fingerX - previous.fingerX) * gain;
+        rawImgY = previous.rawImgY + (val.fingerY - previous.fingerY) * gain;
+      }
+      loupeMotionRef.current = { rawImgX, rawImgY, fingerX: val.fingerX, fingerY: val.fingerY };
+      const point = view.rightAngles ? projectOrthogonalPoint(pts, [rawImgX, rawImgY], zoom) : [rawImgX, rawImgY];
       val = { ...val, rawImgX, rawImgY, imgX: point[0], imgY: point[1] };
+    } else {
+      loupeMotionRef.current = null;
     }
     loupeRef.current = val;
     setLoupe(val);
-  }, [pts, view.rightAngles]);
+  }, [pts, view.rightAngles, zoom, loupeMagnification]);
   /* Держим zoomRef актуальным — нужен для pinch-zoom startZoom */
   useEffect(() => { zoomRef.current = zoom; }, [zoom]);
   useEffect(() => {
@@ -93,7 +108,7 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
     const ctx = cvs.getContext("2d");
     const sz = 160;
     /* Динамическая магнификация: x2 от ТЕКУЩЕГО вида, минимум x2 от натурального */
-    const mag = Math.max(zoom * 2, 2);
+    const mag = loupeMagnification;
     /* viewR = сколько пикселей исходника видно от центра до края лупы */
     const viewR = sz / (2 * mag);
     ctx.clearRect(0, 0, sz, sz);
@@ -120,7 +135,7 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
     ctx.beginPath(); ctx.arc(sz / 2, sz / 2, 5, 0, Math.PI * 2); ctx.stroke();
     ctx.fillStyle = TRACE.target;
     ctx.beginPath(); ctx.arc(sz / 2, sz / 2, 1.5, 0, Math.PI * 2); ctx.fill();
-  }, [loupe, zoom]);
+  }, [loupe, loupeMagnification]);
   const img2screen = useCallback((ix, iy) => [ix * zoom + pan.x, iy * zoom + pan.y], [zoom, pan]);
   /* DOM-версии — читают позицию img элемента напрямую из браузера.
      Никаких closures, refs, zoom, pan — берём getBoundingClientRect.
@@ -149,7 +164,7 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
   placePointRef.current = (ix, iy) => {
     if (closed) return;
     // A tap on the starting marker closes the contour without moving any vertex.
-    // Use the actual pointer coordinate, so touch-target retargeting cannot pull it in.
+    // Use the precise target before alignment, so event retargeting cannot pull it in.
     const imageElement = imgRef.current;
     if (pts.length >= 3 && imageElement) {
       const bounds = imageElement.getBoundingClientRect();
@@ -159,7 +174,7 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
     }
     /* Guard: не более одной точки за 500мс */
     if (Date.now() - pointGuardRef.current < 500) return;
-    const point = view.rightAngles ? projectOrthogonalPoint(pts, [ix, iy]) : [ix, iy];
+    const point = view.rightAngles ? projectOrthogonalPoint(pts, [ix, iy], zoom) : [ix, iy];
     const last = pts[pts.length - 1];
     if (view.rightAngles && last && Math.hypot(point[0] - last[0], point[1] - last[1]) < 1e-7) return;
     // A constrained endpoint may coincide with A even when the raw pointer does not.
@@ -281,7 +296,9 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
   /* ═══ MOUSE + ЛУПА НА ДЕСКТОПЕ ═══ */
   const [mPan, setMPan] = useState(null);
   const mouseLoupeRef = useRef(false);
+  const suppressLoupeClickRef = useRef(false);
   const onMouseDown = useCallback(e => {
+    suppressLoupeClickRef.current = false;
     if (e.button === 2 || e.shiftKey || e.button === 1) {
       e.preventDefault();
       setMPan({ sx: e.clientX - pan.x, sy: e.clientY - pan.y });
@@ -289,6 +306,7 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
     }
     /* ЛКМ без shift — запуск таймера лупы + запоминаем стартовую позицию */
     if (!closed && e.button === 0) {
+      setLoupeSync(null);
       dragStartRef.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
       isDragPanRef.current = false;
       mouseLoupeRef.current = false;
@@ -331,6 +349,7 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
     if (mPan) { setMPan(null); return; }
     if (mouseLoupeRef.current && loupeActiveRef.current) {
       const lp = loupeRef.current;
+      suppressLoupeClickRef.current = true;
       mouseLoupeRef.current = false;
       loupeActiveRef.current = false;
       setLoupeSync(null);
@@ -339,6 +358,8 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
     mouseLoupeRef.current = false;
   }, [mPan, setLoupeSync]);
   const onClick = useCallback(e => {
+    // Mouseup has already committed the loupe target, which can differ from the pointer.
+    if (suppressLoupeClickRef.current) { suppressLoupeClickRef.current = false; return; }
     if (Date.now() - lastTouchTimeRef.current < 400) return;
     if (mouseLoupeRef.current) return;
     if (isDragPanRef.current) { isDragPanRef.current = false; return; } // был drag-pan — не ставим точку
@@ -351,31 +372,42 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
   const undo = () => {
     if (closed) {
       setClosed(false); setNamePrompt(false); setScaleSide(null);
+      setEditingScale(false);
     }
     else setPts(p => p.slice(0, -1));
   };
+  const enteredCm = Number(scaleCm.trim().replace(',', '.'));
+  const canConfirmScale = Number.isFinite(enteredCm) && enteredCm > 0;
   const scale = useMemo(() => {
     if (!closed || pts.length < 3) return null;
     /* Если есть сохранённый масштаб — используем его */
-    if (savedScale) return savedScale;
+    if (savedScale && !editingScale) return savedScale;
     /* Иначе — ручной ввод */
-    if (scaleSide === null || !scaleCm || !scaleConfirmed) return null;
+    if (scaleSide === null || !canConfirmScale || !scaleConfirmed) return null;
     const i = scaleSide, j = (i + 1) % pts.length;
     const d = Math.hypot(pts[j][0] - pts[i][0], pts[j][1] - pts[i][1]);
     if (d < 1) return null;
-    return (parseFloat(scaleCm) / 100) / d;
-  }, [closed, scaleSide, scaleCm, scaleConfirmed, pts, savedScale]);
-  const realSides = useMemo(() => {
-    if (!scale) return [];
-    return pts.map((p, i) => { const j = (i + 1) % pts.length; return Math.round(Math.hypot(pts[j][0] - p[0], pts[j][1] - p[1]) * scale * 100) / 100; });
-  }, [scale, pts]);
-  const realVerts = useMemo(() => {
-    if (!scale) return [];
-    const mnx = Math.min(...pts.map(p => p[0])), mny = Math.min(...pts.map(p => p[1]));
-    return pts.map(p => [Math.round((p[0] - mnx) * scale * 1000) / 1000, Math.round((p[1] - mny) * scale * 1000) / 1000]);
-  }, [scale, pts]);
-  const realArea = useMemo(() => scale ? calcPoly(realVerts).a : 0, [realVerts, scale]);
-  const realPerim = useMemo(() => realSides.reduce((s, v) => s + v, 0), [realSides]);
+    return (enteredCm / 100) / d;
+  }, [closed, scaleSide, enteredCm, canConfirmScale, scaleConfirmed, pts, savedScale, editingScale]);
+  const measured = useMemo(() => measureTracePoints(pts, scale), [pts, scale]);
+  const realSides = measured?.lengths || [];
+  const realVerts = measured?.verts || [];
+  const realArea = measured?.area || 0;
+  const realPerim = measured?.perim || 0;
+  const confirmScale = () => {
+    if (!canConfirmScale || scaleSide === null) return;
+    const next = pts[(scaleSide + 1) % pts.length], point = pts[scaleSide];
+    const pixels = Math.hypot(next[0] - point[0], next[1] - point[1]);
+    if (pixels < 1) return;
+    const nextScale = enteredCm / 100 / pixels;
+    if (editingScale) {
+      if (onRecalibrateScale) onRecalibrateScale(nextScale);
+      else onScaleChange?.(nextScale);
+      setSavedScale(nextScale);
+      setEditingScale(false);
+    }
+    setScaleConfirmed(true);
+  };
   const doFinish = () => {
     if (!scale || realVerts.length < 3 || !roomName.trim()) return;
     /* Сохраняем масштаб для следующих комнат */
@@ -388,6 +420,7 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
     setScaleSide(null);
     setScaleCm("");
     setScaleConfirmed(false);
+    setEditingScale(false);
     setNamePrompt(false);
     setRoomName("Помещение " + (completedRooms.length + 2));
   };
@@ -424,7 +457,7 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
           style={{ position: "absolute", left: pan.x, top: pan.y, transform: `scale(${zoom})`, transformOrigin: "0 0", pointerEvents: "none", opacity: view.opacity, maxWidth: "none", maxHeight: "none" }} />}
         {/* The manual builder and PDF tracer share the same technical rendering. */}
         <svg className="trace-overlay" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}>
-          {view.completed && completedRooms.map(rm => {
+          {view.completed && completedRooms.map((rm, index) => {
             if (!rm.imgPts || rm.imgPts.length < 3) return null;
             const screenPoints = rm.imgPts.map(p => img2screen(p[0], p[1]));
             const lengths = rm.v && rm.v.length === rm.imgPts.length ? rm.v.map((p, i) => {
@@ -434,9 +467,9 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
             return <g key={rm.id} className="trace-completed-room">
               <path className="trace-outline-halo" d={screenPoints.map((p, i) => (i ? "L" : "M") + p.join(" ")).join(" ") + "Z"}
                 fill="none" stroke="#fff" strokeWidth={TRACE.outlineWidth + 2.2} strokeLinejoin="round" />
-              <polygon points={screenPoints.map(p => p.join(",")).join(" ")} fill={TRACE.fill} stroke={TRACE.contour} strokeWidth={TRACE.outlineWidth} strokeLinejoin="round" />
-              <TracingGeometry points={screenPoints} closed lengths={lengths} showDimensions={view.dimensions} completed />
-              {view.roomNames && <TraceRoomLabel points={rm.imgPts} zoom={zoom} pan={pan} name={rm.name || "Помещение"} area={fmt(rm.aO) + " м²"} />}
+              <polygon points={screenPoints.map(p => p.join(",")).join(" ")} fill={traceRoomFill(index)} stroke={TRACE.contour} strokeWidth={TRACE.outlineWidth} strokeLinejoin="round" />
+              <TracingGeometry points={screenPoints} closed lengths={lengths} showDimensions={view.dimensions} completed
+                roomLabel={view.roomNames ? { points: rm.imgPts, zoom, pan, name: rm.name || "Помещение", area: fmt(rm.aO) + " м²" } : null} />
             </g>;
           })}
           {pts.length >= 2 && <>
@@ -444,7 +477,7 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
               fill="none" stroke="#fff" strokeWidth={TRACE.outlineWidth + 2.2} strokeLinejoin="round" strokeDasharray={closed ? "none" : "8,4"} />
             <polyline className="trace-active-contour"
               points={[...pts, ...(closed ? [pts[0]] : [])].map(p => img2screen(p[0], p[1]).join(",")).join(" ")}
-              fill={closed ? TRACE.fill : "none"} stroke={TRACE.contour} strokeWidth={TRACE.outlineWidth} strokeLinejoin="round"
+              fill={closed ? traceRoomFill(completedRooms.length) : "none"} stroke={TRACE.contour} strokeWidth={TRACE.outlineWidth} strokeLinejoin="round"
               strokeDasharray={closed ? "none" : "8,4"} />
           </>}
           <TracingGeometry points={pts.map(p => img2screen(p[0], p[1]))} closed={closed} lengths={realSides}
@@ -478,7 +511,7 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
                 position: "absolute", top: 6, left: 0, width: "100%", textAlign: "center",
                 fontSize: 9, color: "#fff", fontWeight: 700, pointerEvents: "none",
                 textShadow: "0 1px 3px rgba(0,0,0,0.9)"
-              }}>{"x" + Math.round(Math.max(zoom * 2, 2))}</div>
+              }}>{"x" + Math.round(loupeMagnification)}</div>
             </div>
           );
         })()}
@@ -499,6 +532,7 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
                 style={{ ...fieldS, flex: 1, minWidth: 0 }} />
             </div>}
             <div style={{ fontSize: 12, color: "#6F7688", fontWeight: 700, marginBottom: 6 }}>{"Выберите сторону и введите её длину:"}</div>
+            {editingScale && onRecalibrateScale && <div style={{ fontSize: 11, color: "#6F7688", marginBottom: 8 }}>Новый размер пересчитает все обведённые помещения этого листа.</div>}
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
               {pts.map((_, i) => {
                 const j = (i + 1) % pts.length;
@@ -509,15 +543,16 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
             </div>
             {scaleSide !== null && <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <span style={{ color: "#1E2530", fontSize: 14, fontWeight: 800 }}>{pointLabel(scaleSide)}{pointLabel((scaleSide + 1) % pts.length)}:</span>
-              <input aria-label="Длина выбранной стороны, см" type="number" inputMode="decimal" value={scaleCm}
+              <input aria-label="Длина выбранной стороны, см" type="text" inputMode="decimal" value={scaleCm}
                 onChange={e => { setScaleCm(e.target.value); setScaleConfirmed(false); }}
-                onKeyDown={e => { if (e.key === "Enter" && scaleCm) setScaleConfirmed(true); }}
+                onKeyDown={e => { if (e.key === "Enter") confirmScale(); }}
                 placeholder={"длина в см"} autoFocus
                 style={{ ...fieldS, width: 120, textAlign: "center", fontWeight: 700 }} />
               <span style={{ color: "#A5A9B8", fontSize: 12, fontWeight: 600 }}>{"см"}</span>
-              <button onClick={() => { if (scaleCm) setScaleConfirmed(true); }}
-                style={{ background: scaleCm ? TRACE.accent : "#F3F3FA", border: "none", borderRadius: 14, padding: "0 18px", height: 44, cursor: scaleCm ? "pointer" : "default", color: scaleCm ? "#fff" : "#A5A9B8", fontSize: 14, fontWeight: 700, fontFamily: "inherit" }}>{"OK"}</button>
+              <button disabled={!canConfirmScale} onClick={confirmScale}
+                style={{ background: canConfirmScale ? TRACE.accent : "#F3F3FA", border: "none", borderRadius: 14, padding: "0 18px", height: 44, cursor: canConfirmScale ? "pointer" : "default", color: canConfirmScale ? "#fff" : "#A5A9B8", fontSize: 14, fontWeight: 700, fontFamily: "inherit" }}>{"OK"}</button>
             </div>}
+            {editingScale && <button onClick={() => setEditingScale(false)} style={{ ...chipS(), marginTop: 8 }}>Отмена</button>}
           </div>
         ) : (
           <div>
@@ -533,13 +568,16 @@ function TracingCanvas({ image, onFinish, completedRooms, initScale, onScaleChan
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
               {realSides.map((s, i) => (
                 <span key={i} style={{ background: TRACE.soft, borderRadius: 8, padding: "3px 8px", fontSize: 11, fontWeight: 700, color: TRACE.accent }}>
-                  {pointLabel(i)}{pointLabel((i + 1) % pts.length)}: {Math.round(s * 100)}{" см"}</span>))}
+                  {pointLabel(i)}{pointLabel((i + 1) % pts.length)}: {fmtCentimetres(s * 100)}{" см"}</span>))}
             </div>
             {savedScale && (
               <div style={{ fontSize: 11, color: "#6F7688", marginBottom: 6 }}>
-                {"Масштаб сохранён с 1-й комнаты · "}
-                <span onClick={() => { setSavedScale(null); setScaleConfirmed(false); }}
-                  style={{ color: TRACE.accent, cursor: "pointer", textDecoration: "underline" }}>{"Ввести заново"}</span>
+                {onRecalibrateScale ? "Масштаб всего листа · " : "Масштаб чертежа · "}
+                <button onClick={() => {
+                  const side = scaleSide ?? 0;
+                  setScaleSide(side); setScaleCm(fmtCentimetres(realSides[side] * 100));
+                  setScaleConfirmed(false); setEditingScale(true);
+                }} style={{ background: "none", border: 0, padding: 0, font: "inherit", color: TRACE.accent, cursor: "pointer", textDecoration: "underline" }}>Изменить масштаб</button>
               </div>
             )}
             {!savedScale && <button onClick={() => setScaleConfirmed(false)} style={{ ...chipS(), marginBottom: 8 }}>{"Изменить размер"}</button>}
