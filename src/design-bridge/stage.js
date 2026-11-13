@@ -1,3 +1,5 @@
+import { visualViewportBounds } from './viewport-geometry.js';
+
 /* Оверлеи занимают рабочую область приложения. Старые прототипы без явной
    рабочей области сохраняют привязку к экрану устройства. */
 
@@ -28,6 +30,12 @@ export function fitToStage(host) {
   let watched = null, ro = null, active = true;
   const apply = () => {
     if (!active) return;
+    if (document.documentElement.classList?.contains('z-mobile-viewport')) {
+      const bounds = visualViewportBounds(window);
+      Object.assign(host.style, { position: 'fixed', left: bounds.left + 'px', top: bounds.top + 'px',
+        width: bounds.width + 'px', height: bounds.height + 'px', right: 'auto', bottom: 'auto', borderRadius: '0px', overflow: 'hidden' });
+      return;
+    }
     const el = stageEl();
     if (el !== watched && ro) { if (watched) ro.unobserve(watched); if (el) ro.observe(el); }
     watched = el;

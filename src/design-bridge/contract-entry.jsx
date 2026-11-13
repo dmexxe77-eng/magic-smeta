@@ -5,6 +5,7 @@ import { createContractDraft, validateContractDraft, contractDraftFields, create
 import { htmlToPdf } from '../utils/pdf.js';
 import { collectPdfAvoidRanges, pdfContentEnd, paginatePdf } from '../utils/pdf-pagination.js';
 import { fitToStage } from './stage.js';
+import { revealFocusedControl } from './viewport-geometry.js';
 import { contractTemplateAccess } from './contract-template-store.js';
 import './contract-editor.css';
 
@@ -183,7 +184,7 @@ function ProjectContract({ project, total, area, est, estimateAdjustment, estima
   const patchParty = values => setDraft(current => ({ ...current, party: { ...current.party, ...values } }));
   const patchAct = values => setActDraft(current => ({ ...current, ...values }));
   const close = () => busy ? null : dirty ? setLeaveOpen(true) : onClose();
-  const focusInvalid = () => requestAnimationFrame(() => { const field = window.document.querySelector('.cd-shell [aria-invalid="true"]'); field?.scrollIntoView({ block: 'center' }); field?.focus({ preventScroll: true }); });
+  const focusInvalid = () => requestAnimationFrame(() => { const field = window.document.querySelector('.cd-shell [aria-invalid="true"]'); field?.focus({ preventScroll: true }); revealFocusedControl(window); });
   const currentActValid = !hasErrors(validateActDraft(actDraft));
   const lastAct = saved?.act || saved?.actDraft;
   const actForContract = currentActValid ? actDraft : lastAct && !hasErrors(validateActDraft(lastAct)) ? lastAct : null;

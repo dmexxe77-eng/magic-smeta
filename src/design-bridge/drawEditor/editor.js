@@ -10,6 +10,7 @@ import { rulerCandidate, adjustRulerCandidate, RULER_UNITS_PER_METRE } from './s
 import { rulerEdgeVelocity, clipRulerPointer } from './ruler-edge-pan.js';
 import { rulerWorkView, fitRulerView } from './ruler-work-view.js';
 import { fmtCentimetres } from '../../utils/measurement-format.js';
+import { revealFocusedControl, revealElementInPane } from '../viewport-geometry.js';
 
 const fmtCm = metres => fmtCentimetres(metres * 100);
 const icon = (name, extra = '') => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ${extra}>${({ back: '<path d="m14 6-6 6 6 6"/>', undo: '<path d="M3 10a9 9 0 1 1 2.4 8.1M3 4v6h6"/>', redo: '<path d="M21 10a9 9 0 1 0-2.4 8.1M21 4v6h-6"/>', arrow: '<path d="M5 12h14m-5-5 5 5-5 5"/>', plus: '<path d="M12 5v14M5 12h14"/>', minus: '<path d="M5 12h14"/>', fit: '<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/>', rotate: '<path d="M20 8a8 8 0 1 0 0 8M20 3v5h-5"/>', align: '<path d="M4 19h16M7 15l5-10 5 10"/>' })[name] || ''}</svg>`;
@@ -721,7 +722,7 @@ function revealMobileFormInput() {
   if (!alive || !MOBILE) return;
   const input = document.activeElement;
   if (!input?.matches?.('input.in') || !['op', 'q'].includes(input.dataset.in) || ![...sheet.querySelectorAll('input.in')].includes(input)) return;
-  (input.closest('.fld') || input).scrollIntoView?.({ block: 'nearest' });
+  revealFocusedControl(window);
 }
 function setKb(on) {
   const compact = on && (!MOBILE || S.stage === 2);
@@ -732,7 +733,7 @@ sheet.addEventListener('toggle', e => {
   if (MOBILE && S.op && e.target === $('#operationHelp')) {
     const opening = e.target.open && !S.op.helpOpen;
     S.op.helpOpen = !!e.target.open;
-    if (opening) e.target.scrollIntoView?.({ block: 'nearest' });
+    if (opening) revealElementInPane(window, e.target);
   }
 }, true);
 sheet.addEventListener('focusin', e => { const el = e.target; if (!el.matches || !el.matches('input.in')) return; el.dataset.sess = ++S.sess; setTimeout(() => el.select(), 0);

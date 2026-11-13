@@ -14,6 +14,8 @@ class Element {
   };
   clientWidth = 800;
   clientHeight = 600;
+  clientTop = 0;
+  scrollHeight = 600;
   scrollTop = 0;
   get value() { return this.inputValue ?? ''; }
   set value(value) { this.inputValue = String(value ?? ''); }
@@ -22,8 +24,8 @@ class Element {
   get open() { return this.attributes.has('open'); }
   set open(value) { if (value) this.attributes.set('open', ''); else this.attributes.delete('open'); }
   get firstChild() { return this.children[0]; }
-  appendChild(child) { this.children.push(child); return child; }
-  removeChild(child) { this.children.splice(this.children.indexOf(child), 1); }
+  appendChild(child) { this.children.push(child); child.parentElement = this; return child; }
+  removeChild(child) { this.children.splice(this.children.indexOf(child), 1); child.parentElement = null; }
   setAttribute(key, value) { this.attributes.set(key, String(value)); }
   getAttribute(key) { return this.attributes.get(key) ?? null; }
   addEventListener(type, fn, options = false) {
@@ -65,6 +67,8 @@ class Element {
         input.owner = this;
         input.row = new Element();
         input.row.classes.add('row');
+        input.parentElement = input.row;
+        input.row.parentElement = this;
         for (const [, key, value] of source.matchAll(/([\w-]+)="([^"]*)"/g)) {
           input.attributes.set(key, value);
           if (key.startsWith('data-')) input.dataset[key.slice(5).replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())] = value;
@@ -107,13 +111,16 @@ export function mount(t, createEditor, initial, options = {}) {
   const frames = new Map();
   let frameId = 0, frameTime = 0;
   globalThis.setTimeout = (fn, delay, ...args) => { const timer = previous.setTimeout(fn, delay, ...args); timers.add(timer); return timer; };
-  globalThis.document = { createElementNS: () => new Element(), activeElement: null };
-  globalThis.window = { addEventListener() {}, removeEventListener() {} };
+  globalThis.document = { createElementNS: () => new Element(), activeElement: null, documentElement: new Element(), body: new Element() };
+  globalThis.window = { innerWidth: 800, innerHeight: 600, document: globalThis.document,
+    getComputedStyle: element => ({ overflowY: element.style.overflowY || element.style.overflow || 'visible' }),
+    addEventListener() {}, removeEventListener() {} };
   globalThis.requestAnimationFrame = manualRAF ? fn => { const id = ++frameId; frames.set(id, fn); return id; } : fn => fn();
   globalThis.cancelAnimationFrame = id => frames.delete(id);
   globalThis.window.requestAnimationFrame = globalThis.requestAnimationFrame;
   globalThis.window.cancelAnimationFrame = globalThis.cancelAnimationFrame;
   const root = new Element(), nodes = new Map();
+  root.parentElement = globalThis.document.body;
   root.querySelector = selector => {
     const id = selector.slice(1);
     if (selector.startsWith('#')) {
@@ -127,6 +134,7 @@ export function mount(t, createEditor, initial, options = {}) {
     if (selector !== '.zoom' && ![root, ...nodes.values()].some(node => node.innerHTML.includes(`id="${id}"`))) return null;
     if (!nodes.has(selector)) {
       const element = new Element();
+      element.parentElement = root;
       if (selector === '#cv' && canvasBounds) {
         element.clientWidth = canvasBounds.width;
         element.clientHeight = canvasBounds.height;

@@ -5,13 +5,13 @@ import { fitToStage } from '../src/design-bridge/stage.js';
 const styles = overrides => ({ overflow: 'hidden', overflowX: 'hidden', overflowY: 'hidden', borderTopLeftRadius: '24px', borderRadius: '24px', ...overrides });
 const element = (rect, computed = styles()) => ({ rect, computed, getBoundingClientRect() { return this.rect; } });
 
-function surface(t, { marker = null, legacy = [], width = 1366, observer = true } = {}) {
+function surface(t, { marker = null, legacy = [], width = 1366, height = 1024, native = false, observer = true } = {}) {
   const previous = Object.fromEntries(['document', 'window', 'getComputedStyle', 'ResizeObserver'].map(key => [key, globalThis[key]]));
   const events = collection => ({
     addEventListener(type, fn) { if (!collection.has(type)) collection.set(type, new Set()); collection.get(type).add(fn); },
     removeEventListener(type, fn) { collection.get(type)?.delete(fn); },
   });
-  const windowEvents = new Map(), viewportEvents = new Map(), observers = [], html = {}, root = { querySelectorAll() { scans++; return legacy; } };
+  const windowEvents = new Map(), viewportEvents = new Map(), observers = [], html = { clientWidth: width, clientHeight: height, classList: { contains: name => native && name === 'z-mobile-viewport' } }, root = { querySelectorAll() { scans++; return legacy; } };
   let current = marker, scans = 0;
   globalThis.document = { documentElement: html, body: root, querySelector: selector => selector === '[data-zamer-app-stage]' ? current : null, getElementById: () => root };
   globalThis.getComputedStyle = node => node.computed;
@@ -21,7 +21,7 @@ function surface(t, { marker = null, legacy = [], width = 1366, observer = true 
     unobserve(node) { this.observed.delete(node); this.unobserved.push(node); }
     disconnect() { this.disconnected = true; this.observed.clear(); }
   }
-  globalThis.window = { innerWidth: width, ...events(windowEvents), visualViewport: events(viewportEvents), ...(observer ? { ResizeObserver: ResizeObserverMock } : {}) };
+  globalThis.window = { innerWidth: width, innerHeight: height, document: globalThis.document, ...events(windowEvents), visualViewport: { width, height, offsetLeft: 0, offsetTop: 0, ...events(viewportEvents) }, ...(observer ? { ResizeObserver: ResizeObserverMock } : {}) };
   if (observer) globalThis.ResizeObserver = ResizeObserverMock;
   else delete globalThis.ResizeObserver;
   t.after(() => { for (const [key, value] of Object.entries(previous)) { if (value === undefined) delete globalThis[key]; else globalThis[key] = value; } });
@@ -41,6 +41,25 @@ test('overlay stage: the explicit full-width workspace wins over large rounded c
   assert.ok(env.observers[0].observed.has(marker));
   assert.ok(env.observers[0].observed.has(env.html));
   close();
+});
+
+test('native editors stay over the visible keyboard viewport instead of following a shifted background stage', t => {
+  const marker = element({ left: 0, top: -240, width: 390, height: 350 });
+  const env = surface(t, { marker, width: 390, height: 844, native: true }), host = { style: {} }, close = fitToStage(host);
+  Object.assign(window.visualViewport, { height: 350, offsetTop: 240 });
+  env.emit('resize', 'visual');
+  assert.equal(host.style.top, '240px');
+  assert.equal(host.style.height, '350px');
+  assert.equal(host.style.width, '390px');
+  marker.rect.top = -410;
+  env.emit('scroll');
+  assert.equal(host.style.top, '240px', 'scrolling the old home screen cannot pull the editor above the viewport');
+  window.visualViewport.height = 844;
+  env.emit('resize', 'visual');
+  assert.equal(host.style.top, '0px');
+  assert.equal(host.style.height, '844px');
+  close();
+  assert.equal(env.listenerCount('window') + env.listenerCount('visual'), 0);
 });
 
 test('overlay stage: orientation, visual viewport and observed container changes update exact bounds', t => {
