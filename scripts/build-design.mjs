@@ -25,12 +25,16 @@ import { loginPreviewPage } from './design-login.mjs';
 import { interfaceTemplate } from './design-interface.mjs';
 import { tabletTemplate, tabletManifest } from './design-tablet.mjs';
 import { devicePreviewPage } from './design-device-preview.mjs';
+import { mobileViewportMeta, mobileViewportHead, mobileInputTemplate } from '../src/design-bridge/mobile-viewport.js';
 
 const OUT = 'public/design';
 fs.mkdirSync(OUT + '/vendor', { recursive: true });
 fs.mkdirSync(OUT + '/assets', { recursive: true });
 fs.copyFileSync('design-src/assets/trace-upload-hero-labeled.png', OUT + '/assets/trace-upload-hero.png');
 const shim = p => path.resolve('src/design-bridge/shims/' + p);
+
+await build({ entryPoints: ['src/design-bridge/mobile-viewport.js'], bundle: true, format: 'iife',
+  outfile: OUT + '/viewport.js', minify: true, charset: 'utf8', logLevel: 'error' });
 
 await build({ entryPoints: ['src/design-bridge/draw-entry.js'], bundle: true, format: 'iife', globalName: 'MagicDraw',
   outfile: OUT + '/draw.js', minify: true, charset: 'utf8', logLevel: 'error' });
@@ -74,7 +78,7 @@ let tpl = JSON.parse(grab('template'));
 const rep = (a, b, label) => { const n = tpl.split(a).length - 1; if (n !== 1) throw new Error('template: «' + label + '» найдено ' + n + ' раз'); tpl = tpl.replace(a, () => b); };
 
 rep('<meta name="viewport" content="width=device-width, initial-scale=1">',
-  '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n<meta name="theme-color" content="#0b1119">\n<link rel="icon" href="' + FAVICON + '">\n<title>' + BRAND.title + '</title>\n' +
+  mobileViewportHead() + '\n<meta name="theme-color" content="#0b1119">\n<link rel="icon" href="' + FAVICON + '">\n<title>' + BRAND.title + '</title>\n' +
   '<link rel="stylesheet" href="/design/draw.css">\n<link rel="stylesheet" href="/design/trace.css">\n<link rel="stylesheet" href="/design/contract.css">\n<script src="/design/vendor/react.js"></script>\n<script src="/design/vendor/react-dom.js"></script>\n' +
   '<script src="/design/draw.js"></script>\n<script src="/design/trace.js"></script>\n<script src="/design/contract.js"></script>\n<script src="/design/ec.js"></script>\n<script src="/design/estimate.js"></script>\n', 'head');
 
@@ -299,12 +303,14 @@ tpl = mobileHomeTemplate(tpl);
 tpl = accountMenuTemplate(tpl);
 tpl = accountSettingsTemplate(tpl);
 tpl = projectFieldsTemplate(tpl);
+tpl = mobileInputTemplate(tpl);
 
 const json = JSON.stringify(tpl).replace(/<\//g, '<\\/');
 const resources = JSON.stringify(tabletManifest(manifest)).replace(/<\//g, '<\\/');
 const out = src
   .replace(/<script type="__bundler\/manifest">[\s\S]*?<\/script>/, () => '<script type="__bundler/manifest">' + resources + '</script>')
   .replace(/<script type="__bundler\/template">[\s\S]*?<\/script>/, () => '<script type="__bundler/template">' + json + '</script>')
+  .replace('<head>', '<head>' + mobileViewportMeta())
   .replace('<title>Bundled Page</title>', '<title>' + BRAND.title + '</title>');
 fs.writeFileSync(OUT + '/app.html', out);
 const previewFontIds = [

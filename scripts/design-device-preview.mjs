@@ -1,4 +1,5 @@
 import { PRESETS } from '../design-src/device-preview.js';
+import { mobileViewportHead } from '../src/design-bridge/mobile-viewport.js';
 
 function attr(value) {
   return String(value).replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
@@ -19,7 +20,7 @@ export function devicePreviewPage({ css = '', scriptUrl = './device-preview.js',
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  ${mobileViewportHead()}
   <meta name="theme-color" content="#eff1f6">
   <title>ЗАМЕРX — упрощённый вариант</title>
   <style>${styleText(fonts)}\n${styleText(css)}</style>

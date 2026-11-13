@@ -37,7 +37,7 @@
 .z-me-percents{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-bottom:8px}
 .z-me-pct{height:38px;min-width:0;padding:0 2px;border:1.5px solid #e4e4ee;background:#fff;border-radius:10px;font-size:12px;font-weight:800;font-variant-numeric:tabular-nums}
 .z-me-custom{display:flex;align-items:center;gap:4px;min-width:0;height:38px;padding:0 12px;margin-bottom:12px;border:1.5px solid #e4e4ee;border-radius:10px;background:#fff}
-.z-me-custom input{flex:1;min-width:0;border:0;background:transparent;color:#0f1620;font-size:14px;font-weight:700;height:100%;padding:0;outline:none}
+.z-me-custom input{flex:1;min-width:0;border:0;background:transparent;color:#0f1620;font-size:16px;font-weight:700;height:100%;padding:0;outline:none}
 .z-me-custom input::placeholder{color:#a5a9b8}
 .z-me-custom span{color:#a5a9b8;font-size:14px;font-weight:800}
 .z-me-custom.is-custom{border-color:#ff9f0a;background:#fff3e0}

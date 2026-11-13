@@ -38,7 +38,7 @@
 .z-as-modal{position:relative;z-index:1;width:100%;max-height:86%;overflow:auto;background:#fff;border-radius:18px;padding:22px 20px 16px;display:flex;flex-direction:column;gap:10px}
 .z-as-modal h2{font-size:17px;font-weight:700;color:#1e2530;text-align:center;margin:0 0 4px;line-height:1.4}
 .z-as-modal form{margin:0;min-width:0}
-.z-as-input{display:block;width:100%;min-width:0;background:#f7f7fc;border:1px solid #e4e4ee;border-radius:12px;padding:12px 14px;font-size:15px;font-weight:600;color:#1e2530;line-height:1.4;outline:none}
+.z-as-input{display:block;width:100%;min-width:0;background:#f7f7fc;border:1px solid #e4e4ee;border-radius:12px;padding:12px 14px;font-size:16px;font-weight:600;color:#1e2530;line-height:1.4;outline:none}
 .z-as-input::placeholder{color:#a5a9b8;font-size:13px;font-weight:600}
 .z-as-input.is-error{border-color:#ed6669}
 .z-as-field-form>.z-as-input{margin-top:6px}
@@ -76,7 +76,7 @@
 .z-as-password-field{display:block;margin-top:8px}
 .z-as-password-field>span:first-child{display:block;font-size:12px;font-weight:700;color:#6f7688;margin-bottom:6px}
 .z-as-password-row{display:flex;align-items:center;gap:8px;background:#f7f7fc;border:1px solid #e4e4ee;border-radius:12px;padding:0 12px;min-height:46px}
-.z-as-password-row input{flex:1;min-width:0;min-height:46px;padding:10px 0;border:0;background:transparent;color:#1e2530;font-size:15px;font-weight:600;outline:none}
+.z-as-password-row input{flex:1;min-width:0;min-height:46px;padding:10px 0;border:0;background:transparent;color:#1e2530;font-size:16px;font-weight:600;outline:none}
 .z-as-password-row input::placeholder{font-size:13px;font-weight:600;color:#a5a9b8}
 .z-as-password-row button{padding:5px 0;border:0;background:transparent;color:#1461ee;font-size:12px;font-weight:700}
 .z-as-password-hint{display:block;margin-top:4px;font-size:12px;font-weight:600;color:#ed6669;line-height:16px;white-space:pre-line}
