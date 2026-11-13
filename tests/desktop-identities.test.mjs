@@ -598,7 +598,8 @@ test('desktop contracts use and persist the imported template independently of m
   };
   app.openCalc('project-a');
   app.openContract();
-  assert.equal(projectOptions.company, undefined, 'desktop contract does not merge mobile company fallbacks');
+  assert.equal(projectOptions.company.company, 'Рабочая компания', 'desktop contract uses the private desktop company fallback');
+  assert.notEqual(projectOptions.company.company, 'Мобильная компания');
   const access = contractTemplateAccess(projectOptions.templateStore), template = access.load();
   assert.equal(template.head.company, main.contractTemplate.head.company);
   assert.equal(template.numSeq, 42);
@@ -609,8 +610,8 @@ test('desktop contracts use and persist the imported template independently of m
   assert.match(html, /Особые условия: Заказчик/);
   access.save({ ...template, numSeq: 43 });
   app.openContractTpl();
-  assert.equal(editorOptions.company, undefined, 'desktop editor uses its own template company');
-  assert.equal(editorOptions.onEditCompany, undefined, 'desktop keeps its own company editor');
+  assert.equal(editorOptions.company.company, 'Рабочая компания', 'shared company form reads the private desktop profile');
+  assert.equal(typeof editorOptions.onEditCompany, 'function', 'the template opens the same validated company form');
   assert.equal(contractTemplateAccess(editorOptions.templateStore).load().numSeq, 43);
   const edited = { ...template, numSeq: 43, head: { ...template.head, company: 'Изменённая рабочая компания' } };
   contractTemplateAccess(editorOptions.templateStore).save(edited);

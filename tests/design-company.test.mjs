@@ -19,7 +19,8 @@ test('an explicit host template store never falls back to mobile storage', () =>
     assert.equal(reads, 0);
     access.save({ head: { company: 'Компания хоста' }, style: 'accent', numSeq: 12 });
     assert.equal(access.load().head.company, 'Компания хоста');
-    assert.equal(access.load().style, 'accent');
+    assert.equal(access.load().style, 'magic');
+    assert.equal(value.style, 'accent', 'reading the fixed preview style does not rewrite the host store');
     assert.equal(access.load().numSeq, 12);
     assert.equal(reads, 0);
     assert.equal(contractTemplateAccess().load().head.company, 'Мобильная компания', 'the default bridge keeps its existing API and key');
@@ -100,17 +101,14 @@ test('profile edits persist on reload and untouched company fields continue foll
   assert.equal(field(restored.component, 'Адрес компании').val, 'Адрес 2');
 });
 
-test('estimate settings open real company fields and export passes entered company details', async () => {
+test('shared company settings save the details used by project estimate export', async () => {
   const r = await runtime(), app = r.component;
-  let header;
-  r.ctx.MagicDocuments = { openEstimateHeader: options => { header = options; return { close() {} }; } };
-  app.go('account');
-  app.accountVals().acGroups.flatMap(group => group.items).find(item => item.label === 'Шапка сметы').pick();
-  assert.ok(header, 'header settings open the native-style document screen');
-  header.onEditCompany();
-  assert.equal(app.state.screen, 'profile');
-  field(app, 'Компания').change(event('Экспортная студия'));
-  field(app, 'E-mail').change(event('info@example.test'));
+  let settings;
+  r.ctx.MagicDocuments = { openAccountSettings: options => { settings = options; return { close() {} }; } };
+  app.openAccountSettings();
+  assert.ok(settings, 'company details use the shared settings form');
+  await settings.onChange({ company: 'Экспортная студия', email: 'info@example.test' });
+  settings.onClose();
   app.openCalc(app.state.projects[0].id);
   app.setState({ sheet: 'export' });
   let received;

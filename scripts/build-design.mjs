@@ -19,7 +19,9 @@ import { companyTemplate } from './design-company.mjs';
 import { documentEditorsTemplate } from './design-document-editors.mjs';
 import { mobileHomeTemplate } from './design-mobile-home.mjs';
 import { accountSettingsTemplate } from './design-account-settings.mjs';
+import { projectFieldsTemplate } from './design-project-fields.mjs';
 import { accountMenuTemplate } from './design-account-menu.mjs';
+import { loginPreviewPage } from './design-login.mjs';
 import { interfaceTemplate } from './design-interface.mjs';
 import { tabletTemplate, tabletManifest } from './design-tablet.mjs';
 import { devicePreviewPage } from './design-device-preview.mjs';
@@ -44,6 +46,13 @@ await build({ entryPoints: ['src/design-bridge/document-entry.jsx'], bundle: tru
   outfile: OUT + '/documents.js', minify: true, charset: 'utf8', jsx: 'automatic', logLevel: 'error',
   alias: { react: shim('react.js'), 'react-dom/client': shim('react-dom.js'), 'react-dom': shim('react-dom.js'), 'react/jsx-runtime': shim('jsx-runtime.js') } });
 
+await build({ entryPoints: ['src/design-bridge/login-entry.jsx'], bundle: true, format: 'iife',
+  outfile: OUT + '/login.js', minify: true, charset: 'utf8', jsx: 'automatic', logLevel: 'error',
+  alias: { react: shim('react.js'), 'react-dom': shim('react-dom.js'), 'react/jsx-runtime': shim('jsx-runtime.js') } });
+
+await build({ entryPoints: ['src/design-bridge/auth-navigation.js'], bundle: true, format: 'iife', globalName: 'MagicPrototypeAuth',
+  outfile: OUT + '/auth-navigation.js', minify: true, charset: 'utf8', logLevel: 'error' });
+
 await build({ entryPoints: ['src/design-bridge/ec-entry.js'], bundle: true, format: 'iife', globalName: 'MagicEC', outfile: OUT + '/ec.js', minify: true, charset: 'utf8', logLevel: 'error' });
 
 await build({ entryPoints: ['src/design-bridge/quantity-model.js'], bundle: true, format: 'iife', globalName: 'MagicQuantity', outfile: OUT + '/quantity.js', minify: true, charset: 'utf8', logLevel: 'error' });
@@ -66,10 +75,11 @@ const rep = (a, b, label) => { const n = tpl.split(a).length - 1; if (n !== 1) t
 
 rep('<meta name="viewport" content="width=device-width, initial-scale=1">',
   '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n<meta name="theme-color" content="#0b1119">\n<link rel="icon" href="' + FAVICON + '">\n<title>' + BRAND.title + '</title>\n' +
-  '<link rel="stylesheet" href="/design/draw.css">\n<link rel="stylesheet" href="/design/trace.css">\n<script src="/design/vendor/react.js"></script>\n<script src="/design/vendor/react-dom.js"></script>\n' +
+  '<link rel="stylesheet" href="/design/draw.css">\n<link rel="stylesheet" href="/design/trace.css">\n<link rel="stylesheet" href="/design/contract.css">\n<script src="/design/vendor/react.js"></script>\n<script src="/design/vendor/react-dom.js"></script>\n' +
   '<script src="/design/draw.js"></script>\n<script src="/design/trace.js"></script>\n<script src="/design/contract.js"></script>\n<script src="/design/ec.js"></script>\n<script src="/design/estimate.js"></script>\n', 'head');
 
 tpl = tpl.replace('<script src="/design/contract.js"></script>', '<script src="/design/contract.js"></script>\n<script src="/design/documents.js"></script>\n<link rel="stylesheet" href="/design/documents.css">');
+tpl = tpl.replace('<script src="/design/documents.js"></script>', '<script src="/design/auth-navigation.js"></script>\n<script src="/design/documents.js"></script>');
 
 /* Вводное описание прототипа (карточка над рамкой телефона) на сайт не идёт */
 {
@@ -102,7 +112,7 @@ const METHODS = [
   "      onRoomsChange:rooms=>{const updates=new Map(rooms.map(r=>[traceRooms.get(r.traceId),r.verts]).filter(([id])=>id!=null));if(updates.size)self.upd(p.id,x=>({...x,rooms:x.rooms.map(r=>updates.has(r.id)?Object.assign({},r,{v:updates.get(r.id)}):r)}));},",
   "      onDone:()=>{h.close();if(last)self.go('calc',{tab:last});}});}",
   "  openContract(){const p=this.cur();if(!p||!window.MagicContract){this.toast('Договор не загрузился');return;}const self=this;const e=est(p.rooms,this.ed(p.id));const ins=this.installStart(p);const fmtD=iso=>iso?String(iso).split('-').reverse().join('.'):'';",
-  "    const h=window.MagicContract.open({project:{id:p.id,name:p.name,client:p.client,phone:p.phone,address:p.address},total:this.pSum(p),area:this.pArea(p),est:e,estimateAdjustment:p.estimateAdjustment,estimateExportOptions:p.estimateExportOptions,contract:p.contract||null,installDate:fmtD(ins),",
+  "    const h=window.MagicContract.open({project:{id:p.id,name:p.name,client:p.client,phone:p.phone,address:p.address,paid:Number(p.paid)||0},total:this.pSum(p),area:this.pArea(p),est:e,estimateAdjustment:p.estimateAdjustment,estimateExportOptions:p.estimateExportOptions,contract:p.contract||null,installDate:fmtD(ins),",
   "      onProjectPatch:patch=>self.upd(p.id,x=>Object.assign({},x,patch)),",
   "      onSaveContract:c=>self.upd(p.id,x=>Object.assign({},x,{contract:c})),",
   "      onClose:()=>{h.close();}});}",
@@ -288,6 +298,7 @@ tpl = brandTemplate(tpl);
 tpl = mobileHomeTemplate(tpl);
 tpl = accountMenuTemplate(tpl);
 tpl = accountSettingsTemplate(tpl);
+tpl = projectFieldsTemplate(tpl);
 
 const json = JSON.stringify(tpl).replace(/<\//g, '<\\/');
 const resources = JSON.stringify(tabletManifest(manifest)).replace(/<\//g, '<\\/');
@@ -308,6 +319,7 @@ const previewFonts = previewFontIds.map(([id, range]) => {
   return `@font-face{font-family:Manrope;font-style:normal;font-weight:400 800;font-display:swap;src:url(data:font/woff2;base64,${bytes.toString('base64')}) format('woff2');unicode-range:${range}}`;
 }).join('\n');
 fs.writeFileSync(OUT + '/index.html', devicePreviewPage({ css: fs.readFileSync('design-src/device-preview.css', 'utf8'), fonts: previewFonts }));
+fs.writeFileSync(OUT + '/login.html', loginPreviewPage({ fonts: previewFonts }));
 const kb = f => Math.round(fs.statSync(f).size / 1024) + ' КБ';
 console.log('main data:', mainStats.nom, 'позиций ·', mainStats.images, 'фото ·', mainStats.presets, 'кнопок ·', mainStats.projects, 'проектов ·', kb(mainStats.file));
 console.log('design page:', kb(OUT + '/app.html'), '· preview', kb(OUT + '/index.html'), '· draw.js', kb(OUT + '/draw.js'), '· trace.js', kb(OUT + '/trace.js'), '· contract.js', kb(OUT + '/contract.js'), '· ec.js', kb(OUT + '/ec.js'));

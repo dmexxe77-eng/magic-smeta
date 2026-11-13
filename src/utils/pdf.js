@@ -3,7 +3,7 @@
    файл — без window.open и печатных диалогов (их блокируют браузеры и webview).
    Постраничная нарезка не рвёт строки таблиц (tr) и блоки .no-split. */
 
-import { keepWithNextRanges, paginatePdf } from "./pdf-pagination.js";
+import { collectPdfAvoidRanges, pdfContentEnd, paginatePdf } from "./pdf-pagination.js";
 
 const ensureLibs = async () => {
   const load = (src, msg) => new Promise((resolve, reject) => {
@@ -44,7 +44,14 @@ export async function htmlToPdf(html, fileName, opts = {}) {
     wrap.innerHTML = html;
     document.body.appendChild(wrap);
     const pageEl = wrap.firstElementChild || wrap;
-    await new Promise(r => setTimeout(r, 80));
+    pageEl.getBoundingClientRect();
+    await document.fonts?.ready;
+    await Promise.all([...pageEl.querySelectorAll('img')].map(image => image.complete ? undefined : new Promise(resolve => {
+      const finish = () => { clearTimeout(timer); image.removeEventListener('load', finish); image.removeEventListener('error', finish); resolve(); };
+      const timer = setTimeout(finish, 5000);
+      image.addEventListener('load', finish, { once: true }); image.addEventListener('error', finish, { once: true });
+      if (image.complete) finish();
+    })));
     const canvas = await window.html2canvas(pageEl, { scale: 2, useCORS: true, backgroundColor: "#ffffff", windowWidth: 800 });
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
@@ -62,15 +69,10 @@ export async function htmlToPdf(html, fileName, opts = {}) {
         bottom: Math.min(canvas.height, Math.ceil((rc.bottom - pageRect0.top) * scaleY)),
       };
     };
-    const avoidEls = [...pageEl.querySelectorAll(".no-split"), ...pageEl.querySelectorAll("table tr")];
-    const avoidRanges = [
-      ...avoidEls.map(toRange),
-      ...keepWithNextRanges(pageEl.querySelectorAll("[data-pdf-keep-with-next]"), toRange),
-    ];
+    const avoidRanges = collectPdfAvoidRanges(pageEl, toRange);
     const breakBefore = [...pageEl.querySelectorAll("[data-pdf-break-before]")].map(el => toRange(el).top);
-    const contentEnds = [...pageEl.querySelectorAll("[data-pdf-content-end]")].map(el => toRange(el).bottom);
-    const contentEnd = contentEnds.length ? contentEnds.reduce((last, edge) => Math.max(last, edge), 0) : undefined;
-    const slices = paginatePdf({ height: canvas.height, pageHeight: pageSlicePx, avoidRanges, breakBefore, contentEnd });
+    const contentEnd = pdfContentEnd(pageEl, toRange);
+    const slices = paginatePdf({ height: canvas.height, pageHeight: pageSlicePx, edgeTolerance: 1, avoidRanges, breakBefore, contentEnd });
     let first = true;
     for (const { top: y, bottom } of slices) {
       const h = bottom - y;

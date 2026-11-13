@@ -1,0 +1,47 @@
+{
+  "baselineSnapshotDate": "2026-11-13",
+  "baselineArchive": "Текущий-вариант-до-упрощения.zip",
+  "baselineArchiveSha256": "6765ac42296ffa252cfaa5d3c88374b1bfda6fa17b286e63a9a79d0fbdbf9783",
+  "provenance": "Preserved working-tree snapshot, including uncommitted changes; not an exact Git commit checkout.",
+  "entryModules": [
+    "src/data/contract.js",
+    "src/utils/estimate-html.js"
+  ],
+  "files": [
+    {
+      "path": "src/data/contract.js",
+      "bytes": 43105,
+      "sha256": "1a89c3caebcc92c0392c6bfd8c3c55b03b763e0016aaaaddec5b97aa298c2640"
+    },
+    {
+      "path": "src/utils/estimate-adjustment.js",
+      "bytes": 3951,
+      "sha256": "1969e021f0cdc6dad654d6c2a98ef08faed7e2e498bd83ea147aa0e3ef57808f"
+    },
+    {
+      "path": "src/utils/estimate-drawing.js",
+      "bytes": 12548,
+      "sha256": "e0283dfcf9d34e8ecf95c4e42be676e85431ef44d3c8e31d03f8910f46276259"
+    },
+    {
+      "path": "src/utils/estimate-export-options.js",
+      "bytes": 688,
+      "sha256": "b04cdf0bac4f5f8a667712537ab6a7038cf34e87bab43eba3dfa99bfe8739b0c"
+    },
+    {
+      "path": "src/utils/estimate-export.js",
+      "bytes": 8287,
+      "sha256": "4f70edbcadba0a0f8c6d92edfe8788262f5f5897469f3909366b1d62d6d5d08d"
+    },
+    {
+      "path": "src/utils/estimate-html.js",
+      "bytes": 24812,
+      "sha256": "86cb2973e2fbb599c8006c4752a44ce348224399568a3a3af60c59dd3e9f8871"
+    },
+    {
+      "path": "src/utils/estimate-template.js",
+      "bytes": 8343,
+      "sha256": "fe39b0ff2d7f1558e67ebd663ab00f50dd59d52da58050704bc6a46c1f7d842c"
+    }
+  ]
+}

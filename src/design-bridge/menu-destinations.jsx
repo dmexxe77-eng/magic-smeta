@@ -5,7 +5,7 @@ import './menu-destinations.css';
 
 const FEATURES = ['Планировщик задач монтажа', 'Готовая база актуальных номенклатур', 'Обводка чертежа PDF и фото', 'Экспорт сметы в PDF', 'Автоматическое создание договора'];
 const FILTERS = [['all', 'Все'], ['open', 'Ожидают'], ['progress', 'В работе'], ['answered', 'Ответ'], ['closed', 'Закрытые']];
-const TITLES = { designers: 'Дизайнеры', support: 'Поддержка', appeals: 'Обращения', subscription: 'Подписка PRO', training: 'Обучение', logout: 'Выйти из аккаунта?', cancelSubscription: 'Отменить подписку?' };
+const TITLES = { support: 'Поддержка', appeals: 'Обращения', subscription: 'Подписка PRO', training: 'Обучение', logout: 'Выйти из аккаунта?', cancelSubscription: 'Отменить подписку?' };
 
 function Destination({ opts, close }) {
   const [notice, setNotice] = useState(''), [confirmed, setConfirmed] = useState(false);
@@ -16,7 +16,10 @@ function Destination({ opts, close }) {
   const modal = ['logout', 'cancelSubscription', 'training'].includes(id);
   const heading = TITLES[id] || 'Раздел';
   const limitation = text => setNotice(text);
-  const confirm = () => { setConfirmed(true); setNotice(id === 'logout' ? 'В прототипе нет активной сессии. Данные проектов сохранены.' : 'Изменение подписки доступно в приложении с аккаунтом.'); };
+  const confirm = () => {
+    if (id === 'logout' && opts.onLogout) { close(); opts.onLogout(); return; }
+    setConfirmed(true); setNotice(id === 'logout' ? 'В прототипе нет активной сессии. Данные проектов сохранены.' : 'Изменение подписки доступно в приложении с аккаунтом.');
+  };
 
   if (modal) return <div className="nm-backdrop" onClick={event => { if (event.target === event.currentTarget) close(); }}>
     <section className="nm-dialog" role="alertdialog" aria-modal="true" aria-label={heading}>
@@ -28,10 +31,9 @@ function Destination({ opts, close }) {
   </div>;
 
   return <section className="nm-page" role="dialog" aria-modal="true" aria-label={heading}>
-    <header className="nm-header"><button aria-label={'Назад из раздела «' + heading + '»'} className="nm-back" onClick={close}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6" /></svg></button><h1>{heading}</h1>{id === 'designers' && <button className="nm-header-action" aria-label="Добавить дизайнера" onClick={() => limitation('Добавление дизайнеров доступно в приложении с аккаунтом.')}>+ Добавить</button>}</header>
+    <header className="nm-header"><button aria-label={'Назад из раздела «' + heading + '»'} className="nm-back" onClick={close}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6" /></svg></button><h1>{heading}</h1></header>
     <div className="nm-content">
       {!allowed ? <div className="nm-card"><h2>Нет доступа</h2><p>Раздел доступен только администраторам.</p></div> : <>
-        {id === 'designers' && <div className="nm-card nm-empty-designers"><h2>Пока нет дизайнеров</h2><p>Добавьте дизайнера, чтобы указывать его в проектах и считать бонус</p><button className="nm-primary" onClick={() => limitation('Добавление дизайнеров доступно в приложении с аккаунтом.')}>Добавить дизайнера</button></div>}
         {id === 'support' && <>
           <form className="nm-card nm-support-form" onSubmit={event => { event.preventDefault(); limitation('В прототипе обращения не отправляются. Обратитесь в поддержку из приложения с аккаунтом.'); }}>
             <h2>Новое обращение</h2>
@@ -49,7 +51,7 @@ function Destination({ opts, close }) {
           <ul>{FEATURES.map(feature => <li key={feature}><span aria-hidden="true">✓</span>{feature}</li>)}</ul>
           <button className={pro ? 'nm-secondary' : 'nm-primary'} onClick={() => limitation('Оплата и изменение тарифа доступны в приложении с аккаунтом.')}>{pro ? 'Отменить подписку' : 'Симулировать оплату'}</button>
         </div>}
-        <p className="nm-local-hint">{id === 'support' || id === 'appeals' ? 'Переписка доступна в приложении с аккаунтом.' : id === 'designers' ? 'Справочник из аккаунта здесь не подключён.' : 'Подписка аккаунта в прототипе не изменяется.'}</p>
+        <p className="nm-local-hint">{id === 'support' || id === 'appeals' ? 'Переписка доступна в приложении с аккаунтом.' : 'Подписка аккаунта в прототипе не изменяется.'}</p>
       </>}
       {notice && <p className="nm-notice" role="status">{notice}</p>}
     </div>
@@ -58,6 +60,7 @@ function Destination({ opts, close }) {
 
 /** Separate native destinations keep menu links honest in the offline prototype. */
 export function openMenuDestination(opts = {}) {
+  if (!Object.prototype.hasOwnProperty.call(TITLES, opts.id)) return { close() {} };
   const previous = document.activeElement, host = document.createElement('div');
   host.className = 'nm-host';
   document.body.append(host);

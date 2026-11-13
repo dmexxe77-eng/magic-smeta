@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
 import { fitToStage } from './stage.js';
 import { calculateEstimateTotals, estimateAdjustmentRates, normalizeEstimateAdjustment, updateEstimateAdjustment } from '../utils/estimate-adjustment.js';
-import { estimateAdjustmentVisibility, setEstimateAdjustmentVisibility } from '../utils/estimate-export-options.js';
+import { estimateAdjustmentVisibility, setEstimateAdjustmentVisibility, normalizeEstimateExportOptions } from '../utils/estimate-export-options.js';
 import './estimate-editor.css';
 
 const TYPES = [
@@ -19,13 +19,13 @@ const delta = number => `${number > 0 ? '+' : number < 0 ? '−' : ''}${money(Ma
 const sum = rows => (rows || []).reduce((total, row) => total + (Number(row.q) || 0) * (Number(row.p) || 0), 0);
 
 function initialState(opts) {
-  const options = opts.exportOptions || {};
+  const options = normalizeEstimateExportOptions(opts.exportOptions);
   return {
     adjustment: normalizeEstimateAdjustment(opts.adjustment),
     exportOptions: {
       ...options,
       type: TYPES.some(([id]) => id === options.type) ? options.type : 'total',
-      cols: Object.fromEntries(COLUMNS.map(([id]) => [id, typeof options.cols?.[id] === 'boolean' ? options.cols[id] : id !== 'photo'])),
+      cols: options.cols,
     },
   };
 }
@@ -49,7 +49,6 @@ function EstimateEditor({ opts, onClose }) {
   const showChecked = activeGroups.every(scope => visibility[scope]);
   const est = opts.est || {};
   const totals = calculateEstimateTotals(sum(est.mats), sum(est.works), adjustment, sum(est.equipment));
-  const count = ['mats', 'works', 'equipment'].reduce((n, key) => n + (est[key]?.length || 0), 0);
   const clearBuffer = () => { bufferRef.current = null; setBuffer(null); };
 
   const update = patch => {
@@ -153,13 +152,11 @@ function EstimateEditor({ opts, onClose }) {
             <output>{money(totals.adjustedTotal)}</output>
           </section>
         </section>
-        {opts.onEditRows && <button type="button" className="z-me-rows" onClick={() => { if (!commitPercent()) return; onClose(); opts.onEditRows(); }}><span><strong>Позиции сметы</strong><small>{count} позиций · количество и цены</small></span><span aria-hidden="true">›</span></button>}
         {error && <p className="z-me-error" role="alert">{error}</p>}
         <div className="z-me-actions">
           <button type="button" className="z-me-secondary" onClick={() => run('preview', opts.onPreview)} disabled={!opts.onPreview}>{busy === 'preview' ? 'Подготовка…' : 'Предпросмотр'}</button>
           <button type="button" className="z-me-primary" onClick={() => run('download', opts.onDownload)} disabled={!opts.onDownload}>{busy === 'download' ? 'Подготовка…' : 'Скачать PDF'}</button>
         </div>
-        {opts.onShare && <button type="button" className="z-me-share" onClick={() => run('share', opts.onShare)}>{busy === 'share' ? 'Подготовка…' : 'Отправить PDF'}</button>}
       </fieldset>
     </div>
   </div>;

@@ -29,9 +29,15 @@ test('side menu mirrors original sections and only actual admin receives Appeals
   const labels = () => Array.from(app.mobileHomeVals().mhMenuGroups, group => Array.from(group.items, item => item.label));
   assert.deepEqual(labels(), [
     ['Главная', 'Проекты', 'Задачи', 'Аналитика'],
-    ['Редактор пресетов', 'Номенклатуры', 'Шаблон договора', 'Шапка сметы', 'Дизайнеры'],
+    ['Редактор пресетов', 'Номенклатуры', 'Шаблон документов'],
     ['Настройки', 'Написать в поддержку'],
   ]);
+  let templatesOpened = 0;
+  app.openContractTpl = () => { templatesOpened++; };
+  app.setState({ mobileMenuOpen: true });
+  app.mobileHomeVals().mhMenuGroups[1].items[2].pick();
+  assert.equal(templatesOpened, 1, 'the single document entry opens its working text editor');
+  assert.equal(app.state.mobileMenuOpen, false);
   app.setState({ profile: { role: 'ADMIN' } });
   assert.deepEqual(labels()[2], ['Настройки', 'Написать в поддержку', 'Обращения']);
   app.setState({ profile: { role: 'Владелец' } });
@@ -60,12 +66,13 @@ test('server-dependent menu destinations never silently open Account or change s
   const opened = [];
   r.ctx.MagicDocuments = { openMenuDestination: options => { opened.push(options.id); return { close() {} }; } };
   const rows = app.mobileHomeVals().mhMenuGroups.flatMap(group => group.items);
-  rows.find(row => row.label === 'Дизайнеры').pick();
+  assert.equal(rows.some(row => row.label === 'Дизайнеры'), false);
+  app.openNativeMenuDestination('designers');
   rows.find(row => row.label === 'Написать в поддержку').pick();
   assert.equal(app.state.screen, 'dash');
-  assert.deepEqual(opened, ['designers', 'support']);
+  assert.deepEqual(opened, ['support']);
   app.openNativeMenuDestination('appeals');
-  assert.deepEqual(opened, ['designers', 'support']);
+  assert.deepEqual(opened, ['support']);
   app.go('account');
   const plan = app.state.plan;
   app.nativeAccountVals().naManage();

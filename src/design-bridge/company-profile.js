@@ -1,6 +1,7 @@
 import { loadCompanyHeader } from './contract-template-store.js';
 import { normalizeContractLegalForm } from '../data/contract.js';
-import { bankDetailsText } from './account-profile.js';
+import { accountLegalForm, bankDetailsText, validateProfileField } from './account-profile.js';
+import { normalizeEstimateTemplate } from '../utils/estimate-template.js';
 
 const record = value => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 const owns = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
@@ -16,13 +17,20 @@ export function getCompanyDetails(profile, storage) {
     return fallback === undefined ? '' : text(head[fallback]);
   };
   const legalForm = normalizeContractLegalForm(value(['legalForm']));
+  const form = accountLegalForm(legalForm);
+  const identifier = key => {
+    const entered = value([key]);
+    return form && validateProfileField(key, entered, { legalForm }) ? '' : entered;
+  };
   const legalName = value(['legal']);
   const prefix = ({ ip: 'ИП', self_employed: 'Самозанятый' })[legalForm];
   const legal = prefix && legalName && !legalName.toLocaleLowerCase('ru').startsWith(prefix.toLocaleLowerCase('ru')) ? prefix + ' ' + legalName : legalName;
-  const bank = bankDetailsText(saved) || value(['bank']);
+  const bank = bankDetailsText({ ...saved, legalForm }) || value(['bank']);
+  const estimateTemplate = owns(saved, 'estimateTemplate') ? saved.estimateTemplate : head.estimateTemplate;
   return {
-    company: value(['company']), description: value(['description']),
-    legal, legalForm, inn: value(['inn']), kpp: value(['kpp']), ogrn: value(['ogrn']),
+    ...(estimateTemplate && typeof estimateTemplate === 'object' && !Array.isArray(estimateTemplate) ? { estimateTemplate: normalizeEstimateTemplate(estimateTemplate) } : {}),
+    company: value(['company']), description: value(['description']), companyAddress: value(['companyAddress']),
+    legal, legalForm, inn: identifier('inn'), kpp: form && !form.showKpp ? '' : value(['kpp']), ogrn: form && !form.showOgrn ? '' : identifier('ogrn'),
     address: value(['address']), city: value(['city']), phone: value(['contractPhone', 'phone'], ['phone']),
     email: value(['email']), website: value(['site', 'website'], ['website', 'site']),
     logo: value(['logo']), sign: value(['sign', 'signature']), signerName: value(['signerName']), bank,

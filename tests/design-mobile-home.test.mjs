@@ -21,17 +21,17 @@ test('native home keeps menu and account buttons at the top and links to live se
   assert.match(readTemplate(), /data-mobile-menu role="dialog"/);
 });
 
-test('home drawer opens both document editors and uses actual recent projects and totals', async () => {
+test('home drawer opens the single text editor and uses actual recent projects and totals', async () => {
   const r = await runtime(), app = r.component;
   let contract = 0, header = 0;
   app.openContractTpl = () => contract++;
   app.openEstimateHeader = () => header++;
   app.go('dash');
   const values = app.mobileHomeVals(), rows = values.mhMenuGroups.flatMap(group => group.items);
-  rows.find(row => row.label === 'Шаблон договора').pick();
-  rows.find(row => row.label === 'Шапка сметы').pick();
+  rows.find(row => row.label === 'Шаблон документов').pick();
+  assert.ok(!rows.some(row => row.label === 'Шапка сметы'));
   assert.equal(contract, 1);
-  assert.equal(header, 1);
+  assert.equal(header, 0);
   assert.equal(values.mhProjects.length, Math.min(5, app.state.projects.length));
   assert.equal(values.mhStats.find(row => row.label === 'В работе').value,
     String(app.state.projects.filter(p => ['contract', 'install'].includes(p.status)).length));

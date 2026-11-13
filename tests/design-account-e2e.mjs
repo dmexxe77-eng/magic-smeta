@@ -181,10 +181,12 @@ try {
   await page.getByRole('button', { name: 'Выйти из аккаунта', exact: true }).click();
   const logout = page.getByRole('alertdialog', { name: 'Выйти из аккаунта?', exact: true });
   await logout.getByRole('button', { name: 'Выйти', exact: true }).click();
-  await logout.getByRole('status').getByText('В прототипе нет активной сессии. Данные проектов сохранены.', { exact: true }).waitFor();
-  assert.equal(await logout.getByRole('button', { name: 'Понятно', exact: true }).evaluate(element => element === document.activeElement), true);
-  await logout.getByRole('button', { name: 'Понятно', exact: true }).press('Escape');
-  await logout.waitFor({ state: 'hidden' });
+  await page.getByRole('heading', { name: 'Вход', exact: true }).waitFor();
+  assert.equal(await page.evaluate(() => JSON.stringify(JSON.parse(localStorage.getItem('zamer.design.v1')).projects)), projectsBeforeLogout);
+  await page.getByLabel('Номер телефона', { exact: true }).fill('account-e2e-return');
+  await page.getByLabel('Пароль', { exact: true }).fill('1');
+  await page.getByRole('button', { name: 'Войти', exact: true }).click();
+  await ready();
   assert.equal(await page.evaluate(() => JSON.stringify(window.__zamer.state.projects)), projectsBeforeLogout);
   assert.equal(projectsBeforeLogout, originalProjects);
 
@@ -198,7 +200,8 @@ try {
   await settings.getByRole('button', { name: 'Закрыть настройки аккаунта', exact: true }).click();
   const menu = await openMenu();
   const labels = (await menu.locator('button').allTextContents()).map(text => text.replace(/\s/g, '').replace(/›$/, ''));
-  for (const label of ['Главная', 'Проекты', 'Задачи', 'Аналитика', 'Редактор пресетов', 'Номенклатуры', 'Шаблон договора', 'Шапка сметы', 'Дизайнеры', 'Настройки', 'Написать в поддержку']) assert.ok(labels.includes(label.replace(/\s/g, '')), label);
+  for (const label of ['Главная', 'Проекты', 'Задачи', 'Аналитика', 'Редактор пресетов', 'Номенклатуры', 'Шаблон договора', 'Шапка сметы', 'Настройки', 'Написать в поддержку']) assert.ok(labels.includes(label.replace(/\s/g, '')), label);
+  assert.equal(await menu.getByRole('button', { name: 'Дизайнеры', exact: true }).count(), 0);
   assert.equal(await menu.getByRole('button', { name: 'Обращения', exact: true }).count(), 0);
   await page.getByRole('dialog', { name: 'Главное меню', exact: true }).getByRole('button', { name: 'Настройки', exact: true }).click();
   await settings.waitFor();

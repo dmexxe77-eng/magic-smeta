@@ -90,24 +90,15 @@ function HomeScreen({onMenu,contractTpl,setContractTpl,orders,setOrders,onOpen,o
     {id:"c1",name:"Костенко Анатолий",phone:"+7 914 123-45-67",email:"kostenko@mail.ru",address:"ул. Шеронова, 12"},
     {id:"c2",name:"Ткачук Александр", phone:"+7 924 987-65-43",email:"tkachuk@gmail.com",address:"ул. Лазо 69/1, д.22"},
   ]);
-  const[designers,setDesigners] = useState([
-    {id:"d1",name:"Полина Сидоренко",phone:"+7 914 200-11-22",studio:"Студия «Образ»",bonusType:"pct",bonusRate:5,note:""},
-    {id:"d2",name:"Кикоть Дмитрий",  phone:"+7 924 300-44-55",studio:"ИП Кикоть",bonusType:"pct",bonusRate:7,note:""},
-  ]);
-
   const[selOrder,setSelOrder]     = useState(returnOrderId||null);
   const[selClient,setSelClient]   = useState(null);
-  const[selDesigner,setSelDesigner] = useState(null);
   const[projTab,setProjTab]       = useState("info");
   const[showContract,setShowContract] = useState(false);
   const[editOrd,setEditOrd]       = useState(null);
 
   const[showAddCl,setShowAddCl]   = useState(false);
-  const[showAddDes,setShowAddDes] = useState(false);
   const[newCl,setNewCl]   = useState({name:"",phone:"",email:"",address:""});
-  const[newDes,setNewDes] = useState({name:"",studio:"",phone:"",email:"",bonusType:"pct",bonusRate:5,note:""});
   const[editCl,setEditCl]   = useState(null);
-  const[editDes,setEditDes] = useState(null);
   const[addPay,setAddPay]   = useState(false);
   const[addExp,setAddExp]   = useState(false);
   const[newPay,setNewPay]   = useState({cat:"prepay",amount:"",note:""});
@@ -137,7 +128,7 @@ function HomeScreen({onMenu,contractTpl,setContractTpl,orders,setOrders,onOpen,o
 
   const CAT_L={prepay:"Предоплата",balance:"Остаток",partial:"Частичная",other:"Прочее",
     materials:"Материалы",transport:"Транспорт",consumable:"Расходники",
-    salary:"ЗП",tools:"Инструменты",designer_bonus:"Бонус дизайнеру"};
+    salary:"ЗП",tools:"Инструменты",designer_bonus:"Дополнительные расходы"};
   const EXP_CATS=["materials","transport","consumable","tools","salary","designer_bonus","other"];
   const calcFin=ord=>{
     const est=(ord.rooms||[]).length>0?buildEst(ord.rooms,CALC_STATE_REF.presets,optsForOrder(ord),ord.nomSnapshot||null,ord.estimateEdits):{mats:[],works:[]};
@@ -150,13 +141,6 @@ function HomeScreen({onMenu,contractTpl,setContractTpl,orders,setOrders,onOpen,o
     const wCost=(ord.workers||[]).reduce((s,w)=>s+(w.rateType==="pct"?total*w.rate/100:w.rate*area),0);
     return{...totals,total,inc,exp,dExp,wCost,profit:inc-exp-wCost,debt:total-inc,area};
   };
-  const desBonus=ord=>{
-    const d=designers.find(x=>x.id===ord.designerId);
-    if(!d)return 0;
-    const t=calcFin(ord).total;
-    return d.bonusType==="pct"?t*d.bonusRate/100:d.bonusRate;
-  };
-
   /* Общие стили */
   const IS={width:"100%",background:T.faint,border:"0.5px solid "+T.border,color:"#111",
     borderRadius:10,padding:"10px 12px",fontSize:13,fontFamily:"inherit",boxSizing:"border-box",outline:"none"};
@@ -168,7 +152,7 @@ function HomeScreen({onMenu,contractTpl,setContractTpl,orders,setOrders,onOpen,o
     <AppHeader onMenu={onMenu}/>
       {/* Tab bar */}
       <div style={{background:T.card,display:"flex",margin:"0",borderBottom:`2px solid ${ACC}`,paddingTop:2}}>
-        {[{id:"home",l:"Проекты"},{id:"clients",l:"Клиенты",pro:true},{id:"designers",l:"Дизайнеры",pro:true},{id:"finance",l:"Финансы",pro:true},{id:"stats",l:"Аналитика",pro:true}].map(t=>{
+        {[{id:"home",l:"Проекты"},{id:"clients",l:"Клиенты",pro:true},{id:"finance",l:"Финансы",pro:true},{id:"stats",l:"Аналитика",pro:true}].map(t=>{
           const locked=t.pro&&!isPro;
           return(
           <button key={t.id} onClick={()=>{if(locked){return;}setTab(t.id);}}
@@ -193,8 +177,6 @@ function HomeScreen({onMenu,contractTpl,setContractTpl,orders,setOrders,onOpen,o
     if(!ord){setSelOrder(null);return null;}
     const st=stObj(ord.status);
     const fin=calcFin(ord);
-    const des=designers.find(d=>d.id===ord.designerId)||{name:ord.designer||""};
-    const bCalc=desBonus(ord);
     const oPays=ord.payments||[];
     const oExps=ord.expenses||[];
     const pct=fin.total>0?Math.round(fin.inc/fin.total*100):0;
@@ -237,12 +219,6 @@ function HomeScreen({onMenu,contractTpl,setContractTpl,orders,setOrders,onOpen,o
     };
     const startEditExp=(x)=>{setNewExp({cat:x.cat,amount:String(x.amount),note:x.note||""});setEditExpId(x.id);setAddExp(true);};
     const doDelExp=(id)=>setOrders(prev=>prev.map(o=>o.id===ord.id?{...o,expenses:(o.expenses||[]).filter(x=>x.id!==id)}:o));
-    const doAutoBonus=()=>{
-      if(!bCalc)return;
-      const exp={id:"ex"+Date.now(),ordId:ord.id,cat:"designer_bonus",amount:bCalc,date:new Date().toISOString().slice(0,10),note:"Бонус "+des.name};
-      setOrders(prev=>prev.map(o=>o.id===ord.id?{...o,expenses:[...(o.expenses||[]),exp]}:o));
-    };
-
     return(
       <div style={{minHeight:"100vh",background:BG,fontFamily:"'Inter',-apple-system,sans-serif",color:"#111"}}>
         {/* header */}
@@ -365,16 +341,6 @@ function HomeScreen({onMenu,contractTpl,setContractTpl,orders,setOrders,onOpen,o
                 </div>
                 <input style={IS} value={draft.client||""} placeholder="Или вручную" onChange={e=>setEditOrd({...draft,client:e.target.value,clientId:""})}/>
               </div>
-              <div style={{marginBottom:10}}>
-                <div style={{fontSize:11,color:T.sub,marginBottom:6}}>{"Дизайнер"}</div>
-                <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:6}}>
-                  {designers.map(d=>(<button key={d.id} onClick={()=>setEditOrd({...draft,designerId:d.id,designer:d.name})}
-                    style={{padding:"5px 11px",borderRadius:18,border:"1px solid "+(draft.designerId===d.id?"rgba(124,92,191,0.5)":"#e8e8f0"),background:draft.designerId===d.id?"rgba(124,92,191,0.1)":"#f8f9ff",color:draft.designerId===d.id?"#7c5cbf":"#aaa",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
-                    {d.name.split(" ")[0]}
-                  </button>))}
-                </div>
-                <input style={IS} value={draft.designer||""} placeholder="Или вручную" onChange={e=>setEditOrd({...draft,designer:e.target.value,designerId:""})}/>
-              </div>
               <div>
                 <div style={{fontSize:11,color:T.sub,marginBottom:4}}>{"Заметки"}</div>
                 <textarea style={{...IS,resize:"vertical",height:68}} value={draft.notes||""} placeholder="Комментарии..." onChange={e=>setEditOrd({...draft,notes:e.target.value})}/>
@@ -434,10 +400,6 @@ function HomeScreen({onMenu,contractTpl,setContractTpl,orders,setOrders,onOpen,o
                   <div style={{fontSize:13,fontWeight:600,color:T.text}}>{"Расходы"}</div>
                   <button onClick={()=>{const open=!addExp;setAddExp(open);if(open){setEditExpId(null);setNewExp({cat:"materials",amount:"",note:""});}}} style={{background:ABGC,border:"none",borderRadius:8,padding:"5px 12px",color:ACC,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{"+ Добавить"}</button>
                 </div>
-                {des.name&&fin.total>0&&(<div style={{display:"flex",alignItems:"center",gap:10,background:"rgba(124,92,191,0.06)",borderRadius:11,padding:"9px 11px",marginBottom:9}}>
-                  <div style={{flex:1}}><div style={{color:"#7c5cbf",fontSize:12,fontWeight:600}}>{"✦ "+des.name}</div><div style={{color:T.sub,fontSize:11,marginTop:1}}>{(designers.find(d=>d.id===ord.designerId)?.bonusType==="pct"?"Бонус "+(designers.find(d=>d.id===ord.designerId)?.bonusRate)+"%":"Фикс.")+" = "+ff(bCalc)+" ₽"}</div></div>
-                  <button onClick={doAutoBonus} style={{background:"rgba(124,92,191,0.12)",border:"none",borderRadius:8,padding:"6px 11px",color:"#7c5cbf",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{"Начислить"}</button>
-                </div>)}
                 {addExp&&(<div style={{background:T.faint,borderRadius:11,padding:11,marginBottom:9,display:"flex",flexDirection:"column",gap:7}}>
                   <select style={IS} value={newExp.cat} onChange={e=>setNewExp(x=>({...x,cat:e.target.value}))}>
                     {EXP_CATS.map(c=><option key={c} value={c}>{CAT_L[c]||c}</option>)}
@@ -455,17 +417,9 @@ function HomeScreen({onMenu,contractTpl,setContractTpl,orders,setOrders,onOpen,o
           {/* ── Выплаты ── */}
           {projTab==="salary"&&(isPro?(
             <div>
-              {des.name&&fin.total>0&&(<div style={{background:T.card,borderRadius:15,padding:14,marginBottom:9}}>
-                <div style={{fontSize:13,fontWeight:600,color:T.text,marginBottom:11}}>{"Бонус дизайнеру"}</div>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                  <div><div style={{color:"#7c5cbf",fontWeight:600}}>{des.name}</div><div style={{color:T.sub,fontSize:11,marginTop:2}}>{(designers.find(d=>d.id===ord.designerId)?.bonusType==="pct"?(designers.find(d=>d.id===ord.designerId)?.bonusRate)+"%":"фикс.")}</div></div>
-                  <div style={{fontSize:22,fontWeight:800,color:"#7c5cbf"}}>{ff(bCalc)+" ₽"}</div>
-                </div>
-                <button onClick={doAutoBonus} style={{width:"100%",background:"rgba(124,92,191,0.1)",border:"1px solid rgba(124,92,191,0.2)",borderRadius:11,padding:11,color:"#7c5cbf",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{"+ Начислить бонус"}</button>
-              </div>)}
-              {(ord.workers||[]).length===0&&!des.name&&<div style={{color:T.dim,fontSize:13,textAlign:"center",padding:"30px 0"}}>{"Монтажники не назначены"}</div>}
+              {(ord.workers||[]).length===0&&<div style={{color:T.dim,fontSize:13,textAlign:"center",padding:"30px 0"}}>{"Монтажники не назначены"}</div>}
             </div>
-          ):(<ProGate feature="Расчёт выплат — план PRO"><div style={{background:T.card,borderRadius:15,padding:16,color:T.dim,textAlign:"center",fontSize:13}}>{"Монтажники и бонусы дизайнеру"}</div></ProGate>))}
+          ):(<ProGate feature="Расчёт выплат — план PRO"><div style={{background:T.card,borderRadius:15,padding:16,color:T.dim,textAlign:"center",fontSize:13}}>{"Монтажники"}</div></ProGate>))}
         </div>
       {/* Договор — поверх карточки проекта */}
       {showContract&&(()=>{
@@ -505,53 +459,6 @@ function HomeScreen({onMenu,contractTpl,setContractTpl,orders,setOrders,onOpen,o
             onClick={()=>{setSelClient(null);setSelOrder(ord.id);setProjTab("info");setEditOrd(null);}}>
             <div><div style={{fontWeight:600,fontSize:13}}>{ord.name}</div><div style={{color:T.sub,fontSize:11,marginTop:2}}>{ord.date}</div></div>
             <div style={{background:ABGC,color:ACC,fontSize:10,fontWeight:700,padding:"3px 9px",borderRadius:18}}>{st.label}</div>
-          </div>
-        );})}
-      </div>
-    </div>);
-  }
-
-  /* ══ Карточка дизайнера ══ */
-  if(selDesigner){
-    const d=designers.find(x=>x.id===selDesigner);
-    if(!d){setSelDesigner(null);return null;}
-    const dOrds=orders.filter(o=>o.designerId===d.id||o.designer===d.name);
-    const dTotal=dOrds.reduce((s,o)=>s+calcFin(o).total,0);
-    const dPaid=dOrds.reduce((s,o)=>s+calcFin(o).dExp,0);
-    const dCalc=dOrds.reduce((s,o)=>s+desBonus(o),0);
-    return(<div style={{minHeight:"100vh",background:BG,fontFamily:"'Inter',-apple-system,sans-serif",color:"#111"}}>
-      <div style={{background:T.card,borderBottom:"0.5px solid "+T.border,padding:"12px 16px",display:"flex",alignItems:"center",gap:12,position:"sticky",top:0,zIndex:10}}>
-        <button onClick={()=>setSelDesigner(null)} style={{background:T.bg,border:"none",borderRadius:8,width:34,height:34,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><svg width="16" height="16" fill="none" stroke={DARK} strokeWidth="2" strokeLinecap="round"><path d="M10 4L6 8l4 4"/></svg></button>
-        <div style={{flex:1,fontWeight:700,fontSize:16}}>{d.name}</div>
-        <button onClick={()=>setEditDes({...d})} style={{background:"rgba(124,92,191,0.1)",border:"none",borderRadius:8,padding:"6px 14px",color:"#7c5cbf",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{"Ред."}</button>
-      </div>
-      <div style={{padding:14,paddingBottom:40}}>
-        <div style={{background:T.card,borderRadius:15,padding:14,marginBottom:12}}>
-          <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:12}}>
-            <div style={{width:50,height:50,borderRadius:25,background:"rgba(124,92,191,0.1)",display:"flex",alignItems:"center",justifyContent:"center",color:"#7c5cbf",fontSize:18,fontWeight:700,flexShrink:0}}>{av(d.name)}</div>
-            <div><div style={{fontWeight:700,fontSize:17}}>{d.name}</div>{d.studio&&<div style={{color:"#7c5cbf",fontSize:12,marginTop:2}}>{d.studio}</div>}{d.phone&&<div style={{color:T.sub,fontSize:12,marginTop:2}}>{d.phone}</div>}</div>
-          </div>
-          <div style={{background:"rgba(124,92,191,0.07)",borderRadius:11,padding:"11px 13px"}}>
-            <div style={{fontSize:10,color:T.sub,marginBottom:3}}>{"Ставка бонуса"}</div>
-            <div style={{fontSize:24,fontWeight:800,color:"#7c5cbf"}}>{d.bonusType==="pct"?d.bonusRate+"%":ff(d.bonusRate)+" ₽"}</div>
-            <div style={{fontSize:11,color:T.dim,marginTop:2}}>{d.bonusType==="pct"?"% от стоимости объекта":"фиксированный бонус"}</div>
-          </div>
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
-          {[{l:"Проектов",v:String(dOrds.length),c:ACC},{l:"Объём",v:ff(dTotal)+" ₽",c:"#111"},{l:"Расч. бонус",v:ff(dCalc)+" ₽",c:"#7c5cbf"},{l:"Выплачено",v:ff(dPaid)+" ₽",c:"#7c5cbf"}].map(x=>(<div key={x.l} style={{background:T.card,borderRadius:13,padding:"12px 13px"}}><div style={{fontSize:10,color:T.sub,marginBottom:3}}>{x.l}</div><div style={{fontSize:16,fontWeight:700,color:x.c}}>{x.v}</div></div>))}
-        </div>
-        <div style={{fontSize:11,color:T.sub,textTransform:"uppercase",letterSpacing:"0.8px",marginBottom:8}}>{"Проекты"}</div>
-        {dOrds.map(ord=>{const st=stObj(ord.status);const bOrd=desBonus(ord);const bPd=calcFin(ord).dExp;return(
-          <div key={ord.id} style={{background:T.card,borderRadius:14,padding:"12px 13px",marginBottom:7,cursor:"pointer",borderLeft:"3px solid #7c5cbf"}}
-            onClick={()=>{setSelDesigner(null);setSelOrder(ord.id);setProjTab("info");setEditOrd(null);}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:4}}>
-              <div style={{fontWeight:600,fontSize:13}}>{ord.name}</div>
-              <div style={{background:ABGC,color:ACC,fontSize:10,fontWeight:600,padding:"3px 9px",borderRadius:18}}>{st.label}</div>
-            </div>
-            <div style={{display:"flex",gap:10}}>
-              {calcFin(ord).total>0&&<span style={{color:T.sub,fontSize:12}}>{ff(calcFin(ord).total)+" ₽"}</span>}
-              {bOrd>0&&<span style={{color:bPd>=bOrd?"#16a34a":"#7c5cbf",fontSize:12,fontWeight:500}}>{bPd>=bOrd?"✓ "+ff(bPd)+" ₽":"бонус "+ff(bOrd)+" ₽"}</span>}
-            </div>
           </div>
         );})}
       </div>
@@ -639,7 +546,6 @@ function HomeScreen({onMenu,contractTpl,setContractTpl,orders,setOrders,onOpen,o
         const st=stObj(ord.status);
         const fin=calcFin(ord);
         const pct=fin.total>0?Math.round(fin.inc/fin.total*100):0;
-        const des=designers.find(d=>d.id===ord.designerId)||{name:ord.designer||""};
         return(<div key={ord.id} style={{background:T.card,borderRadius:15,padding:"13px",marginBottom:8,cursor:"pointer",borderLeft:`3px solid ${ACC}`}}
           onClick={()=>{setSelOrder(ord.id);setProjTab("info");setEditOrd(null);}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
@@ -647,7 +553,6 @@ function HomeScreen({onMenu,contractTpl,setContractTpl,orders,setOrders,onOpen,o
               <div style={{fontWeight:700,fontSize:15,marginBottom:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{ord.name}</div>
               <div style={{fontSize:12,color:T.sub}}>
                 {ord.client||""}
-                {des.name?<span style={{color:"#7c5cbf",marginLeft:ord.client?6:0}}>{"✦ "+des.name}</span>:null}
               </div>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0,marginLeft:8}}>
@@ -710,23 +615,6 @@ function HomeScreen({onMenu,contractTpl,setContractTpl,orders,setOrders,onOpen,o
       <button onClick={()=>{setNewCl({name:"",phone:"",email:"",address:""});setShowAddCl(true);}}
         style={{display:"block",width:"100%",marginTop:4,padding:"14px",background:ACC,color:"#fff",border:"none",borderRadius:14,fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
         {"+ Новый клиент"}
-      </button>
-    </div>)}
-
-    {/* ══ ДИЗАЙНЕРЫ ══ */}
-    {tab==="designers"&&(<div className="mw" style={{padding:"13px 14px",paddingBottom:90}}>
-      {designers.map(d=>{const ps=orders.filter(o=>o.designerId===d.id||o.designer===d.name);const paid=ps.reduce((s,o)=>s+calcFin(o).dExp,0);return(
-        <div key={d.id} style={{background:T.card,borderRadius:15,padding:"13px",marginBottom:8,cursor:"pointer"}} onClick={()=>setSelDesigner(d.id)}>
-          <div style={{display:"flex",alignItems:"center",gap:12}}>
-            <div style={{width:44,height:44,borderRadius:22,background:"rgba(124,92,191,0.1)",display:"flex",alignItems:"center",justifyContent:"center",color:"#7c5cbf",fontSize:15,fontWeight:700,flexShrink:0}}>{av(d.name)}</div>
-            <div style={{flex:1,minWidth:0}}><div style={{fontWeight:600,fontSize:14}}>{d.name}</div><div style={{color:T.sub,fontSize:11,marginTop:2}}>{d.studio||d.phone||"—"}</div></div>
-            <div style={{textAlign:"right",flexShrink:0}}><div style={{fontSize:17,fontWeight:700,color:"#7c5cbf"}}>{ps.length}</div><div style={{fontSize:10,color:T.dim}}>{"проектов"}</div>{paid>0&&<div style={{fontSize:10,color:"#7c5cbf",marginTop:1}}>{ff(paid)+" ₽"}</div>}</div>
-          </div>
-        </div>
-      );})}
-      <button onClick={()=>{setNewDes({name:"",studio:"",phone:"",email:"",bonusType:"pct",bonusRate:5,note:""});setShowAddDes(true);}}
-        style={{display:"block",width:"100%",marginTop:4,padding:"14px",background:"rgba(124,92,191,0.12)",color:"#7c5cbf",border:"1px solid rgba(124,92,191,0.25)",borderRadius:14,fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-        {"+ Новый дизайнер"}
       </button>
     </div>)}
 
@@ -844,8 +732,7 @@ function HomeScreen({onMenu,contractTpl,setContractTpl,orders,setOrders,onOpen,o
       });
       const mMax=Math.max(1,...mData.map(x=>x.sum));
       const MONTH_L=MONTH_S;
-      /* Дизайнеры и клиенты по объёму */
-      const desRows=designers.map(d=>{const g=pOrders.filter(o=>o.designerId===d.id||o.designer===d.name);return{d,n:g.length,sum:g.reduce((s,o)=>s+o.total,0)};}).filter(x=>x.n>0).sort((a,b)=>b.sum-a.sum);
+      /* Клиенты по объёму */
       const clMap={};
       pOrders.forEach(o=>{const k=o.client||"Без клиента";if(!clMap[k])clMap[k]={n:0,sum:0};clMap[k].n++;clMap[k].sum+=o.total;});
       const clRows=Object.entries(clMap).map(([name,v])=>({name,...v})).sort((a,b)=>b.sum-a.sum).slice(0,6);
@@ -918,18 +805,6 @@ function HomeScreen({onMenu,contractTpl,setContractTpl,orders,setOrders,onOpen,o
         </div>
         </div>
         <div>
-        {/* Дизайнеры */}
-        <div style={{background:T.card,borderRadius:15,padding:13,marginBottom:10}}>
-          <div style={{fontSize:13,fontWeight:600,color:T.text,marginBottom:9}}>{"По дизайнерам"}</div>
-          {desRows.map(x=>(<div key={x.d.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:"0.5px solid "+T.border,cursor:"pointer"}} onClick={()=>setSelDesigner(x.d.id)}>
-            <div style={{display:"flex",alignItems:"center",gap:8,flex:1,minWidth:0}}>
-              <div style={{width:28,height:28,borderRadius:14,background:"rgba(124,92,191,0.12)",display:"flex",alignItems:"center",justifyContent:"center",color:"#7c5cbf",fontSize:10,fontWeight:700,flexShrink:0}}>{av(x.d.name)}</div>
-              <div style={{minWidth:0}}><div style={{fontSize:12,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{x.d.name}</div><div style={{fontSize:10,color:T.sub}}>{x.n+" пр."}</div></div>
-            </div>
-            <div style={{fontSize:12,fontWeight:700,color:"#7c5cbf",flexShrink:0}}>{ff(x.sum)+" ₽"}</div>
-          </div>))}
-          {!desRows.length&&<div style={{color:T.dim,fontSize:12,textAlign:"center",padding:"8px 0"}}>{"Нет проектов с дизайнерами"}</div>}
-        </div>
         {/* Клиенты */}
         <div style={{background:T.card,borderRadius:15,padding:13}}>
           <div style={{fontSize:13,fontWeight:600,color:T.text,marginBottom:9}}>{"Топ клиентов"}</div>
@@ -942,7 +817,7 @@ function HomeScreen({onMenu,contractTpl,setContractTpl,orders,setOrders,onOpen,o
         </div>
         </div>
       </div>);
-    })():(<div style={{padding:"13px 14px"}}><ProGate feature="Аналитика — план PRO"><div style={{background:T.card,borderRadius:15,padding:16,display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>{["Проектов","В работе","Сдано","Дизайнеров"].map(l=>(<div key={l} style={{background:T.faint,borderRadius:12,padding:13,textAlign:"center"}}><div style={{fontSize:28,fontWeight:800}}>{"—"}</div><div style={{fontSize:11,color:T.dim,marginTop:3}}>{l}</div></div>))}</div></ProGate></div>))}
+    })():(<div style={{padding:"13px 14px"}}><ProGate feature="Аналитика — план PRO"><div style={{background:T.card,borderRadius:15,padding:16,display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>{["Проектов","В работе","Сдано"].map(l=>(<div key={l} style={{background:T.faint,borderRadius:12,padding:13,textAlign:"center"}}><div style={{fontSize:28,fontWeight:800}}>{"—"}</div><div style={{fontSize:11,color:T.dim,marginTop:3}}>{l}</div></div>))}</div></ProGate></div>))}
 
     {/* FAB */}
     {tab==="home"&&(<div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",zIndex:10}}>
@@ -967,39 +842,6 @@ function HomeScreen({onMenu,contractTpl,setContractTpl,orders,setOrders,onOpen,o
           <div style={{display:"flex",gap:8,marginTop:14}}>
             <button onClick={save} style={{flex:1,background:d.name?.trim()?ACC:"#f2f3fa",border:"none",borderRadius:12,padding:13,color:d.name?.trim()?"#fff":"#ccc",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{isE?"Сохранить":"Добавить"}</button>
             <button onClick={()=>isE?setEditCl(null):setShowAddCl(false)} style={{flex:1,background:T.bg,border:"none",borderRadius:12,padding:13,color:T.sub,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>{"Отмена"}</button>
-          </div>
-        </div>
-      </div>);
-    })()}
-
-    {/* Модал: новый/редакт. дизайнер */}
-    {(showAddDes||editDes)&&(()=>{
-      const isE=!!editDes;const d=isE?editDes:newDes;const sD=isE?setEditDes:setNewDes;
-      const IS2={...IS};
-      const preview=d.bonusRate>0?"Напр. 300 000 ₽ → "+ff(Math.round(300000*d.bonusRate/100))+" ₽":"";
-      const save=()=>{if(!d.name?.trim())return;if(isE){setDesigners(p=>p.map(x=>x.id===d.id?{...x,...d}:x));setEditDes(null);}else{const id="d"+uid();setDesigners(p=>[...p,{id,...d}]);setShowAddDes(false);}};
-      return(<div style={{position:"fixed",inset:0,zIndex:55,background:"rgba(0,0,0,0.3)",overflow:"auto",display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
-        <div style={{background:T.card,borderRadius:"20px 20px 0 0",padding:"20px 16px 36px",width:"100%",maxWidth:480}}>
-          <div style={{width:36,height:4,background:"#eee",borderRadius:2,margin:"0 auto 18px"}}/>
-          <div style={{fontSize:16,fontWeight:700,color:T.text,marginBottom:14}}>{isE?"Редактировать дизайнера":"Новый дизайнер"}</div>
-          {[{l:"Имя *",k:"name",ph:"Фамилия Имя"},{l:"Студия",k:"studio",ph:"Студия интерьера..."},{l:"Телефон",k:"phone",ph:"+7 999...",type:"tel"}].map(f=>(<div key={f.k} style={{marginBottom:10}}><div style={{fontSize:11,color:T.sub,marginBottom:4}}>{f.l}</div><input style={IS2} value={d[f.k]||""} type={f.type||"text"} placeholder={f.ph} onChange={e=>sD({...d,[f.k]:e.target.value})}/></div>))}
-          <div style={{background:"rgba(124,92,191,0.06)",border:"0.5px solid rgba(124,92,191,0.15)",borderRadius:13,padding:"13px",marginBottom:10}}>
-            <div style={{fontSize:12,fontWeight:700,color:"#7c5cbf",marginBottom:10}}>{"Условия бонуса"}</div>
-            <div style={{display:"flex",gap:6,marginBottom:11}}>
-              {[{id:"pct",l:"% от объекта"},{id:"fixed",l:"Фиксированно ₽"}].map(bt=>(<button key={bt.id} onClick={()=>sD({...d,bonusType:bt.id})} style={{flex:1,padding:"8px",borderRadius:9,border:"0.5px solid "+(d.bonusType===bt.id?"rgba(124,92,191,0.4)":"#e8e8f0"),background:d.bonusType===bt.id?"rgba(124,92,191,0.1)":"#f8f9ff",color:d.bonusType===bt.id?"#7c5cbf":"#aaa",fontSize:12,fontWeight:d.bonusType===bt.id?700:400,cursor:"pointer",fontFamily:"inherit"}}>{bt.l}</button>))}
-            </div>
-            {d.bonusType==="pct"&&(<div>
-              <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:9}}>{[3,5,7,10,12,15].map(p=>(<button key={p} onClick={()=>sD({...d,bonusRate:p})} style={{padding:"5px 11px",borderRadius:18,border:"0.5px solid "+(d.bonusRate===p?"rgba(124,92,191,0.4)":"#e8e8f0"),background:d.bonusRate===p?"rgba(124,92,191,0.1)":"#f8f9ff",color:d.bonusRate===p?"#7c5cbf":"#aaa",fontSize:12,fontWeight:d.bonusRate===p?700:400,cursor:"pointer",fontFamily:"inherit"}}>{p+"%"}</button>))}</div>
-              <div style={{display:"flex",alignItems:"center",gap:8}}><input type="number" min="0" max="50" step="0.5" value={d.bonusRate} onChange={e=>sD({...d,bonusRate:parseFloat(e.target.value)||0})} style={{...IS2,width:80,fontSize:20,fontWeight:700,color:"#7c5cbf",textAlign:"center"}}/><span style={{fontSize:20,color:"#7c5cbf",fontWeight:700}}>{"  %"}</span>{preview&&<div style={{flex:1,fontSize:10,color:T.sub,lineHeight:1.4}}>{preview}</div>}</div>
-            </div>)}
-            {d.bonusType==="fixed"&&(<div>
-              <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:9}}>{[3000,5000,7000,10000,15000].map(v=>(<button key={v} onClick={()=>sD({...d,bonusRate:v})} style={{padding:"5px 10px",borderRadius:18,border:"0.5px solid "+(d.bonusRate===v?"rgba(124,92,191,0.4)":"#e8e8f0"),background:d.bonusRate===v?"rgba(124,92,191,0.1)":"#f8f9ff",color:d.bonusRate===v?"#7c5cbf":"#aaa",fontSize:11,fontWeight:d.bonusRate===v?700:400,cursor:"pointer",fontFamily:"inherit"}}>{ff(v)+" ₽"}</button>))}</div>
-              <div style={{display:"flex",alignItems:"center",gap:8}}><input type="number" min="0" step="500" value={d.bonusRate} onChange={e=>sD({...d,bonusRate:parseInt(e.target.value)||0})} style={{...IS2,width:130,fontSize:18,fontWeight:700,color:"#7c5cbf"}}/><span style={{fontSize:18,color:"#7c5cbf",fontWeight:700}}>{"₽"}</span></div>
-            </div>)}
-          </div>
-          <div style={{display:"flex",gap:8}}>
-            <button onClick={save} style={{flex:1,background:d.name?.trim()?"#7c5cbf":"#f2f3fa",border:"none",borderRadius:12,padding:13,color:d.name?.trim()?"#fff":"#ccc",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{isE?"Сохранить":"Добавить"}</button>
-            <button onClick={()=>isE?setEditDes(null):setShowAddDes(false)} style={{flex:1,background:T.bg,border:"none",borderRadius:12,padding:13,color:T.sub,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>{"Отмена"}</button>
           </div>
         </div>
       </div>);

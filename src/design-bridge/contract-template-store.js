@@ -21,7 +21,12 @@ export function loadDesignContractTemplate(storage) {
 }
 
 export function saveDesignContractTemplate(template, storage) {
-  try { (storage ?? globalThis.localStorage).setItem(DESIGN_CONTRACT_TEMPLATE_KEY, JSON.stringify(template)); } catch { /* private mode */ }
+  try {
+    (storage ?? globalThis.localStorage).setItem(DESIGN_CONTRACT_TEMPLATE_KEY, JSON.stringify(template));
+    return true;
+  } catch (cause) {
+    throw new Error('Не удалось сохранить настройки документов. Проверьте доступ к хранилищу и свободное место.', { cause });
+  }
 }
 
 /** A host may supply its own persistence without reading the mobile template key. */
@@ -32,7 +37,11 @@ export function contractTemplateAccess(store) {
       const saved = store.load();
       return normalizeContractTemplate(saved);
     },
-    save(template) { store.save(template); },
+    save(template) {
+      const result = store.save(template);
+      if (result === false) throw new Error('Не удалось сохранить настройки документов. Попробуйте ещё раз.');
+      return result;
+    },
   };
 }
 

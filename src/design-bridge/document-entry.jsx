@@ -3,64 +3,96 @@ import ReactDOM from 'react-dom';
 import { fitToStage } from './stage.js';
 import { contractTemplateAccess } from './contract-template-store.js';
 import { readDocumentImage } from './document-media.js';
+import { ESTIMATE_PRESETS, estimatePresetId, estimatePresetTemplate } from '../utils/estimate-template.js';
+import { estimateHeaderCompany, estimateHeaderPreview, persistEstimateHeaderPatch } from './estimate-header-model.js';
+import './estimate-header.css';
 
 export { openEditor as openEstimateEditor } from './estimate-editor.jsx';
 export { openSettings as openAccountSettings } from './account-settings.jsx';
 export { openMenuDestination } from './menu-destinations.jsx';
 
-const ink = '#1E2530', sub = '#6F7688', accent = '#1461EE';
-const button = { font: '700 13px Manrope,system-ui,sans-serif', cursor: 'pointer', border: 0 };
-const card = { background: '#fff', borderRadius: 14, border: '1px solid #F1F1F7', padding: 14, marginBottom: 10 };
+function Chevron({ back = false }) {
+  return <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d={back ? 'm12 5-5 5 5 5' : 'm8 5 5 5-5 5'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+}
 
-function EstimateHeader({ company = {}, templateStore, onCompanyChange, onEditCompany, onClose }) {
+function PresetThumbnail({ preset }) {
+  const { appearance } = preset;
+  return <span className="z-eh-thumbnail" data-estimate-thumbnail={preset.id} aria-hidden="true" style={{ '--eh-paper-brand': appearance.background, '--eh-paper-ink': appearance.accent, '--eh-paper-table': appearance.tableHeaderBackground, '--eh-paper-frame': preset.id === 'modern' ? '#D9E6FB' : appearance.sectionColor }}>
+    <span className="z-eh-paper-company"><i /><i /></span>
+    <span className="z-eh-paper-title" /><span className="z-eh-paper-copy" />
+    <span className="z-eh-paper-table"><i /><i /><i /><i /></span>
+    <span className="z-eh-paper-total" />
+  </span>;
+}
+
+function EstimateHeader({ company = {}, templateStore, onCompanyChange, onEditCompany, onClose, busyRef }) {
   const access = contractTemplateAccess(templateStore);
-  const [head, setHead] = useState(() => ({ ...access.load().head, ...company }));
+  const [head, setHead] = useState(() => estimateHeaderCompany(company, access));
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
-  const file = useRef(null);
-  const alive = useRef(true);
+  const file = useRef(null), alive = useRef(true);
   React.useEffect(() => () => { alive.current = false; }, []);
-  const save = patch => {
-    const current = access.load();
-    access.save({ ...current, head: { ...current.head, ...patch } });
-    onCompanyChange?.(patch);
-    setHead(value => ({ ...value, ...patch }));
+  const begin = key => { if (busyRef.current) return false; busyRef.current = true; setError(''); setBusy(key); return true; };
+  const finish = () => { busyRef.current = false; if (alive.current) setBusy(''); };
+  const commit = async patch => {
+    await persistEstimateHeaderPatch({ access, onCompanyChange }, patch);
+    if (alive.current) setHead(value => ({ ...value, ...patch }));
+  };
+  const save = async (patch, key) => {
+    if (!begin(key)) return;
+    try { await commit(patch); }
+    catch (reason) { if (alive.current) setError(reason?.message || 'Не удалось сохранить настройки сметы. Попробуйте ещё раз.'); }
+    finally { finish(); }
   };
   const pick = async event => {
-    const image = event.target.files?.[0], key = event.target.dataset.field;
+    const image = event.target.files?.[0];
     event.target.value = '';
-    if (!image) return;
-    setError(''); setBusy(key);
-    try { const value = await readDocumentImage(image); if (alive.current) save({ [key]: value }); }
-    catch (reason) { if (alive.current) setError(reason.message || 'Не удалось загрузить изображение'); }
-    finally { if (alive.current) setBusy(''); }
+    if (!image || !begin('logo')) return;
+    try { const logo = await readDocumentImage(image); if (alive.current) await commit({ logo }); }
+    catch (reason) { if (alive.current) setError(reason?.message || 'Не удалось загрузить логотип. Попробуйте ещё раз.'); }
+    finally { finish(); }
   };
-  return <section role="dialog" aria-modal="true" aria-label="Шапка сметы" style={{ position: 'absolute', inset: 0, background: '#F3F3FA', color: ink, fontFamily: 'Manrope,system-ui,sans-serif', display: 'flex', flexDirection: 'column' }}>
-    <header style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#fff', padding: '8px 16px', borderBottom: '1px solid #ECECF4' }}>
-      <button type="button" aria-label="Закрыть шапку сметы" onClick={onClose} style={{ ...button, width: 36, height: 38, borderRadius: 11, background: '#F3F3FA', color: ink, fontSize: 23 }}>‹</button>
-      <strong style={{ flex: 1, fontSize: 15 }}>Шапка сметы</strong>
-      <button type="button" onClick={onClose} style={{ ...button, color: accent, background: 'transparent', padding: '10px 0' }}>Готово</button>
+  const preview = async () => {
+    if (!begin('preview')) return;
+    try {
+      if (typeof window.MagicEstimate?.previewEstimate !== 'function') throw new Error('Предпросмотр пока недоступен. Откройте смету из проекта.');
+      await window.MagicEstimate.previewEstimate(estimateHeaderPreview(head));
+    } catch (reason) { if (alive.current) setError(reason?.message || 'Не удалось открыть предпросмотр. Попробуйте ещё раз.'); }
+    finally { finish(); }
+  };
+  const selected = estimatePresetId(head.estimateTemplate);
+  return <section className="z-estimate-header-editor" role="dialog" aria-modal="true" aria-label="Шапка сметы" aria-busy={!!busy}>
+    <header className="z-eh-nav">
+      <button type="button" className="z-eh-back" aria-label="Закрыть шапку сметы" disabled={!!busy} onClick={onClose}><Chevron back /></button>
+      <strong>Шаблон сметы</strong>
+      <button type="button" className="z-eh-link" disabled={!!busy} onClick={onClose}>Готово</button>
     </header>
-    <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px 40px' }}>
-      <div style={card}>
-        <strong style={{ fontSize: 17, fontWeight: 700 }}>Логотип и подпись</strong>
-        <p style={{ fontSize: 12.5, fontWeight: 600, color: sub, margin: '0 0 8px', lineHeight: 1.5 }}>Подставляются в PDF сметы и договор</p>
-        <input ref={file} type="file" accept="image/*" onChange={pick} hidden />
-        <div>
-          {[['logo', 'Логотип'], ['sign', 'Подпись']].map(([key, title]) => <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6, minWidth: 0 }}>
-            <div style={{ width: 72, height: 72, border: '1px solid #E4E4EE', borderRadius: 12, background: '#F3F3FA', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden', boxSizing: 'border-box' }}>
-              {head[key] ? <img src={head[key]} alt={title} style={{ width: 72, height: 72, objectFit: 'contain' }} /> : <span style={{ fontSize: 11, fontWeight: 700, color: '#A5A9B8', padding: '0 4px' }}>{key === 'logo' ? 'Лого' : 'Подпись'}</span>}
-            </div>
-            <button type="button" aria-label={'Загрузить ' + title.toLowerCase()} disabled={!!busy} onClick={() => { file.current.dataset.field = key; file.current.click(); }} style={{ ...button, flex: 1, minWidth: 0, minHeight: 44, padding: '0 10px', borderRadius: 12, background: accent, color: '#fff', fontSize: 13, fontWeight: 800, opacity: busy ? .7 : 1 }}>
-              {busy === key ? 'Загрузка…' : 'Загрузить ' + title.toLowerCase()}
-            </button>
-          </div>)}
+    <div className="z-eh-body">
+      <section className="z-eh-card">
+        <div className="z-eh-card-heading"><h2>Оформление</h2><button type="button" className="z-eh-link" disabled={!!busy} onClick={preview}>{busy === 'preview' ? 'Открываем…' : 'Вид'}</button></div>
+        <p>Один стиль для всех смет компании.</p>
+        <div className="z-eh-presets" role="group" aria-label="Оформление сметы">
+          {ESTIMATE_PRESETS.map(preset => <button key={preset.id} type="button" className="z-eh-preset" aria-label={preset.label} aria-pressed={selected === preset.id} data-estimate-preset={preset.id} disabled={!!busy} onClick={() => save({ estimateTemplate: estimatePresetTemplate(preset.id, head.estimateTemplate) }, preset.id)}>
+            <PresetThumbnail preset={preset} /><span>{preset.label}</span>
+            {selected === preset.id && <svg className="z-eh-preset-check" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="8" fill="currentColor" /><path d="m4.5 8 2.2 2.2 4.8-4.4" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+          </button>)}
         </div>
-        {error && <p role="alert" style={{ fontSize: 12, color: '#FF3B30', marginBottom: 0 }}>{error}</p>}
-      </div>
-      <button type="button" onClick={onEditCompany} style={{ ...button, ...card, width: '100%', display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left', color: ink }}>
-        <span style={{ flex: 1, minWidth: 0 }}><strong style={{ display: 'block', fontSize: 14 }}>Реквизиты компании</strong><span style={{ display: 'block', fontSize: 12, color: sub, fontWeight: 600, marginTop: 4, lineHeight: 1.5 }}>Форма, ИНН, адрес и банк — в настройках аккаунта</span></span><span style={{ color: '#A5A9B8', fontSize: 21 }}>›</span>
+        <p className="z-eh-style-caption" aria-live="polite">{selected ? ESTIMATE_PRESETS.find(preset => preset.id === selected).description : 'Сохранено ваше оформление. Выберите стиль, чтобы заменить его.'}</p>
+      </section>
+      <section className="z-eh-card">
+        <h2>Логотип компании</h2>
+        <p>Используется в шапке сметы и договора.</p>
+        <input ref={file} type="file" aria-label="Файл логотипа" accept="image/*" onChange={pick} hidden />
+        <div className="z-eh-logo-row">
+          <div className="z-eh-logo">{head.logo ? <img src={head.logo} alt="Логотип компании" /> : <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true"><rect x="4" y="4" width="20" height="20" rx="5" stroke="currentColor" strokeWidth="1.6"/><circle cx="10" cy="10" r="2" stroke="currentColor" strokeWidth="1.6"/><path d="m5 21 6-6 4 4 4-5 4 5" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/></svg>}</div>
+          <div className="z-eh-logo-actions"><button type="button" className="z-eh-upload" disabled={!!busy} onClick={() => file.current?.click()}>{busy === 'logo' ? 'Загрузка…' : head.logo ? 'Заменить логотип' : 'Загрузить логотип'}</button>{head.logo && <button type="button" className="z-eh-link z-eh-remove" disabled={!!busy} onClick={() => save({ logo: '' }, 'remove')}>{busy === 'remove' ? 'Удаляем…' : 'Удалить'}</button>}</div>
+        </div>
+      </section>
+      <button type="button" className="z-eh-card z-eh-company" disabled={!!busy || !onEditCompany} onClick={onEditCompany}>
+        <span><strong>Данные компании</strong><span>Название, контакты, адрес и реквизиты</span></span><Chevron />
       </button>
+      {error && <p role="alert" className="z-eh-error">{error}</p>}
+      <p className="z-eh-autosave" role="status">{busy && busy !== 'preview' ? 'Сохраняем изменения…' : 'Изменения сохраняются автоматически'}</p>
     </div>
   </section>;
 }
@@ -70,7 +102,7 @@ export function openEstimateHeader(opts = {}) {
   const host = document.createElement('div');
   host.style.zIndex = '9000';
   document.body.append(host);
-  const detach = fitToStage(host), root = ReactDOM.createRoot(host);
+  const detach = fitToStage(host), root = ReactDOM.createRoot(host), busyRef = { current: false };
   let closed = false;
   const close = () => {
     if (closed) return;
@@ -78,9 +110,13 @@ export function openEstimateHeader(opts = {}) {
     document.removeEventListener('keydown', onKey);
     previousFocus?.focus?.();
   };
-  const requestClose = () => { close(); opts.onClose?.(); };
-  const onKey = event => { if (event.key === 'Escape') { event.preventDefault(); requestClose(); } };
+  const requestClose = () => { if (!busyRef.current) { close(); opts.onClose?.(); } };
+  const onKey = event => {
+    if (event.defaultPrevented || !host.contains(document.activeElement)) return;
+    if (event.key === 'Escape') { event.preventDefault(); requestClose(); }
+  };
   document.addEventListener('keydown', onKey);
-  root.render(<EstimateHeader {...opts} onClose={requestClose} onEditCompany={() => { close(); opts.onEditCompany?.(); }} />);
+  root.render(<EstimateHeader {...opts} busyRef={busyRef} onClose={requestClose} onEditCompany={opts.onEditCompany ? () => { if (!busyRef.current) { close(); opts.onEditCompany(); } } : undefined} />);
+  requestAnimationFrame(() => { if (!closed) host.querySelector('button')?.focus(); });
   return { close };
 }

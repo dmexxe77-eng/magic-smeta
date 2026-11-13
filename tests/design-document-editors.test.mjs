@@ -5,13 +5,13 @@ import { estimateHtml } from '../src/utils/estimate-html.js';
 import { getCompanyDetails } from '../src/design-bridge/company-profile.js';
 import { companyContractFields } from '../src/data/contract.js';
 
-test('visible legal form names retain native requisites and readable contract placeholders', () => {
+test('visible legal form names retain readable placeholders and export only applicable requisites', () => {
   for (const [input, value] of [['ООО', 'ooo'], ['ИП', 'ip'], ['Самозанятый', 'self_employed']]) {
     const company = getCompanyDetails({ legalForm: input, signerName: 'Иванов И.И.', kpp: '123456789' });
     assert.equal(company.legalForm, value);
     assert.equal(companyContractFields(company).форма, input);
     assert.equal(companyContractFields(company).подпись_фио, 'Иванов И.И.');
-    assert.equal(company.kpp, '123456789');
+    assert.equal(company.kpp, value === 'ooo' ? '123456789' : '');
   }
 });
 
@@ -25,7 +25,7 @@ test('mobile estimate editor persists document settings with its project and exp
   assert.ok(editor.est.mats.length + editor.est.works.length > 0);
   assert.equal(editor.rooms.length, project.rooms.filter(r => r.on).length);
   editor.onChange({ adjustment: { scope: 'works', rates: { mats: 5, works: -10, equipment: 0 } }, exportOptions: {
-    type: 'rooms', cols: { photo: true, price: false }, showAdjustmentByScope: { mats: true, works: false, equipment: true },
+    type: 'rooms', columnsDefaultsVersion: 1, cols: { photo: true, price: false }, showAdjustmentByScope: { mats: true, works: false, equipment: true },
   } });
   const saved = app.cur();
   assert.equal(saved.estimateExportOptions.type, 'rooms');
@@ -55,14 +55,40 @@ test('mobile document media updates the saved profile used by both documents', a
   assert.equal(restored.component.state.profile.sign, 'data:image/png;base64,AQ==');
 });
 
-test('photo column and signature affect the rendered document without changing totals', () => {
+test('photo visibility affects layout while saved signatures never print or change totals', () => {
   const est = { mats: [{ n: 'Полотно', q: 2, p: 100, u: 'м²', img: 'data:image/png;base64,AA==' }] };
   const withPhotos = estimateHtml({ est, cols: { photo: true }, company: { sign: 'data:image/png;base64,AQ==' } });
   assert.match(withPhotos, /<th>Фото<\/th>/);
   assert.match(withPhotos, /class="estimate-item-photo" src=/);
-  assert.match(withPhotos, /alt="Подпись исполнителя"/);
+  assert.doesNotMatch(withPhotos, /Подпись исполнителя|estimate-signature/);
   const withoutPhotos = estimateHtml({ est, cols: { photo: false } });
   assert.doesNotMatch(withoutPhotos, /class="estimate-item-photo" src=/);
   for (const html of [withPhotos, withoutPhotos]) assert.match(html, /data-estimate-grand-total>200 ₽/);
   assert.doesNotMatch(estimateHtml({ est, company: { sign: 'javascript:alert(1)' } }), /alt="Подпись исполнителя"/);
+});
+
+test('photo defaults and explicit project visibility override obsolete appearance settings', () => {
+  const est = { mats: [{ n: 'Полотно', q: 2, p: 100, u: 'м²', img: 'data:image/png;base64,AA==' }] };
+  const input = { est, company: { estimateTemplate: { showItemPhotos: false } } };
+  for (const cols of [undefined, { photo: true }]) {
+    const html = estimateHtml({ ...input, cols });
+    assert.match(html, /<th>Фото<\/th>/);
+    assert.match(html, /class="estimate-item-photo"/);
+    assert.match(html, /data-estimate-grand-total>200 ₽/);
+  }
+  const hidden = estimateHtml({ ...input, cols: { photo: false } });
+  assert.doesNotMatch(hidden, /<th>Фото<\/th>|class="estimate-item-photo"/);
+  assert.match(hidden, /data-estimate-grand-total>200 ₽/);
+});
+
+test('all estimate export modes omit legacy signatures without deleting their stored values', () => {
+  const company = { sign: 'data:image/png;base64,AQ==', signature: 'data:image/png;base64,Ag==' };
+  const before = JSON.stringify(company);
+  const est = { mats: [{ n: 'Профиль', q: 2, p: 100, u: 'шт' }] };
+  for (const type of ['total', 'rooms', 'draw', 'compact']) {
+    const html = estimateHtml({ est, company, type, rooms: [{ id: 1, name: 'Комната', est }] });
+    assert.doesNotMatch(html, /estimate-signature|Подпись исполнителя|data:image\/png;base64,AQ==|data:image\/png;base64,Ag==/);
+    assert.match(html, /data-estimate-grand-total>200 ₽/);
+  }
+  assert.equal(JSON.stringify(company), before);
 });

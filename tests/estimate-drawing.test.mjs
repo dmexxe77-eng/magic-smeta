@@ -56,13 +56,14 @@ test('curve samples stay in the geometry without cluttering every point with lab
   assert.doesNotMatch(html, /NaN|Infinity/);
 });
 
-test('invalid and degenerate contours render a safe empty card', () => {
+test('invalid and degenerate contours keep room headings without service messages', () => {
   for (const v of [undefined, [], [[0, 0], [1, 1]], [[0, 0], [1, 1], [2, 2]], [[0, 0], [NaN, 1], [0, 2]], [[0, 0], [Infinity, 1], [0, 2]]]) {
     const html = roomDrawingHtml({ name: 'Без чертежа', v });
-    assert.match(html, /Чертёж не добавлен/);
+    assert.match(html, /estimate-drawing-name">Без чертежа</);
+    assert.doesNotMatch(html, /Чертёж не добавлен|estimate-drawing-empty/);
     assert.doesNotMatch(html, /<svg|NaN|Infinity|S =/);
   }
-  assert.match(roomDrawingHtml(null), /Чертёж не добавлен/);
+  assert.doesNotMatch(roomDrawingHtml(null), /Чертёж не добавлен|<svg/);
 });
 
 test('duplicate adjacent and closing points do not create zero length dimensions', () => {

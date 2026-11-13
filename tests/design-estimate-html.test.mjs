@@ -9,6 +9,38 @@ const est = {
 };
 const clean = html => html.replace(/\u00a0/g, ' ');
 
+test('empty printed estimates leave writable rows and never export system instructions', () => {
+  const html = estimateHtml({ type: 'draw', rooms: [{ id: 'empty', name: 'Комната без плана' }] });
+  assert.doesNotMatch(html, /Данные компании не заполнены|Нет позиций|Помещения не добавлены|Чертёж не добавлен/);
+  assert.equal((html.match(/data-estimate-blank-row/g) || []).length, 2);
+  assert.match(html, /data-estimate-grand-total>0 ₽/);
+  assert.doesNotMatch(html, /<section class="estimate-drawings"/);
+  const roomHtml = estimateHtml({ type: 'rooms', rooms: [{ id: 'empty', name: 'Комната без плана' }] });
+  assert.match(roomHtml, /estimate-drawing-name">Комната без плана</);
+  assert.doesNotMatch(roomHtml, /Чертёж не добавлен|estimate-drawing-empty/);
+});
+
+test('the shared header places contacts under the brand and legal requisites on the right', () => {
+  const html = estimateHtml({ company: { company: 'Студия', legal: 'ИП Тестовый', inn: '123456789012', companyAddress: 'Офис, 5', address: 'Регистрация, 7', phone: '+7 999 111-22-33', email: 'office@example.test' }, est });
+  const header = html.match(/<section class="estimate-company-card"[\s\S]*?<\/section>/)[0];
+  assert.match(header, /estimate-company-copy[\s\S]*?estimate-company-name[\s\S]*?estimate-company-metadata[\s\S]*?Офис, 5[\s\S]*?office@example.test/);
+  assert.ok(header.indexOf('estimate-company-metadata') < header.indexOf('estimate-company-details'));
+  assert.match(header, /estimate-company-details[\s\S]*?ИП Тестовый[\s\S]*?ИНН 123456789012/);
+  assert.doesNotMatch(header, /Регистрация, 7/);
+});
+
+test('the default estimate shares the white contract header and Manrope type', () => {
+  const html=estimateHtml({project:{name:'Квартира'},company:{company:'Студия',companyAddress:'Офис, 5',address:'Юридический адрес, 7'},est});
+  assert.match(html,/data-estimate-layout="stacked"/);
+  assert.match(html,/--estimate-font-family:&#39;Manrope/);
+  assert.match(html,/--estimate-frame-color:#DDE1E6/);
+  assert.match(html,/--estimate-table-bg:#E7EFFD/);
+  assert.ok(html.indexOf('data-estimate-company')<html.indexOf('data-estimate-project'));
+  assert.match(html,/data-company-address>Офис, 5/);
+  assert.doesNotMatch(html,/Юридический адрес, 7/);
+  assert.match(html,/data-estimate-grand-total>425 ₽/);
+});
+
 test('estimate export has materials, works and equipment sections with one grand total', () => {
   const html = clean(estimateHtml({ project: { name: 'Дом' }, est, adjustment: { percent: 10, scope: 'works' } }));
   for (const section of ['mats', 'works', 'equipment']) assert.ok(html.includes(`data-estimate-section="${section}"`));
@@ -47,7 +79,7 @@ test('selected export columns apply to every section and all-off remains readabl
   const html = estimateHtml({ est, cols: { price: false, qty: false, num: false, unit: false } });
   assert.doesNotMatch(html, /<th[^>]*>Цена|<th[^>]*>Кол-во|<th[^>]*>№|<th[^>]*>Ед\./);
   assert.equal((html.match(/<th>Наименование<\/th>/g) || []).length, 3);
-  const minimal = estimateHtml({ est, cols: { price: false, qty: false, num: false, unit: false, name: false, total: false } });
+  const minimal = estimateHtml({ est, cols: { price: false, photo: false, qty: false, num: false, unit: false, name: false, total: false } });
   assert.match(minimal, /<th>Наименование<\/th>/);
 });
 
@@ -145,7 +177,7 @@ test('each room calculation includes its own plan before the table, with no plan
     assert.match(common, /Общие позиции/);
     assert.doesNotMatch(common, /<svg/);
     assert.equal((html.match(/data-estimate-grand-total/g) || []).length, 1);
-    assert.match(html, /<footer class="estimate-summary no-split" data-pdf-content-end>/);
+    assert.match(html, /<footer class="estimate-summary no-split" data-pdf-content-end data-pdf-keep-with-previous>/);
     assert.doesNotMatch(html, /class="estimate-drawings"/);
   }
 });
@@ -178,7 +210,7 @@ test('room export hides equipment only in rooms where there are no equipment pos
   assert.doesNotMatch(noEquipment, /data-estimate-section="equipment"|<span>Оборудование<\/span>/);
 });
 
-test('default template places actual project details on the left and company details on the right', () => {
+test('default template places company branding above the actual project details', () => {
   const company = {
     company: 'Студия Север', description: 'Потолки и освещение', legal: 'ИП Петров Пётр Петрович',
     inn: '123456789012', ogrn: '123456789012345', address: 'Хабаровск, ул. Мира, 7',
@@ -189,12 +221,14 @@ test('default template places actual project details on the left and company det
   const projectCard = html.match(/data-estimate-project>(.*?)<\/section>/s)?.[1];
   const companyCard = html.match(/data-estimate-company>(.*?)<\/section>/s)?.[1];
   assert.ok(projectCard && companyCard);
-  assert.ok(html.indexOf('data-estimate-project') < html.indexOf('data-estimate-company'));
-  for (const value of ['Данные проекта', 'Квартира', 'Иван', 'Объект на Ленина, 3', '9001112222']) assert.ok(projectCard.includes(value));
-  assert.match(projectCard, /<dt>Тип сметы<\/dt><dd>Общая<\/dd>/);
-  assert.match(projectCard, /<dt>Помещений<\/dt><dd>1<\/dd>/);
-  assert.match(projectCard, /<dt>Площадь<\/dt><dd>11 м²<\/dd>/);
-  for (const value of Object.values(company)) assert.ok(companyCard.includes(value));
+  assert.ok(html.indexOf('data-estimate-company') < html.indexOf('data-estimate-project'));
+  for (const value of ['Квартира', 'Иван', 'Объект на Ленина, 3', '9001112222']) assert.ok(projectCard.includes(value));
+  assert.match(projectCard, /data-estimate-type="total">Общая смета/);
+  assert.match(projectCard, /data-estimate-room-count="1">1 помещение/);
+  assert.match(projectCard, /data-estimate-area="11">11 м²/);
+  for (const [key, value] of Object.entries(company)) if (!['description', 'ogrn'].includes(key)) assert.ok(companyCard.includes(value));
+  assert.doesNotMatch(companyCard, /ОГРН|123456789012345/);
+  assert.doesNotMatch(companyCard, /Потолки и освещение/);
   assert.doesNotMatch(companyCard, /Объект на Ленина/);
   assert.doesNotMatch(projectCard, /hello@example/);
 });
@@ -202,12 +236,13 @@ test('default template places actual project details on the left and company det
 test('header safely handles empty and long company details without inventing contacts', () => {
   const empty = estimateHtml({ company: null });
   const companyCard = empty.match(/data-estimate-company>(.*?)<\/section>/s)?.[1];
-  assert.match(companyCard, /Данные компании не заполнены/);
+  assert.match(companyCard, /____________________/);
+  assert.doesNotMatch(companyCard, /Данные компании не заполнены/);
   assert.doesNotMatch(companyCard, /Magic|Хабаровск|Тел\.:|@|ИНН/);
   const longName = 'Очень длинное название компании '.repeat(12);
   const html = estimateHtml({ company: { company: longName, description: '<script>alert(1)</script>', address: 'Переулок "Северный" & улица', phone: '<img src=x onerror=alert(1)>' } });
   assert.ok(html.includes(longName));
-  assert.ok(html.includes('&lt;script&gt;alert(1)&lt;/script&gt;'));
+  assert.doesNotMatch(html, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
   assert.ok(html.includes('Переулок &quot;Северный&quot; &amp; улица'));
   assert.doesNotMatch(html, /<script|<img/);
   assert.match(html, /overflow-wrap:anywhere/);
@@ -215,11 +250,11 @@ test('header safely handles empty and long company details without inventing con
 
 test('header area uses room measurements or explicit project fallback and reflects export type', () => {
   const html = estimateHtml({ project: { area: 99 }, rooms: [{ area: 6.5 }, { area: 2.25 }], type: 'rooms' });
-  assert.match(html, /<dt>Площадь<\/dt><dd>8,75 м²<\/dd>/);
-  assert.match(html, /<dt>Тип сметы<\/dt><dd>По помещениям<\/dd>/);
+  assert.match(html, /data-estimate-area="8.75">8,75 м²/);
+  assert.match(html, /data-estimate-type="rooms">По помещениям/);
   const fallback = estimateHtml({ project: { area: 99 }, type: 'draw' });
-  assert.match(fallback, /<dt>Площадь<\/dt><dd>99 м²<\/dd>/);
-  assert.match(fallback, /<dt>Тип сметы<\/dt><dd>Общая \+ чертежи<\/dd>/);
+  assert.match(fallback, /data-estimate-area="99">99 м²/);
+  assert.match(fallback, /data-estimate-type="draw">Смета с чертежами/);
 });
 
 test('row photos and logos accept only encoded local catalogue images or raster data', () => {
@@ -268,10 +303,10 @@ test('desktop adjustments follow their own category with independent folding and
 test('template colors, logo and company text are safe and optional without changing money', () => {
   const company = {company:'<script>name</script>',description:'Описание',inn:'123',logo:'data:image/png;base64,YQ=='};
   const html = estimateHtml({est,company,template:{background:'#ffffff',accent:'#1461ee',showLogo:false,showDetails:false}});
-  assert.match(html,/background:#ffffff;color:#202532/);
-  assert.match(html,/style="color:#1461ee"/);
+  assert.match(html,/background:#EFF5FF;color:#24364B/);
+  assert.match(html,/style="color:#24364B"/);
   assert.match(html,/&lt;script&gt;name&lt;\/script&gt;/);
   assert.doesNotMatch(html,/<img|ИНН 123/);
-  assert.match(estimateHtml({est,template:{background:'red;position:fixed',accent:'"><script>x</script>'}}),/background:#121a2a;color:#ffffff/);
+  assert.match(estimateHtml({est,template:{background:'red;position:fixed',accent:'"><script>x</script>'}}),/background:#EFF5FF;color:#24364B/);
   assert.match(clean(html),/data-estimate-grand-total>425 ₽/);
 });

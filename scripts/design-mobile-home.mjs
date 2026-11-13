@@ -30,7 +30,7 @@ const HOME_METHOD = String.raw`
     const preset=()=>{const first=(PRESETS.canvas||[])[0];this.go('btnEd',{be:{bid:'canvas',pid:first?.id||'msd',brand:'all',from:'dash'}});};
     const mhMenuGroups=[
       {items:[row('Главная',()=>this.go('dash')),row('Проекты',projects),row('Задачи',()=>this.go('calendar')),row('Аналитика',()=>this.go('analytics'))]},
-      {items:[row('Редактор пресетов',preset),row('Номенклатуры',()=>this.go('nomEd',{ne:{q:'',brand:null,kind:'all',from:'dash'}})),row('Шаблон договора',()=>this.openContractTpl()),row('Шапка сметы',()=>this.openEstimateHeader()),row('Дизайнеры',()=>this.openNativeMenuDestination('designers'))]},
+      {items:[row('Редактор пресетов',preset),row('Номенклатуры',()=>this.go('nomEd',{ne:{q:'',brand:null,kind:'all',from:'dash'}})),row('Шаблон документов',()=>this.openContractTpl())]},
       {items:[row('Настройки',()=>this.go('profile')),row('Написать в поддержку',()=>this.openNativeMenuDestination('support'))]}
     ];
     if(profile.role==='ADMIN')mhMenuGroups[mhMenuGroups.length-1].items.push(row('Обращения',()=>this.openNativeMenuDestination('appeals')));

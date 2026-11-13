@@ -57,14 +57,36 @@ replace('profile:DESIGN_SAVED&&DESIGN_SAVED.profile||{}', 'catalogFolderOrder:DE
 replace('Object.assign({},DESIGN_SAVED||{},{version:1,blocks:BLOCKS', 'Object.assign({},{migration:desktopMigrationMetadata(MAIN.migration),contractTemplate:MAIN.contractTemplate},DESIGN_SAVED||{},{version:1,blocks:BLOCKS');
 replace('estEd:this.state.estEd,profile:this.state.profile});}', 'estEd:this.state.estEd,profile:this.state.profile,contractTemplate:this.state.contractTemplate,catalogFolderOrder:this.state.catalogFolderOrder});}');
 const contractTemplateStore = '{load:()=>this.state.contractTemplate,save:template=>{this.setState({contractTemplate:template});this.saveDesign();}}';
+const documentCompanyMethods = String.raw`
+  documentCompanyStorage(){return {getItem:key=>key==='zamer.contractTpl'?JSON.stringify(this.state.contractTemplate??null):null};}
+  documentCompanyDetails(){return window.MagicEstimate.getCompanyDetails(this.state.profile,this.documentCompanyStorage());}
+  async saveDocumentCompany(patch){
+    const previous=this.state.profile,profile=window.MagicEstimate.mergeAccountProfilePatch(previous,patch);
+    await new Promise(resolve=>this.setState({profile},resolve));
+    try{if(await this.saveDesign()===false)throw new Error('Не удалось сохранить настройки компании');if(this._persistence&&!await this._persistence.flush(this._persistenceKey))throw new Error('Не удалось сохранить настройки компании');return profile;}
+    catch(error){await new Promise(resolve=>this.setState({profile:previous},resolve));this.saveDesign();throw error;}
+  }
+  openDocumentCompany(onDone){
+    if(!window.MagicDocuments?.openAccountSettings){this.toast('Настройки компании не загрузились');return;}
+    const self=this;
+    const h=window.MagicDocuments.openAccountSettings({profile:window.MagicEstimate.getCompanyProfile(this.state.profile,this.documentCompanyStorage()),
+      onChange:patch=>self.saveDocumentCompany(patch),onClose:()=>{h.close();if(onDone)onDone();}});
+  }
+  openEstimateHeader(){
+    if(!window.MagicDocuments?.openEstimateHeader){this.toast('Шаблон сметы не загрузился');return;}
+    const self=this;
+    const h=window.MagicDocuments.openEstimateHeader({company:this.documentCompanyDetails(),templateStore:{load:()=>this.state.contractTemplate,save:template=>{this.setState({contractTemplate:template});this.saveDesign();}},
+      onCompanyChange:patch=>self.saveDocumentCompany(patch),onEditCompany:()=>{h.close();self.openDocumentCompany(()=>self.openEstimateHeader());},onClose:()=>h.close()});
+  }
+`;
 const phoneDocumentMethods = code.match(/^  openEstimateEditor\(\)\{[\s\S]*?(?=^  openContract\(\))/m);
-if (phoneDocumentMethods) replace(phoneDocumentMethods[0], "  openEstimateEditor(){this.setState({sheet:'export'});}\n  openEstimateHeader(){this.go('profile');}\n  openAccountSettings(){this.go('profile');}\n");
+if (phoneDocumentMethods) replace(phoneDocumentMethods[0], "  openEstimateEditor(){this.setState({sheet:'export'});}\n  openAccountSettings(){this.go('profile');}\n" + documentCompanyMethods);
 // Desktop owns its template and company fields independently of phone settings.
 const mobileTemplateMethod = code.match(/^  openContractTpl\(\)\{[^\n]+\}$/m);
 if (!mobileTemplateMethod) throw new Error('Desktop contract template entry was not found');
-replace(mobileTemplateMethod[0], "  openContractTpl(){if(!window.MagicContract){this.toast('Шаблон не загрузился');return;}const h=window.MagicContract.openTemplate({onClose:()=>h.close()});}");
+replace(mobileTemplateMethod[0], "  openContractTpl(){if(!window.MagicContract){this.toast('Шаблон не загрузился');return;}const self=this;const h=window.MagicContract.openTemplate({onClose:()=>h.close(),company:this.documentCompanyDetails(),onEditCompany:()=>{h.close();self.openDocumentCompany(()=>self.openContractTpl());}});}");
 const phoneContractCompany = 'est:window.MagicEstimate.withEstimateImages(e,NOM),company:window.MagicEstimate.getCompanyDetails(this.state.profile),rooms:';
-if (code.includes(phoneContractCompany)) replace(phoneContractCompany, 'est:window.MagicEstimate.withEstimateImages(e,NOM),rooms:');
+if (code.includes(phoneContractCompany)) replace(phoneContractCompany, 'est:window.MagicEstimate.withEstimateImages(e,NOM),company:this.documentCompanyDetails(),rooms:');
 replace('window.MagicContract.open({project:', `window.MagicContract.open({templateStore:${contractTemplateStore},project:`);
 replace('window.MagicContract.openTemplate({onClose:', `window.MagicContract.openTemplate({templateStore:${contractTemplateStore},onClose:`);
 replace('if(!DESIGN_SAVED)[', 'if(!DESIGN_SAVED&&!MAIN.migration)[');

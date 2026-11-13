@@ -89,7 +89,7 @@ test('device preview: browser mode follows the available stage and tiny or inval
 });
 
 test('device preview: app URLs retain project query and hash while stripping only namespaced host controls', () => {
-  const href = 'https://smeta-xi.vercel.app/design/index.html?preview=1&previewDevice=ipad-11&previewOrientation=landscape&previewZoom=100&v=review-42&project=room%20one&device=keep&x=1&x=2#drawing';
+  const href = 'https://smeta-xi.vercel.app/design/index.html?screen=app&preview=1&previewDevice=ipad-11&previewOrientation=landscape&previewZoom=100&v=review-42&project=room%20one&device=keep&x=1&x=2#drawing';
   const app = new URL(appLocation(href));
   assert.equal(app.origin, 'https://smeta-xi.vercel.app');
   assert.equal(app.pathname, '/design/app.html');
@@ -101,10 +101,20 @@ test('device preview: app URLs retain project query and hash while stripping onl
   assert.deepEqual(app.searchParams.getAll('x'), ['1', '2']);
 });
 
-test('device preview: native redirects and iframe URLs always resolve to the native app without stale recursive overrides', () => {
+test('device preview: native login has a separate page and keeps the selected device controls', () => {
+  const url = new URL(appLocation('http://127.0.0.1:5173/design/index.html?screen=login&previewDevice=iphone-pro-max&previewZoom=fit#auth'));
+  assert.equal(url.pathname, '/design/login.html');
+  assert.equal(url.search, '?screen=login');
+  assert.equal(url.hash, '#auth');
+  for (const search of ['', '?screen=unknown', '?screen=register']) {
+    assert.equal(new URL(appLocation('http://127.0.0.1:5173/design/index.html' + search)).pathname, '/design/login.html');
+  }
+});
+
+test('device preview: default entry opens login and explicit app routes retain the native app', () => {
   for (const path of ['/design/?preview=0#project', '/design/index.html?preview=1#project', '/design/app.html?previewDevice=ipad-11#project']) {
     const app = new URL(appLocation('http://127.0.0.1:5177' + path));
-    assert.equal(app.pathname, '/design/app.html');
+    assert.equal(app.pathname, path.startsWith('/design/app.html') ? '/design/app.html' : '/design/login.html');
     assert.equal(app.origin, 'http://127.0.0.1:5177');
     assert.equal(app.hash, '#project');
     assert.equal(app.search, '');
@@ -136,15 +146,16 @@ function previewRuntime() {
   const frame = elements.get('preview-frame'), stage = elements.get('preview-stage'), navigations = [], iframeAppState = { draft: '' };
   Object.defineProperty(frame, 'src', { set(value) { navigations.push(value); iframeAppState.draft = ''; }, get() { return navigations.at(-1); } });
   frame.contentDocument = { querySelector: () => ({}) };
+  frame.contentWindow = {};
   stage.clientWidth = 1000; stage.clientHeight = 600;
-  const initial = new URL('https://smeta-xi.vercel.app/design/?project=test&preview=1'), windowEvents = new Map(), observers = [];
+  const initial = new URL('https://smeta-xi.vercel.app/design/?screen=app&project=test&preview=1'), windowEvents = new Map(), observers = [];
   class PreviewResizeObserver {
     constructor(callback) { this.callback = callback; this.observeCalls = 0; this.watching = false; observers.push(this); }
     observe() { this.watching = true; this.observeCalls++; }
     disconnect() { this.watching = false; }
   }
   const window = {
-    location: { href: initial.href, search: initial.search, replace() { throw new Error('A fine-mouse desktop should keep its preview host'); } },
+    location: { href: initial.href, search: initial.search, origin: initial.origin, replace() { throw new Error('A fine-mouse desktop should keep its preview host'); } },
     matchMedia: query => ({ matches: query.includes('hover: hover') }),
     history: { state: {}, replaceState(state, title, url) { window.location.href = String(url); window.location.search = new URL(url).search; } },
     addEventListener(type, fn) { if (!windowEvents.has(type)) windowEvents.set(type, new Set()); windowEvents.get(type).add(fn); },
@@ -155,11 +166,47 @@ function previewRuntime() {
   const source = transformSync(fs.readFileSync('design-src/device-preview.js', 'utf8'), { loader: 'js', format: 'iife' }).code;
   vm.runInNewContext(source, { window, document, navigator: { maxTouchPoints: 0 }, URL, URLSearchParams, ResizeObserver: PreviewResizeObserver, setTimeout: () => 1, clearTimeout() {} });
   return {
-    frame, stage, navigations, iframeAppState, elements, observers,
+    frame, stage, navigations, iframeAppState, elements, observers, window,
     emitWindow: (type, event = {}) => [...(windowEvents.get(type) || [])].forEach(fn => fn(event)),
     listenerCount: type => windowEvents.get(type)?.size || 0,
   };
 }
+
+test('device preview: only its own same-origin frame can update auth route and retry destination', () => {
+  const { frame, window, elements, emitWindow } = previewRuntime();
+  const message = { type: 'zamer:prototype-screen', screen: 'register' };
+  const initial = window.location.href;
+  emitWindow('message', { source: {}, origin: window.location.origin, data: message });
+  emitWindow('message', { source: frame.contentWindow, origin: 'https://untrusted.invalid', data: message });
+  emitWindow('message', { source: frame.contentWindow, origin: window.location.origin, data: { ...message, screen: 'untrusted' } });
+  assert.equal(window.location.href, initial);
+  emitWindow('message', { source: frame.contentWindow, origin: window.location.origin, data: message });
+  assert.equal(new URL(window.location.href).searchParams.get('screen'), 'register');
+  elements.get('preview-retry').emit('click');
+  assert.equal(new URL(frame.src).pathname, '/design/login.html');
+  assert.equal(new URL(frame.src).searchParams.get('screen'), 'register');
+});
+
+test('device preview: completed frame navigation retains the app route when an unloading document loses its message', () => {
+  const { frame, window, elements } = previewRuntime();
+  const initial = window.location.href;
+  for (const href of ['https://untrusted.invalid/design/login.html?screen=register', 'https://smeta-xi.vercel.app/other/login.html?screen=register']) {
+    frame.contentWindow.location = { href };
+    frame.emit('load');
+    assert.equal(window.location.href, initial);
+  }
+  frame.contentWindow.location = { href: 'https://smeta-xi.vercel.app/design/login.html?screen=register' };
+  frame.emit('load');
+  assert.equal(new URL(window.location.href).searchParams.get('screen'), 'register');
+  frame.contentWindow.location.href = 'https://smeta-xi.vercel.app/design/app.html?screen=app';
+  frame.emit('load');
+  assert.equal(new URL(window.location.href).searchParams.get('screen'), 'app');
+  assert.equal(new URL(window.location.href).searchParams.get('project'), 'test');
+  elements.get('preview-retry').emit('click');
+  assert.equal(new URL(frame.src).pathname, '/design/app.html');
+  Object.defineProperty(frame.contentWindow, 'location', { get() { throw new Error('Cross-origin frame'); } });
+  assert.doesNotThrow(() => frame.emit('load'));
+});
 
 test('device preview runtime: changing device, orientation and scale resizes the same mounted iframe without navigation', () => {
   const { frame, stage, navigations, iframeAppState, elements, emitWindow, listenerCount } = previewRuntime();

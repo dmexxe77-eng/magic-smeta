@@ -1,11 +1,11 @@
 /** Account screen from the native client; document tools live in the side menu. */
 const METHODS = String.raw`
   openNativeMenuDestination(id){
-    const labels={designers:'Дизайнеры',support:'Поддержка',appeals:'Обращения',subscription:'Подписка PRO',training:'Обучение',logout:'Выход',cancelSubscription:'Отменить подписку?'};
+    const labels={support:'Поддержка',appeals:'Обращения',subscription:'Подписка PRO',training:'Обучение',logout:'Выход',cancelSubscription:'Отменить подписку?'};
     if(!labels[id])return;
     if(id==='appeals'&&this.state.profile?.role!=='ADMIN'){this.toast('Нет доступа');return;}
     if(!window.MagicDocuments?.openMenuDestination){this.toast(labels[id]+' доступны в приложении с аккаунтом');return;}
-    const h=window.MagicDocuments.openMenuDestination({id,profile:this.state.profile||{},plan:this.state.plan||'pro',onClose:()=>h.close()});
+    const h=window.MagicDocuments.openMenuDestination({id,profile:this.state.profile||{},plan:this.state.plan||'pro',onLogout:window.MagicPrototypeAuth?.openLogin,onClose:()=>h.close()});
   }
   nativeAccountVals(){
     const s=this.state;if(s.screen!=='account')return{};

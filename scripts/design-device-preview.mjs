@@ -21,13 +21,13 @@ export function devicePreviewPage({ css = '', scriptUrl = './device-preview.js',
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#eff1f6">
-  <title>ЗАМЕРX — предпросмотр</title>
+  <title>ЗАМЕРX — упрощённый вариант</title>
   <style>${styleText(fonts)}\n${styleText(css)}</style>
 </head>
 <body>
   <main class="preview-host" aria-label="Предпросмотр на устройствах">
     <header class="preview-toolbar">
-      <div class="preview-brand">ЗАМЕР<span>X</span></div>
+      <div class="preview-brand">ЗАМЕР<span>X</span><small style="display:block;margin-top:3px;font-size:10px;line-height:1.3;font-weight:600;letter-spacing:0;color:#6f7688">Упрощённый вариант</small></div>
       <label class="preview-device" for="preview-device">
         <span class="preview-label">Устройство</span>
         <select class="preview-select" id="preview-device" aria-label="Устройство">${options}</select>

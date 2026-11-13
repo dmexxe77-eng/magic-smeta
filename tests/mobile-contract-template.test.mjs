@@ -8,7 +8,8 @@ const plain = html => html.replace(/<style[\s\S]*?<\/style>/g, '').replace(/<[^>
 test('old templates retain one editable estimate appendix and independent defaults', () => {
   const first = normalizeContractTemplate({ head: { company: 'Студия' } });
   assert.equal(first.appendices[0].kind, 'estimate');
-  assert.equal(first.appendices[0].exportOptions.cols.num, false);
+  assert.ok(Object.values(first.appendices[0].exportOptions.cols).every(Boolean));
+  assert.equal(first.appendices[0].exportOptions.columnsDefaultsVersion, 1);
   first.sections[0].text = 'Изменение';
   first.appendices[0].exportOptions.cols.price = false;
   const next = normalizeContractTemplate();
@@ -17,7 +18,18 @@ test('old templates retain one editable estimate appendix and independent defaul
   assert.deepEqual(normalizeContractTemplate({ estOn: false }).appendices, []);
 });
 
-test('text appendices substitute company and project values and keep explicit order', () => {
+test('old automatic column exclusions migrate once and later manual changes remain saved', () => {
+  const template = { appendices: [{ id: 'estimate', kind: 'estimate', exportOptions: { type: 'total', cols: { num: false, photo: false } } }] };
+  const migrated = normalizeContractTemplate(template);
+  assert.ok(Object.values(migrated.appendices[0].exportOptions.cols).every(Boolean));
+  migrated.appendices[0].exportOptions.cols.photo = false;
+  const reopened = normalizeContractTemplate(JSON.parse(JSON.stringify(migrated)));
+  assert.equal(reopened.appendices[0].exportOptions.cols.photo, false);
+  assert.equal(reopened.appendices[0].exportOptions.cols.num, true);
+  assert.equal(template.appendices[0].exportOptions.cols.photo, false);
+});
+
+test('text appendices substitute values after the estimate while the separate act reserves its number', () => {
   const tpl = normalizeContractTemplate({ head: { company: 'Студия <A>' }, sections: [], appendices: [
     { id: 'text', kind: 'text', title: 'Акт для {клиент}', text: '{компания}\nПринимает {клиент}' },
     { id: 'estimate', kind: 'estimate', exportOptions: DEFAULT_CONTRACT_ESTIMATE_OPTIONS },
@@ -25,7 +37,8 @@ test('text appendices substitute company and project values and keep explicit or
   const html = contractHtml(tpl, contractFields({ client: 'Иван' }, 1000), est);
   assert.match(html, /Акт для Иван/);
   assert.match(html, /Студия &lt;A&gt;\nПринимает Иван/);
-  assert.ok(html.indexOf('Приложение №1 — Акт') < html.indexOf('Приложение №2 — Спецификация'));
+  assert.ok(html.indexOf('Приложение №1 — Смета') < html.indexOf('Приложение №3 — Акт для Иван'));
+  assert.doesNotMatch(html, /Приложение №2 — Акт|data-document-kind="acceptance/);
   assert.doesNotMatch(html, /Студия <A>/);
   assert.equal(normalizeContractTemplate({ appendices: [...tpl.appendices, tpl.appendices[1]] }).appendices.length, 2);
 });
@@ -34,7 +47,7 @@ test('removing estimate appendix removes its rows and chosen columns affect expo
   const noAppendices = normalizeContractTemplate({ sections: [], appendices: [] });
   assert.doesNotMatch(plain(contractHtml(noAppendices, {}, est)), /Полотно/);
   const tpl = normalizeContractTemplate({ sections: [], appendices: [{ id: 'estimate', kind: 'estimate', exportOptions: {
-    type: 'total', cols: { num: false, photo: false, name: true, qty: true, unit: true, price: false, total: true },
+    type: 'total', columnsDefaultsVersion: 1, cols: { num: false, photo: false, name: true, qty: true, unit: true, price: false, total: true },
   } }] });
   const html = contractHtml(tpl, {}, est);
   assert.doesNotMatch(html, />Цена<\/th>/);
@@ -42,7 +55,7 @@ test('removing estimate appendix removes its rows and chosen columns affect expo
 });
 
 test('estimate appendix uses room context for per-room and drawing exports', () => {
-  const room = { id: 'kitchen', name: 'Кухня', verts: [[0, 0], [4, 0], [4, 3], [0, 3]], holes: [], est };
+  const room = { id: 'kitchen', name: 'Кухня', v: [[0, 0], [4, 0], [4, 3], [0, 3]], holes: [], est };
   const make = type => normalizeContractTemplate({ sections: [], appendices: [{ id: 'estimate', kind: 'estimate', exportOptions: { type } }] });
   const perRoom = contractHtml(make('perRoom'), {}, est, undefined, undefined, { rooms: [room] });
   assert.match(perRoom, /data-estimate-room="kitchen"/);
@@ -57,7 +70,7 @@ test('all contract appendix layouts honor mixed per-category correction visibili
   const adjustment = { scope: 'all', rates: { mats: 10, works: 20, equipment: -10 } };
   const room = { id: 'room', name: 'Комната', est: estimate };
   for (const type of ['total', 'totalDraw', 'perRoom']) {
-    const tpl = normalizeContractTemplate({ sections: [], appendices: [{ id: 'estimate', kind: 'estimate', exportOptions: { type, cols: { num: false, photo: false } } }] });
+    const tpl = normalizeContractTemplate({ sections: [], appendices: [{ id: 'estimate', kind: 'estimate', exportOptions: { type, columnsDefaultsVersion: 1, cols: { num: false, photo: false } } }] });
     const shown = plain(contractHtml(tpl, {}, estimate, adjustment, { showAdjustmentByScope: { mats: false, works: true, equipment: false } }, { rooms: [room] }));
     assert.match(shown, /Материал 1 шт 110 110/, type);
     assert.match(shown, /Контроллер 1 шт 45 45/, type);

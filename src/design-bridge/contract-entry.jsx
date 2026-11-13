@@ -1,381 +1,245 @@
 import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { DEFAULT_CONTRACT_TPL, CONTRACT_STYLES, CONTRACT_ESTIMATE_TYPES, CONTRACT_ESTIMATE_COLUMNS, DEFAULT_CONTRACT_ESTIMATE_OPTIONS, normalizeContractTemplate, normalizeContractLegalForm, companyContractFields, contractFields, contractHtml, nextContractNumber } from '../data/contract.js';
+import { DEFAULT_CONTRACT_TPL, CONTRACT_ESTIMATE_TYPES, CONTRACT_ESTIMATE_COLUMNS, DEFAULT_CONTRACT_ESTIMATE_OPTIONS, normalizeContractTemplate, contractHtml, acceptanceHtml, signatureNameFromClient } from '../data/contract.js';
+import { createContractDraft, validateContractDraft, contractDraftFields, createContractSnapshot, createActSnapshot, validateActDraft, parseContractMoney, formatDocumentDate } from '../data/contract-documents.js';
 import { htmlToPdf } from '../utils/pdf.js';
-import { readDocumentImage } from './document-media.js';
+import { collectPdfAvoidRanges, pdfContentEnd, paginatePdf } from '../utils/pdf-pagination.js';
 import { fitToStage } from './stage.js';
 import { contractTemplateAccess } from './contract-template-store.js';
+import './contract-editor.css';
 
-/* Договор для страницы дизайна.
-   В проекте: условия (номер, дата монтажа, предоплата), заказчик, PDF / поделиться, предпросмотр — всё сохраняется само.
-   В главном меню: шаблон договора (шапка исполнителя, оформление, разделы, подстановки), один на студию, localStorage.
-   Токены — design-src/README.md, раздел 1. */
-const D = { ink: '#0F1620', sub: '#6F7688', dim: '#A5A9B8', accent: '#1461EE', soft: '#E7EFFD', bg: '#F3F3FA', card: '#fff', field: '#F7F7FC', line: '#ECECF4', border: '#E4E4EE', danger: '#FF3B30', dangerSoft: '#FFECEA' };
-const fmt = n => (Number(n) || 0).toLocaleString('ru-RU', { maximumFractionDigits: 2 });
+const money = value => (Number(value) || 0).toLocaleString('ru-RU', { maximumFractionDigits: 2 });
+const clone = value => JSON.parse(JSON.stringify(value));
+const today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+const toInputDate = value => /^\d{2}\.\d{2}\.\d{4}$/.test(value || '') ? value.split('.').reverse().join('-') : value || '';
+const hasErrors = errors => Object.keys(errors).length > 0;
+const newId = prefix => prefix + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
 
-const S = {
-  card: { background: D.card, borderRadius: 18, padding: 14, marginBottom: 10 },
-  sec: { fontSize: 11, fontWeight: 800, letterSpacing: .7, textTransform: 'uppercase', color: D.sub, marginBottom: 8 },
-  label: { fontSize: 12, fontWeight: 700, color: D.sub, margin: '10px 2px 6px' },
-  input: { width: '100%', height: 44, background: D.field, border: '1.5px solid ' + D.border, borderRadius: 12, padding: '0 12px', color: D.ink, fontSize: 16, fontWeight: 600, fontFamily: 'inherit', boxSizing: 'border-box', outline: 'none' },
-  area: { width: '100%', background: D.field, border: '1.5px solid ' + D.border, borderRadius: 12, padding: '10px 12px', color: D.ink, fontSize: 16, fontWeight: 500, lineHeight: 1.45, fontFamily: 'inherit', boxSizing: 'border-box', outline: 'none', resize: 'vertical' },
-  chip: on => ({ height: 34, padding: '0 12px', borderRadius: 10, border: '1.5px solid ' + (on ? D.accent : D.border), background: on ? D.soft : D.card, color: on ? D.accent : D.ink, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }),
-  mini: on => ({ height: 28, padding: '0 10px', borderRadius: 8, border: '1.5px solid ' + (on ? D.accent : D.border), background: on ? D.soft : D.card, color: on ? D.accent : D.ink, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }),
-  primary: { height: 50, borderRadius: 16, border: 'none', background: D.accent, color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', flex: 1, minWidth: 0 },
-  outline: { height: 50, borderRadius: 16, border: '1.5px solid ' + D.border, background: D.card, color: D.ink, fontSize: 15, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', flex: 1, minWidth: 0 },
-  icon: { width: 32, height: 32, borderRadius: 9, border: 'none', background: D.field, color: D.sub, cursor: 'pointer', fontSize: 15, flexShrink: 0, fontFamily: 'inherit' },
-  pick: { width: 84, height: 60, borderRadius: 12, background: D.field, border: '1.5px dashed #C9C6F5', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden', flexShrink: 0, color: D.accent, fontSize: 11, fontWeight: 700, textAlign: 'center' },
-};
-
-/* Лист договора: на телефоне масштабируется по ширине, а не сжимает текст */
-function Paper({ html }) {
-  const ref = useRef(null), wrapRef = useRef(null);
-  const [dims, setDims] = useState({ w: 0, h: 0 });
-  useLayoutEffect(() => {
-    const el = ref.current, wrap = wrapRef.current; if (!el || !wrap) return;
-    const measure = () => setDims({ w: wrap.clientWidth, h: el.scrollHeight });
-    measure();
-    const ro = new ResizeObserver(measure); ro.observe(wrap); ro.observe(el);
-    return () => ro.disconnect();
-  }, [html]);
-  const PW = 768, s = dims.w ? Math.min(1, dims.w / PW) : 1;
-  return (
-    <div className="z-contract-paper" ref={wrapRef} style={{ background: '#fff', borderRadius: 18, overflow: 'hidden', height: dims.h ? Math.ceil(dims.h * s) : 'auto', boxShadow: '0 1px 2px rgba(30,37,48,.06)' }}>
-      <div ref={ref} style={{ width: PW, padding: 24, boxSizing: 'border-box', transform: `scale(${s})`, transformOrigin: 'top left' }} dangerouslySetInnerHTML={{ __html: html }} />
-    </div>
-  );
+function Icon({ name = 'file', size = 18 }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    {name === 'back' ? <path d="m14 6-6 6 6 6" /> : name === 'down' ? <path d="m6 9 6 6 6-6" /> : name === 'eye' ? <><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" /></> : name === 'check' ? <path d="m5 12 4 4L19 6" /> : <><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z" /><path d="M14 3v6h6M8 13h8M8 17h6" /></>}
+  </svg>;
 }
 
-function Shell({ title, sub, onClose, children, wide = false, action, overlay, sourceTemplate = false }) {
-  return (
-    <div className={'z-contract-shell' + (sourceTemplate ? ' z-contract-native-template' : '')} style={{ position: 'absolute', inset: 0, zIndex: 9000, background: D.bg, overflow: 'hidden', display: 'flex', flexDirection: 'column', fontFamily: "'Manrope','Inter',system-ui,sans-serif", color: sourceTemplate ? '#1E2530' : D.ink, WebkitFontSmoothing: 'antialiased' }}>
-      {sourceTemplate && <style>{'.z-contract-native-template .contract-template-title{font-size:14px!important}.z-contract-native-template .contract-template-text{font-size:12px!important}.z-contract-native-template .contract-template-company-input{font-size:15px!important}'}</style>}
-      <div className="z-contract-header" style={{ flexShrink: 0, position: 'sticky', top: 0, zIndex: 5, background: D.card, borderBottom: '0.5px solid ' + D.line, padding: sourceTemplate ? '8px 12px 12px' : '8px 16px', display: 'flex', alignItems: 'center', gap: sourceTemplate ? 8 : 12 }}>
-        <button onClick={onClose} aria-label="Закрыть договор" style={{ background: D.bg, border: 'none', borderRadius: 12, width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
-          <svg width="16" height="16" fill="none" stroke={D.ink} strokeWidth="2" strokeLinecap="round"><path d="M10 4L6 8l4 4" /></svg>
-        </button>
-        <div style={{ flex: 1, minWidth: 0, padding: sourceTemplate ? '0 4px' : 0 }}>
-          <div style={{ fontSize: 15, fontWeight: 800 }}>{title}</div>
-          {sub && <div style={{ fontSize: 11.5, fontWeight: 600, color: D.sub, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub}</div>}
-        </div>
-        {action}
-      </div>
-      <div className={'z-contract-content' + (wide ? ' z-contract-wide' : '')} style={{ flex: 1, minHeight: 0, overflowY: 'auto', ...(sourceTemplate ? { padding: '12px 16px 40px' } : {}) }}>{children}</div>
-      {overlay}
-    </div>
-  );
+function Button({ children, variant = 'primary', className = '', ...props }) {
+  return <button type="button" className={'cd-button cd-button-' + variant + ' ' + className} {...props}>{children}</button>;
 }
-
-/* ── Договор проекта ── */
-function ProjectContract({ project, total, area, est, estimateAdjustment, estimateExportOptions, contract, installDate: ins0, onSaveContract, onProjectPatch, onClose, templateStore, company, rooms, documentContext }) {
-  const templateAccess = contractTemplateAccess(templateStore);
-  const storedTpl = templateAccess.load();
-  const tpl = { ...storedTpl, head: { ...storedTpl.head, ...company } };
-  const saved = contract || null;
-  const [num, setNum] = useState(saved?.number || nextContractNumber(tpl));
-  const [prepay, setPrepay] = useState(saved?.prepay ?? Math.round(total / 2));
-  const [installDate, setInstallDate] = useState(saved?.installDate || ins0 || '');
-  const [party, setParty] = useState({ client: project.client || '', phone: project.phone || '', address: project.address || '' });
-  const [busy, setBusy] = useState('');
-  const numTaken = useRef(!!saved);
-
-  const fields = contractFields(party, total, { number: num, prepay, area: Math.round(area * 100) / 100, installDate });
-  const html = contractHtml(tpl, fields, est, estimateAdjustment, estimateExportOptions, documentContext || { project, rooms });
-  const fileName = 'Договор_' + num + '_' + (project.name || '');
-  const rest = Math.round((total - prepay) * 100) / 100;
-
-  const pushParty = () => { if (onProjectPatch) onProjectPatch({ client: party.client, phone: party.phone, address: party.address }); };
-  const doPdf = async () => { if (busy) return; setBusy('pdf'); try { await htmlToPdf(html, fileName); } finally { setBusy(''); } };
-  const doShare = async () => {
-    if (busy) return; setBusy('share');
-    try {
-      const blob = await htmlToPdf(html, fileName, { blob: true });
-      if (!blob) return;
-      const file = new File([blob], fileName.replace(/[\\/:*?"<>|]+/g, '_') + '.pdf', { type: 'application/pdf' });
-      if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) await navigator.share({ files: [file], title: 'Договор № ' + num });
-      else await htmlToPdf(html, fileName);
-    } catch (e) { if (e && e.name !== 'AbortError') alert('Не удалось поделиться: ' + (e.message || e)); }
-    finally { setBusy(''); }
-  };
-  /* Автосохранение: договор в проекте всегда соответствует тому, что на экране; номер занимается при первом сохранении */
-  const snapshot = () => ({ number: num, prepay, installDate, date: saved?.date || fields['дата'], total, html, client: party.client, address: party.address, phone: party.phone });
-  const saveRef = useRef(null);
-  useEffect(() => {
-    clearTimeout(saveRef.current);
-    saveRef.current = setTimeout(() => { onSaveContract(snapshot()); if (!numTaken.current) { numTaken.current = true; templateAccess.save({ ...tpl, numSeq: (tpl.numSeq || 1) + 1 }); } }, 400);
-    return () => clearTimeout(saveRef.current);
-  }, [num, prepay, installDate, party.client, party.phone, party.address]);
-  const closeAll = () => { clearTimeout(saveRef.current); pushParty(); onSaveContract(snapshot()); onClose(); };
-  const pct = [['30 %', .3], ['50 %', .5], ['70 %', .7], ['100 %', 1]];
-
-  return (
-    <Shell title="Договор" sub={project.name} onClose={closeAll} wide>
-      <div className="z-contract-project"><div className="z-contract-form">
-      <div style={S.card}>
-        <div style={S.sec}>Условия</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          <div><div style={{ ...S.label, marginTop: 0 }}>Номер договора</div><input value={num} onChange={e => setNum(e.target.value)} style={S.input} /></div>
-          <div><div style={{ ...S.label, marginTop: 0 }}>Дата монтажа</div><input value={installDate} placeholder="по согласованию" onChange={e => setInstallDate(e.target.value)} style={S.input} /></div>
-        </div>
-        <div style={S.label}>Предоплата, ₽</div>
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <input value={prepay} inputMode="numeric" onChange={e => setPrepay(parseInt(e.target.value.replace(/\D/g, ''), 10) || 0)} style={{ ...S.input, flex: 1, minWidth: 0 }} />
-          {pct.map(([l, k]) => { const v = Math.round(total * k); return <button key={l} onClick={() => setPrepay(v)} style={S.mini(prepay === v)}>{l}</button>; })}
-        </div>
-        <div style={{ fontSize: 12, color: D.sub, fontWeight: 600, marginTop: 8, lineHeight: 1.4 }}>
-          Сумма по смете <b style={{ color: D.ink }}>{fmt(total)} ₽</b> · остаток после предоплаты <b style={{ color: D.ink }}>{fmt(rest)} ₽</b>
-        </div>
-      </div>
-
-      <div style={S.card}>
-        <div style={S.sec}>Заказчик</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          <div><div style={{ ...S.label, marginTop: 0 }}>ФИО</div><input value={party.client} placeholder="Иванов Иван Иванович" onChange={e => setParty({ ...party, client: e.target.value })} onBlur={pushParty} style={S.input} /></div>
-          <div><div style={{ ...S.label, marginTop: 0 }}>Телефон</div><input value={party.phone} placeholder="+7 …" inputMode="tel" onChange={e => setParty({ ...party, phone: e.target.value })} onBlur={pushParty} style={S.input} /></div>
-        </div>
-        <div style={S.label}>Адрес объекта</div>
-        <input value={party.address} placeholder="г. Хабаровск, …" onChange={e => setParty({ ...party, address: e.target.value })} onBlur={pushParty} style={S.input} />
-      </div>
-
-      <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-        <button onClick={doPdf} disabled={!!busy} style={{ ...S.primary, opacity: busy ? .6 : 1 }}>{busy === 'pdf' ? 'Готовлю PDF…' : 'Скачать PDF'}</button>
-        <button onClick={doShare} disabled={!!busy} style={{ ...S.outline, opacity: busy ? .6 : 1 }}>{busy === 'share' ? 'Готовлю…' : 'Поделиться'}</button>
-      </div>
-      <div style={{ fontSize: 12, color: D.sub, fontWeight: 600, margin: '0 4px 10px', lineHeight: 1.4 }}>Текст, реквизиты и оформление настраиваются в главном меню, раздел «Шаблон договора». Здесь всё сохраняется в проект автоматически.</div>
-      </div><section className="z-contract-preview" aria-label="Предпросмотр договора">
-      <div style={{ ...S.sec, margin: '4px 4px 8px' }}>Предпросмотр</div>
-      <Paper html={html} />
-      </section></div>
-    </Shell>
-  );
+function Field({ label, error, value, onChange, textarea = false, className = '', ...props }) {
+  const Control = textarea ? 'textarea' : 'input';
+  return <label className={'cd-field ' + className}><span>{label}</span><Control aria-label={label} aria-invalid={!!error} value={value ?? ''} onChange={event => onChange(event.target.value)} {...props} />{error && <small className="cd-field-error">{error}</small>}</label>;
 }
-
-/* ── Шаблон договора (главное меню) ── */
-const COMPANY_PLACEHOLDERS = [['компания', 'Название студии'], ['юр_лицо', 'Юр. лицо / ФИО'], ['форма', 'Форма (ИП, ООО…)'], ['инн', 'ИНН'], ['кпп', 'КПП'], ['огрн', 'ОГРН / ОГРНИП'], ['юр_адрес', 'Юридический адрес'], ['телефон_договора', 'Телефон в договоре'], ['банк', 'Банк, р/с'], ['подпись_фио', 'ФИО для подписи']];
-const PROJECT_PLACEHOLDERS = [['клиент', 'Клиент'], ['телефон', 'Телефон клиента'], ['адрес', 'Адрес объекта'], ['дата', 'Дата договора'], ['номер', 'Номер договора'], ['сумма', 'Сумма'], ['сумма_прописью', 'Сумма прописью'], ['предоплата', 'Предоплата'], ['остаток', 'Остаток'], ['площадь', 'Площадь, м²'], ['срок_монтажа', 'Срок монтажа']];
-const COMPANY_ROWS = [['company', 'Компания'], ['legal', 'Юр. лицо'], ['inn', 'ИНН'], ['ogrn', 'ОГРН / ОГРНИП'], ['address', 'Юр. адрес'], ['phone', 'Телефон в договоре'], ['bank', 'Банк, р/с'], ['signerName', 'ФИО для подписи']];
-const sourceCard = { background: '#FFFFFF', borderRadius: 14, padding: 13, marginBottom: 10, border: '0.5px solid #F1F1F7' };
-const sourceCardTitle = { fontSize: 14, fontWeight: 800, color: '#0f1620', textTransform: 'uppercase', letterSpacing: .6 };
-const sourceGroupTitle = { fontSize: 10, fontWeight: 800, color: '#A5A9B8', textTransform: 'uppercase', letterSpacing: .6, margin: '2px 4px 6px' };
-const sourceInput = { width: '100%', background: '#F7F7FC', border: '1px solid #F1F1F7', borderRadius: 12, padding: '11px 14px', color: '#1E2530', fontSize: 15, fontWeight: 600, fontFamily: 'inherit', boxSizing: 'border-box', outline: 'none' };
-const sectionTitleInput = { ...sourceInput, flex: 1, minWidth: 0, fontSize: 14, fontWeight: 700, padding: '7px 10px' };
-const sectionTextInput = { ...sourceInput, display: 'block', minHeight: 88, fontSize: 12, lineHeight: '18px', fontWeight: 500, resize: 'none' };
-const sectionIcon = { width: 28, height: 28, borderRadius: 8, background: '#F7F7FC', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 0, flexShrink: 0, color: '#6F7688', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' };
-const linkButton = { border: 0, background: 'transparent', color: D.accent, font: '700 12px Manrope,system-ui,sans-serif', cursor: 'pointer', padding: '6px 0' };
-
-function companyDisplayRows(head) {
-  const configurations = {
-    ip: { label: 'ИП', name: 'ФИО', ogrn: 'ОГРНИП' },
-    ooo: { label: 'ООО', name: 'Наименование', ogrn: 'ОГРН', kpp: true },
-    ao: { label: 'АО', name: 'Наименование', ogrn: 'ОГРН', kpp: true },
-    self_employed: { label: 'Самозанятый', name: 'ФИО' },
-  };
-  const config = configurations[normalizeContractLegalForm(head.legalForm)];
-  const rows = [['company', 'Компания', head.company], ['legalForm', 'Форма', config?.label || '']];
-  if (config) {
-    rows.push(['legal', config.name, head.legal], ['inn', 'ИНН', head.inn]);
-    if (config.kpp) rows.push(['kpp', 'КПП', head.kpp]);
-    if (config.ogrn) rows.push(['ogrn', config.ogrn, head.ogrn]);
-    rows.push(['address', 'Юр. адрес', head.address]);
-  } else if (head.legal || head.inn || head.address) rows.push(['legal', 'Юр. лицо', head.legal], ['inn', 'ИНН', head.inn], ['address', 'Юр. адрес', head.address]);
-  rows.push(['phone', 'Телефон в договоре', head.phone], ['bank', 'Банк, р/с', head.bank], ['signerName', 'ФИО для подписи', head.signerName]);
-  return rows;
+function Tabs({ value, onChange }) {
+  return <div className="cd-tabs" role="tablist" aria-label="Вид документа">{[['contract', 'Договор'], ['act', 'Акт выполненных работ']].map(([id, label]) => <button type="button" role="tab" aria-selected={value === id} key={id} onClick={() => onChange(id)}>{label}</button>)}</div>;
 }
-
+function Card({ title, action, children, className = '' }) {
+  return <section className={'cd-card ' + className}>{(title || action) && <div className="cd-card-heading"><h2>{title}</h2>{action}</div>}{children}</section>;
+}
 function Sheet({ title, onClose, children }) {
   const ref = useRef(null);
-  useEffect(() => {
-    const previous = document.activeElement;
-    ref.current?.querySelector('button,input,textarea')?.focus();
-    return () => { if (previous?.isConnected) previous.focus?.(); };
-  }, []);
+  useEffect(() => { const previous = document.activeElement; ref.current?.querySelector('button,input,textarea')?.focus(); return () => { if (previous?.isConnected) previous.focus?.(); }; }, []);
   const keyDown = event => {
     if (event.key === 'Escape') { event.preventDefault(); onClose(); }
     if (event.key !== 'Tab') return;
-    const focusable = [...ref.current.querySelectorAll('button:not([disabled]),input,textarea')];
-    const first = focusable[0], last = focusable.at(-1);
+    const controls = [...ref.current.querySelectorAll('button:not([disabled]),input,textarea,select')], first = controls[0], last = controls.at(-1);
     if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
     else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
   };
-  return <div onKeyDown={keyDown} style={{ position: 'absolute', inset: 0, zIndex: 20, display: 'flex', alignItems: 'flex-end', background: 'rgba(15,22,32,.36)' }}>
-    <button aria-label="Закрыть окно" onClick={onClose} style={{ position: 'absolute', inset: 0, border: 0, background: 'transparent' }} />
-    <section ref={ref} role="dialog" aria-modal="true" aria-label={title} style={{ position: 'relative', background: D.card, width: '100%', maxHeight: '88%', display: 'flex', flexDirection: 'column', borderRadius: '22px 22px 0 0', padding: '10px 16px max(16px,env(safe-area-inset-bottom))', boxSizing: 'border-box' }}>
-      <div style={{ alignSelf: 'center', width: 34, height: 4, borderRadius: 2, background: D.border, marginBottom: 10 }} />
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}><strong style={{ fontSize: 16 }}>{title}</strong><button onClick={onClose} aria-label="Закрыть" style={S.icon}>×</button></div>
-      <div style={{ overflowY: 'auto', minHeight: 0 }}>{children}</div>
-    </section>
-  </div>;
+  return <div className="cd-sheet-backdrop" onKeyDown={keyDown}><button className="cd-sheet-dismiss" aria-label="Закрыть окно" onClick={onClose} /><section className="cd-sheet" role="dialog" aria-modal="true" aria-label={title} ref={ref}><div className="cd-sheet-handle" /><div className="cd-sheet-heading"><h2>{title}</h2><button className="cd-icon-button" onClick={onClose} aria-label="Закрыть">×</button></div><div className="cd-sheet-content">{children}</div></section></div>;
+}
+function Shell({ title, sub, onClose, action, children, footer, overlay }) {
+  return <div className="z-contract-shell cd-shell"><header className="z-contract-header cd-header"><button className="cd-back" onClick={onClose} aria-label="Закрыть договор"><Icon name="back" /></button><div className="cd-header-title"><h1>{title}</h1>{sub && <p>{sub}</p>}</div>{action}</header><div className="z-contract-content cd-content">{children}</div>{footer && <footer className="cd-footer">{footer}</footer>}{overlay}</div>;
+}
+function Paper({ html }) {
+  const [layout, setLayout] = useState({ width: 0, slices: [] });
+  const wrap = useRef(null);
+  useLayoutEffect(() => {
+    const source = document.createElement('div');
+    source.setAttribute('aria-hidden', 'true');
+    source.style.cssText = 'position:fixed;left:0;top:0;opacity:0;pointer-events:none;width:800px;background:#fff;z-index:-1;';
+    source.innerHTML = html;
+    document.body.appendChild(source);
+    const article = source.firstElementChild || source;
+    let frame = 0, active = true;
+    const measure = () => {
+      if (!active || !wrap.current) return;
+      const rect = article.getBoundingClientRect();
+      // html2canvas rounds the measured bounds up before rendering at scale 2.
+      const canvasWidth = Math.max(1, Math.ceil(rect.width) * 2), canvasHeight = Math.max(1, Math.ceil(rect.height) * 2);
+      const scaleY = canvasHeight / Math.max(1, article.scrollHeight);
+      const toRange = element => { const bounds = element.getBoundingClientRect(); return { top: Math.max(0, Math.floor((bounds.top - rect.top) * scaleY)), bottom: Math.min(canvasHeight, Math.ceil((bounds.bottom - rect.top) * scaleY)) }; };
+      const avoidRanges = collectPdfAvoidRanges(article, toRange);
+      const slices = paginatePdf({ height: canvasHeight, pageHeight: Math.max(1, Math.floor(277 * canvasWidth / 190)), edgeTolerance: 1, avoidRanges, breakBefore: [...article.querySelectorAll('[data-pdf-break-before]')].map(element => toRange(element).top), contentEnd: pdfContentEnd(article, toRange) });
+      const next = { width: wrap.current.clientWidth, contentWidth: canvasWidth / 2, slices };
+      setLayout(current => JSON.stringify(current) === JSON.stringify(next) ? current : next);
+    };
+    const schedule = () => { if (!active) return; cancelAnimationFrame(frame); frame = requestAnimationFrame(measure); };
+    measure();
+    const observer = new ResizeObserver(schedule);
+    observer.observe(article); if (wrap.current) observer.observe(wrap.current);
+    document.fonts?.ready.then(schedule);
+    source.addEventListener('load', schedule, true);
+    return () => { active = false; cancelAnimationFrame(frame); observer.disconnect(); source.removeEventListener('load', schedule, true); source.remove(); };
+  }, [html]);
+  const contentWidth = layout.contentWidth || 720, mm = contentWidth / 190, pageWidth = 210 * mm, pageHeight = 297 * mm, margin = 10 * mm;
+  const scale = layout.width ? Math.min(1, layout.width / pageWidth) : 1;
+  return <div className="cd-preview cd-pdf-preview" ref={wrap} aria-label="Предпросмотр PDF">{!layout.slices.length && <p className="cd-note" role="status">Готовлю предпросмотр…</p>}{layout.slices.map((slice, index) => <figure className="cd-pdf-page" key={index} data-pdf-page={index + 1}><figcaption>{index + 1} / {layout.slices.length}</figcaption><div className="cd-pdf-page-frame" style={{ width: pageWidth * scale, height: pageHeight * scale }} role="img" aria-label={'Страница ' + (index + 1) + ' из ' + layout.slices.length}><div className="cd-pdf-sheet" style={{ width: pageWidth, height: pageHeight, transform: 'scale(' + scale + ')' }} aria-hidden="true"><div className="cd-pdf-clip" style={{ left: margin, top: margin, width: contentWidth, height: (slice.bottom - slice.top) / 2 }}><div className="cd-pdf-document" style={{ width: contentWidth, transform: 'translateY(-' + slice.top / 2 + 'px)' }} dangerouslySetInnerHTML={{ __html: html }} /></div></div></div></figure>)}</div>;
+}
+function PreviewScreen({ title, html, example, onClose }) {
+  return <Shell title={title} sub={example ? 'Пример на условных данных' : null} onClose={onClose}><Paper html={html} /></Shell>;
 }
 
-function TemplateEditor({ onClose, templateStore, company, onEditCompany, onCompanyChange }) {
-  const templateAccess = contractTemplateAccess(templateStore);
-  const [tpl, setTpl] = useState(() => {
-    const value = templateAccess.load();
-    return normalizeContractTemplate({ ...value, head: { ...value.head, ...company } });
-  });
-  const original = useRef(JSON.stringify(tpl));
-  const [sheet, setSheet] = useState(null), [preview, setPreview] = useState(false);
-  const [estimateDraft, setEstimateDraft] = useState(null), [imageError, setImageError] = useState('');
-  const [imageBusy, setImageBusy] = useState(false);
-  const [fieldActive, setFieldActive] = useState(false);
-  const focusArea = useRef(null), mediaPatch = useRef({});
-  const logoRef = useRef(null), signRef = useRef(null);
+const PLACEHOLDERS = [['исполнитель', 'Исполнитель'], ['клиент', 'Заказчик'], ['телефон', 'Телефон заказчика'], ['адрес', 'Адрес объекта'], ['номер', 'Номер договора'], ['дата', 'Дата договора'], ['дата_начала', 'Начало работ'], ['срок_монтажа', 'Окончание работ'], ['сумма', 'Стоимость'], ['сумма_прописью', 'Стоимость прописью'], ['предоплата', 'Предоплата'], ['остаток', 'Остаток оплаты'], ['площадь', 'Площадь'], ['компания', 'Компания'], ['юр_лицо', 'Исполнитель'], ['инн', 'ИНН исполнителя'], ['адрес_компании', 'Адрес компании'], ['юр_адрес', 'Юридический адрес исполнителя'], ['банк', 'Банковские реквизиты']];
+const ACT_PLACEHOLDERS = [['номер_договора', 'Номер связанного договора'], ['дата_договора', 'Дата связанного договора'], ['дата_завершения', 'Дата завершения работ'], ['работы_акта', 'Выполненные работы'], ['результат_приёмки', 'Результат приёмки'], ['замечания_акта', 'Замечания'], ['срок_устранения', 'Срок устранения замечаний'], ['сумма_акта', 'Стоимость по акту'], ['оплата_акта', 'Полученная оплата'], ['остаток_акта', 'Остаток по акту']];
+
+function TemplateEditor({ onClose, templateStore, company }) {
+  const access = contractTemplateAccess(templateStore);
+  const [tpl, setTpl] = useState(() => { const source = access.load(); return normalizeContractTemplate({ ...source, style: 'magic', head: { ...source.head, ...company } }); });
+  const original = useRef(JSON.stringify(tpl)), focusArea = useRef(null), createdAppendix = useRef(null);
+  const [tab, setTab] = useState('contract'), [sheet, setSheet] = useState(null), [preview, setPreview] = useState(false), [expanded, setExpanded] = useState(null), [error, setError] = useState(''), [removed, setRemoved] = useState(null), [estimateDraft, setEstimateDraft] = useState(null);
+  const dirty = JSON.stringify(tpl) !== original.current;
   const patch = values => setTpl(current => ({ ...current, ...values }));
-  const patchHead = values => setTpl(current => ({ ...current, head: { ...current.head, ...values } }));
-  const patchRow = (list, id, values) => setTpl(current => ({ ...current, [list]: current[list].map(row => row.id === id ? { ...row, ...values } : row) }));
-  const moveUp = (list, index) => setTpl(current => {
+  const patchRow = (list, id, values) => setTpl(current => list === 'preamble' ? { ...current, preamble: values.text ?? current.preamble } : { ...current, [list]: current[list].map(row => row.id === id ? { ...row, ...values } : row) });
+  const save = close => {
+    setError('');
+    try { access.save(tpl); original.current = JSON.stringify(tpl); if (close) onClose(); return true; }
+    catch (cause) { setError(cause?.message || 'Не удалось сохранить настройки. Попробуйте ещё раз.'); return false; }
+  };
+  const leave = () => dirty ? setSheet('leave') : onClose();
+  const move = (list, index, direction) => setTpl(current => {
     const rows = [...current[list]];
-    if (index > 0) [rows[index - 1], rows[index]] = [rows[index], rows[index - 1]];
+    const movable = rows.flatMap((row, position) => list !== 'appendices' || row.kind === 'text' ? [position] : []);
+    const next = movable[movable.indexOf(index) + direction];
+    if (next === undefined) return current;
+    [rows[index], rows[next]] = [rows[next], rows[index]];
     return { ...current, [list]: rows };
   });
-  const remove = (list, id) => {
-    if (focusArea.current?.list === list && focusArea.current.id === id) { focusArea.current = null; setFieldActive(false); }
-    setTpl(current => ({ ...current, [list]: current[list].filter(row => row.id !== id) }));
+  const remove = (list, index) => { setRemoved({ list, index, row: tpl[list][index] }); patch({ [list]: tpl[list].filter((_, i) => i !== index) }); setExpanded(null); };
+  const undoRemove = () => { if (!removed) return; setTpl(current => { const rows = [...current[removed.list]]; rows.splice(removed.index, 0, removed.row); return { ...current, [removed.list]: rows }; }); setRemoved(null); };
+  const addAppendix = (kind = 'text') => {
+    const row = kind === 'estimate' ? { id: newId('ap'), kind, exportOptions: clone(DEFAULT_CONTRACT_ESTIMATE_OPTIONS) } : { id: newId('ap'), kind, title: 'Новое приложение', text: '' };
+    createdAppendix.current = row.id;
+    setTpl(current => ({ ...current, appendices: [...current.appendices, row] }));
+    setExpanded('appendices:' + row.id);
   };
-  const save = () => { templateAccess.save(tpl); onCompanyChange?.(mediaPatch.current); original.current = JSON.stringify(tpl); };
-  const done = () => { save(); onClose(); };
-  const leave = () => JSON.stringify(tpl) !== original.current ? setSheet('leave') : onClose();
-  const updateImage = (key, value) => { mediaPatch.current[key] = value; patchHead({ [key]: value }); };
-  const pickImg = async (ref, key) => {
-    const file = ref.current?.files?.[0]; if (!file) return;
-    setImageBusy(true); setImageError('');
-    try { updateImage(key, await readDocumentImage(file)); }
-    catch (error) { setImageError(error.message || 'Не удалось открыть изображение'); }
-    finally { setImageBusy(false); if (ref.current) ref.current.value = ''; }
+  const fieldProps = (list, row, field) => {
+    const capture = element => { focusArea.current = { list, id: row.id, field, element, start: element.selectionStart ?? 0, end: element.selectionEnd ?? 0 }; };
+    return { value: row[field] || '', onChange: event => { patchRow(list, row.id, { [field]: event.target.value }); capture(event.target); }, onFocus: event => capture(event.target), onSelect: event => capture(event.target), onKeyUp: event => capture(event.target) };
   };
-  const capture = (list, row, field, element) => {
-    focusArea.current = { list, id: row.id, field, element, start: element.selectionStart ?? 0, end: element.selectionEnd ?? 0 };
-  };
-  const fieldProps = (list, row, field) => ({
-    value: row[field] || '',
-    onChange: event => { patchRow(list, row.id, { [field]: event.target.value }); capture(list, row, field, event.target); },
-    onFocus: event => { capture(list, row, field, event.target); setFieldActive(true); },
-    onBlur: () => setFieldActive(false),
-    onSelect: event => capture(list, row, field, event.target),
-    onKeyUp: event => capture(list, row, field, event.target),
-  });
-  const openPlaceholders = () => {
-    const target = focusArea.current;
-    if (target?.element?.isConnected) { target.start = target.element.selectionStart; target.end = target.element.selectionEnd; }
+  const openFields = (list, row, button) => {
+    const element = button.closest('.cd-section-body')?.querySelector('textarea');
+    if (!element) return;
+    focusArea.current = { list, id: row.id, field: 'text', element, start: element.selectionStart ?? element.value.length, end: element.selectionEnd ?? element.value.length };
     setSheet('placeholders');
   };
-  const insertPlaceholder = key => {
-    const target = focusArea.current;
-    if (!target) return;
-    const row = tpl[target.list].find(item => item.id === target.id);
-    if (!row) return;
-    const value = row[target.field] || '', start = Math.min(target.start ?? value.length, value.length), end = Math.max(start, Math.min(target.end ?? start, value.length));
-    const token = '{' + key + '}';
-    patchRow(target.list, target.id, { [target.field]: value.slice(0, start) + token + value.slice(end) });
-    target.start = target.end = start + token.length;
-    setSheet(null);
-    setTimeout(() => { if (target.element?.isConnected) { target.element.focus(); target.element.setSelectionRange(target.start, target.end); } }, 0);
+  const insert = key => {
+    const target = focusArea.current; if (!target) return;
+    const row = target.list === 'preamble' ? { text: tpl.preamble } : tpl[target.list].find(value => value.id === target.id); if (!row) return;
+    const value = row[target.field] || '', token = '{' + key + '}', start = Math.min(target.start, value.length), end = Math.max(start, Math.min(target.end, value.length));
+    patchRow(target.list, target.id, { [target.field]: value.slice(0, start) + token + value.slice(end) }); setSheet(null);
+    setTimeout(() => { if (target.element?.isConnected) { target.element.focus(); target.element.setSelectionRange(start + token.length, start + token.length); } }, 0);
   };
-  const addAppendix = kind => {
-    if (kind === 'estimate' && tpl.appendices.some(row => row.kind === 'estimate')) return;
-    const id = 'ap-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
-    patch({ appendices: [...tpl.appendices, kind === 'text' ? { id, kind, title: 'Новое приложение', text: '' } : { id, kind, exportOptions: { ...DEFAULT_CONTRACT_ESTIMATE_OPTIONS, cols: { ...DEFAULT_CONTRACT_ESTIMATE_OPTIONS.cols } } }] });
-    setSheet(null);
-  };
-  const editCompany = () => { if (onEditCompany) { save(); onEditCompany(); } else setSheet('company'); };
-  const fields = { ...companyContractFields(tpl.head), номер: nextContractNumber(tpl), дата: new Date().toLocaleDateString('ru-RU') };
-  const sample = contractHtml(tpl, fields, { mats: [], works: [] });
-  const rowHead = (list, row, index, label) => <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-    <span style={{ color: D.accent, fontSize: 10, fontWeight: 800, flexShrink: 0 }}>{list === 'sections' ? index + 1 + '.' : 'П' + (index + 1) + '.'}</span>
-    {row.kind === 'estimate' ? <strong style={{ flex: 1, fontSize: 15, fontWeight: 700, padding: '7px 10px' }}>Смета</strong> : <input {...fieldProps(list, row, 'title')} aria-label={label + ' ' + (index + 1)} placeholder={list === 'sections' ? 'Название раздела' : 'Заголовок приложения'} className="contract-template-title" style={sectionTitleInput} />}
-    <button onClick={() => moveUp(list, index)} disabled={index === 0} aria-label={'Переместить выше ' + label.toLowerCase() + ' ' + (index + 1)} style={{ ...sectionIcon, opacity: index === 0 ? .4 : 1 }}>↑</button>
-    <button onClick={() => remove(list, row.id)} aria-label={'Удалить ' + label.toLowerCase() + ' ' + (index + 1)} style={{ ...sectionIcon, background: D.dangerSoft, color: D.danger, fontSize: 12 }}>×</button>
-  </div>;
-  const addButton = { width: '100%', border: '1.5px dashed rgba(20,97,238,0.4)', borderRadius: 10, padding: '10px 0', background: 'transparent', color: D.accent, font: '700 11.5px Manrope,system-ui,sans-serif', cursor: 'pointer' };
-  const headRows = companyDisplayRows(tpl.head);
-  const companyValues = companyContractFields(tpl.head);
-  const overlay = sheet && <Sheet title={sheet === 'placeholders' ? 'Подстановки' : sheet === 'appendix' ? 'Добавить приложение' : sheet === 'estimate' ? 'Параметры сметы' : sheet === 'leave' ? 'Сохранить изменения?' : sheet === 'reset' ? 'Сбросить шаблон?' : 'Информация о компании'} onClose={() => setSheet(null)}>
-    {sheet === 'placeholders' && <>
-      <p style={{ margin: '0 0 12px', fontSize: 12, lineHeight: 1.5, color: D.sub }}>В текст вставится {'{ключ}'}, в договоре подставится значение.</p>
-      {!focusArea.current && <p style={{ fontSize: 12, color: D.sub }}>Сначала поставьте курсор в заголовок или текст раздела.</p>}
-      {[[COMPANY_PLACEHOLDERS, 'Компания'], [PROJECT_PLACEHOLDERS, 'Проект']].map(([rows, title]) => <div key={title}><div style={{ ...S.sec, marginTop: 12 }}>{title}</div>{rows.map(([key, label]) => <button key={key} disabled={!focusArea.current} onClick={() => insertPlaceholder(key)} aria-label={'Вставить {' + key + '}'} style={{ display: 'flex', alignItems: 'center', textAlign: 'left', gap: 12, width: '100%', padding: '10px 0', border: 0, borderBottom: '1px solid ' + D.line, background: 'transparent', fontFamily: 'inherit', cursor: 'pointer', opacity: focusArea.current ? 1 : .5 }}><span style={{ flex: 1, minWidth: 0 }}><strong style={{ display: 'block', color: D.accent, fontSize: 13 }}>{'{' + key + '}'}</strong><span style={{ display: 'block', color: D.ink, fontSize: 12, marginTop: 2 }}>{label}</span><span style={{ display: 'block', color: D.dim, fontSize: 11, marginTop: 2, overflowWrap: 'anywhere' }}>{companyValues[key] || 'нет данных'}</span></span><strong style={{ color: D.accent, fontSize: 12 }}>Вставить</strong></button>)}</div>)}
-    </>}
-    {sheet === 'appendix' && <>
-      <button onClick={() => addAppendix('text')} style={{ ...S.outline, width: '100%', marginBottom: 8 }}>Текст</button>
-      <button disabled={tpl.appendices.some(row => row.kind === 'estimate')} onClick={() => addAppendix('estimate')} style={{ ...S.outline, width: '100%', opacity: tpl.appendices.some(row => row.kind === 'estimate') ? .4 : 1 }}>Смета{tpl.appendices.some(row => row.kind === 'estimate') ? ' · уже добавлена' : ''}</button>
-    </>}
-    {sheet === 'estimate' && estimateDraft && <>
-      <div style={S.sec}>Тип сметы</div>
-      {CONTRACT_ESTIMATE_TYPES.map(type => <button key={type.id} role="radio" aria-checked={estimateDraft.type === type.id} onClick={() => setEstimateDraft({ ...estimateDraft, type: type.id })} style={{ width: '100%', display: 'flex', alignItems: 'flex-start', textAlign: 'left', gap: 12, border: '1.5px solid ' + (estimateDraft.type === type.id ? D.accent : D.border), borderRadius: 14, padding: 12, background: estimateDraft.type === type.id ? D.soft : D.card, marginBottom: 8, cursor: 'pointer', fontFamily: 'inherit' }}><span style={{ width: 17, height: 17, flexShrink: 0, border: '2px solid ' + (estimateDraft.type === type.id ? D.accent : D.dim), borderRadius: '50%', display: 'grid', placeItems: 'center' }}>{estimateDraft.type === type.id && <span style={{ width: 9, height: 9, borderRadius: '50%', background: D.accent }} />}</span><span><strong style={{ color: D.ink, fontSize: 14, display: 'block' }}>{type.label}</strong><span style={{ color: D.sub, fontSize: 12 }}>{type.sub}</span></span></button>)}
-      <div style={{ ...S.sec, marginTop: 16 }}>Столбцы</div><div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>{CONTRACT_ESTIMATE_COLUMNS.map(([key, label]) => <button key={key} aria-pressed={estimateDraft.cols[key] !== false} onClick={() => setEstimateDraft({ ...estimateDraft, cols: { ...estimateDraft.cols, [key]: estimateDraft.cols[key] === false } })} style={S.chip(estimateDraft.cols[key] !== false)}>{label}</button>)}</div>
-      <button onClick={() => { patchRow('appendices', estimateDraft.id, { exportOptions: { type: estimateDraft.type, cols: estimateDraft.cols } }); setSheet(null); }} style={{ ...S.primary, width: '100%' }}>Сохранить</button>
-    </>}
-    {sheet === 'company' && <>{COMPANY_ROWS.map(([key, label]) => <label key={key} style={{ display: 'block' }}><div style={S.label}>{label}</div><input value={tpl.head[key] || ''} onChange={event => patchHead({ [key]: event.target.value })} className="contract-template-company-input" style={sourceInput} /></label>)}<button onClick={() => setSheet(null)} style={{ ...S.primary, width: '100%', marginTop: 14 }}>Готово</button></>}
-    {sheet === 'leave' && <><p style={{ color: D.sub, fontSize: 13 }}>Изменения шаблона ещё не сохранены.</p><button onClick={done} style={{ ...S.primary, width: '100%', marginBottom: 8 }}>Сохранить</button><button onClick={onClose} style={{ ...S.outline, width: '100%', color: D.danger }}>Не сохранять</button></>}
-    {sheet === 'reset' && <><p style={{ color: D.sub, fontSize: 13 }}>Разделы и приложения будут заменены типовым шаблоном. Реквизиты компании сохранятся.</p><button onClick={() => { setTpl(normalizeContractTemplate({ ...DEFAULT_CONTRACT_TPL, head: tpl.head, numSeq: tpl.numSeq })); setSheet(null); }} style={{ ...S.primary, background: D.danger, width: '100%' }}>Сбросить шаблон</button></>}
+  const list = tab === 'act' ? 'actSections' : 'sections', sections = tpl[list] || [];
+  const placeholders = tab === 'act' ? [...PLACEHOLDERS.map(([key, label]) => [key, key === 'номер' ? 'Номер акта' : key === 'дата' ? 'Дата акта' : label]), ...ACT_PLACEHOLDERS] : PLACEHOLDERS;
+  const sampleProject = { name: 'Квартира · пример', client: 'Иванов Алексей Сергеевич', phone: '+7 (999) 123-45-67', address: 'г. Хабаровск, ул. Примерная, д. 12, кв. 8' };
+  const sampleDraft = { ...createContractDraft({ project: sampleProject, total: 85000, area: 42.6, template: tpl, today: today() }), number: 'ПРИМЕР-01', startDate: '2026-11-20', endDate: '2026-11-21' };
+  const sampleFields = contractDraftFields(sampleDraft), sampleEst = { mats: [{ n: 'Полотно и профиль', q: 42.6, u: 'м²', p: 1500 }], works: [{ n: 'Монтаж натяжного потолка', q: 1, u: 'компл.', p: 21100 }] };
+  const sample = tab === 'act' ? acceptanceHtml(tpl, sampleFields, { number: 'А-01', date: '2026-11-21', completionDate: '2026-11-21', acceptance: 'none', scope: 'Монтаж натяжных потолков в трёх помещениях, 42,6 м².', total: 85000, paid: 42500 }, sampleEst) : contractHtml(tpl, sampleFields, sampleEst);
+  if (preview) return <PreviewScreen title={tab === 'act' ? 'Пример акта' : 'Пример договора'} html={sample} example onClose={() => setPreview(false)} />;
+  const renderRows = (key, rows, label) => rows.map((row, index) => {
+    const open = expanded === key + ':' + row.id;
+    const actualIndex = key === 'appendices' ? tpl.appendices.findIndex(value => value.id === row.id) : index;
+    const displayNumber = key === 'appendices' ? row.kind === 'estimate' ? 1 : index + 3 : index + 1;
+    return <div className="cd-section-item" key={row.id}><button className="cd-section-toggle" type="button" aria-expanded={open} onClick={() => setExpanded(open ? null : key + ':' + row.id)}><span className="cd-section-index">{displayNumber}</span><span><strong>{row.kind === 'estimate' ? 'Приложение №1 — Смета' : row.title || 'Новый раздел'}</strong><small>{row.kind === 'estimate' ? 'Подставляются из проекта' : (row.text || 'Добавьте текст').replace(/\{[^}]+\}/g, '…')}</small></span><Icon name="down" size={15} /></button>{open && <div className="cd-section-body">{row.kind === 'estimate' ? <><p className="cd-note">{CONTRACT_ESTIMATE_TYPES.find(type => type.id === row.exportOptions?.type)?.label || 'Общая смета'}</p><Button variant="secondary" onClick={() => { setEstimateDraft({ id: row.id, type: row.exportOptions.type, cols: { ...row.exportOptions.cols } }); setSheet('estimate'); }}>Параметры сметы</Button></> : <><label className="cd-field"><span>Название</span><input {...fieldProps(key, row, 'title')} autoFocus={key === 'appendices' && createdAppendix.current === row.id} aria-label={label + ' ' + displayNumber} /></label><label className="cd-field"><span>Текст</span><textarea {...fieldProps(key, row, 'text')} aria-label={'Текст ' + (key === 'appendices' ? 'приложения' : 'раздела') + ' ' + displayNumber} rows={8} /></label><button className="cd-text-button" type="button" onMouseDown={event => event.preventDefault()} onClick={event => openFields(key, row, event.currentTarget)}>Вставить поле</button></>}<div className="cd-section-actions"><button type="button" disabled={row.kind === 'estimate' || !index} onClick={() => move(key, actualIndex, -1)} aria-label={'Переместить выше ' + label.toLowerCase() + ' ' + displayNumber}>Выше</button><button type="button" disabled={row.kind === 'estimate' || index === rows.length - 1} onClick={() => move(key, actualIndex, 1)}>Ниже</button><button className="cd-danger-text" type="button" onClick={() => remove(key, actualIndex)} aria-label={'Удалить ' + label.toLowerCase() + ' ' + displayNumber}>Удалить</button></div></div>}</div>;
+  });
+  let overlay = null;
+  if (sheet) overlay = <Sheet title={sheet === 'leave' ? 'Сохранить изменения?' : sheet === 'placeholders' ? 'Вставить поле' : sheet === 'estimate' ? 'Параметры сметы' : sheet === 'reset' ? 'Вернуть стандартный текст?' : 'Добавить приложение'} onClose={() => setSheet(null)}>
+    {sheet === 'leave' && <><p className="cd-note">В настройках есть несохранённые изменения.</p><Button className="cd-full" onClick={() => save(true)}>Сохранить</Button><Button variant="secondary" className="cd-full" onClick={onClose}>Не сохранять</Button></>}
+    {sheet === 'reset' && <><p className="cd-note">Заменится только текст текущего документа. Реквизиты и настройки сохранятся.</p><Button className="cd-full" onClick={() => { patch({ [list]: clone(DEFAULT_CONTRACT_TPL[list] || []), ...(tab === 'contract' ? { preamble: DEFAULT_CONTRACT_TPL.preamble } : {}) }); setExpanded(null); setSheet(null); }}>Вернуть стандартный текст</Button></>}
+    {sheet === 'placeholders' && <><p className="cd-note">{focusArea.current ? 'Выберите данные для вставки в позицию курсора.' : 'Сначала поставьте курсор в текст раздела.'}</p><div className="cd-placeholder-list">{placeholders.map(([key, label]) => <button type="button" key={key} disabled={!focusArea.current} aria-label={'Вставить {' + key + '}'} onClick={() => insert(key)}><span><strong>{label}</strong><small>Подставится в документ</small></span><span className="cd-token">{'{' + key + '}'}</span></button>)}</div></>}
+    {sheet === 'estimate' && estimateDraft && <><div className="cd-form-stack">{CONTRACT_ESTIMATE_TYPES.map(type => <button type="button" className={'cd-option ' + (estimateDraft.type === type.id ? 'is-active' : '')} role="radio" aria-checked={estimateDraft.type === type.id} key={type.id} onClick={() => setEstimateDraft({ ...estimateDraft, type: type.id })}><strong>{type.label}</strong><small>{type.sub}</small></button>)}</div><p className="cd-label">Столбцы</p><div className="cd-chips">{CONTRACT_ESTIMATE_COLUMNS.map(([key, label]) => <button type="button" aria-pressed={estimateDraft.cols[key] !== false} key={key} onClick={() => setEstimateDraft({ ...estimateDraft, cols: { ...estimateDraft.cols, [key]: estimateDraft.cols[key] === false } })}>{label}</button>)}</div><Button className="cd-full" onClick={() => { patchRow('appendices', estimateDraft.id, { exportOptions: { ...DEFAULT_CONTRACT_ESTIMATE_OPTIONS, type: estimateDraft.type, cols: estimateDraft.cols } }); setSheet(null); }}>Сохранить параметры</Button></>}
+    {error && <p className="cd-error" role="alert">{error}</p>}
   </Sheet>;
-  if (preview) return <Shell title="Предпросмотр договора" sub="Данные проекта подставятся при создании договора" onClose={() => setPreview(false)}><Paper html={sample} /></Shell>;
-  return <Shell sourceTemplate title="Шаблон договора" sub={null} onClose={leave} action={<button disabled={imageBusy} onClick={done} style={{ ...linkButton, fontSize: 15, fontWeight: 700, minHeight: 40, padding: '0 4px' }}>Готово</button>} overlay={<>{fieldActive && !sheet && <div style={{ position: 'absolute', left: 16, right: 16, bottom: 8, zIndex: 10, pointerEvents: 'none', display: 'flex', justifyContent: 'flex-end' }}><button onMouseDown={event => event.preventDefault()} onClick={openPlaceholders} style={{ minHeight: 48, padding: '0 16px', borderRadius: 12, border: 0, background: D.accent, color: '#FFFFFF', fontSize: 14, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer', pointerEvents: 'auto', boxShadow: '0 4px 10px rgba(30,37,48,.18)' }}>Подстановки</button></div>}{overlay}</>}>
-    <div className="z-contract-mobile-editor">
-      <div style={sourceCard}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
-          <strong style={sourceCardTitle}>Информация о компании</strong>
-          <button onClick={editCompany} style={{ ...linkButton, padding: 0, display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-            Изменить <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m4.5 2 4 4-4 4" /></svg>
-          </button>
-        </div>
-        <div>
-          {[
-            ['logo', 'Лого', 'Загрузить логотип', logoRef],
-            ['sign', 'Подпись', 'Загрузить подпись', signRef],
-          ].map(([key, placeholder, buttonLabel, ref]) => <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6 }}>
-            <input ref={ref} type="file" accept="image/*" aria-label={buttonLabel} style={{ display: 'none' }} onChange={() => pickImg(ref, key)} />
-            <div style={{ width: 72, height: 72, borderRadius: 12, background: '#F3F3FA', border: '1px solid #E4E4EE', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0, boxSizing: 'border-box' }}>
-              {tpl.head[key] ? <img src={tpl.head[key]} alt={placeholder} style={{ width: 72, height: 72, objectFit: 'contain' }} /> : <span style={{ fontSize: 11, fontWeight: 700, color: '#A5A9B8', textAlign: 'center', padding: '0 4px' }}>{placeholder}</span>}
-            </div>
-            <button disabled={imageBusy} onClick={() => ref.current?.click()} aria-label={buttonLabel} style={{ flex: 1, minWidth: 0, minHeight: 44, borderRadius: 12, background: '#1461EE', border: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 10px', fontSize: 13, fontWeight: 800, fontFamily: 'inherit', color: '#FFFFFF', textAlign: 'center', cursor: 'pointer', opacity: imageBusy ? .7 : 1 }}>{buttonLabel}</button>
-          </div>)}
-        </div>
-        {imageError && <p role="alert" style={{ color: D.danger, fontSize: 12 }}>{imageError}</p>}
-        <div style={{ marginTop: 10 }}>
-          {headRows.map(([key, label, value], index) => <div key={key} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', borderBottom: index === headRows.length - 1 ? 0 : '0.5px solid #F1F1F7', padding: '8px 0' }}>
-            <span style={{ width: 108, fontSize: 12, fontWeight: 600, color: '#6F7688', paddingTop: 1, flexShrink: 0 }}>{label}</span>
-            <span style={{ flex: 1, minWidth: 0, fontSize: 13, textAlign: 'left', fontWeight: 600, overflowWrap: 'anywhere', whiteSpace: 'pre-line', color: value ? '#1E2530' : '#A5A9B8' }}>{value || '—'}</span>
-          </div>)}
-        </div>
-      </div>
-      <div style={sourceGroupTitle}>Разделы договора</div>
-      {tpl.sections.map((row, index) => <div key={row.id} style={sourceCard}>
-        {rowHead('sections', row, index, 'Раздел')}
-        <textarea {...fieldProps('sections', row, 'text')} className="contract-template-text" aria-label={'Текст раздела ' + (index + 1)} placeholder="Текст раздела" rows={3} style={sectionTextInput} />
-      </div>)}
-      <button onClick={() => patch({ sections: [...tpl.sections, { id: 's-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6), title: 'Новый раздел', text: '' }] })} style={addButton}>+ Добавить раздел</button>
-      <div style={{ height: .5, background: '#E4E4EE', margin: '8px 4px' }} />
-      <div style={sourceGroupTitle}>Приложения к договору</div>
-      {tpl.appendices.map((row, index) => <div key={row.id} style={sourceCard}>
-        {rowHead('appendices', row, index, 'Приложение')}
-        {row.kind === 'text' ? <textarea {...fieldProps('appendices', row, 'text')} className="contract-template-text" aria-label={'Текст приложения ' + (index + 1)} placeholder="Текст приложения" rows={3} style={sectionTextInput} /> : <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <p style={{ margin: 0, color: '#6F7688', fontSize: 12, fontWeight: 600, lineHeight: '16px' }}>{CONTRACT_ESTIMATE_TYPES.find(type => type.id === row.exportOptions.type)?.label} · из проекта при генерации договора</p>
-          <button onClick={() => { setEstimateDraft({ id: row.id, type: row.exportOptions.type, cols: { ...row.exportOptions.cols } }); setSheet('estimate'); }} style={{ padding: '12px 0', alignSelf: 'center', border: 0, background: 'transparent', color: '#1461EE', fontSize: 14, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' }}>Параметры сметы</button>
-        </div>}
-      </div>)}
-      <button onClick={() => setSheet('appendix')} style={addButton}>+ Добавить приложение</button>
-      <p style={{ color: '#6f7688', fontSize: 11, lineHeight: '16px', padding: '0 4px', margin: '0 0 7px' }}>Подстановки: кнопка «Подстановки» над клавиатурой — {'{компания} {юр_лицо} {инн}'}… и данные проекта {'{клиент} {сумма}'}…</p>
-      <div style={sourceCard}>
-        <strong style={sourceCardTitle}>Оформление</strong>
-        <div style={{ display: 'flex', gap: 6, marginTop: 14 }}>{CONTRACT_STYLES.map(style => <button key={style.id} aria-pressed={tpl.style === style.id} onClick={() => patch({ style: style.id })} style={{ flex: 1, border: '1px solid ' + (tpl.style === style.id ? '#1461EE' : '#E8E8F2'), borderRadius: 9, padding: '8px 4px', background: tpl.style === style.id ? '#1461EE' : '#FFFFFF', color: tpl.style === style.id ? '#FFFFFF' : '#5A6070', fontSize: 11, fontWeight: tpl.style === style.id ? 700 : 500, fontFamily: 'inherit', cursor: 'pointer' }}>{style.id === 'accent' ? 'ZAMER' : style.label}</button>)}</div>
-      </div>
-      <button onClick={() => setPreview(true)} style={{ width: '100%', marginTop: 16, marginBottom: 8, background: '#1461EE', borderRadius: 12, padding: '14px 0', border: 0, color: '#FFFFFF', fontSize: 14, fontWeight: 800, fontFamily: 'inherit', cursor: 'pointer' }}>Предпросмотр договора</button>
-    </div>
+  return <Shell title="Шаблон документов" onClose={leave} footer={<div className="cd-template-footer"><span className="cd-save-state">{dirty ? 'Есть изменения' : 'Изменения сохранены'}</span><div className="cd-bottom-actions"><Button variant="secondary" onClick={() => setPreview(true)} aria-label="Предпросмотр документа">Предпросмотр</Button><Button onClick={() => save(true)}>Сохранить</Button></div></div>} overlay={overlay}>
+    <Tabs value={tab} onChange={value => { setTab(value); setExpanded(null); }} />
+    <p className="cd-template-intro">{tab === 'act' ? 'Текст для актов выполненных работ. Даты, объём и результат приёмки заполняются в проекте.' : 'Текст для новых договоров. Клиент, адрес и стоимость подставляются из проекта.'}</p>
+    <Card title={tab === 'act' ? 'Содержание акта' : 'Содержание договора'} action={<span className="cd-count">{sections.length} разделов</span>}><p className="cd-note cd-note-top">{tab === 'act' ? 'Все основные формулировки акта редактируются здесь. Поля в скобках заполнятся данными проекта и приёмки.' : 'Типовой текст уже подготовлен. Откройте раздел, если нужно изменить его под свою работу.'}</p><div className="cd-section-list">{tab === 'contract' && <div className="cd-section-item"><button type="button" className="cd-section-toggle" aria-expanded={expanded === 'preamble'} onClick={() => setExpanded(expanded === 'preamble' ? null : 'preamble')}><span className="cd-section-index"><Icon size={14} /></span><span><strong>Вступление</strong><small>{(tpl.preamble || 'Исполнитель и заказчик заключают договор').replace(/\{[^}]+\}/g, '…')}</small></span><Icon name="down" size={15} /></button>{expanded === 'preamble' && <div className="cd-section-body"><label className="cd-field"><span>Текст вступления</span><textarea {...fieldProps('preamble', { id: 'preamble', text: tpl.preamble }, 'text')} aria-label="Текст вступления" rows={6} /></label><button type="button" className="cd-text-button" onMouseDown={event => event.preventDefault()} onClick={event => openFields('preamble', { id: 'preamble' }, event.currentTarget)}>Вставить поле</button></div>}</div>}{renderRows(list, sections, 'Раздел')}</div><button type="button" className="cd-add" onClick={() => { const row = { id: newId('s'), title: 'Новый раздел', text: '' }; patch({ [list]: [...sections, row] }); setExpanded(list + ':' + row.id); }}>+ Добавить раздел</button>{removed && <div className="cd-undo"><span>Раздел удалён</span><button type="button" onClick={undoRemove}>Отменить</button></div>}<button type="button" className="cd-text-button cd-reset" onClick={() => setSheet('reset')}>Вернуть стандартный текст</button></Card>
+    {tab === 'contract' && <Card title="Приложения"><p className="cd-note cd-note-top">Каждое приложение начинается с нового листа.</p><div className="cd-section-list">{renderRows('appendices', tpl.appendices.filter(row => row.kind === 'estimate'), 'Приложение')}{renderRows('appendices', tpl.appendices.filter(row => row.kind === 'text'), 'Приложение')}</div>{!tpl.appendices.some(row => row.kind === 'estimate') && <button type="button" className="cd-add" onClick={() => addAppendix('estimate')}>+ Добавить смету из проекта</button>}<button type="button" className="cd-add" onClick={() => addAppendix()}>+ Добавить приложение</button></Card>}
+    {error && <p className="cd-error" role="alert">{error}</p>}
+  </Shell>;
+}
+
+function ProjectContract({ project, total, area, est, estimateAdjustment, estimateExportOptions, contract, installDate, onSaveContract, onProjectPatch, onClose, templateStore, company, rooms, documentContext }) {
+  const access = contractTemplateAccess(templateStore);
+  const actValues = value => Object.fromEntries(['number', 'date', 'completionDate', 'acceptance', 'remarks', 'remedyDate', 'scope', 'total', 'paid'].filter(key => Object.prototype.hasOwnProperty.call(value || {}, key)).map(key => [key, value[key]]));
+  const [tpl] = useState(() => { const source = access.load(); return normalizeContractTemplate({ ...source, style: 'magic', head: { ...source.head, ...company } }); });
+  const [saved, setSaved] = useState(contract || null);
+  const [draft, setDraft] = useState(() => createContractDraft({ saved: contract, project, total, area, installDate, template: tpl, refreshFromProject: true }));
+  const [tab, setTab] = useState('contract'), [preview, setPreview] = useState(false), [errors, setErrors] = useState({}), [error, setError] = useState(''), [busy, setBusy] = useState(''), [leaveOpen, setLeaveOpen] = useState(false);
+  const [actDraft, setActDraft] = useState(() => { const previous = contract?.actDraft || contract?.act || {}; return { number: previous.number ?? 'А-' + draft.number, date: previous.date ?? today(), completionDate: previous.completionDate ?? '', acceptance: previous.acceptance ?? '', remarks: previous.remarks ?? '', remedyDate: previous.remedyDate ?? '', scope: previous.scope ?? 'Работы по изготовлению и монтажу натяжных потолков согласно договору и смете.', total: previous.total ?? total, paid: project.paid ?? previous.paid ?? '' }; });
+  const originalDraft = useRef(JSON.stringify(draft)), originalAct = useRef(JSON.stringify(actDraft)), numberTaken = useRef(!!contract?.html || contract?.numberAllocated === true);
+  const context = documentContext || { project, rooms };
+  const dirty = JSON.stringify(draft) !== originalDraft.current || JSON.stringify(actDraft) !== originalAct.current;
+  const patch = values => setDraft(current => ({ ...current, ...values }));
+  const patchParty = values => setDraft(current => ({ ...current, party: { ...current.party, ...values } }));
+  const patchAct = values => setActDraft(current => ({ ...current, ...values }));
+  const close = () => busy ? null : dirty ? setLeaveOpen(true) : onClose();
+  const focusInvalid = () => requestAnimationFrame(() => { const field = window.document.querySelector('.cd-shell [aria-invalid="true"]'); field?.scrollIntoView({ block: 'center' }); field?.focus({ preventScroll: true }); });
+  const currentActValid = !hasErrors(validateActDraft(actDraft));
+  const lastAct = saved?.act || saved?.actDraft;
+  const actForContract = currentActValid ? actDraft : lastAct && !hasErrors(validateActDraft(lastAct)) ? lastAct : null;
+  const persist = (next, savedActDraft = false) => {
+    if (!onSaveContract) throw new Error('Сохранение документа недоступно');
+    onSaveContract(next); setSaved(next);
+    originalDraft.current = JSON.stringify(draft);
+    if (savedActDraft) originalAct.current = JSON.stringify(actDraft);
+  };
+  const saveAndExit = () => {
+    setError('');
+    try {
+      const next = { ...draft, client: draft.party.client, phone: draft.party.phone, address: draft.party.address, schemaVersion: 2, status: 'draft', frozen: false, numberAllocated: numberTaken.current, actDraft: actValues(actDraft), act: actForContract ? actValues(actForContract) : null };
+      onProjectPatch?.({ client: draft.party.client, phone: draft.party.phone, address: draft.party.address });
+      persist(next, true); onClose();
+    } catch (cause) { setError(cause?.message || 'Не удалось сохранить черновик. Попробуйте ещё раз.'); }
+  };
+  const exportDocument = async () => {
+    if (busy) return;
+    const contractErrors = validateContractDraft(draft), actErrors = tab === 'act' ? validateActDraft(actDraft) : {};
+    setErrors(tab === 'act' ? actErrors : contractErrors); setError('');
+    if (hasErrors(contractErrors)) { setTab('contract'); setErrors(contractErrors); setError('Проверьте выделенные поля договора.'); focusInvalid(); return; }
+    if (hasErrors(actErrors)) { setError('Проверьте выделенные поля акта.'); focusInvalid(); return; }
+    setBusy('pdf');
+    try {
+      const snapshot = createContractSnapshot({ draft, template: tpl, est, estimateAdjustment, estimateExportOptions, documentContext: context, actDraft: actForContract });
+      if (!numberTaken.current) { const current = access.load(); access.save({ ...current, numSeq: (current.numSeq || 1) + 1 }); numberTaken.current = true; }
+      const act = actForContract ? createActSnapshot({ contract: snapshot, act: actForContract, template: tpl, est, estimateAdjustment, estimateExportOptions, documentContext: context }) : null;
+      persist({ ...snapshot, act, numberAllocated: numberTaken.current }, currentActValid);
+      onProjectPatch?.({ client: draft.party.client, phone: draft.party.phone, address: draft.party.address });
+      const selected = tab === 'act' ? act : snapshot;
+      const filename = (tab === 'act' ? 'Акт_' : 'Договор_') + selected.number + '_' + (project.name || '');
+      await htmlToPdf(selected.html, filename);
+    } catch (cause) { if (cause?.fields) setErrors(cause.fields); if (cause?.name !== 'AbortError') setError(cause?.message || 'Не удалось подготовить PDF'); }
+    finally { setBusy(''); }
+  };
+  const draftFields = contractDraftFields(draft);
+  const draftPreview = tab === 'act' ? acceptanceHtml(tpl, draftFields, actDraft, est, estimateAdjustment, estimateExportOptions, context) : contractHtml(tpl, draftFields, est, estimateAdjustment, estimateExportOptions, context, actForContract);
+  if (preview) return <PreviewScreen title={tab === 'act' ? 'Предпросмотр акта' : 'Предпросмотр договора'} html={draftPreview} onClose={() => setPreview(false)} />;
+  const overlay = leaveOpen && <Sheet title="Сохранить изменения?" onClose={() => setLeaveOpen(false)}><p className="cd-note">Можно сохранить заполненные поля и продолжить позже.</p><Button className="cd-full" onClick={saveAndExit}>Сохранить и выйти</Button><Button variant="secondary" className="cd-full" onClick={() => setLeaveOpen(false)}>Продолжить редактирование</Button><Button variant="secondary" className="cd-full cd-danger-text" onClick={onClose}>Закрыть без сохранения</Button>{error && <p className="cd-error" role="alert">{error}</p>}</Sheet>;
+  return <Shell title="Документы" sub={project.name} onClose={close} footer={<div className="cd-actions cd-export-actions"><Button variant="secondary" disabled={!!busy} aria-label="Предпросмотр документа" onClick={() => setPreview(true)}>Предпросмотр</Button><Button disabled={!!busy} onClick={exportDocument}>{busy === 'pdf' ? 'Готовлю PDF…' : 'Скачать PDF'}</Button></div>} overlay={overlay}>
+    <Tabs value={tab} onChange={value => { setTab(value); setErrors({}); setError(''); }} />
+    {tab === 'contract' ? <>
+      <Card title="Заказчик"><Field label="Заказчик" placeholder="ФИО или название организации" value={draft.party.client} onChange={value => patchParty({ client: value })} error={errors.client} /><Field label="ФИО заказчика для подписи" placeholder="Иванов И.И." value={draft.party.signerName ?? signatureNameFromClient(draft.party.client, draft.party)} onChange={value => patchParty({ signerName: value })} /><Field label="Телефон заказчика" type="tel" placeholder="+7 …" value={draft.party.phone} onChange={value => patchParty({ phone: value })} error={errors.phone} /><Field label="Адрес объекта" value={draft.party.address} onChange={value => patchParty({ address: value })} error={errors.address} /><details className="cd-details" open={errors.inn || errors.kpp ? true : undefined}><summary>Реквизиты заказчика <Icon name="down" size={14} /></summary><div className="cd-form-stack"><div className="cd-grid"><Field label="ИНН заказчика" inputMode="numeric" value={draft.party.inn} onChange={value => patchParty({ inn: value })} error={errors.inn} /><Field label="КПП заказчика" inputMode="numeric" value={draft.party.kpp} onChange={value => patchParty({ kpp: value })} error={errors.kpp} /></div><Field label="Юридический адрес заказчика" value={draft.party.legalAddress} onChange={value => patchParty({ legalAddress: value })} /><Field label="Представитель заказчика" value={draft.party.representative} onChange={value => patchParty({ representative: value })} /><Field label="Основание полномочий" placeholder="Устав или доверенность" value={draft.party.authority} onChange={value => patchParty({ authority: value })} /></div></details></Card>
+      <Card title="Условия договора"><div className="cd-grid"><Field label="Номер договора" value={draft.number} onChange={value => { patch({ number: value, numberAuto: false }); if (actDraft.number === 'А-' + draft.number) patchAct({ number: 'А-' + value }); }} error={errors.number} /><Field label="Дата договора" type="date" value={toInputDate(draft.date)} onChange={value => patch({ date: value })} error={errors.date} /><Field label="Начало работ" type="date" value={toInputDate(draft.startDate)} onChange={value => patch({ startDate: value })} error={errors.startDate} /><Field label="Окончание работ" type="date" value={toInputDate(draft.endDate)} onChange={value => patch({ endDate: value })} error={errors.endDate} /></div><div className="cd-total-line"><span>Стоимость по смете</span><strong>{money(draft.total)} ₽</strong></div>{errors.total && <p className="cd-field-error">{errors.total}</p>}<Field label="Предоплата, ₽" value={draft.prepay} inputMode="decimal" onChange={value => patch({ prepay: value })} error={errors.prepay} /><div className="cd-chips cd-prepay-chips">{[30, 50, 70, 100].map(percent => <button type="button" key={percent} onClick={() => patch({ prepay: Math.round(draft.total * percent) / 100 })}>{percent}%</button>)}</div><p className="cd-note">Остаток по условиям договора: {Number.isFinite(parseContractMoney(draft.prepay)) ? money(draft.total - parseContractMoney(draft.prepay)) + ' ₽' : '—'}</p></Card><p className="cd-note cd-screen-note">Суммы и смета — из текущего расчёта. Текст и оформление — из настроек документов.</p>
+    </> : <><Card title="Акт выполненных работ"><p className="cd-note cd-note-top">Приложение №2 к договору № {draft.number} от {formatDocumentDate(draft.date)}. Акт сохраняется отдельным документом.</p><div className="cd-grid"><Field label="Номер акта" value={actDraft.number} onChange={value => patchAct({ number: value })} error={errors.number} /><Field label="Дата акта" type="date" value={toInputDate(actDraft.date)} onChange={value => patchAct({ date: value })} error={errors.date} /></div><Field label="Работы завершены" type="date" value={toInputDate(actDraft.completionDate)} onChange={value => patchAct({ completionDate: value })} error={errors.completionDate} /><Field label="Выполненные работы" textarea rows={3} value={actDraft.scope} onChange={value => patchAct({ scope: value })} error={errors.scope} /></Card><Card title="Подпись заказчика"><Field label="ФИО заказчика для подписи" placeholder="Иванов И.И." value={draft.party.signerName ?? signatureNameFromClient(draft.party.client, draft.party)} onChange={value => patchParty({ signerName: value })} /></Card><Card title="Приёмка работ"><div className="cd-acceptance">{[['none', 'Без замечаний'], ['remarks', 'Есть замечания']].map(([value, label]) => <button type="button" aria-pressed={actDraft.acceptance === value} className={actDraft.acceptance === value ? 'is-active' : ''} key={value} onClick={() => patchAct({ acceptance: value })}>{label}</button>)}</div>{errors.acceptance && <p className="cd-field-error">{errors.acceptance}</p>}{actDraft.acceptance === 'remarks' && <><Field label="Замечания и недостатки" textarea rows={3} value={actDraft.remarks} onChange={value => patchAct({ remarks: value })} error={errors.remarks} /><Field label="Устранить до" type="date" value={toInputDate(actDraft.remedyDate)} onChange={value => patchAct({ remedyDate: value })} error={errors.remedyDate} /></>}</Card><Card title="Стоимость выполненных работ"><Field label="Стоимость по акту, ₽" inputMode="decimal" value={actDraft.total} onChange={value => patchAct({ total: value })} error={errors.total} /></Card></>}
+    {error && <p className="cd-error" role="alert">{error}</p>}
   </Shell>;
 }
 
 function mount(node, onClose) {
-  const host = document.createElement('div');
-  host.style.zIndex = '9000';
-  document.body.appendChild(host);
-  const unfit = fitToStage(host);
-  const root = ReactDOM.createRoot(host);
+  const host = document.createElement('div'); host.style.zIndex = '9000'; document.body.appendChild(host);
+  const unfit = fitToStage(host), root = ReactDOM.createRoot(host);
   const close = () => { root.unmount(); unfit(); host.remove(); };
   root.render(React.cloneElement(node, { onClose: () => { if (onClose) onClose(); else close(); } }));
   return { close };
 }
-/* MagicContract.open({ project, total, area, est, contract, installDate, onSaveContract, onProjectPatch, onClose }) → { close }; договор сохраняется в проект автоматически */
 export function open(opts) { return mount(<ProjectContract {...opts} />, opts.onClose); }
-/* MagicContract.openTemplate({ onClose }) → { close } — редактор шаблона из главного меню */
 export function openTemplate(opts = {}) { return mount(<TemplateEditor {...opts} />, opts.onClose); }

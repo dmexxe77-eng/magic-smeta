@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { chromium } from 'playwright';
 
-const base=process.env.DESIGN_URL||'http://127.0.0.1:5173/design/index.html';
+const base=process.env.DESIGN_URL||'http://127.0.0.1:5173/design/app.html';
 const browser=await chromium.launch({channel:process.env.PLAYWRIGHT_CHANNEL||'chrome',headless:true});
 const dir='artifacts/design';fs.mkdirSync(dir,{recursive:true});
 const context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:2});

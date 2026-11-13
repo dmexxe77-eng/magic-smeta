@@ -18,9 +18,10 @@
 .z-as-section-title{font-size:11px;font-weight:800;letter-spacing:.7px;color:#6f7688;text-transform:uppercase;margin:14px 4px 6px;line-height:1.4}
 .z-as-section-hint{font-size:11.5px;font-weight:600;color:#a5a9b8;line-height:16px;margin:-2px 4px 8px}
 .z-as-card{background:#fff;border-radius:18px;padding:0 14px;overflow:visible}
-.z-as-value-row{display:flex;align-items:center;gap:8px;width:100%;min-height:52px;padding:0;border:0;border-bottom:.5px solid #f1f1f7;background:transparent;text-align:left;color:#1e2530}
+.z-as-value-row{display:flex;align-items:center;gap:8px;width:100%;min-height:52px;padding:10px 0;border:0;border-bottom:.5px solid #f1f1f7;background:transparent;text-align:left;color:#1e2530}
 .z-as-field-label{width:112px;flex-shrink:0;font-size:12.5px;font-weight:600;color:#6f7688;line-height:1.4}
-.z-as-value{flex:1;min-width:0;font-size:14px;font-weight:600;color:#1e2530;text-align:right;line-height:1.4;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.z-as-field-warning{display:block;margin-top:2px;color:#c72f26;font-size:10.5px;font-weight:600;line-height:1.3}
+.z-as-value{flex:1;min-width:0;font-size:14px;font-weight:600;color:#1e2530;text-align:right;line-height:1.4;display:block;white-space:normal;overflow-wrap:anywhere}
 .z-as-value.is-empty{color:#a5a9b8}
 .z-as-pencil{width:28px;height:28px;flex:none;display:grid;place-items:center;color:#a5a9b8}
 .z-as-link-row,.z-as-toggle-row{display:flex;align-items:center;gap:10px;width:100%;min-height:52px;padding:0;border:0;border-bottom:.5px solid #f1f1f7;background:transparent;text-align:left;color:#1e2530}

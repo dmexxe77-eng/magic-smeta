@@ -16,27 +16,20 @@ import CompassBuilder from "../builders/CompassBuilder.jsx";
 import ManualBuilder from "../builders/ManualBuilder.jsx";
 import PdfPagePicker from "../builders/PdfPagePicker.jsx";
 
-function NewOrderFlow({onBack,onCreate,clients:extClients,designers:extDesigners,onAddClient,onAddDesigner}){
+function NewOrderFlow({onBack,onCreate,clients:extClients,onAddClient}){
   const[step,setStep]=useState("form");
   const[name,setName]=useState("");
   const[clientId,setClientId]=useState("");
   const[clientTxt,setClientTxt]=useState("");
-  const[designerId,setDesignerId]=useState("");
-  const[desTxt,setDesTxt]=useState("");
   const[phone,setPhone]=useState("");
   const[address,setAddress]=useState("");
   const[notes,setNotes]=useState("");
   const[showNewCl,setShowNewCl]=useState(false);
-  const[showNewDes,setShowNewDes]=useState(false);
   const[newClName,setNewClName]=useState("");
-  const[newDesName,setNewDesName]=useState("");
-  const[newDesStudio,setNewDesStudio]=useState("");
 
   const IS={width:"100%",background:T.faint,border:"0.5px solid "+T.border,color:"#111",borderRadius:10,padding:"10px 12px",fontSize:13,fontFamily:"inherit",boxSizing:"border-box",outline:"none"};
   const cls=extClients||[];
-  const des=extDesigners||[];
   const selCl=cls.find(c=>c.id===clientId);
-  const selDes=des.find(d=>d.id===designerId);
   const ACC2="#4F46E5";
   const DARK2="#1e2530";
 
@@ -65,16 +58,6 @@ function NewOrderFlow({onBack,onCreate,clients:extClients,designers:extDesigners
           <input style={IS} value={clientTxt} onChange={e=>{setClientTxt(e.target.value);setClientId("");}} placeholder="Или введите вручную"/>
         </div>
 
-        {/* Дизайнер */}
-        <div style={{marginBottom:18}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-            <div style={{fontSize:11,color:T.sub,fontWeight:500}}>{"Дизайнер"}</div>
-            <button onClick={()=>setShowNewDes(true)} style={{background:"rgba(124,92,191,0.1)",border:"none",borderRadius:7,padding:"4px 10px",color:"#7c5cbf",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{"+ Новый"}</button>
-          </div>
-          {des.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>{des.map(d=>(<button key={d.id} onClick={()=>{setDesignerId(d.id);setDesTxt(d.name);}} style={{padding:"6px 13px",borderRadius:18,border:"1px solid "+(designerId===d.id?"rgba(124,92,191,0.4)":"#e4e4f0"),background:designerId===d.id?"rgba(124,92,191,0.1)":"#fff",color:designerId===d.id?"#7c5cbf":"#aaa",fontSize:12,fontWeight:designerId===d.id?600:400,cursor:"pointer",fontFamily:"inherit"}}>{d.name.split(" ")[0]}</button>))}</div>}
-          <input style={IS} value={desTxt} onChange={e=>{setDesTxt(e.target.value);setDesignerId("");}} placeholder="Или введите вручную"/>
-        </div>
-
         {/* Контакты */}
         <div style={{background:T.card,borderRadius:14,padding:14,marginBottom:16}}>
           <div style={{fontSize:11,color:T.sub,fontWeight:500,marginBottom:10}}>{"Дополнительно"}</div>
@@ -85,7 +68,7 @@ function NewOrderFlow({onBack,onCreate,clients:extClients,designers:extDesigners
 
         {/* Кнопки */}
         <div style={{display:"flex",flexDirection:"column",gap:8}}>
-          <button onClick={()=>{if(!name.trim())return;onCreate({name,client:selCl?.name||clientTxt,clientId,phone,address,designer:selDes?.name||desTxt,designerId,notes},"none");}}
+          <button onClick={()=>{if(!name.trim())return;onCreate({name,client:selCl?.name||clientTxt,clientId,phone,address,notes},"none");}}
             style={{width:"100%",background:name.trim()?ACC2:"rgba(79,70,229,0.1)",border:"none",borderRadius:14,padding:"15px",color:name.trim()?"#fff":"#aaa",fontSize:15,fontWeight:700,cursor:name.trim()?"pointer":"default",fontFamily:"inherit",boxShadow:name.trim()?`0 6px 24px ${ACC2}55`:"none"}}>
             {"Создать заказ"}
           </button>
@@ -109,19 +92,6 @@ function NewOrderFlow({onBack,onCreate,clients:extClients,designers:extDesigners
         </div>
       </div>)}
 
-      {/* Модал: новый дизайнер */}
-      {showNewDes&&(<div style={{position:"fixed",inset:0,zIndex:30,background:"rgba(0,0,0,0.3)",display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
-        <div style={{background:T.card,borderRadius:"20px 20px 0 0",padding:"20px 16px 36px",width:"100%",maxWidth:480}}>
-          <div style={{width:36,height:4,background:"#eee",borderRadius:2,margin:"0 auto 14px"}}/>
-          <div style={{fontSize:15,fontWeight:700,color:T.text2,marginBottom:11}}>{"Новый дизайнер"}</div>
-          <input style={{...IS,marginBottom:8}} value={newDesName} onChange={e=>setNewDesName(e.target.value)} placeholder="Имя дизайнера"/>
-          <input style={{...IS,marginBottom:11}} value={newDesStudio} onChange={e=>setNewDesStudio(e.target.value)} placeholder="Студия (необязательно)"/>
-          <div style={{display:"flex",gap:8}}>
-            <button onClick={()=>{if(!newDesName.trim())return;const id=onAddDesigner&&onAddDesigner(newDesName.trim(),newDesStudio.trim())||("d"+uid());setDesignerId(id);setDesTxt(newDesName.trim());setNewDesName("");setNewDesStudio("");setShowNewDes(false);}} style={{flex:1,background:"#7c5cbf",border:"none",borderRadius:12,padding:13,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{"Добавить"}</button>
-            <button onClick={()=>setShowNewDes(false)} style={{flex:1,background:T.bg,border:"none",borderRadius:12,padding:13,color:T.sub,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>{"Отмена"}</button>
-          </div>
-        </div>
-      </div>)}
     </div>
   );
 
@@ -133,7 +103,7 @@ function NewOrderFlow({onBack,onCreate,clients:extClients,designers:extDesigners
       </button>
       <div style={{flex:1,minWidth:0}}>
         <div style={{fontWeight:700,fontSize:15,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:T.text2}}>{name}</div>
-        <div style={{fontSize:11,color:T.sub,marginTop:1}}>{selCl?.name||clientTxt||""}{(selDes?.name||desTxt)?<span style={{color:"#7c5cbf"}}>{" · ✦ "+(selDes?.name||desTxt)}</span>:null}</div>
+        <div style={{fontSize:11,color:T.sub,marginTop:1}}>{selCl?.name||clientTxt||""}</div>
       </div>
     </div>
     <div style={{padding:"22px 14px"}}>
@@ -145,7 +115,7 @@ function NewOrderFlow({onBack,onCreate,clients:extClients,designers:extDesigners
           {id:"trace",l:"Обводка",sub:"PDF или фото плана",c:"#16a34a",ic:"⊞"},
         ].map(m=>(
           <button key={m.id}
-            onClick={()=>onCreate({name,client:selCl?.name||clientTxt,clientId,phone,address,designer:selDes?.name||desTxt,designerId,notes},m.id)}
+            onClick={()=>onCreate({name,client:selCl?.name||clientTxt,clientId,phone,address,notes},m.id)}
             style={{display:"flex",alignItems:"center",gap:14,padding:"15px 16px",background:T.card,borderRadius:15,border:"0.5px solid "+T.border,cursor:"pointer",textAlign:"left",fontFamily:"inherit",width:"100%"}}>
             <div style={{width:44,height:44,borderRadius:22,background:m.c+"18",display:"flex",alignItems:"center",justifyContent:"center",color:m.c,fontSize:20,fontWeight:700,flexShrink:0}}>{m.ic}</div>
             <div style={{flex:1}}><div style={{fontSize:14,fontWeight:600,color:T.text2,marginBottom:2}}>{m.l}</div><div style={{fontSize:12,color:T.sub}}>{m.sub}</div></div>

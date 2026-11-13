@@ -5,29 +5,67 @@ export const ESTIMATE_FONTS = Object.freeze([
   { id: 'arial', label: 'Arial', css: 'Arial,sans-serif' },
   { id: 'verdana', label: 'Verdana', css: 'Verdana,sans-serif' },
   { id: 'georgia', label: 'Georgia', css: 'Georgia,serif' },
-  { id: 'times', label: 'Times New Roman', css: '"Times New Roman",serif' },
+  { id: 'times', label: 'Times New Roman', css: "'Liberation Serif','Times New Roman',Georgia,serif" },
+  { id: 'manrope', label: 'Manrope', css: "'Manrope',Arial,sans-serif" },
+]);
+const LEGACY_APPEARANCE = Object.freeze({
+  background: '#121a2a', accent: '#9586ff', projectBackground: '#f8f8fd',
+  tableHeaderBackground: '#202532', sectionColor: '#202532', stripeBackground: '#f5f7fb',
+  layout: 'split', font: 'arial', density: 'regular', logoPosition: 'left',
+  projectWidth: 60, headerHeight: 156, headerPadding: 16, headerRadius: 14,
+  logoSize: 42, fontSize: 12, companyFontSize: 19,
+});
+const DEFAULT_APPEARANCE = Object.freeze({
+  background: '#FFFFFF', accent: '#24364B', projectBackground: '#FFFFFF',
+  tableHeaderBackground: '#E7EFFD', sectionColor: '#24364B', stripeBackground: '#F7F8FA',
+  layout: 'stacked', font: 'manrope', density: 'compact', logoPosition: 'left',
+  projectWidth: 60, headerHeight: 120, headerPadding: 16, headerRadius: 0,
+  logoSize: 38, fontSize: 12, companyFontSize: 18,
+});
+export const ESTIMATE_PRESETS = Object.freeze([
+  Object.freeze({ id: 'brand', label: 'Единое оформление', description: 'Чистый лист и аккуратные таблицы', appearance: DEFAULT_APPEARANCE }),
 ]);
 export function normalizeEstimateTemplate(value) {
+  const legacyDefault = value?.formatVersion !== 2 && Object.entries(LEGACY_APPEARANCE)
+    .every(([key, oldValue]) => value?.[key] === undefined || value[key] === oldValue);
+  const appearance = legacyDefault ? DEFAULT_APPEARANCE : { ...DEFAULT_APPEARANCE, ...value };
   return {
-    background: color(value?.background, '#121a2a'), accent: color(value?.accent, '#9586ff'),
-    projectBackground: color(value?.projectBackground, '#f8f8fd'),
-    tableHeaderBackground: color(value?.tableHeaderBackground, '#202532'),
-    sectionColor: color(value?.sectionColor, '#202532'),
-    stripeBackground: color(value?.stripeBackground, '#f5f7fb'),
+    formatVersion: 2,
+    background: color(appearance.background, DEFAULT_APPEARANCE.background), accent: color(appearance.accent, DEFAULT_APPEARANCE.accent),
+    projectBackground: color(appearance.projectBackground, DEFAULT_APPEARANCE.projectBackground),
+    tableHeaderBackground: color(appearance.tableHeaderBackground, DEFAULT_APPEARANCE.tableHeaderBackground),
+    sectionColor: color(appearance.sectionColor, DEFAULT_APPEARANCE.sectionColor),
+    stripeBackground: color(appearance.stripeBackground, DEFAULT_APPEARANCE.stripeBackground),
     showLogo: value?.showLogo !== false, showDetails: value?.showDetails !== false,
     showItemPhotos: value?.showItemPhotos !== false, stripedRows: value?.stripedRows === true,
-    layout: choice(value?.layout, ['split', 'reverse', 'stacked'], 'split'),
-    font: choice(value?.font, ESTIMATE_FONTS.map(item => item.id), 'arial'),
-    density: choice(value?.density, ['compact', 'regular', 'airy'], 'regular'),
-    logoPosition: choice(value?.logoPosition, ['left', 'above', 'right'], 'left'),
-    projectWidth: number(value?.projectWidth, 60, 35, 70),
-    headerHeight: number(value?.headerHeight, 156, 120, 320),
-    headerPadding: number(value?.headerPadding, 16, 8, 32),
-    headerRadius: number(value?.headerRadius, 14, 0, 24),
-    logoSize: number(value?.logoSize, 42, 24, 112),
-    fontSize: number(value?.fontSize, 12, 10, 16),
-    companyFontSize: number(value?.companyFontSize, 19, 16, 30),
+    layout: choice(appearance.layout, ['split', 'reverse', 'stacked'], DEFAULT_APPEARANCE.layout),
+    font: choice(appearance.font, ESTIMATE_FONTS.map(item => item.id), DEFAULT_APPEARANCE.font),
+    density: choice(appearance.density, ['compact', 'regular', 'airy'], DEFAULT_APPEARANCE.density),
+    logoPosition: choice(appearance.logoPosition, ['left', 'above', 'right'], DEFAULT_APPEARANCE.logoPosition),
+    projectWidth: number(appearance.projectWidth, DEFAULT_APPEARANCE.projectWidth, 35, 70),
+    headerHeight: number(appearance.headerHeight, DEFAULT_APPEARANCE.headerHeight, 120, 320),
+    headerPadding: number(appearance.headerPadding, DEFAULT_APPEARANCE.headerPadding, 8, 32),
+    headerRadius: number(appearance.headerRadius, DEFAULT_APPEARANCE.headerRadius, 0, 24),
+    logoSize: number(appearance.logoSize, DEFAULT_APPEARANCE.logoSize, 24, 112),
+    fontSize: number(appearance.fontSize, DEFAULT_APPEARANCE.fontSize, 10, 16),
+    companyFontSize: number(appearance.companyFontSize, DEFAULT_APPEARANCE.companyFontSize, 16, 30),
   };
+}
+
+/** Change the presentation while preserving document visibility preferences. */
+export function estimatePresetTemplate(id, current) {
+  const preset = ESTIMATE_PRESETS.find(item => item.id === (id === 'modern' ? 'brand' : id));
+  if (!preset) throw new Error('Неизвестное оформление сметы');
+  return normalizeEstimateTemplate({ ...normalizeEstimateTemplate(current), ...preset.appearance });
+}
+
+/** Customized values stay untouched and are never silently mapped onto a preset. */
+export function estimatePresetId(value) {
+  const appearance = normalizeEstimateTemplate(value);
+  return ESTIMATE_PRESETS.find(preset => Object.keys(DEFAULT_APPEARANCE)
+    .every(key => typeof appearance[key] === 'string' && appearance[key].startsWith('#')
+      ? appearance[key].toLowerCase() === preset.appearance[key].toLowerCase()
+      : appearance[key] === preset.appearance[key]))?.id || null;
 }
 function luminance(hex) {
   const channels = hex.slice(1).match(/../g).map(value => parseInt(value, 16) / 255)
@@ -45,6 +83,7 @@ export function estimateHeaderInk(background) {
 /** Only normalized numbers, colors and whitelisted font families enter document CSS. */
 export function estimateTemplateVariables(template) {
   const a = normalizeEstimateTemplate(template);
+  const preset = estimatePresetId(a);
   const font = ESTIMATE_FONTS.find(font => font.id === a.font).css;
   const columns = a.layout === 'stacked' ? 'minmax(0,1fr)' : a.layout === 'reverse'
     ? `minmax(0,${100 - a.projectWidth}fr) minmax(0,${a.projectWidth}fr)`
@@ -52,12 +91,14 @@ export function estimateTemplateVariables(template) {
   const values = {
     'font-family': font, 'font-size': `${a.fontSize}px`, 'company-font-size': `${a.companyFontSize}px`,
     'header-columns': columns, 'header-height': `${a.headerHeight}px`, 'header-padding': `${a.headerPadding}px`,
+    'stacked-company-height': a.headerHeight === DEFAULT_APPEARANCE.headerHeight ? '0px' : `${a.headerHeight}px`,
     'header-radius': `${a.headerRadius}px`, 'project-bg': a.projectBackground, 'project-ink': estimateHeaderInk(a.projectBackground),
-    'project-order': a.layout === 'reverse' ? 2 : 1, 'company-order': a.layout === 'reverse' ? 1 : 2,
+    'project-order': a.layout === 'split' ? 1 : 2, 'company-order': a.layout === 'split' ? 2 : 1,
     'logo-size': `${a.logoSize}px`, 'brand-direction': a.logoPosition === 'above' ? 'column' : 'row',
     'brand-align': a.logoPosition === 'above' ? 'flex-start' : 'center', 'logo-order': a.logoPosition === 'right' ? 2 : 0,
-    'table-bg': a.tableHeaderBackground, 'table-ink': estimateHeaderInk(a.tableHeaderBackground),
+    'table-bg': a.tableHeaderBackground, 'table-ink': preset === 'brand' ? '#214D7B' : estimateHeaderInk(a.tableHeaderBackground),
     'section-color': a.sectionColor, 'stripe-bg': a.stripedRows ? a.stripeBackground : 'transparent',
+    'frame-color': '#DDE1E6',
     'row-padding': `${{ compact: 5, regular: 8, airy: 12 }[a.density]}px`,
   };
   return Object.entries(values).map(([key, value]) => `--estimate-${key}:${value}`).join(';');

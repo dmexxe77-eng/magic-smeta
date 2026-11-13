@@ -1,6 +1,6 @@
-/** Keep transparent signatures readable in both PDF documents. */
+/** Resize uploaded logos while preserving transparency for document headers. */
 export async function readDocumentImage(file) {
-  if (!file || !file.type.startsWith('image/')) throw new Error('Выберите изображение логотипа или подписи');
+  if (!file || !file.type.startsWith('image/')) throw new Error('Выберите изображение логотипа');
   if (file.size > 15 * 1024 * 1024) throw new Error('Изображение должно быть меньше 15 МБ');
   const data = await new Promise((resolve, reject) => {
     const reader = new FileReader();

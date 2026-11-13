@@ -18,7 +18,7 @@ const METHODS = String.raw`
     this.setState({sheet:null});
     const h=window.MagicDocuments.openEstimateEditor({project:p,company:window.MagicEstimate.getCompanyDetails(this.state.profile),
       est:exportEstimate(p.rooms,this.ed(p.id)),rooms:p.rooms.filter(r=>r.on).map(r=>Object.assign({},r,{est:exportEstimate([r],{})})),
-      adjustment,exportOptions:Object.assign({type:'total',cols:this.state.exp.cols},options),
+      adjustment,exportOptions:window.MagicEstimate.normalizeEstimateExportOptions(Object.assign({type:'total',cols:this.state.exp.cols},options)),
       onChange:change=>{self.upd(p.id,project=>Object.assign({},project,{estimateAdjustment:change.adjustment,estimateExportOptions:change.exportOptions}));self.saveDesign();},
       onPreview:run('preview'),onDownload:run('download'),onShare:run('share'),
       onEditRows:()=>{h.close();self.setState({sheet:'estimate',estTab:'all'});},onClose:()=>h.close()});
@@ -27,7 +27,7 @@ const METHODS = String.raw`
     if(!window.MagicDocuments){this.go('profile');return;}
     const self=this;
     const h=window.MagicDocuments.openEstimateHeader({company:window.MagicEstimate.getCompanyDetails(this.state.profile),
-      onCompanyChange:patch=>{self.setState(s=>({profile:Object.assign({},s.profile,patch)}));self.saveDesign();},
+      onCompanyChange:patch=>self.saveAccountProfile(patch),
       onEditCompany:()=>{h.close();self.go('profile');},onClose:()=>h.close()});
   }
 `;
@@ -40,9 +40,10 @@ export function documentEditorsTemplate(source) {
     template = template.split(before).join(after);
   };
   replace('  openContract(){', METHODS + '\n  openContract(){', 'document methods');
+  replace("exp:{type:'total',cols:{num:true,name:true,qty:true,unit:true,price:true,total:true},pct:0,share:false}", "exp:{type:'total',columnsDefaultsVersion:1,cols:{num:true,photo:true,name:true,qty:true,unit:true,price:true,total:true},pct:0,share:false}", 'all estimate columns enabled');
   replace("pExport:()=>{if(!n){this.toast('Сначала добавьте помещения');return;}this.setState({sheet:'export'});}", 'pExport:()=>this.openEstimateEditor()', 'project estimate');
   replace("openExport:()=>this.setState({sheet:'export'})", 'openExport:()=>this.openEstimateEditor()', 'calculator export', 2);
-  replace("it('С',AS,A,'Шапка сметы','Компания и реквизиты',null,()=>this.go('profile'))", "it('С',AS,A,'Шапка сметы','Логотип, реквизиты, подпись',null,()=>this.openEstimateHeader())", 'header settings');
+  replace("it('С',AS,A,'Шапка сметы','Компания и реквизиты',null,()=>this.go('profile'))", "it('С',AS,A,'Шаблон документов','Тексты документов',null,()=>this.openContractTpl())", 'header settings');
   replace("inp('ИНН','inn'),inp('ОГРН / ОГРНИП','ogrn')", "inp('Правовая форма','legalForm','ИП / ООО / Самозанятый'),inp('ИНН','inn'),inp('КПП','kpp'),inp('ОГРН / ОГРНИП','ogrn')", 'company legal fields');
   replace("inp('Телефон для документов','contractPhone')", "inp('Телефон для документов','contractPhone'),inp('ФИО для подписи','signerName')", 'company signer');
   replace("const h=window.MagicContract.openTemplate({onClose:()=>h.close()});", "const self=this;const h=window.MagicContract.openTemplate({company:window.MagicEstimate.getCompanyDetails(this.state.profile),onCompanyChange:patch=>{self.setState(s=>({profile:Object.assign({},s.profile,patch)}));self.saveDesign();},onEditCompany:()=>{h.close();self.go('profile');},onClose:()=>h.close()});", 'contract company');

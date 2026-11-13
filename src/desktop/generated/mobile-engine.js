@@ -148,7 +148,7 @@ const desktopBindEstimateOverrides=(edits,projects)=>{const result=cloneProjectD
 
 class Component extends DCLogic {
   state={designViewport:null,catalogFolderOrder:DESIGN_SAVED?.catalogFolderOrder||[],contractTemplate:DESIGN_SAVED?.contractTemplate??MAIN.contractTemplate??null,profile:DESIGN_SAVED&&DESIGN_SAVED.profile||MAIN.profile||{},screen:'home',sheet:null,toast:null,fin:null,filter:'all',curId:null,tab:null,estTab:'room',estEd:desktopBindEstimateOverrides(MAIN.estEd,MAIN.projects),editLine:null,editBuf:'',
-    exp:{type:'total',cols:{num:true,name:true,qty:true,unit:true,price:true,total:true},pct:0,share:false},
+    exp:{type:'total',columnsDefaultsVersion:1,cols:{num:true,photo:true,name:true,qty:true,unit:true,price:true,total:true},pct:0,share:false},
     mb:null,nf:{name:'',client:'',designer:'',phone:'',address:'',notes:''},projects:this.seed()};
 
   designSnapshot(){return Object.assign({},{migration:desktopMigrationMetadata(MAIN.migration),contractTemplate:MAIN.contractTemplate},DESIGN_SAVED||{},{version:1,blocks:BLOCKS,presets:PRESETS,nom:NOM,roomOpts:ROOM_OPTS,projects:this.state.projects,estEd:this.state.estEd,profile:this.state.profile,contractTemplate:this.state.contractTemplate,catalogFolderOrder:this.state.catalogFolderOrder});}
@@ -322,7 +322,7 @@ class Component extends DCLogic {
     const chip=(id,label,n,color)=>{const on=s.filter===id;return{id,label,n,pick:()=>this.setState({filter:id}),border:on?color:'#E4E4EE',bg:on?color:'#fff',color:on?'#fff':'#3D4454',countBg:on?'rgba(255,255,255,.22)':'#F1F1F7',countColor:on?'#fff':'#6F7688'};};
     const filters=[chip('all','Все',ps.length,INK)].concat(STATUSES.map(st=>chip(st.id,st.label,cnt(st.id),st.color)));
     const pq=(s.pq||'').trim().toLowerCase();
-    const hit=p=>!pq||[p.name,p.client,p.address,p.designer].some(v=>(v||'').toLowerCase().includes(pq));
+    const hit=p=>!pq||[p.name,p.client,p.address].some(v=>(v||'').toLowerCase().includes(pq));
     const cards=ps.filter(p=>(s.filter==='all'||p.status===s.filter)&&hit(p)).sort((a,b)=>dateKey(b.date).localeCompare(dateKey(a.date))).map(p=>{
       const st=ST(p.status),sum=this.pSum(p),area=this.pArea(p);
       const meta=[p.client,area?F(area)+' м²':null,p.date].filter(Boolean).join(' · ');
@@ -337,11 +337,11 @@ class Component extends DCLogic {
 
 
   openNativeMenuDestination(id){
-    const labels={designers:'Дизайнеры',support:'Поддержка',appeals:'Обращения',subscription:'Подписка PRO',training:'Обучение',logout:'Выход',cancelSubscription:'Отменить подписку?'};
+    const labels={support:'Поддержка',appeals:'Обращения',subscription:'Подписка PRO',training:'Обучение',logout:'Выход',cancelSubscription:'Отменить подписку?'};
     if(!labels[id])return;
     if(id==='appeals'&&this.state.profile?.role!=='ADMIN'){this.toast('Нет доступа');return;}
     if(!window.MagicDocuments?.openMenuDestination){this.toast(labels[id]+' доступны в приложении с аккаунтом');return;}
-    const h=window.MagicDocuments.openMenuDestination({id,profile:this.state.profile||{},plan:this.state.plan||'pro',onClose:()=>h.close()});
+    const h=window.MagicDocuments.openMenuDestination({id,profile:this.state.profile||{},plan:this.state.plan||'pro',onLogout:window.MagicPrototypeAuth?.openLogin,onClose:()=>h.close()});
   }
   nativeAccountVals(){
     const s=this.state;if(s.screen!=='account')return{};
@@ -373,7 +373,7 @@ class Component extends DCLogic {
     const it=(ic,icBg,icColor,label,sub,right,pick,color)=>({ic,icBg,icColor,label,sub:sub||'',hasSub:!!sub,right:right||'',pick:pick||stub(label),color:color||INK});
     const A=ACC,AS='#E7EFFD';
     const groups=[
-      {title:'Документы',items:[it('Д',AS,A,'Шаблон договора','Реквизиты, разделы, оформление',null,()=>this.openContractTpl()),it('С',AS,A,'Шапка сметы','Логотип, реквизиты, подпись',null,()=>this.openEstimateHeader())]},
+      {title:'Документы',items:[it('Д',AS,A,'Шаблон договора','Реквизиты, разделы, оформление',null,()=>this.openContractTpl()),it('С',AS,A,'Шаблон документов','Тексты документов',null,()=>this.openContractTpl())]},
       {title:'Справочники',items:[it('К',AS,A,'Редактор кнопок','Пресеты блоков',null,()=>this.go('btnEd',{be:{bid:'canvas',pid:'msd',brand:'all',from:'account'}})),it('Н',AS,A,'Номенклатуры','База позиций и цен',String(NOM.length),()=>this.go('nomEd',{ne:{q:'',brand:null,kind:'all',from:'account'}})),it('Л','#E6F6EC','#16A34A','Клиенты','','14'),it('Дз','#DEF3F0','#0D9488','Дизайнеры','Бонусы и объекты','2')]},
       {title:'Команда · скоро',items:[it('М','#F3F3FA','#A5A9B8','Монтажники','Видят ТЗ и свои объекты','в разработке',soon('Монтажники'),'#6F7688'),it('Р','#F3F3FA','#A5A9B8','Роли и доступ','Замерщик · Менеджер · Владелец','в разработке',soon('Роли и доступ'),'#6F7688')]},
       {title:'Данные и оформление',items:[it('↺','#F3F3FA','#6F7688','Резервная копия','Сохранить / загрузить',''),it('◐','#F3F3FA','#6F7688','Оформление','Светлая · Тёмная',dark?'Тёмная':'Светлая',()=>this.setState({themeO:dark?'light':'dark'})),it('А','#F3F3FA','#6F7688','Аналитика','Метрики и воронка','',()=>this.go('analytics'))]},
@@ -483,7 +483,7 @@ class Component extends DCLogic {
     const preset=()=>{const first=(PRESETS.canvas||[])[0];this.go('btnEd',{be:{bid:'canvas',pid:first?.id||'msd',brand:'all',from:'dash'}});};
     const mhMenuGroups=[
       {items:[row('Главная',()=>this.go('dash')),row('Проекты',projects),row('Задачи',()=>this.go('calendar')),row('Аналитика',()=>this.go('analytics'))]},
-      {items:[row('Редактор пресетов',preset),row('Номенклатуры',()=>this.go('nomEd',{ne:{q:'',brand:null,kind:'all',from:'dash'}})),row('Шаблон договора',()=>this.openContractTpl()),row('Шапка сметы',()=>this.openEstimateHeader()),row('Дизайнеры',()=>this.openNativeMenuDestination('designers'))]},
+      {items:[row('Редактор пресетов',preset),row('Номенклатуры',()=>this.go('nomEd',{ne:{q:'',brand:null,kind:'all',from:'dash'}})),row('Шаблон документов',()=>this.openContractTpl())]},
       {items:[row('Настройки',()=>this.openAccountSettings()),row('Написать в поддержку',()=>this.openNativeMenuDestination('support'))]}
     ];
     if(profile.role==='ADMIN')mhMenuGroups[mhMenuGroups.length-1].items.push(row('Обращения',()=>this.openNativeMenuDestination('appeals')));
@@ -687,7 +687,11 @@ class Component extends DCLogic {
     const n=p.rooms.length;
     const HINTS={order:'Автоматически при создании проекта',estimate:'Когда смета скачана или отправлена клиенту',discuss:'Расчёт передан клиенту на согласование',contract:'Когда внесён первый приход или назначена дата монтажа',install:'По календарю: с первого дня монтажа. Перенесли дату — вернётся в «Договор»',done:'Монтаж прошёл и объект оплачен',declined:'Только вручную'};
     const steps=STATUSES.map(st=>{const on=p.status===st.id;return{label:st.label,on,dot:st.color,weight:on?800:600,hint:HINTS[st.id],hintColor:on?ACC:'#A5A9B8',pick:()=>{this.upd(p.id,x=>({...x,status:st.id}));this.setState({sheet:null});this.toast('Статус изменён вручную: '+st.label);}};});
-    const row=(label,value)=>({label,value:value||'Добавить',color:value?INK:DIM,pick:()=>this.toast(label+' — редактирование не входит в прототип')});
+    const row=(label,value,key)=>({
+      id:'project-'+p.id+'-'+key,label,value:String(value??''),single:key!=='notes',multiline:key==='notes',type:key==='phone'?'tel':'text',placeholder:key==='notes'?'Особенности объекта':'Добавить',
+      change:e=>{if(this.state.screen!=='project'||this.state.curId!==p.id)return;const value=e.target.value;this.upd(p.id,x=>({...x,[key]:value}));},
+      blur:()=>{if(this.state.screen!=='project'||this.state.curId!==p.id)return;this.setState({},()=>{if(this.saveDesign)this.saveDesign();});}
+    });
     return{pName:p.name,pClientLine:[p.client,p.date].filter(Boolean).join(' · '),steps,pStatusLabel:ST(p.status).label,pStatusColor:ST(p.status).color,openStatus:()=>this.setState({sheet:'status'}),
       pSumTxt:p.rooms.length?RUB(sum):'Нет расчёта',pSumColor:p.rooms.length?INK:DIM,pAreaTxt:area?F(area)+' м²':'—',pRoomsTxt:n?n+' '+(n===1?'помещение':n<5?'помещения':'помещений'):'нет помещений',
       pPaidPct:sum?Math.min(100,Math.round(paid/sum*100)):0,pPaidTxt:RUB(paid),pDebtTxt:RUB(debt),pDebtColor:debt?'#FF3B30':'#6F7688',
@@ -710,23 +714,20 @@ class Component extends DCLogic {
       pInstall:()=>this.openEvent(p.id,{kind:['contract','install','done'].includes(p.status)?'Монтаж':(p.rooms.length?'Встреча':'Замер')}),pInstLabel:this.installsOf(p).length?'Добавить событие':'Назначить событие',pInstSub:this.installsOf(p).length?'Ещё один этап монтажа, встреча или заметка':'Замер, встреча или монтаж · в календарь',
       pInstBorder:'#E4E4EE',pInstBg:'#fff',pInstIcon:'#6F7688',
       pExport:()=>this.openEstimateEditor(),pContract:()=>this.openContract(),
-      pRows:[row('Клиент',p.client),row('Телефон',p.phone),row('Адрес',p.address),row('Дизайнер',p.designer),row('Заметки',p.notes)],
+      pRows:[row('Клиент',p.client,'client'),row('Телефон',p.phone,'phone'),row('Адрес',p.address,'address'),row('Заметки',p.notes,'notes')],
       goHome:()=>this.go('home'),openProjMenu:()=>this.setState({sheet:'proj'}),
       projMenu:[{label:'Дублировать проект',color:INK,pick:()=>{const c=cloneProjectData(p);c.id=uid();c.name=p.name+' (копия)';c.status='order';c.paid=0;this.setState(x=>({projects:[c].concat(x.projects),estEd:{...x.estEd,[c.id]:cloneProjectData(x.estEd[p.id]||{})},sheet:null}));this.toast('Копия создана');}},
         {label:'Чертежи для Easy Ceiling (.ec)',color:INK,pick:()=>this.exportEC()},
         {label:'Удалить проект',color:'#FF3B30',pick:()=>{this.setState(x=>({projects:x.projects.filter(q=>q.id!==p.id),sheet:null,screen:'home'}));this.toast('Проект удалён');}}]};
   }
   newVals(){
-    const s=this.state;if(s.screen!=='new')return{sheetDesigner:false};
+    const s=this.state;if(s.screen!=='new')return{};
     const f=s.nf,ok=!!f.name.trim();
     const set=k=>e=>this.setState(x=>({nf:{...x.nf,[k]:e.target.value}}));
     const chips=(list,key)=>list.map(name=>{const on=f[key]===name;return{label:name.split(' ').slice(0,2).join(' '),pick:()=>this.setState(x=>({nf:{...x.nf,[key]:on?'':name}})),border:on?ACC:'#E4E4EE',bg:on?'#E7EFFD':'#fff',color:on?ACC:'#3D4454'};});
     const create=measure=>{if(!ok)return;const p={id:uid(),name:f.name.trim(),client:f.client,designer:f.designer,phone:f.phone,address:f.address,notes:f.notes,status:'order',date:desktopDisplayDate(),paid:0,rooms:[],calculationSnapshotVersion:1};this.setState(x=>({projects:[p].concat(x.projects)}),()=>{if(measure)this.go('addRoom',{curId:p.id,tab:null});else this.openProject(p.id);});};
-    return{sheetDesigner:s.sheet==='designer',nfName:f.name,nfClient:f.client,nfDesigner:f.designer,nfPhone:f.phone,nfAddress:f.address,nfNotes:f.notes,
+    return{nfName:f.name,nfClient:f.client,nfDesigner:f.designer,nfPhone:f.phone,nfAddress:f.address,nfNotes:f.notes,
       nfSet:{name:set('name'),client:set('client'),designer:set('designer'),phone:set('phone'),address:set('address'),notes:set('notes')},
-      nfDesignerTxt:f.designer||'Без дизайнера',nfDesignerColor:f.designer?INK:DIM,nfOpenDesigner:()=>this.setState({sheet:'designer'}),
-      nfDesigners:[['','Без дизайнера','объект без посредника'],['Полина Сидоренко','Студия «Образ» · бонус 5%'],['Кикоть Дмитрий','ИП Кикоть · бонус 7%']].map(a=>{const name=a.length===3?a[0]:a[0];const label=a.length===3?a[1]:a[0];const sub=a.length===3?a[2]:a[1];const on=f.designer===name;return{label,sub,on,weight:on?800:600,letter:name?name.split(' ').map(w=>w[0]).join('').slice(0,2):'—',pick:()=>this.setState(x=>({nf:{...x.nf,designer:name},sheet:null}))};}),
-      nfNewDesigner:()=>{const v=prompt('Имя дизайнера');this.setState({sheet:null});if(v&&v.trim())this.setState(x=>({nf:{...x.nf,designer:v.trim()}}));},
       nfPrimaryBg:ok?ACC:'#E7EFFD',nfPrimaryColor:ok?'#fff':'#A5A9B8',nfSecondaryColor:ok?ACC:'#C9C9D6',nfCreate:()=>create(false),nfCreateMeasure:()=>create(true),goHome:()=>this.go('home')};
   }
   svgPoly(v,W,H,pad){const xs=v.map(p=>p[0]),ys=v.map(p=>p[1]);const mnx=Math.min(...xs),mny=Math.min(...ys),rw=Math.max(Math.max(...xs)-mnx,0.5),rh=Math.max(Math.max(...ys)-mny,0.5);const sc=Math.min((W-2*pad)/rw,(H-2*pad)/rh);const ox=pad+(W-2*pad-rw*sc)/2,oy=pad+(H-2*pad-rh*sc)/2;return{to:p=>[ox+(p[0]-mnx)*sc,oy+(p[1]-mny)*sc],sc};}
@@ -896,7 +897,7 @@ class Component extends DCLogic {
     const setAdjustment=patch=>{this.commitEstimatePercent(p.id);this.setEstimateAdjustment(p.id,patch);};
     const on=b=>({border:b?ACC:'#E4E4EE',bg:b?'#E7EFFD':'#fff',color:b?ACC:'#3D4454'});
     const types=[['total','Общая смета','Материалы, работы и оборудование'],['draw','Общая + чертежи','Все планы на отдельных листах'],['rooms','По помещениям','Чертёж и расчёт каждого помещения']].map(([id,label,sub])=>{const a=x.type===id;return{label,sub,pick:()=>setX({type:id}),border:a?ACC:'#E4E4EE',bg:a?'#E7EFFD':'#fff',dotBorder:a?ACC:'#C9C9D6',dot:a?ACC:'transparent'};});
-    const cols=[['num','#'],['name','Название'],['qty','Кол-во'],['unit','Ед.'],['price','Цена'],['total','Итого']].map(([id,label])=>Object.assign({label,toggle:()=>setX({cols:Object.assign({},this.state.exp.cols,{[id]:!this.state.exp.cols[id]})})},on(x.cols[id])));
+    const cols=[['num','#'],['photo','Фото'],['name','Название'],['qty','Кол-во'],['unit','Ед.'],['price','Цена'],['total','Итого']].map(([id,label])=>Object.assign({label,toggle:()=>setX({cols:Object.assign({},this.state.exp.cols,{[id]:!this.state.exp.cols[id]})})},on(x.cols[id])));
     const pcts=[-15,-10,-5,0,5,10,15].map(value=>Object.assign({label:pct(value),pick:()=>setAdjustment({percent:value})},on(!mixed&&adjustment.percent===value)));
     const scopes=[['all','Вся смета'],['mats','Материалы'],['works','Работы'],['equipment','Оборудование']].map(([id,label])=>{const value=id==='all'?(uniform?pct(rates.mats):'Разные'):pct(rates[id]);return Object.assign({id,label,value,aria:label+' '+value,selected:adjustment.scope===id,pick:()=>setAdjustment({scope:id})},on(adjustment.scope===id));});
     const showPct=p.estimateExportOptions?.showAdjustment!==false,isCustom=![-15,-10,-5,0,5,10,15].includes(adjustment.percent);
@@ -1099,14 +1100,34 @@ class Component extends DCLogic {
       onDone:()=>{h.close();if(last)self.go('calc',{tab:last});}});}
 
   openEstimateEditor(){this.setState({sheet:'export'});}
-  openEstimateHeader(){this.go('profile');}
   openAccountSettings(){this.go('profile');}
+
+  documentCompanyStorage(){return {getItem:key=>key==='zamer.contractTpl'?JSON.stringify(this.state.contractTemplate??null):null};}
+  documentCompanyDetails(){return window.MagicEstimate.getCompanyDetails(this.state.profile,this.documentCompanyStorage());}
+  async saveDocumentCompany(patch){
+    const previous=this.state.profile,profile=window.MagicEstimate.mergeAccountProfilePatch(previous,patch);
+    await new Promise(resolve=>this.setState({profile},resolve));
+    try{if(await this.saveDesign()===false)throw new Error('Не удалось сохранить настройки компании');if(this._persistence&&!await this._persistence.flush(this._persistenceKey))throw new Error('Не удалось сохранить настройки компании');return profile;}
+    catch(error){await new Promise(resolve=>this.setState({profile:previous},resolve));this.saveDesign();throw error;}
+  }
+  openDocumentCompany(onDone){
+    if(!window.MagicDocuments?.openAccountSettings){this.toast('Настройки компании не загрузились');return;}
+    const self=this;
+    const h=window.MagicDocuments.openAccountSettings({profile:window.MagicEstimate.getCompanyProfile(this.state.profile,this.documentCompanyStorage()),
+      onChange:patch=>self.saveDocumentCompany(patch),onClose:()=>{h.close();if(onDone)onDone();}});
+  }
+  openEstimateHeader(){
+    if(!window.MagicDocuments?.openEstimateHeader){this.toast('Шаблон сметы не загрузился');return;}
+    const self=this;
+    const h=window.MagicDocuments.openEstimateHeader({company:this.documentCompanyDetails(),templateStore:{load:()=>this.state.contractTemplate,save:template=>{this.setState({contractTemplate:template});this.saveDesign();}},
+      onCompanyChange:patch=>self.saveDocumentCompany(patch),onEditCompany:()=>{h.close();self.openDocumentCompany(()=>self.openEstimateHeader());},onClose:()=>h.close()});
+  }
   openContract(){const p=this.cur();if(!p||!window.MagicContract){this.toast('Договор не загрузился');return;}const self=this;const e=est(p.rooms,this.ed(p.id));const ins=this.installStart(p);const fmtD=iso=>iso?String(iso).split('-').reverse().join('.'):'';
-    const h=window.MagicContract.open({templateStore:{load:()=>this.state.contractTemplate,save:template=>{this.setState({contractTemplate:template});this.saveDesign();}},project:{id:p.id,name:p.name,client:p.client,phone:p.phone,address:p.address},total:this.pSum(p),area:this.pArea(p),est:withEstimateImages(e,NOM),rooms:p.rooms.filter(r=>r.on).map(r=>Object.assign({},r,{est:withEstimateImages(est([r],{}),NOM)})),estimateAdjustment:p.estimateAdjustment,estimateExportOptions:p.estimateExportOptions,contract:p.contract||null,installDate:fmtD(ins),
+    const h=window.MagicContract.open({templateStore:{load:()=>this.state.contractTemplate,save:template=>{this.setState({contractTemplate:template});this.saveDesign();}},project:{id:p.id,name:p.name,client:p.client,phone:p.phone,address:p.address,paid:Number(p.paid)||0},total:this.pSum(p),area:this.pArea(p),est:withEstimateImages(e,NOM),company:this.documentCompanyDetails(),rooms:p.rooms.filter(r=>r.on).map(r=>Object.assign({},r,{est:withEstimateImages(est([r],{}),NOM)})),estimateAdjustment:p.estimateAdjustment,estimateExportOptions:p.estimateExportOptions,contract:p.contract||null,installDate:fmtD(ins),
       onProjectPatch:patch=>self.upd(p.id,x=>Object.assign({},x,patch)),
       onSaveContract:c=>self.upd(p.id,x=>Object.assign({},x,{contract:c})),
       onClose:()=>{h.close();}});}
-  openContractTpl(){if(!window.MagicContract){this.toast('Шаблон не загрузился');return;}const h=window.MagicContract.openTemplate({templateStore:{load:()=>this.state.contractTemplate,save:template=>{this.setState({contractTemplate:template});this.saveDesign();}},onClose:()=>h.close()});}
+  openContractTpl(){if(!window.MagicContract){this.toast('Шаблон не загрузился');return;}const self=this;const h=window.MagicContract.openTemplate({templateStore:{load:()=>this.state.contractTemplate,save:template=>{this.setState({contractTemplate:template});this.saveDesign();}},onClose:()=>h.close(),company:this.documentCompanyDetails(),onEditCompany:()=>{h.close();self.openDocumentCompany(()=>self.openContractTpl());}});}
   exportEC(){const p=this.cur();if(!p||!window.MagicEC){this.toast('Выгрузка не загрузилась');return;}if(!p.rooms.length){this.toast('Сначала добавьте помещения');return;}
     const rooms=p.rooms.filter(r=>r.on).map(r=>{const g=geom(r.v,r.holes),pr=presetForInstance(r.canvas,'canvas',desktopCatalog()),nom=pr&&pr.items[0]?pr.items[0].n:'',w=(nom.match(/(\d{3})\s*см/)||[])[1];
       return{name:r.name,verts:r.v,area:g.a,perim:g.p,material:nom||(pr?pr.name:''),width:w?+w:320,texture:/ткан/i.test(nom)?'Ткань':'Матовая'};});

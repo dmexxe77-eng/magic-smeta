@@ -10,6 +10,7 @@ import {nomKey, resolveNom, withEstimateImages} from '../src/desktop/nomenclatur
 import {instanceLines as desktopInstanceLines} from '../src/desktop/quantity-adapter.js';
 import {createDesktopDesignStorage, desktopMigrationMetadata} from '../src/desktop/desktop-storage.js';
 import * as projectCatalog from '../src/desktop/project-catalog.js';
+import { estimatePresetTemplate } from '../src/utils/estimate-template.js';
 
 const copy = value => JSON.parse(JSON.stringify(value));
 const fixedDate = new Date(2026, 10, 1, 12);
@@ -57,6 +58,86 @@ test('desktop shared engine retains every mobile project estimate exactly', asyn
     const mobileProject = mobile.component.state.projects.find(p => p.id === project.id);
     assert.deepEqual(arithmetic(desktop.est(project.rooms, desktop.component.ed(project.id))), arithmetic(mobile.est(mobileProject.rooms, mobile.component.ed(project.id))), project.name);
   }
+});
+
+test('document company settings use the shared form and keep desktop addresses separate from phone data', async () => {
+  const r = await desktopRuntime(), app = r.component;
+  r.entries.set('zamer.contractTpl', JSON.stringify({ head: { company: 'Телефонная компания' } }));
+  app.setState({ profile: {}, contractTemplate: { head: { company: 'Компания desktop' } } });
+  let templateOptions, accountOptions, saved = 0;
+  r.ctx.MagicContract = { openTemplate: options => { templateOptions = options; return { close() {} }; } };
+  r.ctx.MagicDocuments = { openAccountSettings: options => { accountOptions = options; return { close() {} }; } };
+  app.saveDesign = () => { saved++; return true; };
+  app.openContractTpl();
+  assert.equal(templateOptions.company.company, 'Компания desktop');
+  templateOptions.onEditCompany();
+  assert.equal(accountOptions.profile.company, 'Компания desktop');
+  await accountOptions.onChange({ companyAddress: 'Офис, 10', address: 'Юридический адрес, 20' });
+  assert.equal(saved, 1);
+  assert.equal(app.state.profile.companyAddress, 'Офис, 10');
+  assert.equal(app.state.profile.address, 'Юридический адрес, 20');
+  accountOptions.onClose();
+  assert.equal(templateOptions.company.companyAddress, 'Офис, 10');
+  assert.equal(templateOptions.company.address, 'Юридический адрес, 20');
+  assert.equal(JSON.parse(r.entries.get('zamer.contractTpl')).head.company, 'Телефонная компания');
+});
+
+test('a rejected document company save restores the previous desktop profile', async () => {
+  const r = await desktopRuntime(), app = r.component;
+  app.setState({ profile: { company: 'Сохранённая компания', address: 'Юр. адрес' } });
+  let options;
+  r.ctx.MagicDocuments = { openAccountSettings: value => { options = value; return { close() {} }; } };
+  app.saveDesign = () => false;
+  app.openDocumentCompany();
+  await assert.rejects(options.onChange({ company: 'Несохранённая компания' }), /Не удалось сохранить/);
+  assert.equal(app.state.profile.company, 'Сохранённая компания');
+  assert.equal(app.state.profile.address, 'Юр. адрес');
+});
+
+test('desktop estimate appearance saves through the shared company profile and returns from company settings', async () => {
+  const r = await desktopRuntime(), app = r.component;
+  app.setState({ profile: { company: 'Компания desktop' }, contractTemplate: { head: { company: 'Резервное имя' } } });
+  r.entries.set('zamer.contractTpl', JSON.stringify({ head: { company: 'Телефонная компания' } }));
+  let header, account, writes = 0;
+  r.ctx.MagicDocuments = {
+    openEstimateHeader: options => { header = options; return { close() {} }; },
+    openAccountSettings: options => { account = options; return { close() {} }; },
+  };
+  app.saveDesign = () => { writes++; return true; };
+  app.openEstimateHeader();
+  assert.equal(header.company.company, 'Компания desktop');
+  await header.onCompanyChange({ estimateTemplate: estimatePresetTemplate('modern'), logo: '' });
+  assert.equal(writes, 1);
+  assert.equal(app.documentCompanyDetails().estimateTemplate.background, estimatePresetTemplate('modern').background);
+  header.onEditCompany();
+  assert.equal(account.profile.company, 'Компания desktop');
+  await account.onChange({ companyAddress: 'Офис, 10' });
+  account.onClose();
+  assert.equal(header.company.companyAddress, 'Офис, 10');
+  assert.equal(header.company.estimateTemplate.background, estimatePresetTemplate('modern').background);
+  assert.equal(JSON.parse(r.entries.get('zamer.contractTpl')).head.company, 'Телефонная компания');
+});
+
+test('document company settings await durable storage and roll back an asynchronous refusal', async () => {
+  const r = await desktopRuntime(), app = r.component;
+  app.setState({ profile: { company: 'Сохранённая компания' } });
+  let options, writes = 0, finish;
+  r.ctx.MagicDocuments = { openAccountSettings: value => { options = value; return { close() {} }; } };
+  app.saveDesign = () => { writes++; return true; };
+  app._persistenceKey = 'desktop-company';
+  app._persistence = { flush: key => { assert.equal(key, 'desktop-company'); return new Promise(resolve => { finish = resolve; }); } };
+  app.openDocumentCompany();
+  let settled = false;
+  const save = options.onChange({ company: 'Несохранённая компания' });
+  save.then(() => { settled = true; }, () => { settled = true; });
+  await Promise.resolve();
+  await Promise.resolve();
+  assert.equal(settled, false);
+  assert.equal(typeof finish, 'function');
+  finish(false);
+  await assert.rejects(save, /Не удалось сохранить/);
+  assert.equal(app.state.profile.company, 'Сохранённая компания');
+  assert.equal(writes, 2, 'rollback replaces the rejected snapshot with the previous profile');
 });
 
 test('switching projects through estimate always edits a room of the selected project', async () => {

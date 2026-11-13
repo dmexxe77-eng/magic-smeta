@@ -176,15 +176,13 @@ export const ESTIMATE_DRAWING_CSS = `
 .estimate-document .estimate-drawing-name{font-size:16px;line-height:1.25;font-weight:700;min-width:0;overflow-wrap:anywhere}
 .estimate-document .estimate-drawing-metrics{font-size:12px;line-height:1.3;color:#647184;white-space:nowrap;flex-shrink:0}
 .estimate-document .estimate-drawing svg{display:block;width:100%;height:auto}
-.estimate-document .estimate-drawing-empty{display:flex;align-items:center;justify-content:center;min-height:280px;font-size:12px;color:#647184;padding:20px;text-align:center}
 .estimate-document .estimate-drawing-compact .estimate-drawing-header{gap:3px 8px;padding:7px 9px;min-height:31px}
 .estimate-document .estimate-drawing-compact .estimate-drawing-name{font-size:12px}
 .estimate-document .estimate-drawing-compact .estimate-drawing-metrics{font-size:10px}
-.estimate-document .estimate-drawing-compact .estimate-drawing-empty{min-height:160px;font-size:11px}
 `;
 
 export function roomDrawingHtml(room = {}, { compact = false } = {}) {
   const model = roomDrawingLayout(room, { compact });
   const metrics = model.path ? `<span class="estimate-drawing-metrics">S = ${number(model.area)} м² · P = ${number(model.perimeter)} м</span>` : '';
-  return `<div class="estimate-drawing${compact ? ' estimate-drawing-compact' : ''} no-split"><div class="estimate-drawing-header"><strong class="estimate-drawing-name">${escape(model.name)}</strong>${metrics}</div>${model.path ? svgFromLayout(model) : '<div class="estimate-drawing-empty">Чертёж не добавлен</div>'}</div>`;
+  return `<div class="estimate-drawing${compact ? ' estimate-drawing-compact' : ''} no-split"><div class="estimate-drawing-header"><strong class="estimate-drawing-name">${escape(model.name)}</strong>${metrics}</div>${model.path ? svgFromLayout(model) : ''}</div>`;
 }

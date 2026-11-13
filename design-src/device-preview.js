@@ -64,7 +64,9 @@ export function computePreviewLayout({
 
 export function appLocation(href) {
   const current = new URL(href);
-  const target = new URL('./app.html', current);
+  const screen = current.searchParams.get('screen');
+  const app = screen === 'app' || (!screen && current.pathname.endsWith('/app.html'));
+  const target = new URL(app ? './app.html' : './login.html', current);
   target.search = current.search;
   target.hash = current.hash;
   for (const parameter of HOST_PARAMETERS) target.searchParams.delete(parameter);
@@ -78,7 +80,7 @@ function boot() {
     coarse: media('(pointer: coarse)'),
     hoverFine: media('(hover: hover) and (pointer: fine)'),
   });
-  const target = appLocation(window.location.href);
+  let target = appLocation(window.location.href);
   if (mode === 'native') {
     window.location.replace(target);
     return;
@@ -191,7 +193,30 @@ function boot() {
     frame.src = target;
     checkReady();
   }
-  frame.addEventListener('load', checkReady);
+  function syncRoute(screen) {
+    if (!['login', 'register', 'app'].includes(screen)) return;
+    const current = new URL(window.location.href);
+    current.searchParams.set('screen', screen);
+    if (current.href !== window.location.href) window.history.replaceState(window.history.state, '', current);
+    target = appLocation(current.href);
+  }
+  frame.addEventListener('load', () => {
+    checkReady();
+    // A document can unload before its queued route message reaches the host.
+    // Confirm completed navigation from the same-origin frame as well.
+    try {
+      const loaded = new URL(frame.contentWindow.location.href);
+      if (loaded.origin !== window.location.origin) return;
+      if (loaded.pathname === new URL('./app.html', window.location.href).pathname) syncRoute('app');
+      else if (loaded.pathname === new URL('./login.html', window.location.href).pathname) syncRoute(loaded.searchParams.get('screen') === 'register' ? 'register' : 'login');
+    } catch {
+      // Cross-origin or browser-owned error pages cannot supply an app route.
+    }
+  });
+  window.addEventListener('message', event => {
+    if (event.source !== frame.contentWindow || event.origin !== window.location.origin || event.data?.type !== 'zamer:prototype-screen') return;
+    syncRoute(event.data.screen);
+  });
   retry.addEventListener('click', loadApp);
   window.addEventListener('pagehide', pauseWatching);
   window.addEventListener('pageshow', (event) => {

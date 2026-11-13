@@ -36,10 +36,6 @@ export default function App(){
     {id:"c1",name:"Костенко Анатолий",phone:"+7 914 123-45-67",email:"kostenko@mail.ru",address:"ул. Шеронова, 12"},
     {id:"c2",name:"Ткачук Александр", phone:"+7 924 987-65-43",email:"tkachuk@gmail.com",address:"ул. Лазо 69/1, д.22"},
   ]);
-  const[appDesigners,setAppDesigners]=useState([
-    {id:"d1",name:"Полина Сидоренко",phone:"+7 914 200-11-22",studio:"Студия «Образ»",bonusType:"pct",bonusRate:5,note:""},
-    {id:"d2",name:"Кикоть Дмитрий",  phone:"+7 924 300-44-55",studio:"ИП Кикоть",     bonusType:"pct",bonusRate:7,note:""},
-  ]);
   setT(theme);
   const fRef2=useRef(null);
   const snapshotTsRef=useRef(0);
@@ -245,7 +241,6 @@ export default function App(){
     return{...o,status,statusDates:{...(o.statusDates||{}),[status]:stamp}};
   }));
   const addClient=(name)=>{const id="c"+uid();setAppClients(p=>[...p,{id,name,phone:"",email:"",address:""}]);return id;};
-  const addDesigner=(name,studio)=>{const id="d"+uid();setAppDesigners(p=>[...p,{id,name,studio:studio||"",phone:"",bonusType:"pct",bonusRate:5,note:""}]);return id;};
   const createOrder=(info,method)=>{
     const ord={id:uid(),name:info.name||"Заказ",client:info.client||"",clientId:info.clientId||"",phone:info.phone||"",address:info.address||"",designer:info.designer||"",designerId:info.designerId||"",notes:info.notes||"",date:new Date().toLocaleDateString("ru-RU"),rooms:[],method,status:"order",planImage:null};
     setOrders(prev=>[ord,...prev]);
@@ -374,7 +369,7 @@ export default function App(){
   };
 
   if(screen==="home")content=(<HomeScreen orders={orders} setOrders={setOrders} onOpen={openOrder} onNew={()=>setScreen("new")} onStatusChange={changeStatus} theme={theme} setTheme={setTheme} onFullExport={buildFullExport} onSaveNow={manualSave} onImport={handleImport} saveStatus={saveStatus} returnOrderId={curId} onMenu={()=>setMenuOpen(true)} contractTpl={contractTpl} setContractTpl={setContractTpl}/>);
-  else if(screen==="new")content=(<NewOrderFlow onBack={()=>setScreen("home")} onCreate={createOrder} clients={appClients} designers={appDesigners} onAddClient={addClient} onAddDesigner={addDesigner}/>);
+  else if(screen==="new")content=(<NewOrderFlow onBack={()=>setScreen("home")} onCreate={createOrder} clients={appClients} onAddClient={addClient}/>);
   else if(screen==="pickImage")content=(<div style={{minHeight:"100vh",background:T.bg,color:T.text,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16,padding:20}}>
     <div style={{fontSize:14,fontWeight:600}}>{"Загрузите план потолков"}</div>
     <div style={{fontSize:10,color:T.dim}}>{"Изображение или PDF-файл чертежа"}</div>
