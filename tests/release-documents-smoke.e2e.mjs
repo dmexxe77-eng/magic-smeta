@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { chromium } from 'playwright';
+import { canonicalAppHtml } from './release-build-identity.mjs';
 
 // Compiled runtime only; no /src imports, credentials or server mutations.
 const base = process.env.RELEASE_BASE;
@@ -55,8 +56,16 @@ try {
   for (const file of ['design/app.html', 'design/contract.js']) {
     const response = await context.request.get(origin + '/' + file); assert.ok(response.ok(), file + ' is published');
     const remote = await response.body(), local = await fs.readFile(path.resolve('public', file));
-    assert.equal(createHash('sha256').update(remote).digest('hex'), createHash('sha256').update(local).digest('hex'), file + ' matches the checked local build');
-    results.compiledHashes[file] = createHash('sha256').update(remote).digest('hex');
+    if (file === 'design/app.html') {
+      const actual = canonicalAppHtml(remote), expected = canonicalAppHtml(local);
+      assert.ok(expected.decodedModules.length > 0, 'embedded compiled components were identified');
+      assert.deepEqual(actual.decodedModules, expected.decodedModules, 'every decoded component matches the checked local build');
+      assert.deepEqual(actual.bytes, expected.bytes, 'all non-payload HTML and decoded source bytes match');
+      results.compiledHashes[file] = { rawRemote: actual.rawHash, rawLocal: expected.rawHash, canonicalRemote: actual.canonicalHash, canonicalLocal: expected.canonicalHash, decodedModules: actual.decodedModules.length };
+    } else {
+      assert.equal(createHash('sha256').update(remote).digest('hex'), createHash('sha256').update(local).digest('hex'), file + ' matches the checked local build');
+      results.compiledHashes[file] = createHash('sha256').update(remote).digest('hex');
+    }
   }
   await load();
   await page.evaluate(() => {
