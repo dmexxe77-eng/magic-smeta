@@ -1,13 +1,33 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { getCompanyDetails, getCompanyProfile } from '../src/design-bridge/company-profile.js';
-import { DESIGN_CONTRACT_TEMPLATE_KEY, loadDesignContractTemplate, saveDesignContractTemplate } from '../src/design-bridge/contract-template-store.js';
+import { DESIGN_CONTRACT_TEMPLATE_KEY, loadDesignContractTemplate, saveDesignContractTemplate, contractTemplateAccess } from '../src/design-bridge/contract-template-store.js';
 import { runtime } from './design-runtime.mjs';
 
 const storage = entries => ({ getItem: key => entries[key] ?? null, setItem: (key, value) => { entries[key] = value; } });
 const data = head => storage({ [DESIGN_CONTRACT_TEMPLATE_KEY]: JSON.stringify({ head }) });
 const event = value => ({ target: { value } });
 const field = (app, label) => app.profileVals().prSections.flatMap(section => section.rows).find(row => row.label === label);
+
+test('an explicit host template store never falls back to mobile storage', () => {
+  let value = null, reads = 0;
+  const previous = globalThis.localStorage;
+  globalThis.localStorage = { getItem() { reads++; return JSON.stringify({ head: { company: 'Мобильная компания' } }); } };
+  try {
+    const access = contractTemplateAccess({ load: () => value, save: template => { value = template; } });
+    assert.equal(access.load().head.company, '');
+    assert.equal(reads, 0);
+    access.save({ head: { company: 'Компания хоста' }, style: 'accent', numSeq: 12 });
+    assert.equal(access.load().head.company, 'Компания хоста');
+    assert.equal(access.load().style, 'accent');
+    assert.equal(access.load().numSeq, 12);
+    assert.equal(reads, 0);
+    assert.equal(contractTemplateAccess().load().head.company, 'Мобильная компания', 'the default bridge keeps its existing API and key');
+  } finally {
+    if (previous === undefined) delete globalThis.localStorage;
+    else globalThis.localStorage = previous;
+  }
+});
 
 test('company details reuse entered contract fields without exporting demo defaults', () => {
   const source = data({ company: 'Студия', legal: 'ООО Студия', phone: '+7 999 1112233', inn: '1234567890', address: 'Адрес компании', logo: 'data:image/png;base64,AA==' });
@@ -82,8 +102,12 @@ test('profile edits persist on reload and untouched company fields continue foll
 
 test('estimate settings open real company fields and export passes entered company details', async () => {
   const r = await runtime(), app = r.component;
+  let header;
+  r.ctx.MagicDocuments = { openEstimateHeader: options => { header = options; return { close() {} }; } };
   app.go('account');
   app.accountVals().acGroups.flatMap(group => group.items).find(item => item.label === 'Шапка сметы').pick();
+  assert.ok(header, 'header settings open the native-style document screen');
+  header.onEditCompany();
   assert.equal(app.state.screen, 'profile');
   field(app, 'Компания').change(event('Экспортная студия'));
   field(app, 'E-mail').change(event('info@example.test'));

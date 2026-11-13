@@ -22,12 +22,14 @@ const METHODS = String.raw`
   estimateAdjustmentVals(){
     const p=this.cur();if(!p)return{};
     const totals=this.estimateTotals(p),label=window.MagicEstimate.adjustmentLabel(p.estimateAdjustment);
-    const adjustment={hasEstimateAdjustment:totals.hasAdjustment,estimateBaseTxt:'Без корректировки '+RUB(totals.baseTotal),estimateAdjustmentTxt:label};
+    const adjustment={hasEstimateAdjustment:totals.hasAdjustment,estimateBaseTxt:'Без корректировки '+RUB(totals.baseTotal),estimateAdjustmentTxt:label,
+      estimateAdjustmentRows:totals.adjustments.map(entry=>({label:window.MagicEstimate.adjustmentLabel(entry)}))};
     if(this.state.sheet==='estimate'){
       const r=p.rooms.find(room=>room.id===this.state.tab)||p.rooms[0];
       const e=est(this.state.estTab==='all'||!r?p.rooms:[r],this.ed(p.id));
       const shown=this.estimateTotals(p,e);
-      Object.assign(adjustment,{estGrand:RUB(shown.adjustedTotal),estBaseTxt:'Без корректировки '+RUB(shown.baseTotal),estAdjustmentTxt:label+' · '+RUB(shown.adjustmentAmount)});
+      Object.assign(adjustment,{estGrand:RUB(shown.adjustedTotal),estBaseTxt:'Без корректировки '+RUB(shown.baseTotal),estAdjustmentTxt:label+' · '+RUB(shown.adjustmentAmount),
+        estAdjustmentRows:shown.adjustments.map(entry=>({label:window.MagicEstimate.adjustmentLabel(entry)+' · '+RUB(entry.amount)}))});
     }
     return adjustment;
   }
@@ -86,7 +88,7 @@ const EXPORT_METHOD = String.raw`
   }
 `;
 
-const adjustmentLines = (base, label, tag = 'div') => `<sc-if value="{{ hasEstimateAdjustment }}" hint-placeholder-val="{{ false }}"><${tag} style="display:block;font-size:10.5px;font-weight:600;line-height:1.4;color:#6F7688;margin-top:3px">{{ ${base} }}</${tag}><${tag} style="display:block;font-size:10.5px;font-weight:600;line-height:1.4;color:#6F7688">{{ ${label} }}</${tag}></sc-if>`;
+const adjustmentLines = (base, rows) => `<sc-if value="{{ hasEstimateAdjustment }}" hint-placeholder-val="{{ false }}"><div class="z-estimate-adjustments" style="min-width:0;max-width:100%;font-size:10.5px;font-weight:600;line-height:1.4;color:#6F7688;white-space:normal;overflow-wrap:anywhere;margin-top:3px"><div>{{ ${base} }}</div><sc-for list="{{ ${rows} }}" as="adjustmentRow" hint-placeholder-count="0"><div>{{ adjustmentRow.label }}</div></sc-for></div></sc-if>`;
 
 export function adjustmentTemplate(source) {
   let tpl = source;
@@ -105,9 +107,13 @@ export function adjustmentTemplate(source) {
   if (exportStart < 0 || exportEnd < exportStart) throw new Error('adjustment: export methods missing');
   tpl = tpl.slice(0, exportStart) + EXPORT_METHOD + tpl.slice(exportEnd);
 
-  rep('{{ cTotalTxt }}</span>', '{{ cTotalTxt }}</span>' + adjustmentLines('estimateBaseTxt','estimateAdjustmentTxt','span'), 'calculator adjustment');
-  rep('{{ pSumTxt }}</div>', '{{ pSumTxt }}</div>' + adjustmentLines('estimateBaseTxt','estimateAdjustmentTxt'), 'project adjustment');
-  rep('{{ estGrand }}</div>', '{{ estGrand }}</div>' + adjustmentLines('estBaseTxt','estAdjustmentTxt'), 'estimate adjustment');
+  const calculatorHeader = '<div style="flex:none;background:#fff;padding:6px {{ headPad }}px 10px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #ECECF4">\n            <button sc-camel-on-click="{{ calcBack }}"';
+  rep(calculatorHeader, calculatorHeader.replace('display:flex;', 'display:grid;grid-template-columns:40px minmax(0,1fr) auto;'), 'calculator header layout');
+  rep('<div style="font-size:15px;font-weight:800">Расчёт сметы</div>', '<div style="font-size:15px;font-weight:800;white-space:nowrap">Расчёт сметы</div>', 'calculator title');
+  rep('{{ cTotalSub }}</span></button>', '{{ cTotalSub }}</span></button><sc-if value="{{ hasEstimateAdjustment }}" hint-placeholder-val="{{ false }}"><div style="grid-column:2/-1;min-width:0;text-align:right">' + adjustmentLines('estimateBaseTxt','estimateAdjustmentRows') + '</div></sc-if>', 'calculator adjustment');
+  rep('<div><div style="font-size:11px;font-weight:700;color:#6F7688;letter-spacing:.5px;text-transform:uppercase">Сумма по смете</div>', '<div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:700;color:#6F7688;letter-spacing:.5px;text-transform:uppercase">Сумма по смете</div>', 'project summary width');
+  rep('{{ pSumTxt }}</div>', '{{ pSumTxt }}</div>' + adjustmentLines('estimateBaseTxt','estimateAdjustmentRows'), 'project adjustment');
+  rep('{{ estGrand }}</div>', '{{ estGrand }}</div>' + adjustmentLines('estBaseTxt','estAdjustmentRows'), 'estimate adjustment');
 
   const scopeMarkup = '<div role="group" aria-label="К чему применить процент" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin-bottom:8px"><sc-for list="{{ expScopes }}" as="scope" hint-placeholder-count="4"><button aria-label="{{ scope.aria }}" aria-pressed="{{ scope.selected }}" sc-camel-on-click="{{ scope.pick }}" style="min-width:0;min-height:44px;padding:5px 2px;border-radius:9px;border:1.5px solid {{ scope.border }};background:{{ scope.bg }};color:{{ scope.color }};font-weight:700;cursor:pointer"><span style="display:block;font-size:10px;line-height:1.4">{{ scope.label }}</span><span style="display:block;font-size:13px;margin-top:2px;font-variant-numeric:tabular-nums">{{ scope.value }}</span></button></sc-for></div><div style="font-size:10.5px;line-height:1.4;color:#6F7688;margin-bottom:10px">{{ expScopeHint }}</div>';
   rep('Корректировка стоимости</div>', 'Наценка или скидка</div>' + scopeMarkup, 'scope control');

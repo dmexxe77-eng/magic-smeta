@@ -1,6 +1,9 @@
 /* Mobile drawing workspace. All rules are isolated from the calculator. */
 @import '../../components/builders/operation-guide.css';
 @import '../../components/builders/measurement-tools.css';
+@import './mobile-workflow.css';
+@import './tablet-workflow.css';
+@import '../bridge-responsive.css';
 
 .zd {
  --ground:#F3F3FA;--paper:#F8FAFD;--grid:#E5EBF3;--surface:#fff;--surface2:#F2F5FA;

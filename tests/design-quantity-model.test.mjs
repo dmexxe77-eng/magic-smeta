@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import {
   sourceOfBlock, getInstances, createInstance,
   blockQuantity, itemQuantity, instanceLines,
+  rebaseMainQuantity, setBlockQuantity,
 } from '../src/design-bridge/quantity-model.js';
 
 const geometry = { a: 24, p: 20, inn: 4, out: 2, angs: [90, 90, 90, 90, 270, 270] };
@@ -140,6 +141,58 @@ test('legacy single qtyO is the final value and is not deducted twice', () => {
     assert.equal(q.deducted, 0);
     assert.equal(q.overridden, true);
   }
+});
+
+test('explicit deduction edits rebase a legacy final exactly once and remain reversible',()=>{
+  const room={main:{qtyO:11.45,iq:{profile:7}},extra:[{qty:2,subP:false}]};
+  const before=JSON.stringify(room),read=()=>blockQuantity(def('main'),room.main,room,geometry,definitions).value;
+  assert.equal(read(),11.45);assert.equal(JSON.stringify(room),before,'reading imported data never migrates it');
+  rebaseMainQuantity(room,geometry,definitions);room.extra[0].subP=true;
+  assert.equal(read(),9.45);assert.equal(room.main.qtyBase,11.45);assert.equal(room.main.qtyO,undefined);
+  rebaseMainQuantity(room,geometry,definitions);room.extra[0].subP=false;
+  assert.equal(read(),11.45);assert.deepEqual(room.main.iq,{profile:7});
+});
+
+test('already deducted imports preserve their initial final quantity through rebasing and removal',()=>{
+  const room={main:{qtyO:8},extra:[{qty:2,subP:true}]};
+  assert.equal(blockQuantity(def('main'),room.main,room,geometry,definitions).value,8);
+  rebaseMainQuantity(room,geometry,definitions);
+  assert.equal(room.main.qtyBase,10);
+  assert.equal(blockQuantity(def('main'),room.main,room,geometry,definitions).value,8);
+  room.extra=[];
+  assert.equal(blockQuantity(def('main'),room.main,room,geometry,definitions).value,10);
+});
+
+test('tracked bases retain the full reversible value after deductions exceed the base',()=>{
+  const room={main:{qtyO:10},extra:[{qty:20,subP:false}]};
+  rebaseMainQuantity(room,geometry,definitions);room.extra[0].subP=true;
+  assert.equal(blockQuantity(def('main'),room.main,room,geometry,definitions).value,0);
+  room.extra[0].subP=false;
+  assert.equal(blockQuantity(def('main'),room.main,room,geometry,definitions).value,10);
+});
+
+test('main manual input stores a final value plus current deductions and reset clears both formats',()=>{
+  const room={main:{qtyO:12,iq:{profile:4}},extra:[{qty:2,subP:true}]};
+  setBlockQuantity(def('main'),room.main,9,room,geometry,definitions);
+  assert.equal(room.main.qtyBase,11);assert.equal(room.main.qtyO,undefined);
+  assert.equal(blockQuantity(def('main'),room.main,room,geometry,definitions).value,9);
+  room.extra[0].qty=3;
+  assert.equal(blockQuantity(def('main'),room.main,room,geometry,definitions).value,8);
+  setBlockQuantity(def('main'),room.main,null,room,geometry,definitions);
+  assert.equal(room.main.qtyBase,undefined);assert.equal(room.main.qtyO,undefined);
+  assert.equal(blockQuantity(def('main'),room.main,room,geometry,definitions).value,17);
+  assert.deepEqual(room.main.iq,{profile:4});
+});
+
+test('tracked bases include curtains and opted-in custom single or multi length blocks',()=>{
+  const single={id:'custom_single',single:true,source:'manual',unit:'м.п.',subP:true};
+  const multi={id:'custom_multi',source:'manual',unit:'м.п.',subP:true};
+  const defs=[...definitions,single,multi];
+  const room={main:{qtyO:10},curtain:[{qty:1,subP:false}],custom_single:{qtyO:2,subP:false},custom_multi:[{qty:3,subP:false}]};
+  rebaseMainQuantity(room,geometry,defs);
+  room.curtain[0].subP=true;room.custom_single.subP=true;room.custom_multi[0].subP=true;
+  assert.equal(blockQuantity(def('main'),room.main,room,geometry,defs).value,4);
+  assert.equal(instanceLines(def('main'),{...room.main,iq:{profile:7}},{items:[{n:'profile',p:10,k:2,mult:3}]},room,geometry,defs)[0].q,7);
 });
 
 test('main deductions clamp at zero and missing contributions add nothing', () => {

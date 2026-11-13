@@ -1,0 +1,32 @@
+/* Prototype overlays share the full application workspace. */
+.z-trace-shell{display:flex;flex-direction:column;height:100%;min-height:0}
+.z-trace-workspace{flex:1;min-height:0;overflow:hidden}
+.z-trace-workspace>.trace-canvas-layout{min-height:0!important}
+.z-trace-shell input,.z-contract-shell input,.z-contract-shell textarea{font-size:16px!important}
+.z-contract-content{width:100%;max-width:720px;box-sizing:border-box;margin:0 auto;padding:12px 12px calc(40px + env(safe-area-inset-bottom))}
+.z-contract-paper{width:100%;max-width:768px;margin:0 auto}
+.z-contract-form,.z-contract-preview{min-width:0}
+.z-estimate-shell{overscroll-behavior:contain}
+.z-estimate-header{flex:none}
+.z-estimate-viewport{overscroll-behavior:contain}
+@media(min-width:701px){
+ .z-trace-shell>.z-trace-header{min-height:64px;padding:12px 20px!important}
+ .z-trace-shell>.z-trace-footer{min-height:64px;padding:10px 20px!important}
+ .z-trace-shell button{min-height:44px}
+ .z-trace-shell .trace-canvas-toolbar{padding:12px 20px!important}
+ .z-contract-header{min-height:64px;padding:10px 24px!important}
+ .z-contract-content{padding:24px 24px calc(40px + env(safe-area-inset-bottom))}
+ .z-estimate-header{min-height:64px;padding:10px 24px!important}
+ .z-estimate-viewport{padding:24px!important}
+}
+@media(min-width:960px){
+ .z-trace-workspace>.trace-canvas-layout{display:grid!important;grid-template-columns:minmax(0,1fr) 320px;grid-template-rows:auto minmax(0,1fr)}
+ .z-trace-shell .trace-canvas-toolbar{grid-column:1/-1;grid-row:1}
+ .z-trace-shell .trace-canvas-surface{grid-column:1;grid-row:2;min-width:0;min-height:0}
+ .z-trace-shell .trace-canvas-controls{grid-column:2;grid-row:2;min-width:0;min-height:0;overflow:auto;overscroll-behavior:contain;border-top:0!important;border-left:1px solid #ECECF4;padding:20px 16px!important}
+}
+@media(min-width:1100px){
+ .z-contract-content.z-contract-wide{max-width:1240px}
+ .z-contract-project{display:grid;grid-template-columns:minmax(300px,360px) minmax(0,768px);align-items:start;gap:24px}
+ .z-contract-preview{position:sticky;top:88px;max-height:calc(100dvh - 112px);overflow:auto;overscroll-behavior:contain}
+}

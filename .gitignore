@@ -4,3 +4,13 @@ dist/
 *.local
 
 artifacts/
+
+# Local review, deployment metadata, and temporary exports.
+.impeccable/
+.vercel/
+tmp/
+output/
+
+# Duplicate assets created by Finder/cloud sync; canonical catalogue is nom/.
+public/design/nom */
+public/landing 2.html

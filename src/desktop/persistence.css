@@ -1,0 +1,16 @@
+.d-persistence-notice{display:flex;align-items:center;gap:20px;margin:16px 30px 0;padding:14px 16px;border:1px solid #e8b4a7;border-radius:9px;background:#fff4ef;color:#8c3525}
+.d-persistence-notice>div{flex:1;min-width:0}
+.d-persistence-notice b{font-size:12px;font-weight:750}
+.d-persistence-notice p{margin:5px 0 0;font-size:11px;line-height:1.6}
+.d-persistence-notice>.d-btn{flex:none;border-color:#d99a89;color:#8c3525;background:#fff}
+.d-save-status.is-error{color:#b3412c}
+.d-persistence-notice>.d-persistence-actions{display:flex;flex:0 0 auto;flex-wrap:wrap;gap:8px;align-items:center}
+.d-persistence-actions .d-btn{border-color:#d99a89;color:#8c3525;background:#fff}
+.d-topbar-save{font-size:11px;color:#5e7189;white-space:nowrap}
+.d-topbar-save.is-error{color:#a33d2c}
+.d-storage-loading{padding:48px;color:#415874;font:14px system-ui}
+.d-storage-recovery{max-width:850px;margin:48px auto;padding:24px;color:#1e3048;font:14px/1.6 system-ui}
+.d-storage-recovery>.sb-backup{margin-top:24px}
+.d-restore-lock{position:fixed;inset:0;z-index:20000;display:grid;place-items:center;background:rgba(245,248,253,.94);color:#243d5d;font-size:16px;cursor:wait}
+@media(max-width:650px){.d-persistence-notice>.d-persistence-actions{width:100%;flex-direction:column;align-items:stretch}.d-persistence-actions .d-btn,.d-persistence-actions .sb-download-control{width:100%}.d-topbar-save{display:none}}
+@media(max-width:650px){.d-persistence-notice{align-items:flex-start;flex-direction:column;gap:10px;margin:12px 13px 0;padding:12px}.d-persistence-notice>.d-btn{width:100%}}

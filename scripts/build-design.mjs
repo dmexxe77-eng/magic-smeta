@@ -12,13 +12,22 @@ import { quantitiesTemplate } from './design-quantities.mjs';
 import { storageTemplate } from './design-storage.mjs';
 import { presetEditorTemplate } from './design-preset-editor.mjs';
 import { calculatorTemplate } from './design-calculator.mjs';
+import { drawingPreviewTemplate } from './design-drawing-preview.mjs';
 import { equipmentTemplate } from './design-equipment.mjs';
 import { adjustmentTemplate } from './design-adjustment.mjs';
 import { companyTemplate } from './design-company.mjs';
+import { documentEditorsTemplate } from './design-document-editors.mjs';
+import { mobileHomeTemplate } from './design-mobile-home.mjs';
+import { accountSettingsTemplate } from './design-account-settings.mjs';
+import { accountMenuTemplate } from './design-account-menu.mjs';
 import { interfaceTemplate } from './design-interface.mjs';
+import { tabletTemplate, tabletManifest } from './design-tablet.mjs';
+import { devicePreviewPage } from './design-device-preview.mjs';
 
 const OUT = 'public/design';
 fs.mkdirSync(OUT + '/vendor', { recursive: true });
+fs.mkdirSync(OUT + '/assets', { recursive: true });
+fs.copyFileSync('design-src/assets/trace-upload-hero-labeled.png', OUT + '/assets/trace-upload-hero.png');
 const shim = p => path.resolve('src/design-bridge/shims/' + p);
 
 await build({ entryPoints: ['src/design-bridge/draw-entry.js'], bundle: true, format: 'iife', globalName: 'MagicDraw',
@@ -31,11 +40,16 @@ await build({ entryPoints: ['src/design-bridge/contract-entry.jsx'], bundle: tru
   outfile: OUT + '/contract.js', minify: true, charset: 'utf8', jsx: 'automatic', loader: { '.js': 'jsx' }, logLevel: 'error',
   alias: { react: shim('react.js'), 'react-dom/client': shim('react-dom.js'), 'react-dom': shim('react-dom.js'), 'react/jsx-runtime': shim('jsx-runtime.js') } });
 
+await build({ entryPoints: ['src/design-bridge/document-entry.jsx'], bundle: true, format: 'iife', globalName: 'MagicDocuments',
+  outfile: OUT + '/documents.js', minify: true, charset: 'utf8', jsx: 'automatic', logLevel: 'error',
+  alias: { react: shim('react.js'), 'react-dom/client': shim('react-dom.js'), 'react-dom': shim('react-dom.js'), 'react/jsx-runtime': shim('jsx-runtime.js') } });
+
 await build({ entryPoints: ['src/design-bridge/ec-entry.js'], bundle: true, format: 'iife', globalName: 'MagicEC', outfile: OUT + '/ec.js', minify: true, charset: 'utf8', logLevel: 'error' });
 
 await build({ entryPoints: ['src/design-bridge/quantity-model.js'], bundle: true, format: 'iife', globalName: 'MagicQuantity', outfile: OUT + '/quantity.js', minify: true, charset: 'utf8', logLevel: 'error' });
 await build({ entryPoints: ['src/design-bridge/design-storage.js'], bundle: true, format: 'iife', globalName: 'MagicDesignStorage', outfile: OUT + '/storage.js', minify: true, charset: 'utf8', logLevel: 'error' });
 await build({ entryPoints: ['src/design-bridge/estimate-entry.js'], bundle: true, format: 'iife', globalName: 'MagicEstimate', outfile: OUT + '/estimate.js', minify: true, charset: 'utf8', logLevel: 'error' });
+await build({ entryPoints: ['design-src/device-preview.js'], bundle: true, format: 'esm', outfile: OUT + '/device-preview.js', minify: true, charset: 'utf8', logLevel: 'error' });
 
 const src = fs.readFileSync('design-src/prototype.html', 'utf8');
 const grab = type => src.match(new RegExp('<script type="__bundler/' + type + '">([\\s\\S]*?)</script>'))[1];
@@ -47,19 +61,15 @@ for (const e of JSON.parse(grab('ext_resources'))) {
   fs.writeFileSync(OUT + '/vendor/' + name, bytes);
 }
 
-/* На телефоне: без вводного описания и без рамки устройства, экран приложения во весь экран */
-const MOBILE_CSS = '<style>@media (max-width:700px){html,body{margin:0;background:#F3F3FA}' +
-  '.sc-host>div{padding:0!important;min-height:0!important;display:block!important}' +
-  '.sc-host-x>div{width:100vw!important;height:100dvh!important;border-radius:0!important;box-shadow:none!important;border:0!important}' +
-  '.sc-host-x>div>div:not(:nth-child(3)){display:none!important}' +
-  '.sc-host-x>div>div:nth-child(3)>div>div>div:first-child{height:0!important}}</style>';
 let tpl = JSON.parse(grab('template'));
 const rep = (a, b, label) => { const n = tpl.split(a).length - 1; if (n !== 1) throw new Error('template: «' + label + '» найдено ' + n + ' раз'); tpl = tpl.replace(a, () => b); };
 
 rep('<meta name="viewport" content="width=device-width, initial-scale=1">',
   '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n<meta name="theme-color" content="#0b1119">\n<link rel="icon" href="' + FAVICON + '">\n<title>' + BRAND.title + '</title>\n' +
-  '<link rel="stylesheet" href="/design/draw.css">\n<script src="/design/vendor/react.js"></script>\n<script src="/design/vendor/react-dom.js"></script>\n' +
-  '<script src="/design/draw.js"></script>\n<script src="/design/trace.js"></script>\n<script src="/design/contract.js"></script>\n<script src="/design/ec.js"></script>\n<script src="/design/estimate.js"></script>\n' + MOBILE_CSS, 'head');
+  '<link rel="stylesheet" href="/design/draw.css">\n<link rel="stylesheet" href="/design/trace.css">\n<script src="/design/vendor/react.js"></script>\n<script src="/design/vendor/react-dom.js"></script>\n' +
+  '<script src="/design/draw.js"></script>\n<script src="/design/trace.js"></script>\n<script src="/design/contract.js"></script>\n<script src="/design/ec.js"></script>\n<script src="/design/estimate.js"></script>\n', 'head');
+
+tpl = tpl.replace('<script src="/design/contract.js"></script>', '<script src="/design/contract.js"></script>\n<script src="/design/documents.js"></script>\n<link rel="stylesheet" href="/design/documents.css">');
 
 /* Вводное описание прототипа (карточка над рамкой телефона) на сайт не идёт */
 {
@@ -86,11 +96,11 @@ const METHODS = [
   "    const h=window.MagicDraw.open({roomName:r?r.name:'Помещение '+n,initial:r?{verts:r.v}:null,",
   "      onFinish:res=>{h.close();if(r){self.upd(p.id,x=>({...x,rooms:x.rooms.map(q=>q.id===r.id?Object.assign({},q,{name:res.name,v:res.verts}):q)}));self.go('calc',{tab:r.id});self.toast('Контур обновлён');}",
   "        else{const rm=mk(res.name,res.verts);self.upd(p.id,x=>({...x,rooms:x.rooms.concat([rm]),status:x.status==='order'?'estimate':x.status}));self.go('calc',{tab:rm.id});self.toast(res.name+' · '+F(res.area)+' м² добавлено');}}});}",
-  "  openTrace(){const p=this.cur();if(!p||!window.MagicTrace){this.toast('Обводка не загрузилась');return;}const self=this;const inp=document.createElement('input');inp.type='file';inp.accept='image/*,.pdf';inp.style.display='none';document.body.appendChild(inp);",
-  "    inp.onchange=()=>{const f=inp.files&&inp.files[0];inp.remove();if(!f)return;let last=null;const h=window.MagicTrace.open({file:f,roomCount:p.rooms.length,",
-  "      onRoom:res=>{const rm=mk(res.name,res.verts);last=rm.id;self.upd(p.id,x=>({...x,rooms:x.rooms.concat([rm]),status:x.status==='order'?'estimate':x.status}));self.toast(res.name+' · '+F(res.area)+' м² добавлено');},",
-  "      onDone:()=>{h.close();if(last)self.go('calc',{tab:last});}});};",
-  "    inp.click();}",
+  "  openTrace(){const p=this.cur();if(!p||!window.MagicTrace){this.toast('Обводка не загрузилась');return;}const self=this;",
+  "    let last=null;const traceRooms=new Map();const h=window.MagicTrace.open({roomCount:p.rooms.length,",
+  "      onRoom:res=>{const rm=mk(res.name,res.verts);last=rm.id;if(res.traceId!=null)traceRooms.set(res.traceId,rm.id);self.upd(p.id,x=>({...x,rooms:x.rooms.concat([rm]),status:x.status==='order'?'estimate':x.status}));self.toast(res.name+' · '+F(res.area)+' м² добавлено');},",
+  "      onRoomsChange:rooms=>{const updates=new Map(rooms.map(r=>[traceRooms.get(r.traceId),r.verts]).filter(([id])=>id!=null));if(updates.size)self.upd(p.id,x=>({...x,rooms:x.rooms.map(r=>updates.has(r.id)?Object.assign({},r,{v:updates.get(r.id)}):r)}));},",
+  "      onDone:()=>{h.close();if(last)self.go('calc',{tab:last});}});}",
   "  openContract(){const p=this.cur();if(!p||!window.MagicContract){this.toast('Договор не загрузился');return;}const self=this;const e=est(p.rooms,this.ed(p.id));const ins=this.installStart(p);const fmtD=iso=>iso?String(iso).split('-').reverse().join('.'):'';",
   "    const h=window.MagicContract.open({project:{id:p.id,name:p.name,client:p.client,phone:p.phone,address:p.address},total:this.pSum(p),area:this.pArea(p),est:e,estimateAdjustment:p.estimateAdjustment,estimateExportOptions:p.estimateExportOptions,contract:p.contract||null,installDate:fmtD(ins),",
   "      onProjectPatch:patch=>self.upd(p.id,x=>Object.assign({},x,patch)),",
@@ -266,18 +276,38 @@ tpl = quantitiesTemplate(tpl);
 tpl = storageTemplate(tpl);
 tpl = presetEditorTemplate(tpl);
 tpl = calculatorTemplate(tpl);
+tpl = drawingPreviewTemplate(tpl);
 tpl = equipmentTemplate(tpl);
 tpl = adjustmentTemplate(tpl);
 tpl = companyTemplate(tpl);
+tpl = documentEditorsTemplate(tpl);
 tpl = interfaceTemplate(tpl, fs.readFileSync('design-src/interface.css', 'utf8'));
+tpl = tabletTemplate(tpl, fs.readFileSync('design-src/tablet.css', 'utf8'));
 /* Бренд ЗАМЕРX: знак, название, палитра — после всех правок разметки, чтобы перекрасить и их */
 tpl = brandTemplate(tpl);
+tpl = mobileHomeTemplate(tpl);
+tpl = accountMenuTemplate(tpl);
+tpl = accountSettingsTemplate(tpl);
 
 const json = JSON.stringify(tpl).replace(/<\//g, '<\\/');
+const resources = JSON.stringify(tabletManifest(manifest)).replace(/<\//g, '<\\/');
 const out = src
+  .replace(/<script type="__bundler\/manifest">[\s\S]*?<\/script>/, () => '<script type="__bundler/manifest">' + resources + '</script>')
   .replace(/<script type="__bundler\/template">[\s\S]*?<\/script>/, () => '<script type="__bundler/template">' + json + '</script>')
   .replace('<title>Bundled Page</title>', '<title>' + BRAND.title + '</title>');
-fs.writeFileSync(OUT + '/index.html', out);
+fs.writeFileSync(OUT + '/app.html', out);
+const previewFontIds = [
+  ['555ff905-d6fe-4725-bb37-c1fb8ae9302f', 'U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116'],
+  ['86b2e220-ffdf-4d9c-9de7-fb083d5e282f', 'U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD'],
+];
+const previewFonts = previewFontIds.map(([id, range]) => {
+  const entry = manifest[id];
+  if (!entry) throw new Error('device preview: missing Manrope resource ' + id);
+  let bytes = Buffer.from(entry.data, 'base64');
+  if (entry.compressed) bytes = zlib.gunzipSync(bytes);
+  return `@font-face{font-family:Manrope;font-style:normal;font-weight:400 800;font-display:swap;src:url(data:font/woff2;base64,${bytes.toString('base64')}) format('woff2');unicode-range:${range}}`;
+}).join('\n');
+fs.writeFileSync(OUT + '/index.html', devicePreviewPage({ css: fs.readFileSync('design-src/device-preview.css', 'utf8'), fonts: previewFonts }));
 const kb = f => Math.round(fs.statSync(f).size / 1024) + ' КБ';
 console.log('main data:', mainStats.nom, 'позиций ·', mainStats.images, 'фото ·', mainStats.presets, 'кнопок ·', mainStats.projects, 'проектов ·', kb(mainStats.file));
-console.log('design page:', kb(OUT + '/index.html'), '· draw.js', kb(OUT + '/draw.js'), '· trace.js', kb(OUT + '/trace.js'), '· contract.js', kb(OUT + '/contract.js'), '· ec.js', kb(OUT + '/ec.js'));
+console.log('design page:', kb(OUT + '/app.html'), '· preview', kb(OUT + '/index.html'), '· draw.js', kb(OUT + '/draw.js'), '· trace.js', kb(OUT + '/trace.js'), '· contract.js', kb(OUT + '/contract.js'), '· ec.js', kb(OUT + '/ec.js'));

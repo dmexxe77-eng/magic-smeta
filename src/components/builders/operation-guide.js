@@ -22,7 +22,7 @@ function size(op, key, label) {
   return `${label} · ${formatted} см`;
 }
 
-function description(op, { a, b, inHole }) {
+export function operationDescription(op, { a = 'A', b = 'B', inHole = false } = {}) {
   const from = op.seg?.from === 'end' ? b : a;
   if (op.kind === 'len') {
     const fixed = op.seg?.end === 'start' ? b : a, moved = op.seg?.end === 'start' ? a : b;
@@ -139,5 +139,5 @@ export function operationGuide(op, { a = 'A', b = 'B', inHole = false, lengthCm 
   }
 
   const legend = showLegend ? '<div class="operation-guide-legend" aria-hidden="true"><span class="guide-legend-before">До</span><span class="guide-legend-after">После</span><span class="guide-not-scale">Схема</span></div>' : '';
-  return `<figure class="operation-guide" data-operation="${escape(op.kind)}"><svg class="operation-diagram" viewBox="0 0 320 175" role="img" aria-label="${escape(alt)}">${drawing}</svg>${legend}<figcaption>${escape(description(op, context))}</figcaption></figure>`;
+  return `<figure class="operation-guide" data-operation="${escape(op.kind)}"><svg class="operation-diagram" viewBox="0 0 320 175" role="img" aria-label="${escape(alt)}">${drawing}</svg>${legend}<figcaption>${escape(operationDescription(op, context))}</figcaption></figure>`;
 }

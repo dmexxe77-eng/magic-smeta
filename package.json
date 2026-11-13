@@ -5,14 +5,16 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "build": "vite build",
+    "build": "npm run desktop && vite build",
     "preview": "vite preview --host 127.0.0.1",
     "design": "node scripts/build-design.mjs",
+    "desktop": "npm run design && node scripts/build-desktop.mjs",
     "test": "node --test tests/*.test.mjs",
     "test:quantities": "node --test --experimental-test-coverage --test-coverage-include=src/design-bridge/quantity-model.js --test-coverage-include=src/design-bridge/design-storage.js --test-coverage-lines=80 --test-coverage-functions=80 --test-coverage-branches=80 tests/design-quantity-model.test.mjs tests/design-storage.test.mjs",
     "test:e2e": "node tests/design-e2e.mjs"
   },
   "dependencies": {
+    "fflate": "0.8.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

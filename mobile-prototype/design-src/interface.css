@@ -1,0 +1,11 @@
+/* Interaction polish preserves the app's existing compact dimensions. */
+.z-ui { --z-focus: #1461ee; }
+.z-ui button { font-family: inherit; touch-action: manipulation; }
+.z-ui :is(button, input):focus-visible { outline: 2px solid var(--z-focus); outline-offset: 2px; }
+.z-ui .z-block-toggle { border: 0; padding: 0; background: transparent; color: inherit; text-align: left; font: inherit; }
+.z-ui .z-line-toggle { padding: 0; }
+.z-ui .z-line-edit, .z-ui .z-reset { border: 0; padding: 0; background: transparent; font: inherit; }
+.z-ui .z-block-title { white-space: normal !important; }
+@media (prefers-reduced-motion: reduce) {
+  .z-ui, .z-ui * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}

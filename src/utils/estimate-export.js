@@ -77,18 +77,26 @@ export function prepareEstimateExport(est, adjustment, showAdjustment = true) {
     adjustment,
     equipment.reduce((sum, line) => sum + amount(line), 0),
   );
-  let targets = [cents(totals.materialsTotal), cents(totals.worksTotal), cents(totals.equipmentTotal)];
-  const fold = !showAdjustment && totals.hasAdjustment;
-  if (fold) {
+  const scopes = ['mats', 'works', 'equipment'];
+  const baseTargets = [cents(totals.materialsTotal), cents(totals.worksTotal), cents(totals.equipmentTotal)];
+  let adjustedTargets = [...baseTargets];
+  if (totals.hasAdjustment) {
     if (totals.adjustments[0].scope === 'all') {
       const factor = 1 + totals.adjustments[0].percent / 100;
-      targets = allocateCents([totals.materialsTotal * factor, totals.worksTotal * factor, totals.equipmentTotal * factor], cents(totals.adjustedTotal));
+      adjustedTargets = allocateCents([totals.materialsTotal * factor, totals.worksTotal * factor, totals.equipmentTotal * factor], cents(totals.adjustedTotal));
     } else {
-      for (const entry of totals.adjustments) targets[{ mats: 0, works: 1, equipment: 2 }[entry.scope]] += cents(entry.amount);
+      for (const entry of totals.adjustments) adjustedTargets[scopes.indexOf(entry.scope)] += cents(entry.amount);
     }
   }
+  const visible = scope => typeof showAdjustment === 'object' && showAdjustment !== null ? showAdjustment[scope] !== false : !!showAdjustment;
+  const targets = scopes.map((scope, index) => visible(scope) ? baseTargets[index] : adjustedTargets[index]);
   const rates = estimateAdjustmentRates(adjustment);
-  const foldedPercent = scope => fold ? rates[scope] : 0;
+  const foldedPercent = scope => visible(scope) ? 0 : rates[scope];
+  const categoryAdjustments = Object.fromEntries(scopes.map((scope, index) => [scope, {
+    scope, percent: rates[scope], base: baseTargets[index] / 100,
+    amount: visible(scope) ? (adjustedTargets[index] - baseTargets[index]) / 100 : 0,
+    adjustedTotal: adjustedTargets[index] / 100, shown: visible(scope) && rates[scope] !== 0,
+  }]));
   return {
     mats: prepareRows(mats, targets[0], foldedPercent('mats')),
     works: prepareRows(works, targets[1], foldedPercent('works')),
@@ -97,6 +105,7 @@ export function prepareEstimateExport(est, adjustment, showAdjustment = true) {
     worksTotal: targets[1] / 100,
     equipmentTotal: targets[2] / 100,
     totals,
+    categoryAdjustments,
   };
 }
 
@@ -134,10 +143,21 @@ export function partitionEstimateExport(prepared, rooms = []) {
     });
   });
   if (sections.some(section => unassigned[section].length)) groups.push(unassigned);
-  return groups.map(group => ({
+  const result = groups.map(group => ({
     ...group,
     materialsTotal: (group.mats || []).reduce((sum, line) => sum + cents(line.exportTotal), 0) / 100,
     worksTotal: (group.works || []).reduce((sum, line) => sum + cents(line.exportTotal), 0) / 100,
     equipmentTotal: (group.equipment || []).reduce((sum, line) => sum + cents(line.exportTotal), 0) / 100,
   }));
+  for (const [section, totalKey] of [['mats', 'materialsTotal'], ['works', 'worksTotal'], ['equipment', 'equipmentTotal']]) {
+    const correction = prepared.categoryAdjustments?.[section];
+    if (!correction) continue;
+    const allocated = allocateCents(result.map(group => group[totalKey]), cents(correction.amount));
+    result.forEach((group, index) => {
+      group.categoryAdjustments ??= {};
+      group.categoryAdjustments[section] = { ...correction, base: group[totalKey], amount: allocated[index] / 100,
+        adjustedTotal: (cents(group[totalKey]) + allocated[index]) / 100 };
+    });
+  }
+  return result;
 }

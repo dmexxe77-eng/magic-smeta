@@ -2,6 +2,7 @@
 // Перенесён из HTML-прототипа: императивный DOM внутри переданного корневого элемента.
 import { L,TAU,wrap,hyp,sub,add,mul,dot,cross,norm,perp,clone,cm,fmt2,turnAt,shoelace,windOf,interiorDeg,outNormal,lineX,segX,inside,isInteriorDiag,W_ANG,toPts,flat,buildCons,conRes,resid,jac,solveLin,sq,lm,rankOf,rowFor,estScale,analyze,alignPts,makeModel,solveModel,ptsOf,filletInfo,arcInfo,flatten,perimeterOf,polyStats,sideLen,bakeModel,checkFillets,opDelete,opAddPoint,opShift,opLength,opFillet,opArc,opBump,rectPoly,circumR,ovalPoly,DEG,W_PRIOR,NEED } from './geometry.js';
 
+import { filletLimit } from './geometry.js';
 import { operationGuide, operationFieldHelp } from '../operation-guide.js';
 import { measurementToolbar } from '../measurement-tools.js';
 
@@ -350,9 +351,9 @@ function makeOp(kind, i) { const n = S.poly.v.length, A = L(i), B = L((i + 1) % 
   S.op = { kind, i, spec, seg, f }; opFields(); S.focusReq = `input[data-in="op"][data-k="${S.op.spec.fields[0][0]}"]`; }
 function opFields() { const o = S.op; if (o.kind === 'arc') o.spec.fields = o.seg.mode === 'h' ? [['h', 'Стрела (высота дуги)', 'см']] : [['s', 'Длина дуги', 'см']]; }
 function opNote() { const o = S.op, num = k => parseNum(o.f[k]) / 100;
-  if (o.kind === 'fillet') { const fi = filletInfo({ v: S.poly.v.map((p, k) => ({ ...p, fillet: k === o.i ? 1 : p.fillet })) }, o.i); if (!fi) return '';
-    const Rmax = Math.min(fi.lp, fi.ln) / 2 * Math.tan(fi.phi / 2), r = num('r');
-    return isFinite(r) && r > 0 ? `Касание на ${cm(r / Math.tan(fi.phi / 2))} см от угла · максимум R ${cm(Rmax)}` : `Угол ${Math.round(fi.phi * DEG)}° · максимум R ${cm(Rmax)} см`; }
+  if (o.kind === 'fillet') { const limit = filletLimit(S.poly, o.i); if (!limit) return '';
+    const maximum = String(limit.maxRadiusCm).replace('.', ','), r = num('r');
+    return isFinite(r) && r > 0 ? `Касание на ${cm(r / Math.tan(limit.phi / 2))} см от угла · максимум R ${maximum} см` : `Угол ${Math.round(limit.phi * DEG)}° · максимум R ${maximum} см`; }
   if (o.kind === 'arc') { const c = sideLen(S.poly, o.i); if (o.seg.mode === 'h') { const h = num('h'); return isFinite(h) && h > 0 ? `Хорда ${cm(c)} см · радиус ${cm(c * c / (8 * h) + h / 2)} см` : `Хорда (стена) ${cm(c)} см`; }
     return `Длина дуги должна быть больше ${cm(c)} см`; }
   if (o.kind === 'len') { const n = S.poly.v.length, A = L(o.i), B = L((o.i + 1) % n), C = L((o.i + 2) % n), Z = L((o.i - 1 + n) % n), mv = o.seg.end === 'end';

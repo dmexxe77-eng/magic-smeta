@@ -1,0 +1,19 @@
+.d-deduction-result {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: -3px 0 14px;
+  padding: 9px 11px;
+  border-radius: 7px;
+  background: #edf4ff;
+  color: #4f70a0;
+  font-size: 11px;
+}
+
+.d-deduction-result strong {
+  margin-left: auto;
+  color: #1461ee;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}

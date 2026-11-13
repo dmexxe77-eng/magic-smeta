@@ -54,32 +54,34 @@ const METHODS = String.raw`
       const open=col[b.id]===false,allInstances=window.MagicQuantity.getInstances(r,b);
       const hdr={id:b.id,open,toggleOpen:()=>this.setState(x=>({collapsed:Object.assign({},x.collapsed||{},{[b.id]:(x.collapsed||{})[b.id]===false}),variantOpen:null})),chevDeg:open?0:-90,closed:!open,headMb:open?10:2};
       const editInstance=(id,fn,spread=false)=>this.updRoom(rm=>{
-        if(b.single){rm[b.id]=rm[b.id]||{pid:null};fn(rm[b.id]);}
-        else{const i=(rm[b.id]||[]).find(x=>x.id===id);if(i)fn(i);}
+        if(window.MagicQuantity.isPerimeterDeductionBlock(b))window.MagicQuantity.rebaseMainQuantity(rm,quantityGeom(rm),BLOCKS);
+        if(b.single){rm[b.id]=rm[b.id]||{pid:null};fn(rm[b.id],rm);}
+        else{const i=(rm[b.id]||[]).find(x=>x.id===id);if(i)fn(i,rm);}
         return rm;
       });
       const editor=pid=>()=>this.go('btnEd',{be:{bid:b.id,pid,brand:'all',from:'calc'}});
       const card=(inst,index)=>{
         const q=blockQty(b,inst,r,g),lines=instLines(b.id,inst,null,g,r),total=lines.reduce((a,l)=>a+l.t,0),key='q|'+r.id+'|'+b.id+'|'+(inst.id||'single');
         const editInst=fn=>editInstance(inst.id,fn);
-        const setQ=n=>editInst(i=>{if(n===null)delete i[b.single?'qtyO':'qty'];else i[b.single?'qtyO':'qty']=n;});
+        const setQ=n=>editInstance(inst.id,(i,rm)=>window.MagicQuantity.setBlockQuantity(b,i,n,rm,quantityGeom(rm),BLOCKS));
         const step=d=>{
           const current=this.cur(),room=current&&current.rooms.find(x=>x.id===r.id);if(!room)return;
           const i=b.single?room[b.id]:(room[b.id]||[]).find(x=>x.id===inst.id);if(!i)return;
           const qb=this.state.qtyBuf,pending=qb&&qb.k===key?readQuantity(qb.t):undefined;
           if(qb&&qb.k===key&&pending===undefined){this.toast('Введите неотрицательное количество');return;}
-          const base=pending!==undefined?pending:blockQty(b,i,room,quantityGeom(room)).shown;
+          const currentQuantity=blockQty(b,i,room,quantityGeom(room));
+          const base=pending!==undefined?pending:b.id==='main'?currentQuantity.value:currentQuantity.shown;
           setQ(Math.max(0,Math.round(((base||0)+d)*1000)/1000));this.setState({qtyBuf:null});
         };
         const choices=(PRESETS[b.id]||[]).filter(pr=>!pr.hidden&&(pr.items.length||pr.id===inst.pid)).map(pr=>Object.assign({name:pr.name,pick:()=>editInst(i=>{if(i.pid!==pr.id){i.pid=pr.id;i.off={};i.iq={};i.variants={};}})},chipStyle(pr.id===inst.pid)));
-        return{id:inst.id||'single',unit:q.unit,qtyAria:'Общее количество '+b.title+' '+(index+1),qtyTxt:s.qtyBuf&&s.qtyBuf.k===key?s.qtyBuf.t:QF(q.shown),totalTxt:total?RUB(total):'—',inc:()=>step(b.step||1),dec:()=>step(-(b.step||1)),
+        return{id:inst.id||'single',unit:q.unit,qtyAria:'Общее количество '+b.title+' '+(index+1),qtyTxt:s.qtyBuf&&s.qtyBuf.k===key?s.qtyBuf.t:QF(b.id==='main'?q.value:q.shown),totalTxt:total?RUB(total):'—',inc:()=>step(b.step||1),dec:()=>step(-(b.step||1)),
           qtyChange:e=>this.setState({qtyBuf:{k:key,t:e.target.value}}),
           qtyBlur:()=>{const qb=this.state.qtyBuf;if(!qb||qb.k!==key)return;const n=readQuantity(qb.t);if(n===undefined){this.toast('Введите неотрицательное количество');return;}setQ(n);this.setState({qtyBuf:null});},
           qtyReset:()=>setQ(null),qtyCanReset:q.overridden,qtyResetLabel:q.source==='manual'?'очистить':'сбросить',qtyNote:q.overridden?'Вручную':q.source==='manual'?'Вводится вручную':q.source==='area'?'Площадь с чертежа':'Периметр с чертежа',
           hasSubP:!!b.subP&&q.unit==='м.п.',subSwBg:inst.subP?ACC:'#D6D6E2',subKnob:inst.subP?19:3,subRowBg:inst.subP?'#EEEDFC':'#F7F7FC',subRowBorder:inst.subP?'#DCD9FA':'#ECECF4',subColor:inst.subP?ACC:'#3D4454',subNote:inst.subP?'P основного профиля уменьшен на '+F(q.value||0)+' м.п.':'длина не влияет на основной профиль',
           toggleSubP:()=>editInst(i=>{i.subP=!i.subP;}),
           lines:lines.map(l=>this.quantityLine(l,r,b,inst,editInst,key)),
-          remove:()=>this.updRoom(rm=>{rm[b.id]=(rm[b.id]||[]).filter(x=>x.id!==inst.id);return rm;}),chips:choices,editButtons:editor(inst.pid),quantity:q};
+          remove:()=>this.updRoom(rm=>{if(window.MagicQuantity.isPerimeterDeductionBlock(b))window.MagicQuantity.rebaseMainQuantity(rm,quantityGeom(rm),BLOCKS);rm[b.id]=(rm[b.id]||[]).filter(x=>x.id!==inst.id);return rm;}),chips:choices,editButtons:editor(inst.pid),quantity:q};
       };
       const selLines=allInstances.length?allInstances.map(i=>{const pr=PR(b.id,i.pid),q=blockQty(b,i,r,g);return{name:pr?pr.name:'не выбрано',qty:(q.value==null?'—':F(q.value))+' '+q.unit};}):[{name:'не добавлено',qty:''}];
       if(b.single){
@@ -95,7 +97,7 @@ const METHODS = String.raw`
       const insts=allInstances.map(card),total=insts.reduce((a,c)=>a+c.lines.reduce((n,l)=>n+(l.on?readQuantity(l.totalTxt)||0:0),0),0);
       const actualTotal=allInstances.reduce((sum,i)=>sum+instLines(b.id,i,null,g,r).reduce((n,l)=>n+l.t,0),0);
       return Object.assign({},hdr,{selLines,title:b.title,single:false,multi:true,showSingle:false,showMulti:open,totalTxt:actualTotal?RUB(actualTotal):'—',totalColor:actualTotal?INK:DIM,unit:b.unit,insts,editButtons:editor((allInstances[0]||{}).pid||b.def),addLabel:'+ Добавить '+(b.add||b.title.toLowerCase()),
-        addInst:()=>this.updRoom(rm=>{const pr=(PRESETS[b.id]||[]).find(x=>!x.hidden&&x.items.length)||(PRESETS[b.id]||[]).find(x=>!x.hidden);rm[b.id]=rm[b.id]||[];rm[b.id].push(window.MagicQuantity.createInstance(b,pr?pr.id:null,uid()));return rm;})});
+        addInst:()=>this.updRoom(rm=>{if(window.MagicQuantity.isPerimeterDeductionBlock(b))window.MagicQuantity.rebaseMainQuantity(rm,quantityGeom(rm),BLOCKS);const pr=(PRESETS[b.id]||[]).find(x=>!x.hidden&&x.items.length)||(PRESETS[b.id]||[]).find(x=>!x.hidden);rm[b.id]=rm[b.id]||[];rm[b.id].push(window.MagicQuantity.createInstance(b,pr?pr.id:null,uid()));return rm;})});
     });
   }
   blockFormVals(){

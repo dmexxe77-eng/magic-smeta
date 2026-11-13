@@ -1,0 +1,104 @@
+:root {
+  color-scheme: light;
+  font-family: Manrope, -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #17212f;
+  background: #eff1f6;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+* { box-sizing: border-box; }
+html, body { width: 100%; height: 100%; margin: 0; }
+body { overflow: hidden; }
+button, select { font: inherit; }
+button, select { -webkit-tap-highlight-color: transparent; }
+button { cursor: pointer; }
+button:disabled { cursor: default; opacity: .42; }
+button, select { color: inherit; }
+button:focus-visible, select:focus-visible {
+  outline: 3px solid #1461ee;
+  outline-offset: 3px;
+}
+::selection { color: #fff; background: #1461ee; }
+
+.preview-host { display: none; height: 100%; height: 100dvh; }
+[data-preview-mode="preview"] .preview-host { display: flex; flex-direction: column; }
+.preview-toolbar {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  min-height: 64px;
+  padding: 12px 24px;
+  background: #fff;
+  border-bottom: 1px solid #e2e5ee;
+}
+.preview-brand { margin-right: 8px; font-size: 16px; font-weight: 800; letter-spacing: -.02em; white-space: nowrap; }
+.preview-brand span { color: #1461ee; }
+.preview-device { display: flex; align-items: center; gap: 10px; }
+.preview-label { font-size: 12px; color: #657185; }
+.preview-select {
+  width: 226px;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid #dfe3ed;
+  border-radius: 10px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 650;
+}
+.preview-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 9px 12px;
+  border: 1px solid #dfe3ed;
+  border-radius: 10px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.preview-button svg { width: 18px; height: 18px; flex: 0 0 auto; }
+.preview-zoom { display: inline-flex; align-items: center; gap: 3px; padding: 3px; border-radius: 11px; background: #f0f2f7; }
+.preview-zoom .preview-button { min-height: 34px; padding: 7px 11px; border: 0; border-radius: 8px; background: transparent; color: #657185; }
+.preview-zoom .preview-button[aria-pressed="true"] { color: #1461ee; background: #fff; box-shadow: 0 1px 3px #182a4a0d; }
+.preview-readout { margin-left: auto; color: #657185; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.preview-stage { position: relative; flex: 1 1 auto; min-width: 0; min-height: 0; overflow: auto; scrollbar-color: #b9c2d2 #eff1f6; scrollbar-width: thin; }
+.preview-canvas { display: grid; place-items: center; width: max-content; min-width: 100%; min-height: 100%; padding: 24px; }
+.preview-artboard { position: relative; flex: none; border-radius: 12px; box-shadow: 0 12px 36px #182a4a1a; outline: 1px solid #d9deea; }
+.preview-frame { display: block; position: absolute; top: 0; left: 0; border: 0; border-radius: 12px; background: #fff; transform-origin: 0 0; }
+.preview-status { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 12px; padding: 24px; background: #eff1f6; color: #657185; font-size: 14px; text-align: center; }
+.preview-status[hidden], .preview-button[hidden] { display: none; }
+.preview-noscript { margin: 32px; font-size: 16px; line-height: 1.6; }
+.preview-noscript a { color: #1461ee; }
+
+@media (hover: hover) {
+  .preview-button:hover:not(:disabled) { background: #f4f6fa; }
+  .preview-zoom .preview-button[aria-pressed="true"]:hover { background: #fff; }
+}
+
+@media (max-width: 900px) {
+  .preview-toolbar { gap: 8px 12px; padding: 10px 16px; }
+  .preview-brand { margin-right: 0; }
+  .preview-device { gap: 8px; }
+  .preview-label { display: none; }
+  .preview-select { width: 205px; }
+}
+
+@media (max-width: 600px) {
+  .preview-brand { width: 100%; }
+  .preview-device { flex: 1 1 180px; }
+  .preview-select { width: 100%; }
+  .preview-readout { margin-left: 0; }
+  .preview-button { min-height: 44px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; }
+}

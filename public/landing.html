@@ -1,877 +1,227 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MAGIC — Калькулятор натяжных потолков</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Golos+Text:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-:root{
-  --bg:#f7f7f5;
-  --bg2:#ffffff;
-  --card:#ffffff;
-  --border:#e8e8e4;
-  --border2:#d4d4ce;
-  --acc:#4F46E5;
-  --acc-light:#eeeeff;
-  --acc-mid:#c7c4f8;
-  --text:#111118;
-  --sub:#6b6b7a;
-  --dim:#b0b0ba;
-  --green:#16a34a;
-  --green-light:#dcfce7;
-  --orange:#d97706;
-  --orange-light:#fef3c7;
-  --red:#dc2626;
-  --navy:#1e2030;
-}
-*{margin:0;padding:0;box-sizing:border-box;}
-html{scroll-behavior:smooth;}
-body{
-  background:var(--bg);
-  color:var(--text);
-  font-family:'Golos Text',sans-serif;
-  font-size:16px;line-height:1.6;
-  overflow-x:hidden;
-}
-
-/* ─── NAV ─── */
-nav{
-  position:fixed;top:0;left:0;right:0;z-index:100;
-  display:flex;align-items:center;justify-content:space-between;
-  padding:16px 6vw;
-  background:rgba(247,247,245,0.88);
-  backdrop-filter:blur(20px);
-  border-bottom:1px solid var(--border);
-}
-.nav-logo{display:flex;align-items:center;gap:10px;}
-.nav-logo-icon{
-  width:36px;height:36px;border-radius:9px;
-  background:var(--navy);
-  display:flex;align-items:center;justify-content:center;
-}
-.nav-brand{font-family:'Unbounded',sans-serif;font-size:14px;font-weight:700;letter-spacing:2px;color:var(--text);}
-.nav-studio{font-size:9px;color:var(--acc);letter-spacing:3px;margin-top:-2px;font-weight:600;}
-.nav-links{display:flex;gap:32px;}
-.nav-links a{font-size:14px;color:var(--sub);text-decoration:none;transition:color .2s;}
-.nav-links a:hover{color:var(--text);}
-.nav-cta{
-  background:var(--navy);border:none;border-radius:10px;
-  padding:9px 22px;color:#fff;font-size:14px;font-weight:600;
-  cursor:pointer;font-family:'Golos Text',sans-serif;
-  text-decoration:none;transition:all .2s;
-}
-.nav-cta:hover{background:var(--acc);}
-@media(max-width:640px){.nav-links{display:none;}}
-
-/* ─── HERO ─── */
-.hero{
-  min-height:100vh;
-  display:grid;grid-template-columns:1fr 1fr;
-  align-items:center;gap:60px;
-  padding:120px 6vw 80px;
-  max-width:1200px;margin:0 auto;
-}
-@media(max-width:900px){
-  .hero{grid-template-columns:1fr;text-align:center;padding:100px 20px 60px;}
-  .hero-visual{display:flex;justify-content:center;}
-}
-.hero-eyebrow{
-  display:inline-flex;align-items:center;gap:8px;
-  background:var(--acc-light);
-  border-radius:50px;padding:5px 14px;
-  font-size:12px;color:var(--acc);font-weight:700;letter-spacing:1px;
-  margin-bottom:24px;
-  animation:fadeUp .6s ease both;
-}
-.hero-eyebrow span{width:6px;height:6px;background:var(--acc);border-radius:50%;animation:blink 2s infinite;}
-@keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
-
-h1{
-  font-family:'Unbounded',sans-serif;
-  font-size:clamp(32px,5vw,60px);
-  font-weight:900;line-height:1.05;
-  letter-spacing:-1.5px;
-  margin-bottom:24px;
-  animation:fadeUp .6s .1s ease both;
-}
-h1 .accent{color:var(--acc);}
-h1 .light{color:var(--sub);}
-
-.hero-desc{
-  font-size:17px;color:var(--sub);line-height:1.7;
-  margin-bottom:36px;max-width:480px;
-  animation:fadeUp .6s .2s ease both;
-}
-@media(max-width:900px){.hero-desc{margin:0 auto 36px;}}
-
-.hero-btns{
-  display:flex;gap:12px;flex-wrap:wrap;
-  animation:fadeUp .6s .3s ease both;
-  margin-bottom:40px;
-}
-@media(max-width:900px){.hero-btns{justify-content:center;}}
-
-.btn-primary{
-  background:var(--navy);border:none;border-radius:12px;
-  padding:14px 28px;color:#fff;font-size:15px;font-weight:700;
-  cursor:pointer;font-family:'Golos Text',sans-serif;
-  text-decoration:none;transition:all .25s;
-  display:inline-flex;align-items:center;gap:8px;
-}
-.btn-primary:hover{background:var(--acc);transform:translateY(-1px);}
-.btn-ghost{
-  background:transparent;border:1.5px solid var(--border2);border-radius:12px;
-  padding:14px 24px;color:var(--sub);font-size:15px;font-weight:500;
-  cursor:pointer;font-family:'Golos Text',sans-serif;
-  text-decoration:none;transition:all .25s;
-}
-.btn-ghost:hover{border-color:var(--acc);color:var(--acc);}
-
-.hero-trust{
-  display:flex;align-items:center;gap:12px;
-  font-size:13px;color:var(--dim);
-  animation:fadeUp .6s .4s ease both;
-}
-.trust-dot{width:4px;height:4px;border-radius:50%;background:var(--border2);}
-@media(max-width:900px){.hero-trust{justify-content:center;}}
-
-@keyframes fadeUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
-
-/* ─── PHONE ─── */
-.phone-wrap{
-  position:relative;
-  animation:fadeUp .6s .2s ease both, float 6s ease-in-out infinite;
-}
-@keyframes float{0%,100%{transform:translateY(0);}50%{transform:translateY(-10px);}}
-.phone-shadow{
-  position:absolute;bottom:-30px;left:50%;transform:translateX(-50%);
-  width:200px;height:30px;
-  background:radial-gradient(ellipse,rgba(0,0,0,.15) 0%,transparent 70%);
-}
-.phone-frame{
-  width:260px;
-  background:var(--card);
-  border:1px solid var(--border);
-  border-radius:28px;padding:10px;
-  box-shadow:0 30px 60px rgba(0,0,0,.12),0 4px 12px rgba(0,0,0,.06);
-}
-.phone-screen{
-  background:#f7f7f5;
-  border-radius:20px;overflow:hidden;
-  min-height:460px;
-}
-/* Phone status bar */
-.ph-status{
-  background:var(--navy);height:6px;
-}
-.ph-header{
-  background:var(--bg2);
-  border-bottom:0.5px solid var(--border);
-  padding:10px 12px 8px;
-  display:flex;align-items:center;gap:7px;
-}
-.ph-icon{
-  width:24px;height:24px;border-radius:6px;
-  background:var(--navy);
-  display:flex;align-items:center;justify-content:center;flex-shrink:0;
-}
-.ph-brand{font-family:'Unbounded',sans-serif;font-size:9px;font-weight:700;letter-spacing:1px;line-height:1;}
-.ph-sub{font-size:7px;color:var(--acc);letter-spacing:2px;margin-top:1px;}
-.ph-sum{margin-left:auto;text-align:right;}
-.ph-sum-num{font-size:12px;font-weight:700;color:var(--text);}
-.ph-sum-sub{font-size:7px;color:var(--acc);}
-
-.ph-body{padding:8px 10px;}
-.ph-tabs{display:flex;gap:4px;margin-bottom:8px;overflow:hidden;}
-.ph-tab{
-  background:var(--bg);border:0.5px solid var(--border);
-  border-radius:6px;padding:4px 8px;font-size:8px;color:var(--sub);white-space:nowrap;
-}
-.ph-tab.on{background:var(--navy);border-color:var(--navy);color:#fff;}
-
-.ph-canvas-box{
-  background:var(--bg2);border:0.5px solid var(--border);
-  border-radius:8px;height:100px;margin-bottom:8px;
-  display:flex;align-items:center;justify-content:center;overflow:hidden;
-}
-.ph-block{
-  background:var(--bg2);border:0.5px solid var(--border);
-  border-radius:8px;padding:8px;margin-bottom:6px;
-}
-.ph-blk-lbl{font-size:7px;font-weight:700;color:var(--acc);letter-spacing:1px;margin-bottom:5px;}
-.ph-row2{display:flex;align-items:center;gap:5px;margin-bottom:3px;}
-.ph-sq{width:5px;height:5px;border-radius:1.5px;background:var(--acc);flex-shrink:0;}
-.ph-rn{font-size:8px;color:var(--sub);flex:1;}
-.ph-rv{font-size:8px;font-weight:600;color:var(--text);}
-.ph-est{
-  background:var(--navy);
-  padding:8px 10px;
-  display:flex;justify-content:space-between;align-items:center;
-}
-.ph-est-ttl{font-size:7px;font-weight:700;color:rgba(255,255,255,.5);letter-spacing:1px;}
-.ph-est-num{font-size:13px;font-weight:700;color:#fff;}
-.ph-est-tabs2{display:flex;gap:3px;}
-.ph-et{background:rgba(255,255,255,.1);border:none;border-radius:5px;padding:3px 7px;font-size:7px;color:rgba(255,255,255,.6);cursor:pointer;font-family:inherit;}
-.ph-et.on{background:rgba(255,255,255,.25);color:#fff;}
-
-/* ─── STATS STRIP ─── */
-.stats-strip{
-  background:var(--navy);
-  padding:40px 6vw;
-  display:flex;gap:0;justify-content:center;flex-wrap:wrap;
-}
-.stat2{
-  flex:1;min-width:140px;
-  text-align:center;
-  padding:0 24px;
-  border-right:1px solid rgba(255,255,255,.08);
-}
-.stat2:last-child{border-right:none;}
-.stat2-num{
-  font-family:'Unbounded',sans-serif;
-  font-size:32px;font-weight:900;color:#fff;line-height:1;margin-bottom:6px;
-}
-.stat2-num span{color:var(--acc-mid);}
-.stat2-lbl{font-size:12px;color:rgba(255,255,255,.45);}
-
-/* ─── SECTION ─── */
-.section{padding:100px 6vw;max-width:1200px;margin:0 auto;}
-.sec-eye{
-  display:inline-block;font-size:11px;font-weight:700;
-  color:var(--acc);letter-spacing:2px;text-transform:uppercase;
-  background:var(--acc-light);border-radius:4px;padding:3px 10px;
-  margin-bottom:16px;
-}
-.sec-h{
-  font-family:'Unbounded',sans-serif;
-  font-size:clamp(28px,4vw,48px);font-weight:900;
-  line-height:1.1;letter-spacing:-1px;margin-bottom:16px;
-}
-.sec-h .acc{color:var(--acc);}
-.sec-p{font-size:16px;color:var(--sub);max-width:500px;line-height:1.7;}
-
-/* ─── FEATURES BENTO ─── */
-.bento{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  grid-template-rows:auto auto;
-  gap:16px;margin-top:56px;
-}
-@media(max-width:900px){.bento{grid-template-columns:1fr 1fr;}}
-@media(max-width:600px){.bento{grid-template-columns:1fr;}}
-
-.bcard{
-  background:var(--bg2);border:1px solid var(--border);
-  border-radius:20px;padding:28px;
-  transition:transform .25s,box-shadow .25s,border-color .25s;
-}
-.bcard:hover{
-  transform:translateY(-3px);
-  box-shadow:0 16px 48px rgba(0,0,0,.08);
-  border-color:var(--acc-mid);
-}
-.bcard.wide{grid-column:span 2;}
-.bcard.accent-bg{background:var(--navy);}
-.bcard.accent-bg .bcard-title{color:#fff;}
-.bcard.accent-bg .bcard-desc{color:rgba(255,255,255,.5);}
-
-.bcard-icon{font-size:28px;margin-bottom:14px;line-height:1;}
-.bcard-eyebrow{
-  font-size:10px;font-weight:700;letter-spacing:1.5px;color:var(--acc);
-  text-transform:uppercase;margin-bottom:8px;
-}
-.bcard-title{font-size:17px;font-weight:700;margin-bottom:8px;line-height:1.3;}
-.bcard-desc{font-size:13px;color:var(--sub);line-height:1.6;}
-.bcard-tag{
-  display:inline-block;margin-top:12px;
-  background:var(--green-light);color:var(--green);
-  border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;
-}
-.bcard-tag.orange{background:var(--orange-light);color:var(--orange);}
-
-/* ─── COMPASS SECTION ─── */
-.compass-sec{
-  background:var(--bg2);
-  border-top:1px solid var(--border);border-bottom:1px solid var(--border);
-  padding:100px 6vw;
-}
-.compass-inner{
-  max-width:1100px;margin:0 auto;
-  display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center;
-}
-@media(max-width:800px){.compass-inner{grid-template-columns:1fr;gap:40px;}}
-.compass-art{display:flex;justify-content:center;}
-.c-ring{
-  width:260px;height:260px;border-radius:50%;
-  border:1.5px solid var(--border);
-  background:var(--bg);
-  display:flex;align-items:center;justify-content:center;
-  position:relative;
-  box-shadow:0 8px 40px rgba(0,0,0,.06);
-}
-.c-ring-inner{
-  width:170px;height:170px;border-radius:50%;
-  background:var(--bg2);border:1px solid var(--border);
-  position:absolute;
-  display:flex;align-items:center;justify-content:center;
-}
-.c-needle{
-  width:3px;height:76px;
-  background:linear-gradient(to bottom,var(--red) 50%,var(--acc) 50%);
-  border-radius:2px;
-  position:absolute;
-  animation:needle 4s ease-in-out infinite;
-  transform-origin:50% 100%;
-}
-@keyframes needle{0%,100%{transform:rotate(-8deg);}50%{transform:rotate(12deg);}}
-.c-center{
-  width:10px;height:10px;border-radius:50%;
-  background:var(--navy);position:absolute;z-index:2;
-}
-.c-deg{
-  font-family:'Unbounded',sans-serif;
-  font-size:20px;font-weight:900;color:var(--acc);
-  position:absolute;bottom:-36px;left:50%;transform:translateX(-50%);
-}
-.c-dir{
-  position:absolute;font-size:12px;font-weight:700;
-}
-.c-n{top:12px;left:50%;transform:translateX(-50%);color:var(--red);}
-.c-s{bottom:12px;left:50%;transform:translateX(-50%);color:var(--dim);}
-.c-e{right:12px;top:50%;transform:translateY(-50%);color:var(--acc);}
-.c-w{left:12px;top:50%;transform:translateY(-50%);color:var(--dim);}
-.c-ticks{position:absolute;inset:0;}
-
-.feat-list{display:flex;flex-direction:column;gap:14px;margin-top:28px;}
-.feat-item{
-  display:flex;align-items:flex-start;gap:12px;
-  background:var(--bg);border:1px solid var(--border);
-  border-radius:14px;padding:14px 16px;
-}
-.feat-item-icon{
-  width:36px;height:36px;border-radius:9px;
-  background:var(--acc-light);
-  display:flex;align-items:center;justify-content:center;
-  font-size:16px;flex-shrink:0;
-}
-.feat-item-title{font-size:13px;font-weight:700;margin-bottom:3px;}
-.feat-item-desc{font-size:12px;color:var(--sub);line-height:1.5;}
-
-/* ─── STEPS ─── */
-.steps-wrap{
-  max-width:1100px;margin:0 auto;
-  display:grid;grid-template-columns:repeat(4,1fr);gap:0;
-  margin-top:56px;
-}
-@media(max-width:800px){.steps-wrap{grid-template-columns:1fr 1fr;}}
-@media(max-width:500px){.steps-wrap{grid-template-columns:1fr;}}
-.step2{
-  padding:28px 24px;
-  border-right:1px solid var(--border);
-}
-.step2:last-child{border-right:none;}
-.step2-num{
-  font-family:'Unbounded',sans-serif;
-  font-size:40px;font-weight:900;color:var(--acc-mid);
-  line-height:1;margin-bottom:16px;
-}
-.step2-title{font-size:16px;font-weight:700;margin-bottom:8px;}
-.step2-desc{font-size:13px;color:var(--sub);line-height:1.6;}
-@media(max-width:800px){
-  .step2{border-right:none;border-bottom:1px solid var(--border);}
-  .step2:nth-child(even){border-left:1px solid var(--border);}
-  .step2:last-child{border-bottom:none;}
-}
-
-/* ─── PRICING ─── */
-.pricing-sec{background:var(--bg2);padding:100px 6vw;border-top:1px solid var(--border);}
-.pricing-grid{
-  max-width:760px;
-  display:grid;grid-template-columns:1fr 1fr;gap:20px;
-  margin-top:56px;
-}
-@media(max-width:600px){.pricing-grid{grid-template-columns:1fr;}}
-.pcard{
-  background:var(--bg);border:1.5px solid var(--border);
-  border-radius:22px;padding:30px;
-}
-.pcard.hot{
-  background:var(--navy);border-color:var(--navy);
-  position:relative;
-}
-.pcard-badge{
-  position:absolute;top:-13px;left:50%;transform:translateX(-50%);
-  background:var(--acc);color:#fff;
-  font-size:10px;font-weight:700;letter-spacing:1.5px;
-  padding:4px 14px;border-radius:20px;white-space:nowrap;
-}
-.pcard-name{font-size:12px;font-weight:700;letter-spacing:1.5px;color:var(--sub);margin-bottom:12px;}
-.pcard.hot .pcard-name{color:rgba(255,255,255,.45);}
-.pcard-price{
-  font-family:'Unbounded',sans-serif;
-  font-size:44px;font-weight:900;line-height:1;margin-bottom:4px;
-}
-.pcard.hot .pcard-price{color:#fff;}
-.pcard-per{font-size:13px;color:var(--sub);margin-bottom:24px;}
-.pcard.hot .pcard-per{color:rgba(255,255,255,.4);}
-.pcard-ul{list-style:none;margin-bottom:26px;}
-.pcard-ul li{
-  display:flex;align-items:center;gap:10px;
-  font-size:14px;color:var(--sub);
-  padding:7px 0;border-bottom:1px solid var(--border);
-}
-.pcard.hot .pcard-ul li{color:rgba(255,255,255,.65);border-color:rgba(255,255,255,.08);}
-.pcard-ul li .chk{color:var(--green);font-weight:700;flex-shrink:0;}
-.pcard-ul li.no{opacity:.4;}
-.pcard-ul li.no .chk{color:var(--dim);}
-.pbtn{
-  width:100%;border:none;border-radius:12px;padding:12px;
-  font-size:15px;font-weight:700;cursor:pointer;
-  font-family:'Golos Text',sans-serif;
-  text-decoration:none;display:block;text-align:center;
-  transition:all .25s;
-}
-.pbtn-outline{background:transparent;border:1.5px solid var(--border2);color:var(--text);}
-.pbtn-outline:hover{border-color:var(--acc);color:var(--acc);}
-.pbtn-fill{background:var(--acc);color:#fff;box-shadow:0 4px 20px rgba(79,70,229,.3);}
-.pbtn-fill:hover{background:#3730cc;box-shadow:0 8px 30px rgba(79,70,229,.4);}
-
-/* ─── REVIEWS ─── */
-.reviews-sec{
-  max-width:1100px;margin:0 auto;
-  padding:100px 6vw;
-}
-.rev-grid{
-  display:grid;grid-template-columns:repeat(3,1fr);gap:16px;
-  margin-top:50px;
-}
-@media(max-width:800px){.rev-grid{grid-template-columns:1fr;}}
-.rcard{
-  background:var(--bg2);border:1px solid var(--border);
-  border-radius:18px;padding:24px;
-}
-.rcard-stars{color:var(--orange);font-size:14px;letter-spacing:2px;margin-bottom:10px;}
-.rcard-q{font-size:18px;color:var(--dim);margin-bottom:8px;}
-.rcard-text{font-size:14px;color:var(--sub);line-height:1.7;margin-bottom:18px;}
-.rcard-author{display:flex;align-items:center;gap:10px;}
-.rcard-av{
-  width:36px;height:36px;border-radius:50%;
-  background:var(--navy);
-  color:#fff;font-size:12px;font-weight:700;
-  display:flex;align-items:center;justify-content:center;flex-shrink:0;
-}
-.rcard-name{font-size:14px;font-weight:700;}
-.rcard-role{font-size:11px;color:var(--dim);}
-
-/* ─── CTA ─── */
-.cta-sec{
-  background:var(--navy);
-  padding:100px 6vw;text-align:center;
-}
-.cta-sec h2{
-  font-family:'Unbounded',sans-serif;
-  font-size:clamp(30px,5vw,60px);font-weight:900;
-  color:#fff;line-height:1.1;letter-spacing:-1px;
-  margin-bottom:18px;
-}
-.cta-sec h2 span{color:var(--acc-mid);}
-.cta-sec p{font-size:17px;color:rgba(255,255,255,.45);margin-bottom:36px;}
-.btn-white{
-  background:#fff;border:none;border-radius:12px;
-  padding:14px 32px;color:var(--navy);font-size:16px;font-weight:700;
-  cursor:pointer;font-family:'Golos Text',sans-serif;
-  text-decoration:none;
-  display:inline-block;
-  transition:all .25s;
-}
-.btn-white:hover{background:var(--acc-light);color:var(--acc);}
-.cta-note{margin-top:14px;font-size:13px;color:rgba(255,255,255,.25);}
-
-/* ─── FOOTER ─── */
-footer{
-  padding:32px 6vw;
-  display:flex;align-items:center;justify-content:space-between;
-  flex-wrap:wrap;gap:12px;
-  border-top:1px solid var(--border);
-}
-.foot-brand{
-  display:flex;align-items:center;gap:8px;
-}
-.foot-brand-txt{font-family:'Unbounded',sans-serif;font-size:12px;font-weight:700;letter-spacing:2px;color:var(--dim);}
-.foot-copy{font-size:13px;color:var(--dim);}
-
-/* ─── REVEAL ─── */
-.rev{opacity:0;transform:translateY(24px);transition:opacity .7s ease,transform .7s ease;}
-.rev.show{opacity:1;transform:none;}
-.rev-d1{transition-delay:.1s;}
-.rev-d2{transition-delay:.2s;}
-.rev-d3{transition-delay:.3s;}
-</style>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#ffffff">
+  <title>ЗАМЕРX — расчёт потолков и работа с объектами</title>
+  <meta name="description" content="Постройте потолки из дизайн-проекта, соберите смету своими пресетами и ведите объект: календарь, финансы и аналитика. Один аккаунт на всех устройствах.">
+  <meta property="og:title" content="ЗАМЕРX — расчёт потолков и работа с объектами"><meta property="og:description" content="От плана потолков до результата по объекту. Обводка, калькулятор, календарь, финансы и аналитика в одном приложении."><meta property="og:type" content="website">
+  <link rel="icon" type="image/svg+xml" href="/landing/favicon.svg"><link rel="preload" href="/online/manrope-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/landing/site.css"><link rel="stylesheet" href="/landing/tracing-phone.css"><link rel="stylesheet" href="/landing/journey-workspace.css">
+  <script type="module" src="/landing/landing.js"></script><script type="module" src="/landing/tracing-demo.js"></script><script type="module" src="/landing/journey-workspace.js"></script>
+  <noscript><style>.jw-tabs,.menu-toggle,.billing-switch{display:none}.jw-panel[hidden]{display:block!important}.jw-panel{margin-top:32px}.jw-intro,.jw-description{width:100%;max-width:650px}.jw-content{min-height:0;padding-top:0}.jw-visual{position:relative;top:auto;right:auto;margin:30px auto 0}</style></noscript>
 </head>
 <body>
-
-<nav>
-  <div class="nav-logo">
-    <div class="nav-logo-icon">
-      <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-        <rect x="3" y="10" width="14" height="2" rx="1" fill="#4F46E5"/>
-        <rect x="5" y="6" width="10" height="2" rx="1" fill="#4F46E5" opacity="0.55"/>
-        <rect x="7" y="14" width="6" height="2" rx="1" fill="#4F46E5" opacity="0.3"/>
-      </svg>
-    </div>
-    <div>
-      <div class="nav-brand">MAGIC</div>
-      <div class="nav-studio">STUDIO</div>
-    </div>
-  </div>
-  <div class="nav-links">
-    <a href="#features">Возможности</a>
-    <a href="#compass">Компас</a>
-    <a href="#pricing">Цены</a>
-  </div>
-  <a href="https://smeta-xi.vercel.app" class="nav-cta" target="_blank">Открыть →</a>
-</nav>
-
-<!-- HERO -->
-<div class="hero">
-  <div class="hero-text">
-    <div class="hero-eyebrow"><span></span>Для мастеров натяжных потолков</div>
-    <h1>Считайте <span class="accent">точно</span>.<br><span class="light">Зарабатывайте</span><br>больше.</h1>
-    <p class="hero-desc">Умный калькулятор смет с замером по компасу. От плана помещения до готового КП клиенту — за 2 минуты.</p>
-    <div class="hero-btns">
-      <a href="https://smeta-xi.vercel.app" class="btn-primary" target="_blank">Попробовать бесплатно ↗</a>
-      <a href="#features" class="btn-ghost">Узнать больше</a>
-    </div>
-    <div class="hero-trust">
-      <span>Бесплатно</span>
-      <span class="trust-dot"></span>
-      <span>Без установки</span>
-      <span class="trust-dot"></span>
-      <span>iOS и Android</span>
-    </div>
-  </div>
-  <div class="hero-visual">
-    <div class="phone-wrap">
-      <div class="phone-frame">
-        <div class="phone-screen">
-          <div class="ph-status"></div>
-          <div class="ph-header">
-            <div class="ph-icon">
-              <svg width="12" height="12" viewBox="0 0 20 20" fill="none">
-                <rect x="3" y="10" width="14" height="2" rx="1" fill="#4F46E5"/>
-                <rect x="5" y="6" width="10" height="2" rx="1" fill="#4F46E5" opacity="0.6"/>
-                <rect x="7" y="14" width="6" height="2" rx="1" fill="#4F46E5" opacity="0.3"/>
-              </svg>
+  <a class="skip-link" href="#main">Перейти к содержимому</a>
+  <svg class="svg-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <defs>
+      <symbol id="brand-mark" viewBox="0 0 64 64"><rect width="64" height="64" rx="15" fill="#101b2c"/><path d="M13 50V17a4 4 0 0 1 4-4h33M22 13v5m8-5v7m8-7v5m8-5v7M13 24h5m-5 8h7m-7 8h5" fill="none" stroke="#ecf3ff" stroke-width="2.7" stroke-linecap="round"/><path d="M22 23h10.5l21 27H43z" fill="#fff"/><path d="M42.5 23H54L31 50H19.5z" fill="#3984ff"/></symbol>
+      <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+      <symbol id="i-plan" viewBox="0 0 24 24"><path d="M4 4h16v16H4zM4 13h8V4m0 9v7m0-7h8"/></symbol>
+      <symbol id="i-calc" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 11h1m6 0h1m-8 4h1m6 0h1m-8 3h1m6 0h1"/></symbol>
+      <symbol id="i-layers" viewBox="0 0 24 24"><path d="m3 7 9-4 9 4-9 4zm0 5 9 4 9-4M3 17l9 4 9-4"/></symbol>
+      <symbol id="i-light" viewBox="0 0 24 24"><path d="M8 14a6 6 0 1 1 8 0l-1 3H9zm1 7h6M12 1v1M3 5l1 1m16-1-1 1"/></symbol>
+      <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M20 8V5H5a2 2 0 0 1 0-4h13v4M5 5H3v15h17V8H5M16 11h6v6h-6z"/></symbol>
+      <symbol id="i-phone" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 18h4"/></symbol>
+      <symbol id="i-monitor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 22h8m-4-5v5"/></symbol>
+      <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 10h18M7 14h2m6 0h2m-10 3h2"/></symbol>
+      <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 3v17h17M8 16v-4m5 4V8m5 8V5"/></symbol>
+      <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H5v20h14V7zm0 0v5h5M8 12h8m-8 4h8"/></symbol>
+      <symbol id="apartment" viewBox="0 0 640 440"><g fill="none" stroke="currentColor" stroke-width="5"><path d="M50 40h540v350H50zM50 210h200V40m0 170h150V40M400 210h190M250 210v180M400 210v180M50 300h200M400 300h190M150 40v170M490 40v170"/></g><g fill="none" stroke="currentColor" stroke-width="1.4" opacity=".3"><path d="M65 60h70v95H65zM165 55h70v100h-70zM270 55h110v100H270zM420 55h50v100h-50zM510 55h65v100h-65zM65 225h160v60H65zM65 320h160v55H65zM265 260h50v110h-50zM345 260h40v110h-40zM420 225h150v60H420zM420 320h55v55h-55zM510 320h65v55h-65z"/><path d="M90 80h30m-30 10h30m70-15h30m-30 10h30m65-10h45m-45 10h45m140-10h30M90 245h50m-50 10h50m-50 85h50m-50 10h50m280-105h45m-45 10h45"/></g></symbol>
+      <symbol id="blueprint-plan" viewBox="0 0 900 600">
+        <g class="blueprint-walls"><path d="M120 100H580V165H750V490H120Z"/><path d="M310 100V260M310 315V490M520 165V250M520 305V490M120 300H220M275 300H310M310 355H410M465 355H520M520 325H630M685 325H750"/></g>
+        <g class="blueprint-details"><path d="M310 260h55a55 55 0 0 1-55 55M220 300v-55a55 55 0 0 1 55 55M410 355v-55a55 55 0 0 1 55 55M520 250h55a55 55 0 0 1-55 55M630 325v-55a55 55 0 0 1 55 55"/><path d="M140 120H290V225M140 320V470H290M330 120H560V185H500V275H380M330 375H500V470H330ZM540 185H730V305H590M540 345H730V470H540Z"/><path d="M175 155h60m-60 15h60m145 25h75m-75 15h75m-245 175h70m-70 15h70m390-180h65m-65 15h65m-65 155h65m-65 15h65"/></g>
+        <g class="blueprint-dimensions"><path d="M120 80V45M580 80V45M750 145V45M120 60H750M114 66l12-12m448 12 12-12m158 12 12-12M100 100H65M100 490H65M80 100V490M74 106l12-12m-12 402 12-12M120 510v35m190-35v35m210-35v35m230-35v35M120 530H750M114 536l12-12m178 12 12-12m198 12 12-12m218 12 12-12"/><text x="350" y="48">5 400</text><text x="665" y="48">2 400</text><text x="216" y="555">2 800</text><text x="416" y="555">3 200</text><text x="640" y="555">3 600</text><text x="61" y="300" transform="rotate(-90 61 300)">6 200</text></g>
+        <g class="blueprint-lights"><circle cx="175" cy="195" r="6"/><circle cx="255" cy="195" r="6"/><circle cx="375" cy="245" r="6"/><circle cx="465" cy="245" r="6"/><circle cx="175" cy="425" r="6"/><circle cx="255" cy="425" r="6"/><circle cx="590" cy="235" r="6"/><circle cx="680" cy="235" r="6"/><circle cx="590" cy="405" r="6"/><circle cx="680" cy="405" r="6"/></g>
+        <g class="blueprint-register"><path d="M40 30v20m-10-10h20m800-10v20m-10-10h20M40 550v20m-10-10h20m800-10v20m-10-10h20"/></g>
+      </symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol></defs>
+  </svg>
+  <header class="site-header"><div class="container header-inner">
+    <a class="brand" href="#" aria-label="ЗАМЕРX — начало страницы"><svg aria-hidden="true"><use href="#brand-mark"/></svg><span>ЗАМЕРX</span></a>
+    <nav id="main-nav" class="main-nav" aria-label="Навигация по странице"><a href="#tracing">Потолки</a><a href="#calculator">Расчёт</a><a href="#workspace">Объекты</a><a href="#pricing">Подписка</a></nav>
+    <a class="header-cta" href="/">Открыть приложение <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a><button id="menu-toggle" class="menu-toggle" aria-label="Открыть меню" aria-controls="main-nav" aria-expanded="false"><span></span><span></span></button>
+  </div></header>
+  <main id="main">
+    <section class="hero" data-blueprint-scene><svg class="blueprint-art blueprint-art-hero" viewBox="0 0 900 600" aria-hidden="true" focusable="false"><use href="#blueprint-plan"/><path class="blueprint-draw" pathLength="1" d="M328 118H562V183H502V337H328Z"/><path class="blueprint-draw blueprint-draw-secondary" pathLength="1" d="M538 183H732V307H538Z"/><g class="blueprint-nodes"><circle cx="328" cy="118" r="4"/><circle cx="562" cy="118" r="4"/><circle cx="502" cy="337" r="4"/></g></svg><div class="container">
+      <h1 class="hero-title">Рассчитывайте потолки.<br><span>Ведите объекты.</span></h1>
+      <div class="hero-summary"><p class="hero-description">ЗАМЕРX — приложение для работы с натяжными потолками. Постройте потолки на плане, соберите смету своими пресетами и ведите объект от календаря до финансового результата.</p><div class="hero-actions"><a class="button button-primary" href="/">Открыть приложение <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a><a class="text-link" href="#tracing">Посмотреть в деле <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a></div></div>
+      <p class="hero-account"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Один аккаунт для телефона, планшета и компьютера</p>
+      <nav id="capabilities" class="process-nav" aria-label="Три этапа работы с объектом">
+        <a class="process-link" href="#tracing"><span class="process-index">01</span><b>Создайте потолки</b><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        <a class="process-link" href="#calculator"><span class="process-index">02</span><b>Рассчитайте смету</b><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        <a class="process-link" href="#workspace" data-workspace-target="calendar"><span class="process-index">03</span><b>Ведите объект</b><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      </nav>
+    </div></section>
+    <section id="tracing" class="chapter chapter-tracing" aria-labelledby="tracing-heading" data-blueprint-scene><svg class="blueprint-art blueprint-art-tracing" viewBox="0 0 900 600" aria-hidden="true" focusable="false"><use href="#blueprint-plan"/><path class="blueprint-draw" pathLength="1" d="M138 318H292V472H138Z"/></svg><div class="container chapter-layout">
+      <div class="chapter-copy" data-reveal>
+        <div class="chapter-heading"><span class="chapter-index" aria-hidden="true">01</span><h2 id="tracing-heading">Создайте потолки<br>из дизайн-проекта.</h2></div>
+        <p class="chapter-description">Загрузите план, задайте масштаб и обведите комнаты. Вместо переноса размеров вручную вы получаете контуры потолков, с которыми можно сразу перейти к расчёту.</p>
+        <ol class="trace-instructions">
+          <li><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg><div><b>Используйте PDF или фото</b><p>Подойдёт лист из дизайн-проекта.</p></div></li>
+          <li><svg class="icon" aria-hidden="true"><use href="#i-plan"/></svg><div><b>Задайте масштаб</b><p>Достаточно одного известного размера.</p></div></li>
+          <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><div><b>Обведите и назовите помещения</b><p>Точки → замкнутый контур → готовое помещение.</p></div></li>
+        </ol>
+        <p class="chapter-highlight">10 потолков из дизайн-проекта — за 5 минут.</p>
+      </div>
+      <div class="chapter-visual tracing-visual" data-reveal><div class="trace-phone"><div class="trace-phone-island" aria-hidden="true"></div><div class="trace-demo">
+            <div class="trace-demo-header">
+              <div class="file-icon"><svg class="icon" aria-hidden="true"><use href="#i-file"/></svg></div>
+              <div><b>План потолков.pdf</b><span>Обводка проекта</span></div><span class="file-format">PDF</span>
             </div>
-            <div><div class="ph-brand">MAGIC</div><div class="ph-sub">КАЛЬКУЛЯТОР</div></div>
-            <div class="ph-sum"><div class="ph-sum-num">435 356 ₽</div><div class="ph-sum-sub">🔄 обновить</div></div>
-          </div>
-          <div class="ph-body">
-            <div class="ph-tabs">
-              <div class="ph-tab on">Гостиная</div>
-              <div class="ph-tab">Спальня</div>
-              <div class="ph-tab">Кухня</div>
-              <div class="ph-tab">+3</div>
+            <div class="trace-canvas">
+              <div class="plan-stamp">План потолков <span>М 1:100</span></div>
+              <span id="trace-stage" class="trace-stage">План готов к обводке</span>
+              <svg viewBox="35 25 570 390" class="apartment-plan" role="img" aria-label="План квартиры: точки по углам, замыкание контура и добавление каждого помещения"><use href="#apartment" width="640" height="440"/><g class="trace-rooms"><g data-trace-room><path d="M55 45h90v160H55z"/><text x="100" y="132">12,4 м²</text><text x="100" y="150" class="trace-room-label">Кабинет</text></g><g data-trace-room><path d="M155 45h90v160h-90z"/><text x="200" y="132">11,8 м²</text><text x="200" y="150" class="trace-room-label">Детская</text></g><g data-trace-room><path d="M255 45h140v160H255z"/><text x="325" y="132">22,6 м²</text><text x="325" y="150" class="trace-room-label">Гостиная</text></g><g data-trace-room><path d="M405 45h80v160h-80z"/><text x="445" y="132">8,2 м²</text><text x="445" y="150" class="trace-room-label">Гардеробная</text></g><g data-trace-room><path d="M495 45h90v160h-90z"/><text x="540" y="132">10,5 м²</text><text x="540" y="150" class="trace-room-label">Спальня</text></g><g data-trace-room><path d="M55 215h190v80H55z"/><text x="150" y="263">9,6 м²</text><text x="150" y="281" class="trace-room-label">Кухня</text></g><g data-trace-room><path d="M55 305h190v80H55z"/><text x="150" y="353">9,2 м²</text><text x="150" y="371" class="trace-room-label">Столовая</text></g><g data-trace-room><path d="M255 215h140v170H255z"/><text x="325" y="308">18,4 м²</text><text x="325" y="326" class="trace-room-label">Коридор</text></g><g data-trace-room><path d="M405 215h180v80H405z"/><text x="495" y="263">9,0 м²</text><text x="495" y="281" class="trace-room-label">Ванная</text></g><g data-trace-room><path d="M405 305h180v80H405z"/><text x="495" y="353">8,8 м²</text><text x="495" y="371" class="trace-room-label">Прихожая</text></g></g><g aria-hidden="true"><polyline id="trace-active-line" points=""/><g id="trace-active-points"></g><g id="trace-cursor" transform="translate(55 45)" hidden><path d="M0 0v24l6-6 5 10 5-2-5-10h9z"/></g></g></svg>
+              <div class="trace-counter"><svg class="icon" aria-hidden="true"><use href="#i-plan"/></svg><span>Помещения</span><b id="trace-count">0 из 10</b></div>
             </div>
-            <div class="ph-canvas-box">
-              <svg viewBox="0 0 200 90" style="width:100%;height:100%;">
-                <polygon points="18,8 155,8 155,55 125,75 18,75"
-                  fill="rgba(79,70,229,0.06)" stroke="#4F46E5" stroke-width="1.5"/>
-                <text x="86" y="40" text-anchor="middle" fill="#4F46E5"
-                  font-size="11" font-family="Golos Text" font-weight="700">29.9 м²</text>
-                <text x="86" y="53" text-anchor="middle" fill="#6b6b7a"
-                  font-size="8" font-family="Golos Text">21.4 м.п.</text>
-              </svg>
+            <div class="trace-room-editor-slot">
+              <div id="trace-room-editor" class="trace-room-editor" hidden>
+                <label for="trace-room-name">Название помещения<input id="trace-room-name" value="" readonly tabindex="-1" autocomplete="off"></label>
+                <span id="trace-add-room" class="trace-add-room" aria-hidden="true"><svg class="icon"><use href="#i-check"/></svg> Добавить помещение</span>
+              </div>
+              <p class="trace-editor-hint">Контур → название → новое помещение в проекте</p>
             </div>
-            <div class="ph-block">
-              <div class="ph-blk-lbl">МАТЕРИАЛЫ</div>
-              <div class="ph-row2"><div class="ph-sq"></div><div class="ph-rn">ПВХ Полотно MSD</div><div class="ph-rv">29 890 ₽</div></div>
-              <div class="ph-row2"><div class="ph-sq" style="background:#7c5cbf"></div><div class="ph-rn">EUROKRAAB 2.0</div><div class="ph-rv">8 764 ₽</div></div>
-              <div class="ph-row2"><div class="ph-sq" style="background:#16a34a"></div><div class="ph-rn">Монтаж Eurokraab</div><div class="ph-rv">9 408 ₽</div></div>
+            <div class="trace-project-progress">
+              <div><span>Добавлено в проект</span><progress id="trace-progressbar" value="0" max="10" aria-label="Добавленные помещения"></progress></div>
+              <ol id="trace-added-rooms" class="trace-added-rooms" aria-label="Помещения проекта"></ol>
             </div>
-          </div>
-          <div class="ph-est">
-            <div><div class="ph-est-ttl">СМЕТА</div></div>
-            <div class="ph-est-num">435 356 ₽</div>
-            <div class="ph-est-tabs2">
-              <button class="ph-et on">Ком.</button>
-              <button class="ph-et">Все</button>
+            <div class="trace-demo-footer">
+              <p id="trace-message" role="status" aria-live="polite">Точки по углам, название и добавление — для каждого помещения.</p>
+              <button id="trace-start" class="button button-primary">Посмотреть обводку <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></button>
             </div>
-          </div>
-        </div>
+            <div class="trace-playback-controls"><button id="trace-restart" hidden>Сначала</button><span>Пошаговый пример в спокойном темпе</span><button id="trace-skip" hidden>Показать результат</button></div>
+          </div></div><p class="demo-caption">Посмотрите весь процесс в спокойном темпе.</p></div>
+    </div></section>
+    <section id="calculator" class="chapter chapter-calculator" aria-labelledby="calculator-heading" data-blueprint-scene><svg class="blueprint-art blueprint-art-calculator" viewBox="0 0 900 600" aria-hidden="true" focusable="false"><use href="#blueprint-plan"/><path class="blueprint-draw" pathLength="1" d="M538 343H732V472H538Z"/></svg><div class="container chapter-layout">
+      <div class="chapter-copy" data-reveal>
+        <div class="chapter-heading"><span class="chapter-index" aria-hidden="true">02</span><h2 id="calculator-heading">Ваши пресеты.<br><span class="heading-accent">Готовая смета.</span></h2></div>
+        <p class="chapter-description">Создайте свои блоки и пресеты под привычную работу. Одно нажатие добавит весь состав, а ЗАМЕРX рассчитает количества и стоимость по вашим правилам.</p>
+        <ul class="chapter-points"><li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Материалы, работы и оборудование — отдельными группами</li><li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Отдельная скидка или наценка для каждой группы</li><li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Свои цены, состав и нормы расхода</li></ul>
+        <div id="catalog" class="catalog-foundation"><h3>База номенклатур уже есть.</h3><p>Берите готовые позиции для своих пресетов, меняйте цены и дополняйте каталог тем, с чем работаете вы.</p><div class="catalog-samples"><figure><img src="/design/nom%203/lf_euro02.webp" alt="Теневой профиль EuroLumFer 02" width="110" height="70" loading="lazy"><figcaption>Теневой профиль</figcaption></figure><figure><img src="/design/nom%203/lf_supra.webp" alt="Парящий профиль LumFer Clamp Supra" width="110" height="70" loading="lazy"><figcaption>Парящий профиль</figcaption></figure><figure><img src="/design/nom%203/lf_cornice_uno.webp" alt="Карнизный профиль LumFer Cornice Uno" width="110" height="70" loading="lazy"><figcaption>Карнизный профиль</figcaption></figure></div></div>
       </div>
-      <div class="phone-shadow"></div>
-    </div>
-  </div>
-</div>
-
-<!-- STATS -->
-<div class="stats-strip rev">
-  <div class="stat2"><div class="stat2-num"><span>30</span>"</div><div class="stat2-lbl">Смета за 30 секунд</div></div>
-  <div class="stat2"><div class="stat2-num"><span>1267</span></div><div class="stat2-lbl">Позиций в каталоге</div></div>
-  <div class="stat2"><div class="stat2-num"><span>4</span></div><div class="stat2-lbl">Способа снять план</div></div>
-  <div class="stat2"><div class="stat2-num"><span>∞</span></div><div class="stat2-lbl">Проектов бесплатно</div></div>
-</div>
-
-<!-- FEATURES BENTO -->
-<section id="features" class="section">
-  <div class="rev">
-    <div class="sec-eye">Возможности</div>
-    <h2 class="sec-h">Всё для работы<br><span class="acc">в одном приложении</span></h2>
-    <p class="sec-p">Больше никаких таблиц и ручного расчёта. Magic автоматизирует замер, расчёт и отправку сметы.</p>
-  </div>
-  <div class="bento rev rev-d1">
-    <div class="bcard accent-bg">
-      <div class="bcard-icon">🧭</div>
-      <div class="bcard-eyebrow" style="color:var(--acc-mid);">Уникальная функция</div>
-      <div class="bcard-title">Замер по компасу</div>
-      <div class="bcard-desc">Направьте телефон вдоль стены — компас сам определит угол. Обойдите комнату и получите точный план.</div>
-    </div>
-    <div class="bcard">
-      <div class="bcard-icon">🗺️</div>
-      <div class="bcard-eyebrow">Быстрый ввод</div>
-      <div class="bcard-title">Обводка чертежа</div>
-      <div class="bcard-desc">Загрузите PDF или фото плана и обведите контур пальцем. Площадь посчитается автоматически.</div>
-    </div>
-    <div class="bcard">
-      <div class="bcard-icon">🤖</div>
-      <div class="bcard-eyebrow">Технологии AI</div>
-      <div class="bcard-title">Распознавание планов</div>
-      <div class="bcard-desc">Сфотографируйте план — ИИ распознает контуры помещения без ручного ввода.</div>
-      <span class="bcard-tag orange">Beta</span>
-    </div>
-    <div class="bcard wide">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:center;">
-        <div>
-          <div class="bcard-icon">📋</div>
-          <div class="bcard-eyebrow">Главная функция</div>
-          <div class="bcard-title">Точный расчёт сметы</div>
-          <div class="bcard-desc">Материалы, профили, работы — всё с учётом углов и конфигурации потолка. Цены фиксируются на момент расчёта. Экспорт PDF одним нажатием.</div>
-          <span class="bcard-tag">Готово за 30 сек</span>
-        </div>
-        <div style="background:var(--bg);border-radius:14px;padding:16px;">
-          <div style="font-size:10px;font-weight:700;color:var(--acc);letter-spacing:1px;margin-bottom:10px;">ПРЕДВАРИТЕЛЬНАЯ СМЕТА</div>
-          <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;"><span style="color:var(--sub)">Материалы</span><span style="font-weight:600">125 470 ₽</span></div>
-          <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;"><span style="color:var(--sub)">Работы</span><span style="font-weight:600">351 588 ₽</span></div>
-          <div style="display:flex;justify-content:space-between;padding:10px 0 0;font-size:14px;"><span style="font-weight:700">Итого</span><span style="font-weight:700;color:var(--acc)">477 058 ₽</span></div>
-        </div>
-      </div>
-    </div>
-    <div class="bcard">
-      <div class="bcard-icon">💼</div>
-      <div class="bcard-eyebrow">CRM</div>
-      <div class="bcard-title">Управление клиентами</div>
-      <div class="bcard-desc">Статусы, платежи, долги и история проектов в одном месте.</div>
-    </div>
-    <div class="bcard">
-      <div class="bcard-icon">📊</div>
-      <div class="bcard-eyebrow">PRO</div>
-      <div class="bcard-title">Финансы студии</div>
-      <div class="bcard-desc">Аналитика выручки, учёт выплат дизайнерам, контроль дебиторки.</div>
-    </div>
-  </div>
-</section>
-
-<!-- HOW IT WORKS -->
-<section style="background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:100px 6vw;" id="how">
-  <div style="max-width:1100px;margin:0 auto;">
-    <div class="rev" style="text-align:center;">
-      <div class="sec-eye">Как это работает</div>
-      <h2 class="sec-h">От замера до КП — <span class="acc">4 шага</span></h2>
-    </div>
-    <div class="steps-wrap rev rev-d1">
-      <div class="step2">
-        <div class="step2-num">01</div>
-        <div class="step2-title">Создайте проект</div>
-        <div class="step2-desc">Добавьте клиента с адресом и контактами. Проект хранится в базе.</div>
-      </div>
-      <div class="step2">
-        <div class="step2-num">02</div>
-        <div class="step2-title">Снимите план</div>
-        <div class="step2-desc">Компасом, обводкой PDF-чертежа, через AI или вручную.</div>
-      </div>
-      <div class="step2">
-        <div class="step2-num">03</div>
-        <div class="step2-title">Выберите материалы</div>
-        <div class="step2-desc">Из каталога 1267 позиций с фото, ценами и брендами.</div>
-      </div>
-      <div class="step2">
-        <div class="step2-num">04</div>
-        <div class="step2-title">Отправьте клиенту</div>
-        <div class="step2-desc">PDF-смета с разбивкой по материалам и работам — за одно нажатие.</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- COMPASS -->
-<section class="compass-sec" id="compass">
-  <div class="compass-inner">
-    <div class="compass-art rev">
-      <div style="position:relative;display:inline-block;">
-        <div class="c-ring">
-          <div class="c-dir c-n">С</div>
-          <div class="c-dir c-s">Ю</div>
-          <div class="c-dir c-e">В</div>
-          <div class="c-dir c-w">З</div>
-          <!-- tick marks via SVG -->
-          <svg style="position:absolute;inset:0;width:100%;height:100%;" viewBox="0 0 260 260">
-            <g transform="translate(130,130)">
-              <script type="text/javascript">
-              </script>
-            </g>
-          </svg>
-          <div class="c-ring-inner">
-            <div class="c-needle"></div>
-            <div class="c-center"></div>
-            <div style="margin-top:48px;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:900;color:var(--acc)" id="cdeg">247°</div>
+      <div class="chapter-visual" data-reveal><div id="demo" class="device-frame"><div class="device-island" aria-hidden="true"></div><iframe id="preset-demo-frame" class="phone-screen" src="/landing/phone-demo.html" title="Интерактивный пример калькулятора ЗАМЕРX"></iframe></div><p class="demo-caption">Попробуйте пресеты и откройте вкладку «Смета».</p></div>
+    </div></section>
+    <section id="workspace" class="jw-section" aria-labelledby="jw-heading" data-blueprint-scene>
+      <svg class="blueprint-art blueprint-art-workspace" viewBox="0 0 900 600" aria-hidden="true" focusable="false"><use href="#blueprint-plan"/><path class="blueprint-draw" pathLength="1" d="M328 373H502V472H328Z"/></svg>
+      <div class="container jw-content">
+        <div class="jw-intro" data-reveal>
+          <div class="chapter-heading"><span class="chapter-index" aria-hidden="true">03</span><h2 id="jw-heading"><span class="sr-only">Работа с объектом. </span>Планируйте работу.<br>Видьте результат.</h2></div>
+          <div class="jw-tabs" role="tablist" aria-label="Работа с объектом">
+            <button id="jw-tab-calendar" type="button" role="tab" aria-selected="true" aria-controls="jw-panel-calendar" data-jw-tab="calendar">Календарь</button>
+            <button id="jw-tab-finances" type="button" role="tab" aria-selected="false" aria-controls="jw-panel-finances" tabindex="-1" data-jw-tab="finances">Финансы</button>
+            <button id="jw-tab-analytics" type="button" role="tab" aria-selected="false" aria-controls="jw-panel-analytics" tabindex="-1" data-jw-tab="analytics">Аналитика</button>
           </div>
         </div>
-        <div class="c-deg" id="cdeg2"></div>
-      </div>
-    </div>
-    <div class="rev rev-d1">
-      <div class="sec-eye">Уникальная функция</div>
-      <h2 class="sec-h">Замер без<br><span class="acc">рулетки</span></h2>
-      <p class="sec-p">Встаньте у стены, направьте телефон вдоль неё. Компас сам определит точное направление — введите только длину.</p>
-      <div class="feat-list">
-        <div class="feat-item">
-          <div class="feat-item-icon">📍</div>
-          <div><div class="feat-item-title">Работает без установки</div><div class="feat-item-desc">Открывается в Safari или Chrome — никаких дополнительных приложений.</div></div>
+        <div id="jw-panel-calendar" class="jw-panel" role="tabpanel" tabindex="0" aria-labelledby="jw-tab-calendar" data-jw-panel="calendar">
+          <div class="jw-description" data-reveal>
+            <h3>Замеры и монтажи — в одном расписании.</h3>
+            <p>Назначайте замеры и встречи, планируйте этапы монтажа и указывайте бригаду. Дата, время и детали выезда остаются рядом с объектом.</p>
+            <ul class="jw-benefits">
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Замеры, встречи, монтажи и другие события</li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Несколько дней и этапов для одного монтажа</li>
+            </ul>
+          </div>
+          <div class="jw-visual" data-reveal>
+            <div class="jw-phone">
+              <div class="jw-island" aria-hidden="true"></div>
+              <div class="jw-screen jw-calendar-screen">
+                <header class="jw-screen-header"><div><span>ЗАМЕРX</span><strong>Календарь</strong></div><span class="jw-example-tag">Пример</span></header>
+                <div class="jw-month">
+                  <div class="jw-month-heading"><b>Ноябрь 2026</b><span>Ваше расписание</span></div>
+                  <div class="jw-weekdays" aria-hidden="true"><span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span></div>
+                  <div class="jw-month-grid" role="img" aria-label="Ноябрь 2026. Выбрано 6 ноября, пятница. События 6 ноября и монтаж с 7 по 9 ноября.">
+                    <span class="jw-empty-day"></span><span class="jw-empty-day"></span><span class="jw-empty-day"></span><span class="jw-empty-day"></span><span class="jw-empty-day"></span><span class="jw-empty-day"></span><span>1</span>
+                    <span>2</span><span>3</span><span>4</span><span>5</span><span class="jw-selected-day">6<i></i></span><span class="jw-install-day">7<i></i></span><span class="jw-install-day">8<i></i></span>
+                    <span class="jw-install-day">9<i></i></span><span>10</span><span>11</span><span>12</span><span>13</span><span>14</span><span>15</span>
+                    <span>16</span><span>17</span><span>18</span><span>19</span><span>20</span><span>21</span><span>22</span>
+                    <span>23</span><span>24</span><span>25</span><span>26</span><span>27</span><span>28</span><span>29</span>
+                    <span>30</span><span class="jw-empty-day"></span><span class="jw-empty-day"></span><span class="jw-empty-day"></span><span class="jw-empty-day"></span><span class="jw-empty-day"></span><span class="jw-empty-day"></span>
+                  </div>
+                </div>
+                <div class="jw-agenda">
+                  <div class="jw-agenda-heading"><b>Пятница, 6 ноября</b><span>2 события</span></div>
+                  <div class="jw-agenda-event"><time datetime="2026-11-06T09:00">09:00</time><div><span class="jw-event-type">Замер</span><b>Квартира на Светлой</b><small>Гостиная, кухня и спальня</small></div></div>
+                  <div class="jw-agenda-event jw-meeting-event"><time datetime="2026-11-06T13:30">13:30</time><div><span class="jw-event-type">Встреча</span><b>Дом в Лесном</b><small>Обсудить варианты освещения</small></div></div>
+                </div>
+                <div class="jw-screen-note"><svg class="icon" aria-hidden="true"><use href="#i-plan"/></svg>Дата, время и объект — под рукой</div>
+              </div>
+            </div>
+            <p class="jw-phone-caption">Пример данных. Иллюстрация возможностей календаря.</p>
+          </div>
         </div>
-        <div class="feat-item">
-          <div class="feat-item-icon">🎯</div>
-          <div><div class="feat-item-title">Снэппинг к прямым углам</div><div class="feat-item-desc">Автоматическое прилипание к 0°, 45°, 90°, 135° — прямые стены без погрешности.</div></div>
+        <div id="jw-panel-finances" class="jw-panel" role="tabpanel" tabindex="0" aria-labelledby="jw-tab-finances" data-jw-panel="finances" hidden>
+          <div class="jw-description" data-reveal>
+            <h3>Деньги остаются рядом с объектом.</h3>
+            <p>Записывайте поступления и расходы по проекту. Видьте оплаты, долги и финансовый результат, чтобы понимать, что принёс каждый объект.</p>
+            <ul class="jw-benefits">
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Поступления и расходы в одной истории</li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Оплаты, долги и результат по объекту</li>
+            </ul>
+          </div>
+          <div class="jw-visual" data-reveal>
+            <div class="jw-phone">
+              <div class="jw-island" aria-hidden="true"></div>
+              <div class="jw-screen jw-finances-screen">
+                <header class="jw-screen-header"><div><span>ЗАМЕРX</span><strong>Финансы объекта</strong></div><span class="jw-example-tag">Пример</span></header>
+                <div class="jw-finance-result"><p>Квартира на Светлой</p><span>Финансовый результат</span><strong>48 500 <small>₽</small></strong><small>Поступления минус расходы</small></div>
+                <div class="jw-cash-flow"><div><span>Поступления</span><b>96 000 ₽</b></div><div><span>Расходы</span><b>47 500 ₽</b></div></div>
+                <div class="jw-ledger"><h4>История по объекту</h4><ul>
+                  <li><div><b>Предоплата</b><span>Поступление</span></div><strong>+60 000 ₽</strong></li>
+                  <li><div><b>Окончательный расчёт</b><span>Поступление</span></div><strong>+36 000 ₽</strong></li>
+                  <li><div><b>Материалы</b><span>Расход</span></div><strong class="jw-expense">−32 000 ₽</strong></li>
+                  <li><div><b>Монтажные работы</b><span>Расход</span></div><strong class="jw-expense">−15 500 ₽</strong></li>
+                </ul></div>
+                <div class="jw-screen-note"><svg class="icon" aria-hidden="true"><use href="#i-wallet"/></svg>Поступления и расходы из ваших записей</div>
+              </div>
+            </div>
+            <p class="jw-phone-caption">Пример данных. Финансовый учёт по одному объекту.</p>
+          </div>
         </div>
-        <div class="feat-item">
-          <div class="feat-item-icon">⚡</div>
-          <div><div class="feat-item-title">Площадь после замыкания</div><div class="feat-item-desc">Обошли все стены — нажали «замкнуть» — готово: площадь и периметр посчитаны.</div></div>
+        <div id="jw-panel-analytics" class="jw-panel" role="tabpanel" tabindex="0" aria-labelledby="jw-tab-analytics" data-jw-panel="analytics" hidden>
+          <div class="jw-description" data-reveal>
+            <h3>Видно, как идут ваши объекты.</h3>
+            <p>Следите за площадью, объёмом смет и средним чеком. Выбирайте период и смотрите, сколько объектов дошло до договора и завершения.</p>
+            <ul class="jw-benefits">
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Объекты, площадь, сумма смет и средний чек</li>
+              <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Показатели за месяц, квартал, год или всё время</li>
+            </ul>
+          </div>
+          <div class="jw-visual" data-reveal>
+            <div class="jw-phone">
+              <div class="jw-island" aria-hidden="true"></div>
+              <div class="jw-screen jw-analytics-screen">
+                <header class="jw-screen-header"><div><span>ЗАМЕРX</span><strong>Аналитика объектов</strong></div><span class="jw-example-tag">Пример</span></header>
+                <div class="jw-analytics-summary">
+                  <div class="jw-analytics-period"><span>За месяц</span><b>Общая картина</b></div>
+                  <div class="jw-estimate-total"><span>Сумма смет</span><strong>678 000 <small>₽</small></strong></div>
+                  <div class="jw-key-metrics"><div><b>12</b><span>объектов</span></div><div><b>286 <small>м²</small></b><span>общая площадь</span></div></div>
+                  <div class="jw-average-check"><span>Средний чек</span><b>56 500 ₽</b></div>
+                </div>
+                <div class="jw-object-statuses">
+                  <h4>Объекты по статусам</h4>
+                  <div class="jw-status-row"><div><span>Новые</span><b>3</b></div><i style="--jw-bar:100%;--jw-bar-color:#b4cafa"></i></div>
+                  <div class="jw-status-row"><div><span>В расчёте</span><b>2</b></div><i style="--jw-bar:66.6667%;--jw-bar-color:#8aaef6"></i></div>
+                  <div class="jw-status-row"><div><span>Договор</span><b>3</b></div><i style="--jw-bar:100%;--jw-bar-color:#5b90f1"></i></div>
+                  <div class="jw-status-row"><div><span>Монтаж</span><b>2</b></div><i style="--jw-bar:66.6667%;--jw-bar-color:#3779ed"></i></div>
+                  <div class="jw-status-row"><div><span>Завершены</span><b>2</b></div><i style="--jw-bar:66.6667%;--jw-bar-color:#245bd1"></i></div>
+                </div>
+                <div class="jw-screen-note"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Цифры помогают оценить результат</div>
+              </div>
+            </div>
+            <p class="jw-phone-caption">Пример данных. Иллюстрация аналитики объектов.</p>
+          </div>
         </div>
       </div>
-    </div>
-  </div>
-</section>
+    </section>
 
-<!-- PRICING -->
-<section class="pricing-sec" id="pricing">
-  <div style="max-width:800px;margin:0 auto;">
-    <div class="rev">
-      <div class="sec-eye">Тарифы</div>
-      <h2 class="sec-h">Прозрачно<br><span class="acc">и без подписок</span></h2>
-      <p class="sec-p">Базовый тариф — бесплатно навсегда. PRO открывает финансы и аналитику.</p>
-    </div>
-    <div class="pricing-grid rev rev-d1">
-      <div class="pcard">
-        <div class="pcard-name">БАЗОВЫЙ</div>
-        <div class="pcard-price" style="color:var(--text)">0 ₽</div>
-        <div class="pcard-per">навсегда</div>
-        <ul class="pcard-ul">
-          <li><span class="chk">✓</span> Калькулятор смет</li>
-          <li><span class="chk">✓</span> 4 способа замера</li>
-          <li><span class="chk">✓</span> Каталог 1267 позиций</li>
-          <li><span class="chk">✓</span> Неограниченно проектов</li>
-          <li><span class="chk">✓</span> Экспорт PDF</li>
-          <li class="no"><span class="chk">—</span> Финансы и долги</li>
-          <li class="no"><span class="chk">—</span> Аналитика студии</li>
-        </ul>
-        <a href="https://smeta-xi.vercel.app" class="pbtn pbtn-outline" target="_blank">Начать бесплатно</a>
-      </div>
-      <div class="pcard hot">
-        <div class="pcard-badge">✦ ПОПУЛЯРНОЕ</div>
-        <div class="pcard-name">PRO</div>
-        <div class="pcard-price">990 ₽</div>
-        <div class="pcard-per">в месяц</div>
-        <ul class="pcard-ul">
-          <li><span class="chk" style="color:#4ade80">✓</span> Всё из Базового</li>
-          <li><span class="chk" style="color:#4ade80">✓</span> Финансы и долги</li>
-          <li><span class="chk" style="color:#4ade80">✓</span> Аналитика выручки</li>
-          <li><span class="chk" style="color:#4ade80">✓</span> Учёт выплат дизайнерам</li>
-          <li><span class="chk" style="color:#4ade80">✓</span> Приоритетная поддержка</li>
-          <li><span class="chk" style="color:#4ade80">✓</span> Ранний доступ к новинкам</li>
-        </ul>
-        <a href="https://smeta-xi.vercel.app" class="pbtn pbtn-fill" target="_blank">Попробовать PRO</a>
-      </div>
-    </div>
-  </div>
-</section>
 
-<!-- REVIEWS -->
-<section class="reviews-sec">
-  <div class="rev" style="text-align:center;margin:0 auto;max-width:500px;">
-    <div class="sec-eye">Отзывы</div>
-    <h2 class="sec-h">Говорят <span class="acc">мастера</span></h2>
-  </div>
-  <div class="rev-grid rev rev-d1">
-    <div class="rcard">
-      <div class="rcard-stars">★★★★★</div>
-      <div class="rcard-q">"</div>
-      <div class="rcard-text">Раньше на смету уходило полчаса в Excel. Теперь прямо на объекте за 2 минуты. Клиент сразу видит цифры — доверие растёт.</div>
-      <div class="rcard-author">
-        <div class="rcard-av">РК</div>
-        <div><div class="rcard-name">Руслан К.</div><div class="rcard-role">Мастер, Хабаровск</div></div>
-      </div>
-    </div>
-    <div class="rcard">
-      <div class="rcard-stars">★★★★★</div>
-      <div class="rcard-q">"</div>
-      <div class="rcard-text">Компас — это находка. Обошёл квартиру за 5 минут, всё само посчиталось. Площади сходятся с замерщиком. Всем советую.</div>
-      <div class="rcard-author">
-        <div class="rcard-av">АС</div>
-        <div><div class="rcard-name">Алексей С.</div><div class="rcard-role">Монтажник, 7 лет стажа</div></div>
-      </div>
-    </div>
-    <div class="rcard">
-      <div class="rcard-stars">★★★★★</div>
-      <div class="rcard-q">"</div>
-      <div class="rcard-text">Теперь веду всю студию в одном месте. Вижу долги, статусы, выплаты дизайнерам. Раньше всё это держала в голове.</div>
-      <div class="rcard-author">
-        <div class="rcard-av">МВ</div>
-        <div><div class="rcard-name">Мария В.</div><div class="rcard-role">Руководитель студии</div></div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- CTA -->
-<section class="cta-sec rev">
-  <h2>Начните зарабатывать<br><span>умнее — уже сегодня</span></h2>
-  <p>Бесплатно. Без регистрации. Прямо в браузере телефона.</p>
-  <a href="https://smeta-xi.vercel.app" class="btn-white" target="_blank">Открыть Magic Studio →</a>
-  <div class="cta-note">smeta-xi.vercel.app · iOS & Android</div>
-</section>
-
-<!-- FOOTER -->
-<footer>
-  <div class="foot-brand">
-    <div class="nav-logo-icon" style="width:28px;height:28px;border-radius:7px;">
-      <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
-        <rect x="3" y="10" width="14" height="2" rx="1" fill="#4F46E5"/>
-        <rect x="5" y="6" width="10" height="2" rx="1" fill="#4F46E5" opacity="0.6"/>
-        <rect x="7" y="14" width="6" height="2" rx="1" fill="#4F46E5" opacity="0.3"/>
-      </svg>
-    </div>
-    <span class="foot-brand-txt">MAGIC STUDIO</span>
-  </div>
-  <div class="foot-copy">© 2025 Magic. Калькулятор натяжных потолков.</div>
-</footer>
-
-<script>
-// Scroll reveal
-const obs = new IntersectionObserver(entries=>{
-  entries.forEach(e=>{ if(e.isIntersecting) e.target.classList.add('show'); });
-},{threshold:.1});
-document.querySelectorAll('.rev').forEach(el=>obs.observe(el));
-
-// Live compass
-let deg=247;
-setInterval(()=>{
-  deg+=(Math.random()-.47)*2.5;
-  if(deg<0)deg+=360; if(deg>=360)deg-=360;
-  const el=document.getElementById('cdeg');
-  if(el) el.textContent=Math.round(deg)+'°';
-},120);
-</script>
-</body>
-</html>
+    <section id="pricing" class="pricing-section" aria-labelledby="pricing-heading" data-blueprint-scene><svg class="blueprint-art blueprint-art-pricing" viewBox="0 0 900 600" aria-hidden="true" focusable="false"><use href="#blueprint-plan"/><path class="blueprint-draw" pathLength="1" d="M138 118H292V282H138Z"/></svg><div class="container pricing-layout">
+      <div class="pricing-copy" data-reveal><h2 id="pricing-heading">Одна подписка.<br>На всех устройствах.</h2><p>Телефон на замере, планшет с дизайн-проектом, компьютер в офисе. Пользуйтесь ЗАМЕРX с одного аккаунта без доплат за свои устройства.</p><div class="device-list"><span><svg class="icon" aria-hidden="true"><use href="#i-phone"/></svg>Телефон</span><span><svg class="icon" style="transform:rotate(90deg)" aria-hidden="true"><use href="#i-phone"/></svg>Планшет</span><span><svg class="icon" aria-hidden="true"><use href="#i-monitor"/></svg>Компьютер</span></div><ul class="plan-features"><li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Обводка дизайн-проектов</li><li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Калькулятор и ваша номенклатура</li><li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Календарь, финансы и аналитика объектов</li></ul></div>
+      <div class="pricing-card" data-reveal><div class="pricing-card-top"><b>ЗАМЕРX</b><span>Все инструменты</span></div><div class="billing-switch" role="group" aria-label="Период подписки"><button data-billing="month" aria-pressed="false">Месяц</button><button data-billing="year" aria-pressed="true">Год <span>−33%</span></button></div><div class="plan-price-wrap" aria-live="polite" aria-atomic="true"><div class="plan-price"><strong id="plan-price"><span id="plan-price-accessible" class="sr-only">4 000</span><span id="plan-price-display" aria-hidden="true">4 000</span></strong><span id="plan-period">₽ / год</span></div><p id="billing-note">333 ₽ в месяц при оплате за год</p><span id="annual-saving" class="annual-saving">Экономия 2 000 ₽ в год</span></div><a class="button button-primary" href="/">Открыть приложение <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a><p class="pricing-device-note">Одна подписка для всех ваших устройств</p></div>
+    </div></section>
+    <section id="faq" class="section" aria-labelledby="faq-heading"><div class="container faq-layout"><div class="faq-intro" data-reveal><h2 id="faq-heading">Перед первым<br>проектом.</h2><p>Несколько ответов, чтобы начать работу с ЗАМЕРX.</p></div><div class="faq-list"><details data-reveal><summary>Можно настроить калькулятор под себя?<svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></summary><p>Да. Создавайте свои блоки и пресеты, задавайте состав, нормы расхода и правила количества. Четыре блока в интерактивном примере показывают принцип работы, а не ограничивают возможности приложения.</p></details><details data-reveal><summary>Можно считать по своим ценам?<svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></summary><p>Да. Меняйте цены готовых позиций, добавляйте свои номенклатуры и собирайте пресеты под свою работу. Цены в примере на этой странице условные.</p></details><details data-reveal><summary>Как работает обводка дизайн-проекта?<svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></summary><p>Загрузите PDF или фото плана и задайте масштаб по известному размеру. Поставьте точки по углам, замкните контур, введите название и добавьте помещение. Повторите для остальных комнат. Скорость зависит от сложности и читаемости плана.</p></details><details data-reveal><summary>Для каждого устройства нужна своя подписка?<svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></summary><p>Нет. Один аккаунт и одна подписка — для телефона, планшета и компьютера. За свои устройства отдельно не доплачиваете.</p></details><details data-reveal><summary>Что меняется при оплате за год?<svg class="icon" aria-hidden="true"><use href="#i-plus"/></svg></summary><p>Набор инструментов тот же. Месяц стоит 500 ₽, год — 4 000 ₽. За год это на 2 000 ₽ меньше, чем двенадцать ежемесячных оплат.</p></details></div></div></section>
+    <section id="start" class="closing-section" aria-labelledby="closing-heading" data-blueprint-scene><svg class="blueprint-art blueprint-art-closing" viewBox="0 0 900 600" aria-hidden="true" focusable="false"><use href="#blueprint-plan"/><path class="blueprint-draw" pathLength="1" d="M328 118H562V183H502V337H328Z"/></svg><div class="container closing-content" data-reveal><h2 id="closing-heading">Посчитайте свой первый<br>объект в <span>ЗАМЕРX.</span></h2><a class="button button-primary" href="/">Начать работу <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a></div></section>
+  </main>
+  <footer class="site-footer"><div class="container footer-inner"><a class="brand" href="#" aria-label="ЗАМЕРX — начало страницы"><svg aria-hidden="true"><use href="#brand-mark"/></svg><span>ЗАМЕРX</span></a><p>Для работы с натяжными потолками. © 2026 ЗАМЕРX</p><a class="text-link" href="/">Начать работу <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a></div></footer>
+</body></html>

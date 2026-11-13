@@ -1,4 +1,6 @@
 import { loadCompanyHeader } from './contract-template-store.js';
+import { normalizeContractLegalForm } from '../data/contract.js';
+import { bankDetailsText } from './account-profile.js';
 
 const record = value => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 const owns = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
@@ -13,12 +15,17 @@ export function getCompanyDetails(profile, storage) {
     const fallback = fallbackKeys.find(key => owns(head, key));
     return fallback === undefined ? '' : text(head[fallback]);
   };
+  const legalForm = normalizeContractLegalForm(value(['legalForm']));
+  const legalName = value(['legal']);
+  const prefix = ({ ip: 'ИП', self_employed: 'Самозанятый' })[legalForm];
+  const legal = prefix && legalName && !legalName.toLocaleLowerCase('ru').startsWith(prefix.toLocaleLowerCase('ru')) ? prefix + ' ' + legalName : legalName;
+  const bank = bankDetailsText(saved) || value(['bank']);
   return {
     company: value(['company']), description: value(['description']),
-    legal: value(['legal']), inn: value(['inn']), ogrn: value(['ogrn']),
-    address: value(['address']), phone: value(['contractPhone', 'phone'], ['phone']),
+    legal, legalForm, inn: value(['inn']), kpp: value(['kpp']), ogrn: value(['ogrn']),
+    address: value(['address']), city: value(['city']), phone: value(['contractPhone', 'phone'], ['phone']),
     email: value(['email']), website: value(['site', 'website'], ['website', 'site']),
-    logo: value(['logo']), bank: value(['bank']),
+    logo: value(['logo']), sign: value(['sign', 'signature']), signerName: value(['signerName']), bank,
   };
 }
 

@@ -17,6 +17,15 @@ test('estimate export has materials, works and equipment sections with one grand
   assert.match(html, />Блок питания</);
 });
 
+test('online migration photos use the same strict local image allowlist', () => {
+  const image = '/online/nom/source-42.jpg';
+  const html = estimateHtml({est:{mats:[{n:'Профиль',q:1,p:100,u:'шт',img:image}]}});
+  assert.ok(html.includes(`class="estimate-item-photo" src="${image}"`));
+  for (const img of ['/online/nom/..%2Fsecret.png','/online/nom/source.svg','/online/nom/source.jpg?x=1','https://external.example/source.jpg']) {
+    assert.doesNotMatch(estimateHtml({est:{mats:[{n:'Профиль',q:1,p:100,u:'шт',img}]}}), /class="estimate-item-photo"/);
+  }
+});
+
 test('hidden adjustment changes targeted prices and preserves the displayed final amount', () => {
   const html = clean(estimateHtml({ est, adjustment: { percent: 10, scope: 'equipment' }, showAdjustment: false }));
   assert.doesNotMatch(html, /Наценка|Скидка|корректиров|data-estimate-adjustment/);
@@ -239,4 +248,30 @@ test('mixed percentages get separate visible rows and all disappear when folded 
     assert.doesNotMatch(hidden, /Наценка|Скидка|корректиров|data-estimate-adjustment/);
     for (const price of ['95', '55', '67,5']) assert.ok(hidden.includes(`>${price}</td>`));
   }
+});
+
+test('desktop adjustments follow their own category with independent folding and no footer duplication', () => {
+  const html = clean(estimateHtml({est,adjustment:{scope:'works',rates:{mats:-5,works:10,equipment:-10}},showAdjustment:{mats:true,works:false,equipment:true}}));
+  const material = html.slice(html.indexOf('<section data-estimate-section="mats"'),html.indexOf('<section data-estimate-section="works"'));
+  const work = html.slice(html.indexOf('<section data-estimate-section="works"'),html.indexOf('<section data-estimate-section="equipment"'));
+  const equipment = html.slice(html.indexOf('<section data-estimate-section="equipment"'),html.indexOf('<footer'));
+  assert.match(material,/Скидка на материалы −5%/);
+  assert.match(material,/>190 ₽/);
+  assert.doesNotMatch(work,/data-estimate-adjustment|Наценка/);
+  assert.match(work,/>55</);
+  assert.match(equipment,/Скидка на оборудование −10%/);
+  assert.doesNotMatch(html.slice(html.indexOf('<footer')),/data-estimate-adjustment|Скидка|Наценка/);
+  assert.equal((html.match(/data-estimate-adjustment-scope=/g)||[]).length,2);
+  assert.match(html,/data-estimate-grand-total>422,5 ₽/);
+});
+
+test('template colors, logo and company text are safe and optional without changing money', () => {
+  const company = {company:'<script>name</script>',description:'Описание',inn:'123',logo:'data:image/png;base64,YQ=='};
+  const html = estimateHtml({est,company,template:{background:'#ffffff',accent:'#1461ee',showLogo:false,showDetails:false}});
+  assert.match(html,/background:#ffffff;color:#202532/);
+  assert.match(html,/style="color:#1461ee"/);
+  assert.match(html,/&lt;script&gt;name&lt;\/script&gt;/);
+  assert.doesNotMatch(html,/<img|ИНН 123/);
+  assert.match(estimateHtml({est,template:{background:'red;position:fixed',accent:'"><script>x</script>'}}),/background:#121a2a;color:#ffffff/);
+  assert.match(clean(html),/data-estimate-grand-total>425 ₽/);
 });

@@ -1,4 +1,4 @@
-/** Shared, side-effect-free quantity rules for the mobile calculator and estimate. */
+/** Shared quantity calculations and explicit edit helpers for the calculator and estimate. */
 const SOURCES = new Set(['area', 'perim', 'manual']);
 const LENGTH_UNITS = new Set(['м.п.', 'м.п', 'м', 'м.']);
 const DEFAULT_DEDUCTIONS = [
@@ -44,9 +44,11 @@ function rawBlockQuantity(def, instance, g) {
   return { value, source: effective.source, unit: effective.unit, overridden: override != null };
 }
 
-function perimeterDeductions(room, g, defs) {
+export const isPerimeterDeductionBlock = def => !!(def.subP || def.id === 'extra' || def.id === 'curtain');
+
+export function perimeterDeductions(room, g, defs) {
   return (defs || DEFAULT_DEDUCTIONS).reduce((total, def) => {
-    if (!(def.subP || def.id === 'extra' || def.id === 'curtain')) return total;
+    if (!isPerimeterDeductionBlock(def)) return total;
     return total + getInstances(room, def).reduce((sum, instance) => {
       if (!instance.subP) return sum;
       const q = rawBlockQuantity(def, instance, g);
@@ -55,16 +57,45 @@ function perimeterDeductions(room, g, defs) {
   }, 0);
 }
 
-/** qtyO in an existing single block is already its final quantity, after deductions. */
+/** Preserve imported final qtyO until the operator first edits a deduction. */
+export function rebaseMainQuantity(room, g, defs) {
+  const main = room?.main;
+  if (!main || quantity(main.qtyBase) != null || quantity(main.qtyO) == null) return;
+  const def = (defs || []).find(block => block.id === 'main') || {id:'main',single:true};
+  if (definitionOfInstance(def,main).source !== 'perim') return;
+  main.qtyBase = round(main.qtyO + perimeterDeductions(room,g,defs));
+  delete main.qtyO;
+}
+
+/** The main profile input is a final quantity; its stored base retains reversible deductions. */
+export function setBlockQuantity(def, instance, value, room, g, defs) {
+  if (def.id === 'main' && def.single) {
+    delete instance.qtyBase;
+    delete instance.qtyO;
+    if (value == null) return;
+    if (definitionOfInstance(def,instance).source === 'perim') {
+      instance.qtyBase = round(value + perimeterDeductions(room,g,defs));
+      return;
+    }
+  }
+  const field = def.single ? 'qtyO' : 'qty';
+  if (value == null) delete instance[field];
+  else instance[field] = value;
+}
+
+/** Legacy qtyO remains final; an explicitly edited qtyBase receives live deductions. */
 export function blockQuantity(def, instance, room, g, defs) {
   const q = rawBlockQuantity(def, instance, g);
-  const deducted = def.id === 'main' && q.source === 'perim' && !q.overridden && q.value != null ?
+  const base = def.id === 'main' && q.source === 'perim' ? quantity(instance?.qtyBase) : null;
+  const value = base ?? q.value;
+  const deducted = def.id === 'main' && q.source === 'perim' && (base != null || !q.overridden) && value != null ?
     round(perimeterDeductions(room, g, defs)) : 0;
   return {
     ...q,
-    value: q.value == null ? null : Math.max(0, round(q.value - deducted)),
-    shown: q.value,
-    missing: q.value == null,
+    overridden: base != null || q.overridden,
+    value: value == null ? null : Math.max(0, round(value - deducted)),
+    shown: value,
+    missing: value == null,
     deducted,
   };
 }

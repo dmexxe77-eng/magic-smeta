@@ -1,54 +1,76 @@
-/* Стартовое меню сайта: выбор версии ЗАМЕРX. Каждая версия открывается по своей ссылке */
+/* Стартовое меню ЗАМЕРX: прототипы приложения и лендинг. */
 import React from 'react';
 import { VERSIONS, MAGIC_RESOURCES } from './links.js';
 import './launcher.css';
 
 const ICONS = {
-  main: <path d="M4 5h16v14H4zM4 9h16M9 9v10" />,
+  landing: <><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c5 5 5 13 0 18M12 3c-5 5-5 13 0 18" /></>,
   design: <path d="M8 3h8a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM11 18h2" />,
   crm: <path d="M4 4h16v16H4zM4 9h16M10 9v11M14 13h3m-3 3h3" />,
   lighting: <path d="M8 14a6 6 0 1 1 8 0l-1 3H9l-1-3Zm1 6h6M12 1v1M3 5l1 1m16-1-1 1M1 12h2m18 0h2" />,
   online: <path d="M3 5h18v11H3zM8 20h8M12 16v4" />,
 };
 
-function Card({ version }) {
+function Icon({ children, className = '' }) {
+  return <svg className={'launch-svg ' + className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{children}</svg>;
+}
+
+function Card({ version, resource = false }) {
+  const Heading = resource ? 'h3' : 'h2';
+  const className = ['launch-card', version.primary && 'is-primary', resource && 'is-resource', !version.href && 'is-disabled'].filter(Boolean).join(' ');
   const body = (
     <>
-      <span className="launch-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{ICONS[version.id]}</svg></span>
-      <span className="launch-badge">{version.badge}</span>
-      <b className="launch-title">{version.title}</b>
-      <span className="launch-text">{version.text}</span>
-      <span className="launch-device">{version.device}</span>
+      <div className="launch-card-top">
+        <span className="launch-icon"><Icon>{ICONS[version.icon || version.id]}</Icon></span>
+        {version.device && <span className="launch-device">{version.device}</span>}
+      </div>
+      <div className="launch-card-copy">
+        <Heading className="launch-title">{version.title}</Heading>
+        <p className="launch-text">{version.text}</p>
+      </div>
+      <span className="launch-action">
+        {version.href ? version.action : version.pending || 'Ссылка появится после публикации'}
+        {version.href && <Icon><path d="M5 12h14m-5-5 5 5-5 5" /></Icon>}
+      </span>
     </>
   );
-  if (!version.href) return <div className="launch-card is-disabled" aria-disabled="true">{body}<span className="launch-soon">{version.pending || 'Ссылка появится после публикации'}</span></div>;
-  return <a className={'launch-card' + (version.id === 'main' ? ' is-primary' : '')} href={version.href}>{body}</a>;
+  if (!version.href) return <div className={className} aria-disabled="true">{body}</div>;
+  return <a className={className} href={version.href}>{body}</a>;
 }
 
 export default function Launcher() {
   return (
-    <main className="launch">
-      <header className="launch-head">
-        <svg className="launch-mark" viewBox="0 0 64 64" width="56" height="56" aria-hidden="true">
-          <defs><linearGradient id="lx" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#3d8bff" /><stop offset="1" stopColor="#0f5cf0" /></linearGradient></defs>
-          <rect width="64" height="64" rx="14" fill="#0b1119" stroke="rgba(255,255,255,0.08)" />
-          <path d="M13 50V16.5a3.5 3.5 0 0 1 3.5-3.5H50" fill="none" stroke="#e6ebf4" strokeWidth="3.4" strokeLinecap="round" />
-          <path d="M22 13v5M30 13v6.5M38 13v5M46 13v6.5M13 24h5M13 32h6.5M13 40h5" stroke="#e6ebf4" strokeWidth="2.6" strokeLinecap="round" />
-          <path d="M22 23h10.5l21 27H43z" fill="#eef2f8" /><path d="M42.5 23H54L31 50H19.5z" fill="url(#lx)" />
-        </svg>
-        <h1>ЗАМЕР<span>X</span></h1>
-        <p>Выберите версию</p>
+    <div className="launch">
+      <a className="launch-skip" href="#launch-content">К выбору раздела</a>
+      <header className="launch-header">
+        <div className="launch-container launch-header-inner">
+          <a className="launch-brand" href="/" aria-label="ЗАМЕРX — главная">
+            <img src="/landing/favicon.svg" width="36" height="36" alt="" />
+            <span>ЗАМЕР<span className="launch-brand-x">X</span></span>
+          </a>
+          <span className="launch-header-caption">Замеры. Расчёты. Сметы.</span>
+        </div>
       </header>
-      <nav className="launch-grid" aria-label="Версии приложения">
-        {VERSIONS.map(v => <Card key={v.id} version={v} />)}
-      </nav>
-      <p className="launch-foot">Данные каждой версии хранятся отдельно</p>
-      <section className="launch-resources" aria-labelledby="magic-resources-title">
-        <header><h2 id="magic-resources-title">Magic Ресурсы</h2><p>Рабочие инструменты вашей команды</p></header>
-        <nav className="launch-grid launch-resource-grid" aria-label="Magic Ресурсы">
-          {MAGIC_RESOURCES.map(resource => <Card key={resource.id} version={resource} />)}
+      <main id="launch-content" className="launch-container launch-main">
+        <div className="launch-intro">
+          <h1>Ваше рабочее пространство</h1>
+          <p>Выберите, где продолжить работу с ЗАМЕРX.</p>
+        </div>
+        <nav className="launch-grid" aria-label="Прототипы и сайт ЗАМЕРX">
+          {VERSIONS.map(version => <Card key={version.id} version={version} />)}
         </nav>
-      </section>
-    </main>
+        <p className="launch-note"><Icon><path d="M12 3 3.5 7v5c0 4.5 4.5 7.8 8.5 9 4-1.2 8.5-4.5 8.5-9V7zM8.5 12l2.5 2.5 4.5-5" /></Icon>Данные онлайн-версии и мобильного прототипа хранятся отдельно</p>
+        <section className="launch-resources" aria-labelledby="magic-resources-title">
+          <div className="launch-section-heading">
+            <h2 id="magic-resources-title">Magic Ресурсы</h2>
+            <p>Рабочие инструменты вашей команды</p>
+          </div>
+          <nav className="launch-grid launch-resource-grid" aria-label="Magic Ресурсы">
+            {MAGIC_RESOURCES.map(resource => <Card key={resource.id} version={resource} resource />)}
+          </nav>
+        </section>
+      </main>
+      <footer className="launch-container launch-footer"><span>ЗАМЕРX</span><span>От замера до готовой сметы</span></footer>
+    </div>
   );
 }

@@ -1,0 +1,174 @@
+/* Native desktop dialog bodies. The shared ModalFrame owns backdrop and focus. */
+.dd-body{padding:26px 28px 22px;font:500 12px/1.5 Manrope,system-ui,sans-serif;color:#182335}
+.dd-heading{display:flex;align-items:flex-start;gap:12px;padding-right:24px;margin-bottom:23px}
+.dd-heading-icon{display:grid;place-items:center;width:36px;height:36px;flex:none;border:1px solid #e8ebf0;border-radius:8px;background:#f8faff;color:#1461ee}
+.dd-heading h2{font-size:17px;line-height:1.35;letter-spacing:-.35px;font-weight:700;margin:0}
+.dd-heading p{font-size:11px;line-height:1.65;color:#7b8698;margin:5px 0 0}
+.dd-body .d-btn{min-height:36px;font-size:12px;border-radius:7px;padding:0 13px;white-space:nowrap}
+.dd-form-section{display:flex;flex-direction:column;gap:17px}
+.dd-field{display:flex;flex-direction:column;gap:7px;min-width:0;margin:0;font-size:12px;color:#526074}
+.dd-field>span:first-child{font-size:11px;font-weight:600;line-height:1.4;color:#536175}
+.dd-field em{font-style:normal;color:#9aa4b3;font-weight:500}
+.dd-field input,.dd-field select,.dd-field textarea,.dd-search input{width:100%;min-width:0;box-sizing:border-box;font:500 12px/1.5 Manrope,system-ui,sans-serif;color:#1d2a3d;background:#fff;border:1px solid #dfe5ed;border-radius:7px;transition:border-color .12s,box-shadow .12s}
+.dd-field input,.dd-field select{height:36px;padding:0 10px}
+.dd-field input[type=date],.dd-field input[type=time]{appearance:auto;font-variant-numeric:tabular-nums;color-scheme:light}
+.dd-field textarea{padding:9px 10px;resize:vertical;min-height:78px;max-height:210px}
+.dd-field input::placeholder,.dd-field textarea::placeholder,.dd-search input::placeholder{color:#a1aab8;font-size:11px}
+.dd-field input:focus,.dd-field select:focus,.dd-field textarea:focus,.dd-search input:focus{border-color:#1461ee;box-shadow:0 0 0 3px #1461ee0c;outline:none}
+.dd-field input[aria-invalid=true],.dd-field select[aria-invalid=true]{border-color:#d24b4b;background:#fffdfd}
+.dd-field .dd-field-error{font-size:10.5px;color:#c43e3e;font-weight:500;line-height:1.55}
+.dd-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.dd-project-choice{display:flex;flex-direction:column;gap:7px}
+.dd-search{position:relative;display:flex;align-items:center;gap:8px}
+.dd-search>svg{position:absolute;left:10px;color:#8794a6;pointer-events:none}
+.dd-search input{height:34px;padding:0 10px 0 33px;background:#f8fafc}
+.dd-kind-field{border:0;margin:0;padding:0;min-width:0}
+.dd-kind-field legend{padding:0;margin-bottom:8px;color:#536175;font-size:11px;font-weight:600}
+.dd-event-kinds{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.dd-event-kinds>button{display:flex;align-items:center;justify-content:center;gap:6px;height:36px;min-width:0;padding:0 7px;background:#fff;border:1px solid #e3e8ef;border-radius:7px;color:#68768a;font:600 11px Manrope,system-ui,sans-serif;cursor:pointer}
+.dd-event-kinds>button:hover{background:#f7f9fc;border-color:#c8d4e5}
+.dd-event-kinds>button.is-selected{border-color:#1461ee;background:#f0f5ff;color:#1461ee}
+.dd-event-kinds>button:focus-visible,.dd-action:focus-visible,.dd-status-option:focus-visible,.dd-source-option:focus-visible,.dd-text-danger:focus-visible{outline:2px solid #1461ee;outline-offset:2px}
+.dd-event-hint{display:flex;align-items:flex-start;gap:8px;padding:10px 12px;border:1px solid #e9eef6;background:#f8faff;border-radius:7px;color:#748297;font-size:10.5px;line-height:1.7;margin:0}
+.dd-event-hint>svg{flex:none;color:#8c9ab0;margin-top:1px}
+.dd-range{display:flex;align-items:center;gap:7px;color:#687d98;font-size:10.5px;margin:-8px 0 0}
+.dd-hint{color:#8a96a6;font-size:10.5px;margin:-8px 0 0}
+.dd-footer{display:flex;align-items:center;justify-content:space-between;gap:14px;padding-top:20px;margin-top:22px;border-top:1px solid #e8ebf0}
+.dd-footer>div{display:flex;align-items:center;gap:8px}
+.dd-text-danger{display:inline-flex;align-items:center;gap:6px;border:0;padding:6px 0;background:transparent;color:#bd4e51;font:500 10.5px Manrope,system-ui,sans-serif;cursor:pointer}
+.dd-text-danger:hover{color:#a52b30}
+.dd-body .dd-btn-danger{color:#b7343b;border:1px solid #f0c9cc;background:#fff6f6}
+.dd-body .dd-btn-danger:hover{color:#a1222a;background:#ffebed;border-color:#e5aeb3}
+.dd-confirm{padding:16px;border:1px solid #f0d9db;border-radius:8px;background:#fffafa;margin-top:16px}
+.dd-confirm>strong{display:block;font-weight:700;font-size:12px;color:#a9343b}
+.dd-confirm>p{margin:6px 0 15px;color:#876b72;font-size:11px;line-height:1.7}
+.dd-confirm>div{display:flex;justify-content:flex-end;gap:8px}
+.dd-error-summary{padding:10px 12px;color:#bd3840;background:#fff4f4;border:1px solid #f2d7d9;border-radius:7px;font-size:11px;margin:15px 0 0}
+.dd-status-list{display:flex;flex-direction:column;gap:5px}
+.dd-status-option{display:flex;align-items:center;gap:11px;width:100%;text-align:left;padding:12px;background:#fff;border:1px solid transparent;border-radius:8px;cursor:pointer;font:500 12px Manrope,system-ui,sans-serif;color:#26354a}
+.dd-status-option>i{width:7px;height:7px;border-radius:50%;flex:none;align-self:flex-start;margin-top:5px}
+.dd-status-option>span{flex:1;min-width:0}
+.dd-status-option strong,.dd-action strong,.dd-source-option strong{display:block;font-size:12px;line-height:1.5;font-weight:600}
+.dd-status-option small,.dd-action small,.dd-source-option small{display:block;margin-top:3px;font-size:10px;line-height:1.65;color:#8b96a6;font-weight:500}
+.dd-status-option>svg{flex:none;color:#1461ee}
+.dd-status-option:hover{background:#f8faff}
+.dd-status-option.is-selected{background:#f4f7fe;border-color:#dbe6fb}
+.dd-action-list{display:flex;flex-direction:column;gap:4px}
+.dd-action{display:flex;align-items:center;gap:12px;width:100%;padding:13px 9px;border:0;border-radius:7px;background:transparent;text-align:left;color:#5d6e84;font:500 12px Manrope,system-ui,sans-serif;cursor:pointer}
+.dd-action>span{flex:1;min-width:0;color:#28374b}
+.dd-action>svg:last-child{color:#a4afbd}
+.dd-action:hover{background:#f6f8fc}
+.dd-action.is-danger{margin-top:8px;border-top:1px solid #edf0f5;border-radius:0;color:#be4d53}
+.dd-action.is-danger strong{color:#bb424a}
+.dd-action.is-danger:hover{background:#fff8f8}
+.dd-rename{margin-top:4px}
+.dd-picker-intro{font-size:11px;line-height:1.65;color:#8390a3;margin:-8px 0 15px}
+.dd-source-list{display:flex;flex-direction:column;gap:4px}
+.dd-source-list>h3{font-size:10px;font-weight:600;color:#96a1b0;letter-spacing:.3px;margin:14px 10px 5px}
+.dd-source-option{display:flex;align-items:center;gap:11px;width:100%;padding:10px;border:1px solid transparent;border-radius:7px;background:#fff;text-align:left;color:#26354a;font:500 12px Manrope,system-ui,sans-serif;cursor:pointer}
+.dd-source-option>span:nth-child(2){flex:1;min-width:0}
+.dd-source-symbol{display:grid;place-items:center;width:30px;height:30px;border:1px solid #e7ecf3;border-radius:6px;font-size:13px;font-weight:600;color:#778aa4;background:#f8fafc;flex:none}
+.dd-source-option:hover{background:#f8faff}
+.dd-source-option.is-selected{border-color:#dce7fb;background:#f3f7ff}
+.dd-source-option.is-selected .dd-source-symbol{border-color:#d8e5ff;color:#1461ee;background:#edf3ff}
+.dd-source-option>svg{color:#1461ee;flex:none}
+
+/* The shared draw bridge exposes stable .zd classes; only desktop gets a wide
+   drawing surface and a persistent inspector in place of the mobile bottom sheet. */
+@media(min-width:900px){
+ body:has(.d-app)>.zd{inset:0!important;left:0!important;top:0!important;right:0!important;bottom:0!important;width:100vw!important;height:100dvh!important;border-radius:0!important;background:#17283f55;padding:24px;align-items:stretch;overflow:hidden!important}
+ body:has(.d-app)>.zd .app{display:grid;grid-template-columns:minmax(0,1fr) 348px;grid-template-rows:56px 42px minmax(0,1fr);width:100%;height:100%;max-width:1440px;min-height:0;border:1px solid #dce3ec;border-radius:12px;box-shadow:0 20px 70px #14294133;overflow:hidden}
+ body:has(.d-app)>.zd .top{grid-column:1/-1;grid-row:1;padding:8px 16px;border-bottom:1px solid #e8ebf0;gap:8px}
+ body:has(.d-app)>.zd .top h1{font-size:14px;font-weight:700}
+ body:has(.d-app)>.zd .top .sub{font-size:10px}
+ body:has(.d-app)>.zd .ib{height:34px;width:34px;border-radius:7px}
+ body:has(.d-app)>.zd .ib.text{width:auto;padding:0 10px;font-size:11px}
+ body:has(.d-app)>.zd .stages{grid-column:1/-1;grid-row:2;justify-content:flex-start;padding:5px 16px;gap:12px;border-bottom:1px solid #e8ebf0}
+ body:has(.d-app)>.zd .pill{flex:none;min-width:135px;min-height:28px;font-weight:600}
+ body:has(.d-app)>.zd .cv-wrap{grid-column:1;grid-row:3;min-width:0;min-height:0}
+ body:has(.d-app)>.zd .sheet,body:has(.d-app)>.zd .app[data-stage="3"] .sheet{grid-column:2;grid-row:3;max-height:none;min-height:0;overflow-y:auto;border:0;border-left:1px solid #e8ebf0;padding:18px;gap:13px}
+ body:has(.d-app)>.zd .sheet-content{gap:12px}
+ body:has(.d-app)>.zd .rows{grid-template-columns:1fr;gap:7px}
+ body:has(.d-app)>.zd .row{min-height:38px;border-radius:7px;background:#f7f9fc}
+ body:has(.d-app)>.zd .row .lbl{font-size:11px;font-weight:600}
+ body:has(.d-app)>.zd .in,body:has(.d-app)>.zd .inName{height:36px;border-radius:7px;font-size:12px;font-weight:600}
+ body:has(.d-app)>.zd .btn{min-height:36px;border-radius:7px;font-size:11px;font-weight:600}
+ body:has(.d-app)>.zd .btn.pri,body:has(.d-app)>.zd .btn.laser{min-height:36px}
+ body:has(.d-app)>.zd .btns{gap:7px}
+ body:has(.d-app)>.zd .acts{grid-template-columns:1fr;gap:7px}
+ body:has(.d-app)>.zd .acts .btn{min-height:39px;padding:7px 10px}
+ body:has(.d-app)>.zd .acts .btn svg.g{width:27px;height:23px}
+ body:has(.d-app)>.zd .card h3,body:has(.d-app)>.zd .card.op h3{font-size:13px;font-weight:700}
+ body:has(.d-app)>.zd .seg{border-radius:7px}
+ body:has(.d-app)>.zd .seg button{min-height:30px;font-weight:600}
+ body:has(.d-app)>.zd .drawing-finish{margin-top:9px;padding-top:14px;gap:7px}
+ body:has(.d-app)>.zd .finish-row{flex-wrap:wrap}
+ body:has(.d-app)>.zd .finish-row .inName{flex-basis:100%}
+ body:has(.d-app)>.zd .drawing-finish .btn{width:100%}
+ body:has(.d-app)>.zd .canvas-looks{max-width:380px;margin:0;left:18px;right:auto;top:15px;border-radius:7px}
+ body:has(.d-app)>.zd .canvas-looks button{min-width:76px;min-height:27px;font-size:10px}
+ body:has(.d-app)>.zd .canvas-meta{left:19px;top:58px}
+ body:has(.d-app)>.zd .zoom{right:18px;top:16px;border-radius:7px}
+ body:has(.d-app)>.zd .zoom button{width:32px;height:32px}
+ body:has(.d-app)>.zd .app.choosing{grid-template-columns:1fr;grid-template-rows:56px minmax(0,1fr)}
+ body:has(.d-app)>.zd .app.choosing .stages{display:none}
+ body:has(.d-app)>.zd .app.choosing .cv-wrap{grid-column:1;grid-row:2;display:flex;align-items:center;justify-content:center}
+ body:has(.d-app)>.zd .app.choosing .sheet{display:none}
+ body:has(.d-app)>.zd .start{max-width:940px;padding:34px;margin:auto}
+ body:has(.d-app)>.zd .start-intro{margin-bottom:25px}
+ body:has(.d-app)>.zd .start-intro h2{font-size:23px;font-weight:700}
+ body:has(.d-app)>.zd .start-intro p{max-width:none;font-size:12px}
+ body:has(.d-app)>.zd .opts{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+ body:has(.d-app)>.zd .opt{border-radius:9px;padding:17px;min-height:112px;border:1px solid #e5ebf3;background:#f8faff}
+ body:has(.d-app)>.zd .opt-primary{grid-column:1;grid-row:1;min-height:160px;background:#f0f5ff;border-color:#dce7fb;flex-wrap:nowrap}
+ body:has(.d-app)>.zd .opt-primary>svg{width:64px;height:64px}
+ body:has(.d-app)>.zd .opt-primary b{font-size:14px}
+ body:has(.d-app)>.zd .quick-shapes{grid-column:2;grid-row:1;gap:12px}
+ body:has(.d-app)>.zd .opt-compact{min-height:160px;gap:14px}
+ body:has(.d-app)>.zd .opt-free{grid-column:1/-1;min-height:84px;background:#fff}
+
+ /* Trace and contract bridges append unclassed hosts with z-index 9000 to body.
+    Their observed root layout distinguishes contract Shell from TraceApp. */
+ body:has(.d-app)>div[style*="z-index: 9000"]:not(.zd){position:fixed!important;inset:24px!important;width:calc(100vw - 48px)!important;height:calc(100dvh - 48px)!important;border-radius:12px!important;border:1px solid #dce3ec;overflow:hidden!important;box-shadow:0 0 0 100vmax #17283f55,0 20px 70px #14294133;font-family:Manrope,system-ui,sans-serif!important;background:#f6f8fc!important}
+ body:has(.d-app)>div[style*="z-index: 9000"]:not(.zd)>div{min-height:0!important;height:100%}
+ body:has(.d-app)>div[style*="z-index: 9000"]:not(.zd) input:not([type=file]),body:has(.d-app)>div[style*="z-index: 9000"]:not(.zd) select{height:36px!important;border-radius:7px!important;font-size:12px!important;font-weight:500!important;border-width:1px!important;box-sizing:border-box}
+ body:has(.d-app)>div[style*="z-index: 9000"]:not(.zd) textarea{border-radius:7px!important;font-size:12px!important;border-width:1px!important}
+ body:has(.d-app)>div[style*="z-index: 9000"]:not(.zd) button{min-height:32px;height:36px!important;border-radius:7px!important;font-size:11px!important;font-weight:600!important}
+ body:has(.d-app)>div[style*="z-index: 9000"]:not(.zd) button[style*="background: rgb(79, 70, 229)"]{background:#1461ee!important}
+ body:has(.d-app)>div[style*="z-index: 9000"]:not(.zd) input:focus-visible,body:has(.d-app)>div[style*="z-index: 9000"]:not(.zd) textarea:focus-visible{outline:2px solid #1461ee!important;outline-offset:2px}
+ /* Contract: form on the left, full document preview on the right. The printed
+    document remains untouched; compact styles apply to its editing controls. */
+ body:has(.d-app)>div[style*="z-index: 9000"]:not(.zd)>div[style*="z-index: 9000"]>div:first-child{min-height:57px!important;padding:9px 24px!important;border-bottom:1px solid #e8ebf0!important}
+ body:has(.d-app)>div[style*="z-index: 9000"]:not(.zd)>div[style*="z-index: 9000"]>div:last-child{max-width:1320px!important;padding:24px!important;display:grid;grid-template-columns:minmax(320px,420px) minmax(0,1fr);gap:12px 24px;align-items:start}
+ body:has(.d-app)>div[style*="z-index: 9000"]:not(.zd)>div[style*="z-index: 9000"]>div:last-child>*{grid-column:1;min-width:0;margin-bottom:0!important}
+ body:has(.d-app)>div[style*="z-index: 9000"]:not(.zd)>div[style*="z-index: 9000"]>div:last-child>div[style*="border-radius: 18px"]{border-radius:9px!important;border:1px solid #e8ebf0}
+ body:has(.d-app)>div[style*="z-index: 9000"]:not(.zd)>div[style*="z-index: 9000"]>div:last-child>div[style*="box-shadow"]{grid-column:2;grid-row:1 / span 50;padding:0;overflow:hidden;border:1px solid #dfe5ed;border-radius:9px!important}
+ body:has(.d-app)>div[style*="z-index: 9000"]:not(.zd)>div[style*="z-index: 9000"]>div:last-child>div:has(+div[style*="box-shadow"]){display:none}
+ /* Trace: the real TracingCanvas contains toolbar / cursor surface / controls.
+    Keep the surface large and place scale, naming and finish controls to its right. */
+ body:has(.d-app)>div[style*="z-index: 9000"]:not(.zd)>div>div>div:has(>div[style*="cursor:"]){display:grid!important;grid-template-columns:minmax(0,1fr) 320px;grid-template-rows:48px minmax(0,1fr);min-height:0!important;height:100%!important}
+ body:has(.d-app)>div[style*="z-index: 9000"]:not(.zd)>div>div>div:has(>div[style*="cursor:"])>div:first-child{grid-column:1;grid-row:1;padding:8px 16px!important}
+ body:has(.d-app)>div[style*="z-index: 9000"]:not(.zd)>div>div>div:has(>div[style*="cursor:"])>div[style*="cursor:"]{grid-column:1;grid-row:2;min-height:0}
+ body:has(.d-app)>div[style*="z-index: 9000"]:not(.zd)>div>div>div:has(>div[style*="cursor:"])>div:last-child{grid-column:2;grid-row:1 / span 2;min-height:0;overflow:auto;padding:18px!important;border-top:0!important;border-left:1px solid #e8ebf0!important}
+}
+@media(min-width:900px) and (max-width:1100px){
+ body:has(.d-app)>.zd{padding:14px}
+ body:has(.d-app)>.zd .app{grid-template-columns:minmax(0,1fr) 300px}
+ body:has(.d-app)>.zd .sheet,body:has(.d-app)>.zd .app[data-stage="3"] .sheet{padding:14px}
+ body:has(.d-app)>div[style*="z-index: 9000"]:not(.zd){inset:14px!important;width:calc(100vw - 28px)!important;height:calc(100dvh - 28px)!important}
+ body:has(.d-app)>div[style*="z-index: 9000"]:not(.zd)>div[style*="z-index: 9000"]>div:last-child{grid-template-columns:minmax(300px,360px) minmax(0,1fr);gap:12px 18px;padding:18px!important}
+}
+@media(max-width:600px){
+ .dd-body{padding:22px 18px 18px}
+ .dd-form-grid{gap:11px}
+ .dd-heading{margin-bottom:19px;padding-right:17px}
+ .dd-heading h2{font-size:16px}
+ .dd-event-kinds{gap:5px}
+ .dd-event-kinds>button{font-size:10px;gap:4px;padding:0 4px}
+ .dd-event-kinds>button>svg{width:14px}
+ .dd-footer{align-items:flex-start;gap:9px}
+ .dd-footer>div{gap:6px}
+ .dd-footer .d-btn{padding:0 10px;font-size:11px}
+ .dd-text-danger{font-size:0;min-height:36px;padding:0 7px}
+ .dd-text-danger>svg{width:17px;height:17px}
+}

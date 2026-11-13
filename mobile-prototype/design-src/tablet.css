@@ -1,0 +1,64 @@
+/* One application viewport; the original prototype's hardware frame stays out of the UI. */
+html,body{margin:0;width:100%;height:100%;overflow:hidden}
+.z-design-shell{padding:0!important;min-height:0!important;width:100%;height:100dvh;display:block!important}
+[data-zamer-device-frame]{max-width:none!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+[data-zamer-frame-chrome],.z-status-spacer{display:none!important}
+[data-zamer-frame-body],[data-zamer-frame-content]{height:100%;min-height:0;overflow:hidden!important}
+.z-app-shell{--z-tablet-focus:#1461ee;--z-tablet-divider:#ececf4}
+.z-app-shell[data-zamer-dark="true"]{--z-tablet-focus:#8c8aff;--z-tablet-divider:#343a48}
+.z-app-shell,.z-screen-stack{width:100%;min-width:0;min-height:0}
+.z-screen{min-width:0;min-height:0}
+.z-screen-body{min-width:0;min-height:0;overscroll-behavior:contain}
+.z-sheet-panel{min-width:0}
+.z-project-totals{width:100%!important;height:auto!important}
+.z-project-totals>div{width:auto!important;height:auto!important}
+.z-screen :is(button,input,textarea){font-family:inherit}
+.z-screen :is(button,input,textarea):focus-visible,.z-sheet :is(button,input,textarea):focus-visible{outline:2px solid var(--z-tablet-focus);outline-offset:2px}
+
+@media(min-width:701px){
+  .z-screen-header{min-height:72px;padding-top:max(12px,env(safe-area-inset-top))!important;padding-bottom:12px!important}
+  .z-screen-body{padding-top:20px!important}
+  .z-screen-footer{padding-top:12px!important;padding-bottom:max(12px,env(safe-area-inset-bottom))!important}
+  .z-screen-footer>button{max-width:360px}
+  .z-screen input,.z-screen textarea,.z-sheet input,.z-sheet textarea{font-size:16px!important}
+  .z-screen button,.z-sheet button{min-height:44px}
+  .z-screen :is(.z-line-toggle,.z-line-edit,.z-reset),.z-sheet :is(.z-line-toggle,.z-line-edit,.z-reset){min-height:0}
+  .z-project-grid{gap:12px!important}
+  .z-project-totals{padding:20px!important}
+  .z-calendar-month{max-width:560px;margin:0 auto 20px!important;width:100%}
+  .z-calendar-agenda{min-width:0}
+  .z-sheet{justify-content:center!important;padding:24px}
+  .z-sheet-panel{width:100%!important;max-width:560px!important;max-height:calc(100% - 8px)!important;border-radius:20px!important;overflow-y:auto;overscroll-behavior:contain}
+  .z-ui[role="dialog"]{width:calc(100% - 48px)!important;max-width:560px!important;max-height:calc(100dvh - 48px)!important;margin:auto!important;border-radius:20px!important}
+  .z-ui[role="dialog"] input,.z-ui[role="dialog"] textarea{font-size:16px!important}
+  .z-ui[role="dialog"] button{min-height:44px}
+  [data-zamer-sheet="sheetEstimate"] .z-sheet-panel{max-width:960px!important;height:100%!important}
+  [data-zamer-sheet="sheetInstall"] .z-sheet-panel{max-width:640px!important}
+  .z-nom-categories{width:144px!important;padding:12px 8px 90px!important;gap:6px!important}
+  .z-nom-categories>div{min-height:58px}
+  .z-nom-category{flex-direction:row!important;align-items:center!important;gap:8px!important;padding:10px 6px!important}
+  .z-nom-category-label{max-width:none!important;font-size:12px!important;text-align:left!important;line-height:1.35!important;-webkit-line-clamp:3!important}
+  .z-nom-list{padding:20px 24px 100px!important}
+  .z-nom-list>div{min-width:0}
+  [data-zamer-screen="btn-ed"] .z-screen-body{padding-bottom:24px!important}
+  [data-zamer-screen="new"] .z-screen-footer,[data-zamer-screen="new-block"] .z-screen-footer{align-items:center}
+  [data-zamer-screen="new"] .z-screen-footer>button,[data-zamer-screen="new-block"] .z-screen-footer>button{width:100%;align-self:center}
+  [data-zamer-screen="add-room"] .z-screen-body{padding-top:28px!important}
+}
+
+@media(min-width:960px){
+  .z-screen:has(>.z-main-nav){padding-left:76px}
+  .z-main-nav{left:0!important;right:auto!important;top:0!important;bottom:0!important;width:76px;z-index:6;align-items:stretch!important}
+  .z-main-nav-surface{height:100%;border-top:0!important;border-right:1px solid var(--z-tablet-divider);backdrop-filter:none!important}
+  .z-main-nav .z-main-nav-items{height:100%;flex-direction:column;align-items:stretch!important;justify-content:flex-start;padding:14px 6px!important;gap:8px}
+  .z-main-nav .z-nav-item{flex:none!important;min-height:68px;justify-content:center;padding:10px 2px!important;border-radius:12px;font-size:10px!important;gap:6px!important}
+  .z-main-nav [data-zamer-nav="goNew"]{margin:12px 0!important}
+  .z-main-nav [data-zamer-nav="goNew"]>div{width:42px!important;height:42px!important;margin-top:0!important;border-radius:14px!important;box-shadow:none!important}
+  .z-screen:has(>.z-main-nav)>.z-screen-body{padding-bottom:28px!important}
+  .z-dashboard-metrics,.z-finance-metrics,.z-analytics-metrics{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:12px!important}
+  [data-zamer-screen="calendar"] .z-screen-body{display:grid;grid-template-columns:minmax(320px,520px) minmax(280px,1fr);align-content:start;align-items:start;gap:24px}
+  .z-calendar-month{position:sticky;top:0;margin:0!important}
+  .z-nom-categories{width:168px!important}
+}
+
+@media(prefers-reduced-motion:reduce){.z-screen,.z-sheet-panel{animation:none!important;scroll-behavior:auto!important}}

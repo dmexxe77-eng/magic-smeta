@@ -65,24 +65,26 @@ export function validateDesignSnapshot(value) {
 }
 
 /** Keep a full snapshot, retry failed writes and report at most once per editor session. */
-export function createDesignStorage({ storage, getStorage = () => globalThis.localStorage, onError = () => {} } = {}) {
+export function createDesignStorage({ storage, getStorage = () => globalThis.localStorage, onError = () => {}, validateSnapshot = validateDesignSnapshot } = {}) {
   let lastSaved = null;
   let reported = false;
+  let lastError = null;
   const report = action => {
     if (reported) return;
     reported = true;
     onError(action === 'load'
       ? 'Не удалось восстановить данные редактора. Открыты исходные данные.'
-      : 'Не удалось сохранить изменения на этом устройстве. Проверьте свободное место и доступ к хранилищу.');
+      : lastError?.message || 'Не удалось сохранить изменения на этом устройстве. Проверьте свободное место и доступ к хранилищу.');
   };
   const access = () => storage ?? getStorage();
   return {
+    get error() {return lastError;},
     load() {
       try {
         const raw = access().getItem(DESIGN_STORAGE_KEY);
         if (raw == null) return null;
         const value = JSON.parse(raw);
-        if (!validateDesignSnapshot(value)) throw new Error('Invalid mobile snapshot');
+        if (!validateSnapshot(value)) throw new Error('Invalid mobile snapshot');
         lastSaved = JSON.stringify(value);
         return value;
       } catch {
@@ -92,13 +94,21 @@ export function createDesignStorage({ storage, getStorage = () => globalThis.loc
     },
     save(value) {
       try {
-        if (!validateDesignSnapshot(value)) throw new Error('Invalid mobile snapshot');
+        if (!validateSnapshot(value)) {
+          lastError = {kind:'validation',message:'Не удалось сохранить: в данных есть некорректная позиция или пресет. Изменения оставлены в редакторе.'};
+          report('save');return false;
+        }
         const raw = JSON.stringify(value);
-        if (raw === lastSaved) return true;
+        if (raw === lastSaved) {lastError = null;return true;}
         access().setItem(DESIGN_STORAGE_KEY, raw);
         lastSaved = raw;
+        lastError = null;
         return true;
-      } catch {
+      } catch (error) {
+        const quota = error?.name === 'QuotaExceededError' || error?.code === 22 || error?.code === 1014;
+        lastError = {kind:quota?'quota':'storage',message:quota
+          ? 'Не удалось сохранить: закончилось место в хранилище браузера. Изменения оставлены в редакторе.'
+          : 'Не удалось сохранить: браузер запретил запись данных. Изменения оставлены в редакторе.'};
         report('save');
         return false;
       }

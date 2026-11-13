@@ -1,3 +1,4 @@
+export { roomDrawingPreview as preview } from './room-drawing-preview.js';
 import { createDrawEditor } from './drawEditor/editor.js';
 import { fitToStage } from './stage.js';
 import './drawEditor/editor.css';
@@ -22,6 +23,7 @@ export function open(opts = {}) {
   let ed = null;
   const close = () => { if (ed) { ed.destroy(); ed = null; } unfit(); host.remove(); };
   ed = createDrawEditor(host, {
+    mobileWorkflow: true,
     roomName: opts.roomName,
     canvasLook: opts.canvasLook,
     initial: opts.initial || null,

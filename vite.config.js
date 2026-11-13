@@ -9,7 +9,9 @@ export default defineConfig({
     rollupOptions: {
       input: {
         launcher: resolve(__dirname, "index.html"),
-        app: resolve(__dirname, "app/index.html")
+        app: resolve(__dirname, "app/index.html"),
+        concept: resolve(__dirname, "concept/index.html"),
+        online: resolve(__dirname, "online/index.html")
       }
     }
   },

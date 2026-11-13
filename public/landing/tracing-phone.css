@@ -1,0 +1,58 @@
+/* A compact tracing workspace; the drawing and playback keep their existing IDs. */
+.tracing-visual { width: 336px; min-width: 0; justify-self: center; }
+.trace-phone { position: relative; width: 336px; height: 680px; padding-top: 28px; border: 8px solid #202b3c; border-radius: 42px; background: #fff; outline: 1px solid #5b6b8540; box-shadow: inset 0 0 0 1px #ffffffc2, 0 2px 0 2px #e1e8f2, 0 30px 55px -28px #233f734d; overflow: hidden; isolation: isolate; }
+.trace-phone-island { position: absolute; z-index: 2; top: 9px; left: 50%; width: 91px; height: 23px; transform: translateX(-50%); border-radius: 15px; background: #202936; pointer-events: none; }
+.trace-phone .trace-demo { display: flex; flex-direction: column; width: 100%; max-width: none; height: 100%; min-height: 0; margin: 0; border: 0; border-radius: 30px; box-shadow: none; background: #fff; }
+.trace-phone .trace-demo-header { flex-shrink: 0; min-height: 56px; gap: 9px; padding: 9px 12px; }
+.trace-phone .file-icon { padding: 8px; border-radius: 8px; color: #3c70bd; background: #eff5ff; }
+.trace-phone .file-icon .icon { width: 18px; height: 18px; }
+.trace-phone .trace-demo-header b { font-size: 12px; line-height: 1.5; }
+.trace-phone .trace-demo-header div>span { margin-top: 1px; color: #62738e; font-size: 11px; line-height: 1.5; }
+.trace-phone .file-format { color: #62738e; font-size: 11px; }
+
+.trace-phone .trace-canvas { display: flex; flex-direction: column; flex: 0 0 288px; min-height: 0; padding: 0; background: #fbfcff; }
+.trace-phone .trace-stage { order: -1; position: static; flex-shrink: 0; min-height: 36px; margin: 0; padding: 8px 12px; border: 0; border-bottom: 1px solid #e2ebfa; border-radius: 0; color: #355f9c; background: #eef4ff; font-size: 11px; font-weight: 700; line-height: 1.7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.trace-phone .plan-stamp { flex-shrink: 0; margin: 0; padding: 7px 12px 0; color: #62738e; font-size: 11px; line-height: 1.6; }
+.trace-phone .apartment-plan { flex: 1; min-height: 0; width: 100%; height: 0; color: #8798b1; }
+.trace-phone .trace-rooms text { font-size: 22px; }
+.trace-phone .trace-rooms .trace-room-label { display: none; }
+.trace-phone .trace-counter { position: static; flex-shrink: 0; align-self: flex-end; gap: 6px; margin: 3px 12px 8px; padding: 3px 7px; border-radius: 6px; font-size: 11px; line-height: 1.6; }
+.trace-phone .trace-counter .icon { width: 14px; height: 14px; }
+.trace-phone .trace-counter>span { color: #5c708f; }
+
+.trace-phone .trace-room-editor-slot { flex: 0 0 78px; min-height: 0; padding: 10px 12px; background: #fff; }
+.trace-phone .trace-room-editor { gap: 8px; align-items: flex-end; }
+.trace-phone .trace-room-editor label { gap: 4px; color: #526a8e; font-size: 11px; line-height: 1.5; }
+.trace-phone .trace-room-editor input { height: 36px; padding: 6px 8px; border-color: #ccdbf0; font-size: 16px; line-height: 1.4; }
+.trace-phone .trace-add-room { flex: 0 0 132px; min-height: 36px; padding: 5px 7px; gap: 5px; border-radius: 7px; color: #45658f; background: #f1f5fc; font-size: 11px; line-height: 1.3; text-align: center; white-space: normal; }
+.trace-phone .trace-add-room .icon { width: 13px; height: 13px; }
+.trace-phone .trace-add-room.is-confirming { color: #fff; background: var(--accent); }
+.trace-phone .trace-editor-hint { padding: 10px 18px; color: #617692; font-size: 11px; line-height: 1.8; }
+
+.trace-phone .trace-project-progress { display: flex; flex-direction: column; flex: 1; min-height: 84px; padding: 10px 12px; overflow: hidden; background: #f7f9fe; }
+.trace-phone .trace-project-progress>div { flex-shrink: 0; gap: 9px; color: #4e688e; font-size: 11px; line-height: 1.6; }
+.trace-phone #trace-progressbar { height: 5px; }
+.trace-phone .trace-added-rooms { flex: 1; flex-direction: column; flex-wrap: nowrap; gap: 4px; min-height: 0; max-height: none; margin-top: 8px; overscroll-behavior: contain; }
+.trace-phone .trace-added-rooms:empty:after { padding-block: 3px; color: #62738e; font-size: 11px; line-height: 1.8; }
+.trace-phone .trace-added-rooms li { flex-shrink: 0; gap: 7px; padding: 4px 7px; border-radius: 6px; background: #fff; font-size: 11px; line-height: 1.6; }
+.trace-phone .trace-added-rooms li .trace-room-title { flex: 1; }
+.trace-phone .trace-added-rooms li .trace-room-area { white-space: nowrap; }
+.trace-phone .trace-added-rooms li:last-child { background: #eaf2ff; border-color: #d1e1f8; }
+
+.trace-phone .trace-demo-footer { display: block; flex-shrink: 0; padding: 10px 12px 8px; background: #fff; }
+.trace-phone .trace-demo-footer p { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; clip-path: inset(50%); overflow: hidden; white-space: nowrap; }
+.trace-phone .trace-demo-footer .button { width: 100%; min-height: 42px; padding: 9px 12px; gap: 8px; border-radius: 9px; font-size: 12px; line-height: 1.5; }
+.trace-phone .trace-demo-footer .button .icon { width: 16px; height: 16px; }
+.trace-phone .trace-playback-controls { flex-shrink: 0; min-height: 34px; gap: 10px; padding: 0 12px 8px; background: #fff; }
+.trace-phone .trace-playback-controls>span { display: none; }
+.trace-phone .trace-playback-controls button { min-height: 26px; padding: 4px 0; color: #245acb; font-size: 11px; line-height: 1.6; }
+.trace-phone .trace-demo-footer .button:focus-visible { outline-offset: 2px; }
+.trace-phone .trace-playback-controls button:focus-visible { outline-offset: 2px; }
+.trace-phone-caption { margin-top: 17px; color: #5d7091; font-size: 11px; line-height: 1.8; text-align: center; }
+
+@media (max-width: 760px) {
+  .tracing-visual { width: 100%; max-width: 420px; }
+  .trace-phone { width: 100%; height: 620px; padding: 0; border: 1px solid #d1dff4; border-radius: 17px; outline: none; box-shadow: 0 18px 40px -26px #2856a04d, 0 1px 3px #254e8c08; }
+  .trace-phone-island { display: none; }
+  .trace-phone .trace-demo { border-radius: 16px; }
+}

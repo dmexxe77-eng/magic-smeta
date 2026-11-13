@@ -1,0 +1,51 @@
+.d-object-statistics dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;margin:8px 22px 28px}
+.d-object-statistics dl>div+div{border-left:1px solid var(--d-line);padding-left:24px}
+.d-object-statistics dt{font-size:12px;color:#596b83;margin-bottom:10px}
+.d-object-statistics dd{margin:0;font-size:30px;font-weight:700;letter-spacing:-.025em;font-variant-numeric:tabular-nums;color:#1b2737}
+.d-object-statistics dd small{font-size:15px;color:#596b83;font-weight:500}
+.d-object-statistics>p{margin:0 22px 20px;font-size:12px;color:#596b83}
+.d-room-navigation{grid-column:1/-1;min-width:0;overflow:hidden}
+.d-room-navigation .d-section-heading{padding-bottom:13px}
+.d-room-navigation-actions{display:flex;gap:6px;align-items:center;margin-left:auto}
+.d-room-navigation-actions .d-btn{margin-left:6px}
+.d-room-navigation-actions button:disabled{opacity:.35;cursor:default}
+.d-room-tabs{position:relative;display:flex;gap:8px;overflow-x:auto;scrollbar-width:thin;scrollbar-color:#bac9de transparent;padding:0 20px 14px;scroll-padding-inline:20px}
+.d-room-tabs>button{flex:0 0 auto;max-width:270px;text-align:left;border:1px solid #dce4ef;border-radius:8px;padding:10px 14px;background:#fff;color:#354b67;cursor:pointer;min-height:58px}
+.d-room-tabs>button b{display:block;font-size:12px;line-height:1.5;max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:650}
+.d-room-tabs>button span{display:block;font-size:11px;color:#596b83;margin-top:3px;font-variant-numeric:tabular-nums}
+.d-room-tabs>button:hover{background:#f5f8fd;border-color:#afc4e4}
+.d-room-tabs>button.is-selected{background:#e7effd;border-color:#8eb4f8;color:#1461ee}
+.d-room-tabs>button.is-selected span{color:#365f9f}
+.d-preset-buttons{display:flex;flex-wrap:wrap;gap:7px;flex:1;min-width:0}
+.d-preset-buttons>button{border:1px solid #dce4ef;border-radius:7px;background:#fff;color:#354b67;font-family:inherit;font-size:12px;font-weight:600;line-height:1.4;padding:8px 12px;cursor:pointer;min-height:34px}
+.d-preset-buttons>button:hover{background:#f4f7fc;border-color:#afc4e4}
+.d-preset-buttons>button.is-selected{background:#e7effd;border-color:#1461ee;color:#1461ee}
+.d-preset-unavailable{font-size:12px;padding:8px;color:#596b83}
+.d-instance-toolbar{align-items:flex-start}
+.d-instance-toolbar>.d-btn,.d-instance-toolbar>.d-icon-btn{flex-shrink:0}
+.d-calculator .d-drawing-canvas{min-height:210px;height:clamp(210px,25vw,300px)}
+.d-template-editor.d-dialog{width:min(1100px,calc(100vw - 48px));max-width:none;padding:0;overflow:hidden}
+.d-template-editor>header{padding:24px 28px 20px;border-bottom:1px solid var(--d-line)}
+.d-template-editor>header h2{font-size:20px;margin:0 0 6px}
+.d-template-editor>header p{font-size:12px;color:#596b83;margin:0}
+.d-template-body{display:grid;grid-template-columns:300px minmax(0,1fr);min-height:0;max-height:calc(90vh - 170px);overflow:auto}
+.d-template-fields{padding:24px;display:flex;flex-direction:column;gap:20px;border-right:1px solid var(--d-line)}
+.d-template-fields>label,.d-template-logo{display:flex;flex-direction:column;gap:8px;font-size:12px;font-weight:600;color:#354b67}
+.d-template-fields input:not([type=checkbox]):not([type=file]):not([type=color]),.d-template-fields textarea{width:100%;border:1px solid #d8e1ee;border-radius:7px;padding:10px;font:inherit;background:#fff;color:#1b2737;resize:vertical}
+.d-template-fields input:focus-visible,.d-template-fields textarea:focus-visible{outline:2px solid #1461ee;outline-offset:2px}
+.d-template-colors{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.d-template-colors label{font-size:12px;color:#354b67;display:flex;flex-direction:column;gap:8px}
+.d-template-colors input{width:100%;height:38px;border:1px solid #d8e1ee;border-radius:6px;background:#fff;padding:4px;cursor:pointer}
+.d-template-fields .d-checkbox-label{display:flex;flex-direction:row;align-items:center;font-weight:500;font-size:12px;line-height:1.5}
+.d-template-logo small,.d-template-hint{font-size:11px;color:#596b83;line-height:1.6;font-weight:400;margin:0}
+.d-template-preview{padding:22px;background:#edf1f7;min-width:0;overflow:hidden}
+.d-template-preview>div:first-child{font-size:12px;color:#596b83;margin-bottom:12px}
+.d-template-preview-scroll{max-height:450px;overflow:auto;scrollbar-width:thin;scrollbar-color:#bac9de transparent}
+.d-template-editor>footer{display:flex;justify-content:flex-end;gap:10px;padding:16px 24px;border-top:1px solid var(--d-line);background:#fff}
+@media(max-width:900px){.d-template-body{grid-template-columns:250px minmax(0,1fr)}.d-template-fields{padding:18px}.d-template-preview{padding:16px}}
+@media(max-width:650px){.d-room-navigation .d-section-heading{gap:8px}.d-room-navigation-actions .d-btn{font-size:0;gap:0;padding:8px}.d-room-tabs{padding-inline:14px}.d-object-statistics dl{gap:12px;margin-inline:16px}.d-object-statistics dl>div+div{padding-left:12px}.d-object-statistics dt{font-size:10px}.d-object-statistics dd{font-size:24px}.d-template-body{grid-template-columns:1fr;max-height:calc(90vh - 185px)}.d-template-editor.d-dialog{width:calc(100vw - 24px)}.d-template-preview-scroll{max-height:320px}.d-instance-toolbar{flex-wrap:wrap}.d-preset-buttons{flex-basis:100%}}
+/* Project identity represents the entire object, rather than one of its ceilings. */
+.d-project-identity{display:flex;align-items:center;justify-content:center;width:100%;height:100%;min-height:40px;border-radius:7px;font-size:17px;font-weight:750;letter-spacing:-.02em}.d-project-thumbnail{border:0;background:transparent;width:48px;height:48px}.d-board-project>.d-project-identity{width:40px;height:40px;min-height:40px;font-size:15px}.d-project-adjustments{display:flex;flex-direction:column;align-items:flex-end;gap:3px;max-width:300px;white-space:normal;margin-top:6px}.d-project-adjustments>span{font-size:10px;line-height:1.5;color:#5d6e84}.d-project-adjustments>span.is-discount{color:#1461ee}
+/* A fieldset legend must not float beside the first checkbox. */
+.d-export-panel fieldset.d-export-columns{min-width:0;border-bottom:0;margin:0}.d-export-panel .d-export-columns>legend{float:none;display:block;width:auto;margin:0 0 12px;font-size:11px}.d-export-column-list{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px 14px;clear:both}.d-export-columns .d-checkbox-label{display:flex;align-items:center;gap:8px;min-width:0;margin:0;font-size:11px;color:#526d8d;line-height:1.5}.d-export-columns .d-checkbox-label>input{width:15px;height:15px;flex:0 0 15px;margin:0;accent-color:#1461ee}.d-export-columns .d-checkbox-label>span{min-width:0;overflow-wrap:anywhere}
+@media(max-width:760px){.d-project-adjustments{align-items:flex-start}.d-project-thumbnail{display:flex;width:40px;height:40px}.d-project-identity{font-size:15px}}

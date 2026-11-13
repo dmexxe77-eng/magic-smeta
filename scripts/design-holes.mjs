@@ -29,7 +29,7 @@ export function holesTemplate(source) {
 /* Методы прототипа, которые сборка добавляет сама: построитель отдаёт res.holes — сохраняем их в помещении */
 export function holesMethods(methods) {
   const from = "initial:r?{verts:r.v}:null,";
-  const to = "initial:r?{verts:r.v,draw:r.draw||null}:null,";
+  const to = "initial:r?{verts:r.v,holes:r.holes||[],draw:r.draw||null}:null,";
   const save = "Object.assign({},q,{name:res.name,v:res.verts})";
   const save2 = "Object.assign({},q,{name:res.name,v:res.verts,holes:res.holes&&res.holes.length?res.holes:undefined,draw:res.draw||null})";
   const mk1 = "else{const rm=mk(res.name,res.verts);self.upd";

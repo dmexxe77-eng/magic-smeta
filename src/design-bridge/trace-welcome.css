@@ -1,0 +1,264 @@
+.trace-welcome,
+.trace-welcome * {
+  box-sizing: border-box;
+}
+
+.trace-welcome {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: #f3f3fa;
+  color: #0f1620;
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+}
+
+.trace-welcome button {
+  font-family: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.trace-welcome button:focus-visible {
+  outline: 2px solid #1461ee;
+  outline-offset: 3px;
+}
+
+.trace-welcome-header {
+  display: flex;
+  align-items: center;
+  flex: none;
+  gap: 12px;
+  padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 10px;
+  background: #fff;
+  border-bottom: 1px solid #ececf4;
+}
+
+.trace-welcome-back {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: #f3f3fa;
+  color: #0f1620;
+}
+
+.trace-welcome-header h1 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.trace-welcome-header p {
+  margin: 2px 0 0;
+  color: #6f7688;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.trace-welcome-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.trace-welcome-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 16px 16px calc(24px + env(safe-area-inset-bottom, 0px));
+}
+
+.trace-welcome-upload-card {
+  overflow: hidden;
+  border-radius: 20px;
+  background: #fff;
+}
+
+.trace-welcome-art {
+  position: relative;
+  aspect-ratio: 1.35;
+  overflow: hidden;
+  background: #f3f7fd;
+}
+
+.trace-welcome-art img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.trace-welcome-art::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 50px;
+  background: linear-gradient(transparent, #fff);
+  pointer-events: none;
+}
+
+.trace-welcome-upload-content {
+  position: relative;
+  padding: 0 16px 17px;
+  margin-top: -29px;
+  text-align: center;
+}
+
+.trace-welcome-upload {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 50px;
+  padding: 13px 14px;
+  border: 0;
+  border-radius: 14px;
+  background: #1461ee;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.4;
+  transition: background-color 150ms ease, transform 150ms ease;
+}
+
+.trace-welcome-upload svg {
+  flex: none;
+}
+
+.trace-welcome-upload:hover {
+  background: #1055d5;
+}
+
+.trace-welcome-upload:active {
+  transform: scale(.985);
+}
+
+.trace-welcome-formats {
+  margin: 12px 0 0;
+  color: #6f7688;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.trace-welcome-file-note {
+  margin: 3px 0 0;
+  color: #6f7688;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.trace-welcome-error {
+  margin: 12px 0 0;
+  color: #c92a22;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.trace-welcome-guide {
+  padding: 16px;
+  border-radius: 20px;
+  background: #fff;
+}
+
+.trace-welcome-guide h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.trace-welcome-guide ol {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin: 18px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trace-welcome-guide li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.trace-welcome-step {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: #e7effd;
+  color: #1461ee;
+  font-size: 10.5px;
+  font-weight: 800;
+}
+
+.trace-welcome-guide h3 {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.trace-welcome-guide li p {
+  margin: 3px 0 0;
+  color: #6f7688;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.trace-welcome-result {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 12px;
+  border-radius: 12px;
+  background: #f0f5fe;
+  color: #1461ee;
+}
+
+.trace-welcome-result svg {
+  flex: none;
+}
+
+.trace-welcome-result p {
+  margin: 0;
+  color: #42618d;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+@media (min-width: 701px) {
+  .trace-welcome-header {
+    min-height: 64px;
+    padding: calc(12px + env(safe-area-inset-top, 0px)) 20px 12px;
+  }
+
+  .trace-welcome-content {
+    padding-top: 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trace-welcome-upload {
+    transition: none;
+  }
+}

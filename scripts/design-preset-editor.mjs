@@ -94,8 +94,9 @@ const METHODS = String.raw`
       this._presetDraft=null;this.setState({projects:JSON.parse(JSON.stringify(snapshot.projects))});
     }
     this._presetDraft=null;
-    if(save&&!this.saveDesign()){this._presetDraft=draft;this.toast('Не удалось сохранить. Попробуйте ещё раз.');return;}
+    if(save&&!this.saveDesign()){if(draft)draft.commitFailed=true;this._presetDraft=draft;this.toast(DESIGN_STORE.error?.message||'Не удалось сохранить. Попробуйте ещё раз.');return false;}
     this.go(from,{be:null,editLine:null,normForm:null});
+    return true;
   }
   presetEditorVals(){
     const s=this.state,be=s.be||{},flags={peSettings:false,peDeleteConfirm:false,peNorm:false,peOrder:false,peHelp:false};

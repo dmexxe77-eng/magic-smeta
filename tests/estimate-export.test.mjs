@@ -203,3 +203,25 @@ test('mixed adjustments are disclosed or folded by group with identical project 
   assert.equal(groups.reduce((total, group) => total + sum(group.mats) + sum(group.works) + sum(group.equipment), 0), 3600000);
   assert.equal(source.mats[0].p, 10000);
 });
+
+test('all eight group visibility combinations reconcile rows, corrections, rooms and total', () => {
+  const source = { mats: [{k:'a',q:1.333,p:101.17}], works:[{k:'b',q:3.477,p:77.73}],equipment:[{k:'c',q:3,p:.01}] };
+  const snapshot = structuredClone(source);
+  const rooms = [1,2,3].map(id => ({id,est:structuredClone(source)}));
+  for (const adjustment of [{scope:'all',percent:11},{scope:'works',rates:{mats:-5,works:10,equipment:-10}}]) {
+    for (let mask = 0; mask < 8; mask++) {
+      const flags = Object.fromEntries(['mats','works','equipment'].map((key,index)=>[key,!!(mask & 1 << index)]));
+      const prepared = prepareEstimateExport(source, adjustment, flags);
+      assertRowsAddUp(prepared);
+      const corrections = Object.values(prepared.categoryAdjustments);
+      assert.equal(sum(prepared.mats)+sum(prepared.works)+sum(prepared.equipment)+corrections.reduce((s,c)=>s+cents(c.amount),0), cents(prepared.totals.adjustedTotal));
+      const groups = partitionEstimateExport(prepared, rooms);
+      assert.equal(groups.reduce((s,g)=>s+Object.values(g.categoryAdjustments).reduce((n,c)=>n+cents(c.adjustedTotal),0),0), cents(prepared.totals.adjustedTotal));
+      for (const key of ['mats','works','equipment']) {
+        assert.equal(groups.reduce((s,g)=>s+cents(g.categoryAdjustments[key].amount),0),cents(prepared.categoryAdjustments[key].amount));
+        assert.equal(prepared.categoryAdjustments[key].shown,flags[key]);
+      }
+    }
+  }
+  assert.deepEqual(source,snapshot);
+});
