@@ -58,8 +58,8 @@ export function solveLin(A, b) { const n = b.length, M = A.map((r, i) => [...r, 
     const pv = M[c][c]; if (Math.abs(pv) < 1e-14) continue; for (let r = 0; r < n; r++) { if (r === c) continue; const f = M[r][c] / pv; if (!f) continue; for (let k = c; k <= n; k++) M[r][k] -= f * M[c][k]; } }
   return M.map((r, i) => Math.abs(r[i]) < 1e-14 ? 0 : r[n] / r[i]); }
 export const sq = r => r.reduce((s, v) => s + v * v, 0);
-export function lm(X, f, iters = 60) { X = X.slice(); let lam = 1e-3, { r0, J } = jac(X, f), cost = sq(r0); const nv = X.length;
-  for (let it = 0; it < iters; it++) { if (cost < 1e-16) break;
+export function lm(X, f, iters = 60, costTolerance = 1e-16) { X = X.slice(); let lam = 1e-3, { r0, J } = jac(X, f), cost = sq(r0); const nv = X.length;
+  for (let it = 0; it < iters; it++) { if (cost < costTolerance) break;
     const A = [], g = new Float64Array(nv);
     for (let a = 0; a < nv; a++) { A.push(new Float64Array(nv)); }
     for (let k = 0; k < J.length; k++) { const row = J[k]; for (let a = 0; a < nv; a++) { const ra = row[a]; if (!ra) continue; g[a] += ra * r0[k]; for (let b = 0; b < nv; b++) A[a][b] += ra * row[b]; } }
@@ -131,30 +131,39 @@ export function turtleGuess(m, scale) { const n = m.n, pr = m.prior, wind = m.wi
 export function solveModel(m) { const scale = estScale(m), prior = turtleGuess(m, scale);
   let X = flat(prior); // старт от фигуры по длинам и поворотам: по мере ввода она не кривится и не складывается
   const cons = buildCons(m); X = lm(X, XX => resid(XX, cons, prior, m.wind));
-  m.sol = alignPts(toPts(X), m.vert); m.scale = scale; m.status = analyze(m, X); return m; }
+  let status = analyze(m, X);
+  // Эскиз выбирает близкую форму, пока размеров недостаточно. Когда фигура
+  // определена, убираем его штраф: пропорции наброска не должны искажать замер.
+  if (status.missing === 0) { X = lm(X, XX => resid(XX, cons, null, m.wind), 60, 1e-24); status = analyze(m, X); }
+  m.sol = alignPts(toPts(X), m.vert); m.scale = scale; m.status = status; return m; }
 
 // ───────── baked polygon: v[i] = {x,y,fillet,arc}; side i goes v[i]→v[i+1], its arc lives on v[i] ─────────
+// A micrometre of numerical radius noise may be clamped to the actual endpoint;
+// the tolerance never extends a tangent beyond its available wall.
+const FILLET_RADIUS_TOLERANCE = 1e-6;
 export const ptsOf = poly => poly.v.map(p => ({ x: p.x, y: p.y }));
-export function filletInfo(poly, i) { const P = ptsOf(poly), n = P.length, R = poly.v[i].fillet; if (!R) return null;
+export function filletInfo(poly, i) { const P = ptsOf(poly), n = P.length; let R = poly.v[i].fillet; if (!R) return null;
   const a = P[(i - 1 + n) % n], b = P[i], c = P[(i + 1) % n], u1 = norm(sub(a, b)), u2 = norm(sub(c, b));
   const phi = Math.acos(Math.max(-1, Math.min(1, dot(u1, u2)))); if (phi < 0.02 || phi > Math.PI - 0.02) return null;
+  const lp = hyp(a, b), ln = hyp(b, c), endpointRadius = Math.min(lp, ln) * Math.tan(phi / 2);
+  if (R > endpointRadius && R - endpointRadius <= FILLET_RADIUS_TOLERANCE) R = endpointRadius;
   const t = R / Math.tan(phi / 2), bis = norm(add(u1, u2)), C = add(b, mul(bis, R / Math.sin(phi / 2)));
-  return { R, t, C, T1: add(b, mul(u1, t)), T2: add(b, mul(u2, t)), phi, lp: hyp(a, b), ln: hyp(b, c) }; }
+  return { R, t, C, T1: add(b, mul(u1, t)), T2: add(b, mul(u2, t)), phi, lp, ln }; }
 export function arcInfo(poly, i) { const P = ptsOf(poly), n = P.length, arc = poly.v[i].arc; if (!arc) return null;
   const A = P[i], B = P[(i + 1) % n], c = hyp(A, B), h = arc.h; if (!(h > 0) || c <= 0) return null;
   const R = c * c / (8 * h) + h / 2, M = mul(add(A, B), .5), nO = outNormal(P, i), d = arc.dir === 'out' ? nO : mul(nO, -1);
   const apex = add(M, mul(d, h)), C = sub(M, mul(d, R - h)), alpha = 2 * Math.asin(Math.min(1, c / (2 * R))), ang = h > R ? TAU - alpha : alpha;
   return { R, h, C, apex, ang, len: R * ang, c, dir: arc.dir }; }
-export function flatten(poly, stepDeg = 3) { const P = ptsOf(poly), n = P.length, out = [];
+export function flatten(poly, stepDeg = 3, cornerOwner) { const P = ptsOf(poly), n = P.length, out = [];
   for (let i = 0; i < n; i++) { const fi = filletInfo(poly, i);
     if (fi) { const a1 = Math.atan2(fi.T1.y - fi.C.y, fi.T1.x - fi.C.x), a2 = Math.atan2(fi.T2.y - fi.C.y, fi.T2.x - fi.C.x), sw = wrap(a2 - a1);
       const steps = Math.max(3, Math.ceil(Math.abs(sw) * DEG / stepDeg));
-      for (let k = 0; k <= steps; k++) { const a = a1 + sw * k / steps; out.push({ x: fi.C.x + fi.R * Math.cos(a), y: fi.C.y + fi.R * Math.sin(a) }); } }
-    else out.push({ x: P[i].x, y: P[i].y });
+      for (let k = 0; k <= steps; k++) { const a = a1 + sw * k / steps; out.push({ x: fi.C.x + fi.R * Math.cos(a), y: fi.C.y + fi.R * Math.sin(a) }); cornerOwner?.(i); } }
+    else { out.push({ x: P[i].x, y: P[i].y }); cornerOwner?.(null); }
     const ai = arcInfo(poly, i);
     if (ai) { const A = P[i], a1 = Math.atan2(A.y - ai.C.y, A.x - ai.C.x), at = s => ({ x: ai.C.x + ai.R * Math.cos(a1 + s), y: ai.C.y + ai.R * Math.sin(a1 + s) });
       let sw = ai.ang; if (hyp(at(sw / 2), ai.apex) > hyp(at(-sw / 2), ai.apex)) sw = -sw;
-      const steps = Math.max(4, Math.ceil(Math.abs(sw) * DEG / stepDeg)); for (let k = 1; k < steps; k++) out.push(at(sw * k / steps)); } }
+      const steps = Math.max(4, Math.ceil(Math.abs(sw) * DEG / stepDeg)); for (let k = 1; k < steps; k++) { out.push(at(sw * k / steps)); cornerOwner?.(null); } } }
   return out; }
 export function perimeterOf(P) { let p = 0; for (let i = 0; i < P.length; i++) p += hyp(P[i], P[(i + 1) % P.length]); return p; }
 export function polyStats(poly) { const F = flatten(poly), P = ptsOf(poly), wind = windOf(P); let inner = 0, outer = 0;
@@ -168,9 +177,99 @@ export function polyStats(poly) { const F = flatten(poly), P = ptsOf(poly), wind
 export function sideLen(poly, i) { const n = poly.v.length; return hyp(poly.v[i], poly.v[(i + 1) % n]); }
 export function bakeModel(m) { return { v: m.sol.map(p => ({ x: p.x, y: p.y, fillet: null, arc: null })) }; }
 
-// drop fillets that no longer fit; returns list of dropped letters
-export function checkFillets(q) { const dropped = []; q.v.forEach((p, i) => { if (!p.fillet) return; const fi = filletInfo(q, i);
-  if (!fi || fi.t > Math.min(fi.lp, fi.ln) / 2 + 1e-9) { p.fillet = null; dropped.push(L(i)); } }); return dropped; }
+// Available straight wall after the neighbouring rounded corners have taken their tangent lengths.
+export function filletLimit(poly, i) {
+  const n = poly.v.length;
+  if (!Number.isInteger(i) || i < 0 || i >= n) return null;
+  const before = (i - 1 + n) % n, after = (i + 1) % n;
+  if (poly.v[i].arc || poly.v[before].arc) return null;
+  const probe = { v: poly.v.map((p, k) => k === i ? { ...p, fillet: 1 } : p) }, fi = filletInfo(probe, i);
+  if (!fi) return null;
+  const occupiedBefore = filletInfo(poly, before)?.t || 0, occupiedAfter = filletInfo(poly, after)?.t || 0;
+  const availableT = Math.max(0, Math.min(fi.lp - occupiedBefore, fi.ln - occupiedAfter));
+  const maxRadius = availableT * Math.tan(fi.phi / 2);
+  return { phi: fi.phi, lp: fi.lp, ln: fi.ln, availableT, maxRadius, maxRadiusCm: Math.round(maxRadius * 1e6) / 1e4 };
+}
+
+// Keep arc ownership while checking the same flattened boundary used by the
+// preview. Shared tangent points remain valid; only participating radii are
+// candidates for cleanup when a later edit creates a crossing.
+function filletBoundaryIssues(poly) {
+  const epsilon = 1e-8, owners = [], samples = [];
+  const raw = flatten(poly, 2, corner => owners.push(corner));
+  raw.forEach((p, k) => {
+    const last = samples[samples.length - 1], owner = owners[k];
+    if (last && hyp(last.p, p) <= epsilon) { if (owner != null) last.corners.add(owner); }
+    else samples.push({ p, corners: new Set(owner == null ? [] : [owner]) });
+  });
+  if (samples.length > 1 && hyp(samples[0].p, samples[samples.length - 1].p) <= epsilon) {
+    for (const corner of samples.pop().corners) samples[0].corners.add(corner);
+  }
+  const corners = new Set();
+  if (samples.length < 3 || Math.abs(shoelace(samples.map(sample => sample.p))) < epsilon) {
+    poly.v.forEach((p, i) => { if (p.fillet) corners.add(i); });
+    return { count: 1, corners };
+  }
+  const segments = samples.map((sample, i) => { const next = samples[(i + 1) % samples.length], a = sample.p, b = next.p;
+    return { a, b, corners: [...sample.corners].filter(corner => next.corners.has(corner)),
+      x0: Math.min(a.x, b.x), x1: Math.max(a.x, b.x), y0: Math.min(a.y, b.y), y1: Math.max(a.y, b.y) }; });
+  const onSegment = (p, a, b) => Math.abs(cross(sub(b, a), sub(p, a))) <= epsilon * Math.max(1, hyp(a, b))
+    && p.x >= Math.min(a.x, b.x) - epsilon && p.x <= Math.max(a.x, b.x) + epsilon
+    && p.y >= Math.min(a.y, b.y) - epsilon && p.y <= Math.max(a.y, b.y) + epsilon;
+  let count = 0;
+  for (let i = 0; i < segments.length; i++) for (let j = i + 2; j < segments.length; j++) {
+    if (i === 0 && j === segments.length - 1) continue;
+    const a = segments[i], b = segments[j];
+    if (a.x1 < b.x0 - epsilon || b.x1 < a.x0 - epsilon || a.y1 < b.y0 - epsilon || b.y1 < a.y0 - epsilon) continue;
+    if (segX(a.a, a.b, b.a, b.b) || onSegment(a.a, b.a, b.b) || onSegment(a.b, b.a, b.b)
+      || onSegment(b.a, a.a, a.b) || onSegment(b.b, a.a, a.b)) {
+      count++; for (const corner of [...a.corners, ...b.corners]) corners.add(corner);
+    }
+  }
+  return { count, corners };
+}
+
+function filletGeometryIssues(poly) {
+  const boundary = filletBoundaryIssues(poly), corners = new Set(boundary.corners);
+  let count = boundary.count, message = 'Скругление пересекает контур помещения';
+  for (let i = 0; i < holesOf(poly).length; i++) { const error = holeError(poly, i);
+    if (error) { count++; message = error; poly.v.forEach((p, k) => { if (p.fillet) corners.add(k); }); }
+  }
+  return { count, corners, boundaryCount: boundary.count, message };
+}
+
+
+// Drop invalid corners first, then resolve shared-wall overlaps in vertex order.
+export function checkFillets(q) {
+  const dropped = [], remove = (p, i) => { p.fillet = null; dropped.push(L(i)); };
+  q.v.forEach((p, i) => { if (!p.fillet) return; const fi = filletInfo(q, i), n = q.v.length;
+    const maximum = fi ? Math.min(fi.lp, fi.ln) * Math.tan(fi.phi / 2) : 0;
+    if (!Number.isFinite(p.fillet) || p.fillet < 0 || !fi || q.v[i].arc || q.v[(i - 1 + n) % n].arc || !(maximum > 0) || p.fillet > maximum + FILLET_RADIUS_TOLERANCE) remove(p, i);
+    else if (p.fillet > maximum) p.fillet = maximum;
+  });
+  q.v.forEach((p, i) => { if (!p.fillet) return; const limit = filletLimit(q, i);
+    if (!limit || !(limit.maxRadius > 0) || p.fillet > limit.maxRadius + FILLET_RADIUS_TOLERANCE) remove(p, i);
+    else if (p.fillet > limit.maxRadius) p.fillet = limit.maxRadius;
+  });
+  if (q.v.some(p => p.fillet)) {
+    let issues = filletGeometryIssues(q);
+    while (issues.count) {
+      let best = null;
+      for (const i of [...issues.corners].sort((a, b) => a - b)) {
+        const radius = q.v[i].fillet; if (!radius) continue;
+        q.v[i].fillet = null;
+        const next = filletGeometryIssues(q);
+        q.v[i].fillet = radius;
+        if (!best || next.count < best.issues.count) best = { i, issues: next };
+      }
+      // A hole outside the unrounded room cannot be repaired by sacrificing
+      // unrelated valid corners. Reject that edit rather than guessing.
+      if (!best || (best.issues.count >= issues.count && issues.boundaryCount === 0)) throw new Error(issues.message);
+      remove(q.v[best.i], best.i); issues = best.issues;
+    }
+  }
+  return dropped;
+}
 
 // ───────── edit operations: (poly, …) → new poly, or throw Error(text) ─────────
 export function opDelete(poly, i) { if (poly.v.length <= 3) throw new Error('Меньше трёх углов оставить нельзя');
@@ -191,10 +290,13 @@ export function opLength(poly, i, end, newLen) { const P = ptsOf(poly), n = P.le
   if (Math.abs(s) < 0.05) throw new Error('Соседняя стена почти на одной линии, длину так не изменить');
   return opShift(poly, k, dl * s); }
 export function opFillet(poly, i, R) { const n = poly.v.length; if (poly.v[i].arc || poly.v[(i - 1 + n) % n].arc) throw new Error('Рядом дуга. Сначала уберите её');
+  if (R != null && (!Number.isFinite(R) || R < 0)) throw new Error('Радиус должен быть больше нуля');
   const q = clone(poly); q.v[i].fillet = R || null; if (!R) return q;
-  const fi = filletInfo(q, i); if (!fi) throw new Error('Этот угол нельзя скруглить');
-  const Rmax = Math.min(fi.lp, fi.ln) / 2 * Math.tan(fi.phi / 2);
-  if (fi.t > Math.min(fi.lp, fi.ln) / 2 + 1e-9) throw new Error(`Не помещается. Максимальный радиус ${cm(Rmax)} см`);
+  const fi = filletInfo(q, i), limit = filletLimit(q, i); if (!fi || !limit) throw new Error('Этот угол нельзя скруглить');
+  if (!(limit.maxRadius > 0) || R > limit.maxRadius + FILLET_RADIUS_TOLERANCE) throw new Error(`Не помещается. Максимальный радиус ${String(limit.maxRadiusCm).replace('.', ',')} см`);
+  if (R > limit.maxRadius) q.v[i].fillet = limit.maxRadius;
+  if (filletBoundaryIssues(q).count) throw new Error('Скругление пересекает контур помещения');
+  checkHoles(q);
   return q; }
 export function opArc(poly, i, mode, val, dir) { const n = poly.v.length; if (poly.v[i].fillet || poly.v[(i + 1) % n].fillet) throw new Error('На концах стены скругления. Сначала уберите их');
   const q = clone(poly); if (!val) { q.v[i].arc = null; return q; }
@@ -204,15 +306,25 @@ export function opArc(poly, i, mode, val, dir) { const n = poly.v.length; if (po
     for (let k = 0; k < 80; k++) { const x = (lo + hi) / 2; if (Math.sin(x) / x > r) lo = x; else hi = x; }
     const x = (lo + hi) / 2; if (x > Math.PI / 2 + 1e-6) throw new Error('Больше полукруга. Уменьшите длину дуги'); const R = c / (2 * Math.sin(x)); h = R * (1 - Math.cos(x)); }
   q.v[i].arc = { h, dir }; return q; }
-export function opBump(poly, i, fromEnd, off, width, depth, dir) { const P = ptsOf(poly), n = P.length, A = P[i], B = P[(i + 1) % n], len = hyp(A, B);
-  if (!(width > 0) || !(depth > 0)) throw new Error('Ширина и глубина должны быть больше нуля');
-  if (off < 0 || off + width > len + 1e-9) throw new Error(`Не помещается на стене. Отступ + ширина не больше ${cm(len)} см`);
+export function opBump(poly, i, fromEnd, off, width, depth, dir, topologyVersion = 2) { const P = ptsOf(poly), n = P.length, A = P[i], B = P[(i + 1) % n], len = hyp(A, B);
+  if (!(width > 0) || !(depth > 0) || !Number.isFinite(width) || !Number.isFinite(depth)) throw new Error('Ширина и глубина должны быть больше нуля');
+  if (!Number.isFinite(off) || off < 0 || off + width > len + 1e-9) throw new Error(`Не помещается на стене. Отступ + ширина не больше ${cm(len)} см`);
   const u = norm(sub(B, A)), d = mul(outNormal(P, i), dir === 'niche' ? 1 : -1);
   const p1 = fromEnd === 'start' ? add(A, mul(u, off)) : sub(B, mul(u, off + width)), p4 = add(p1, mul(u, width));
   const seq = [p1, add(p1, mul(d, depth)), add(p4, mul(d, depth)), p4];
+  const atStart = hyp(p1, A) <= 1e-9, atEnd = hyp(p4, B) <= 1e-9;
+  if (topologyVersion !== 1 && atStart && atEnd) { const q = opShift(poly, i, dir === 'niche' ? depth : -depth); q.v[i].arc = null; return q; }
   const vA = clone(poly.v[i]), vB = clone(poly.v[(i + 1) % n]); vA.arc = null;
   const mid = seq.map(p => ({ x: p.x, y: p.y, fillet: null, arc: null }));
-  if (hyp(mid[0], A) <= 0.004) mid.shift(); if (hyp(mid[mid.length - 1], B) <= 0.004) mid.pop();
+  // Old saved operations must retain their vertex indices for subsequent operations.
+  if (topologyVersion === 1) { if (hyp(mid[0], A) <= 0.004) mid.shift(); if (hyp(mid[mid.length - 1], B) <= 0.004) mid.pop(); }
+  // New corner bumps join the neighboring wall, leaving only the opposite shoulder.
+  else if (atStart) { const previous = P[(i - 1 + n) % n], join = lineX(previous, sub(A, previous), seq[1], u);
+    if (!join || dot(sub(join, previous), sub(A, previous)) <= 0 || dot(sub(seq[2], join), u) <= 1e-9) throw new Error('Глубина больше соседней стены или ширины выступа');
+    Object.assign(vA, { x: join.x, y: join.y }); mid.splice(0, 2); }
+  if (topologyVersion !== 1 && atEnd) { const next = P[(i + 2) % n], join = lineX(next, sub(B, next), seq[2], u);
+    if (!join || dot(sub(join, next), sub(B, next)) <= 0 || dot(sub(join, seq[1]), u) <= 1e-9) throw new Error('Глубина больше соседней стены или ширины выступа');
+    Object.assign(vB, { x: join.x, y: join.y }); mid.splice(-2, 2); }
   const list = [vA, ...mid, vB];
   const q = clone(poly);
   if (i === n - 1) { q.v.splice(n - 1, 1); q.v.splice(0, 1); q.v.push(...list); } else q.v.splice(i, 2, ...list);
