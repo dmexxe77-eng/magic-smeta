@@ -72,8 +72,14 @@ export const CATALOG_FOLDERS = [
   }
 ];
 
+const CRM_CATALOG_FOLDERS = [
+  {id:'crm_technolight', label:'Technolight', color:'#2563eb'},
+  {id:'crm_evoq', label:'EVOQ', color:'#0f766e'},
+];
+const KNOWN_CATALOG_FOLDERS = [...CATALOG_FOLDERS, ...CRM_CATALOG_FOLDERS];
+
 /** Legacy rows remain searchable without being merged into a current folder by display name. */
-export function catalogFolderId(item, folders = CATALOG_FOLDERS) {
+export function catalogFolderId(item, folders = KNOWN_CATALOG_FOLDERS) {
   const name = String(item.br || '').trim();
   const renamed = item.brandName != null && name !== item.brandName;
   if (item.brand && !renamed) return folders.find(folder => folder.id === item.brand)?.id || null;
@@ -82,6 +88,9 @@ export function catalogFolderId(item, folders = CATALOG_FOLDERS) {
 
 export function catalogueFolders(items, order = []) {
   const folders = CATALOG_FOLDERS.map(folder => ({...folder}));
+  for (const folder of CRM_CATALOG_FOLDERS) {
+    if (items.some(item => !item.arch && item.brand === folder.id)) folders.push({...folder});
+  }
   for (const item of items) {
     const name = String(item.br || '').trim();
     if (!item.arch && name && name !== 'Прочее' && (!item.brand || item.brandName != null && name !== item.brandName)

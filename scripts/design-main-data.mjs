@@ -4,6 +4,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import {LUMFER_CATALOG_SEED} from '../src/data/lumfer-track-catalog.js';
+import {applyCatalogSeed} from '../src/utils/catalog-seed.js';
 
 const SOURCE = 'design-src/main-data.json';
 const IMAGES_MODULE = 'src/data/nomV2Images.js';
@@ -16,6 +18,7 @@ const readMain = () => JSON.parse(fs.readFileSync(SOURCE, 'utf8'));
 
 const nomForDesign = n => {
   const out = { n: n.n, p: n.p, u: n.u, m: n.m ? 1 : 0, br: n.br || 'Прочее' };
+  if (n.id != null) out.id = n.id;
   if (n.category === 'equipment') out.category = 'equipment';
   if (n.img) out.img = n.img;
   if (n.mult > 0) out.mult = n.mult;
@@ -42,13 +45,14 @@ async function writeImages(dir, needed) {
 
 export async function writeMainData(outDir) {
   const data = readMain();
-  const nom = data.nom.map(nomForDesign);
+  const seeded = applyCatalogSeed({nom:data.nom.map(nomForDesign)}, LUMFER_CATALOG_SEED);
+  const nom = seeded.nom;
   const projects = data.projects.map(p => ({ ...p, status: STATUS_MAP[p.status] || p.status }));
   const images = await writeImages(path.join(outDir, 'nom'), new Set(nom.map(n => n.img).filter(Boolean)));
   /* параметр кнопки в шаблоне /design называется S / P / manual */
   const PARAM = { area: 'S', perim: 'P', manual: 'manual' };
   const presets = Object.fromEntries(Object.entries(data.presets).map(([bid, list]) => [bid, list.map(pr => (pr.param ? { ...pr, param: PARAM[pr.param] || pr.param } : pr))]));
-  const payload = { nom, presets, projects, estEd: data.estEd, blocks: data.blocks || [], roomOpts: data.roomOpts || [], otherTitle: data.otherTitle || 'Прочее' };
+  const payload = { nom, presets, projects, estEd: data.estEd, blocks: data.blocks || [], roomOpts: data.roomOpts || [], otherTitle: data.otherTitle || 'Прочее', catalogSeed:LUMFER_CATALOG_SEED, catalogueVersions:seeded.catalogueVersions };
   const file = path.join(outDir, 'main-data.js');
   fs.writeFileSync(file, '/* Данные основной версии ZAMER.PRO. Сгенерировано: scripts/design-main-data.mjs */\nwindow.MAGIC_MAIN=' + JSON.stringify(payload).replace(/<\//g, '<\\/') + ';\n');
   return { nom: nom.length, images, presets: Object.values(data.presets).flat().length, projects: projects.length, file };

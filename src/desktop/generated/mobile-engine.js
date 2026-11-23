@@ -30,7 +30,7 @@ const angles=pts=>{const n=pts.length;if(n<3)return[];return pts.map((_,i)=>{con
 const geom=(v,holes)=>{let{a,p}=calcPoly(v||[]);const an=angles((v||[]).map(q=>[q[0]*1000,q[1]*1000]));let inn=an.filter(d=>d===90).length,out=an.filter(d=>d===270).length;(holes||[]).forEach(h=>{const hs=calcPoly(h),ha=angles(h.map(q=>[q[0]*1000,q[1]*1000]));a-=hs.a;p+=hs.p;out+=ha.filter(d=>d===90).length;inn+=ha.filter(d=>d===270).length;});return{a:Math.round(Math.max(0,a)*100)/100,p:Math.round(p*100)/100,inn,out,angs:an,holes:(holes||[]).length};};
 const MAIN=cloneProjectData(window.MAGIC_MAIN||{nom:[],presets:{},projects:[],estEd:{},roomOpts:[]});
 let DESIGN_OWNER=null,DESIGN_NOTICE=null;
-const DESIGN_STORE=createDesktopDesignStorage({getStorage:()=>desktopStorage,onError:message=>{if(DESIGN_OWNER)DESIGN_OWNER.toast(message);else DESIGN_NOTICE=message;}});
+const DESIGN_STORE=createDesktopDesignStorage({getStorage:()=>desktopStorage,catalogSeed:MAIN.catalogSeed,onError:message=>{if(DESIGN_OWNER)DESIGN_OWNER.toast(message);else DESIGN_NOTICE=message;}});
 const DESIGN_SAVED=DESIGN_STORE.load();
 if(DESIGN_SAVED){MAIN.presets=DESIGN_SAVED.presets;MAIN.nom=DESIGN_SAVED.nom;MAIN.projects=DESIGN_SAVED.projects;MAIN.estEd=DESIGN_SAVED.estEd;MAIN.blocks=DESIGN_SAVED.blocks;MAIN.roomOpts=DESIGN_SAVED.roomOpts;}
 const PRESETS=MAIN.presets;
@@ -151,7 +151,7 @@ class Component extends DCLogic {
     exp:{type:'total',columnsDefaultsVersion:1,cols:{num:true,photo:true,name:true,qty:true,unit:true,price:true,total:true},pct:0,share:false},
     mb:null,nf:{name:'',client:'',designer:'',phone:'',address:'',notes:''},projects:this.seed()};
 
-  designSnapshot(){return Object.assign({},{migration:desktopMigrationMetadata(MAIN.migration),contractTemplate:MAIN.contractTemplate},DESIGN_SAVED||{},{version:1,blocks:BLOCKS,presets:PRESETS,nom:NOM,roomOpts:ROOM_OPTS,projects:this.state.projects,estEd:this.state.estEd,profile:this.state.profile,contractTemplate:this.state.contractTemplate,catalogFolderOrder:this.state.catalogFolderOrder});}
+  designSnapshot(){return Object.assign({},{migration:desktopMigrationMetadata(MAIN.migration),contractTemplate:MAIN.contractTemplate},DESIGN_SAVED||{},{version:1,blocks:BLOCKS,presets:PRESETS,nom:NOM,roomOpts:ROOM_OPTS,projects:this.state.projects,catalogueVersions:DESIGN_SAVED?.catalogueVersions||MAIN.catalogueVersions||[],estEd:this.state.estEd,profile:this.state.profile,contractTemplate:this.state.contractTemplate,catalogFolderOrder:this.state.catalogFolderOrder});}
   saveDesign(){clearTimeout(this._designSaveTimer);this._designSaveTimer=null;return this.persistDesignSnapshot(DESIGN_STORE,this._presetDraft?this._presetDraft.snapshot:this.designSnapshot());}
   scheduleDesignSave(){if(!this._designStorageReady)return;clearTimeout(this._designSaveTimer);this._designSaveTimer=setTimeout(()=>this.saveDesign(),120);}
   startDesignStorage(){

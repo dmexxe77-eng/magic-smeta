@@ -9,7 +9,7 @@ export function storageTemplate(source) {
   replace('<script src="/design/main-data.js"></script>',
     '<script src="/design/storage.js"></script>\n<script src="/design/main-data.js"></script>', 'runtime');
   replace('const PRESETS=MAIN.presets;', `let DESIGN_OWNER=null,DESIGN_NOTICE=null;
-const DESIGN_STORE=window.MagicDesignStorage.createDesignStorage({getStorage:()=>window.localStorage,onError:message=>{if(DESIGN_OWNER)DESIGN_OWNER.toast(message);else DESIGN_NOTICE=message;}});
+const DESIGN_STORE=window.MagicDesignStorage.createDesignStorage({getStorage:()=>window.localStorage,catalogSeed:MAIN.catalogSeed,onError:message=>{if(DESIGN_OWNER)DESIGN_OWNER.toast(message);else DESIGN_NOTICE=message;}});
 const DESIGN_SAVED=DESIGN_STORE.load();
 if(DESIGN_SAVED){MAIN.presets=DESIGN_SAVED.presets;MAIN.nom=DESIGN_SAVED.nom;MAIN.projects=DESIGN_SAVED.projects;MAIN.estEd=DESIGN_SAVED.estEd;MAIN.blocks=DESIGN_SAVED.blocks;MAIN.roomOpts=DESIGN_SAVED.roomOpts;}
 const PRESETS=MAIN.presets;`, 'restore main');
@@ -24,7 +24,7 @@ const PRESETS=MAIN.presets;`, 'restore main');
   replace('  componentWillUnmount(){if(this._mo)this._mo.disconnect();}',
     '  componentWillUnmount(){this.stopDesignStorage();if(this._mo)this._mo.disconnect();}', 'unmount');
   replace("  state={screen:'home'", "  state={profile:DESIGN_SAVED&&DESIGN_SAVED.profile||{},screen:'home'", 'restore profile');
-  replace('  seed(){', `  designSnapshot(){return Object.assign({},DESIGN_SAVED||{},{version:1,blocks:BLOCKS,presets:PRESETS,nom:NOM,roomOpts:ROOM_OPTS,projects:this.state.projects,estEd:this.state.estEd,profile:this.state.profile});}
+  replace('  seed(){', `  designSnapshot(){return Object.assign({},DESIGN_SAVED||{},{version:1,blocks:BLOCKS,presets:PRESETS,nom:NOM,roomOpts:ROOM_OPTS,projects:this.state.projects,catalogueVersions:DESIGN_SAVED?.catalogueVersions||MAIN.catalogueVersions||[],estEd:this.state.estEd,profile:this.state.profile});}
   saveDesign(){clearTimeout(this._designSaveTimer);this._designSaveTimer=null;return DESIGN_STORE.save(this.designSnapshot());}
   scheduleDesignSave(){if(!this._designStorageReady)return;clearTimeout(this._designSaveTimer);this._designSaveTimer=setTimeout(()=>this.saveDesign(),120);}
   startDesignStorage(){

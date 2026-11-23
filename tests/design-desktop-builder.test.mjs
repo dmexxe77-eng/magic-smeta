@@ -6,6 +6,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import {writeCrmPhotoFixture} from './crm-photo-fixture.mjs';
 
 const project = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -24,6 +25,9 @@ test('desktop builder reads the native app behind the preview host and retains l
     'src/desktop/project-catalog.js',
     'src/desktop/snapshot-images.js',
     'src/design-bridge/design-storage.js',
+    'src/utils/catalog-seed.js',
+    'src/data/lumfer-track-catalog.js',
+    'src/data/crm-equipment-catalog.js',
     'public/design/app.html',
     'public/design/index.html',
   ]) {
@@ -48,6 +52,7 @@ test('desktop builder reads the native app behind the preview host and retains l
   fs.mkdirSync(path.dirname(source), { recursive: true });
   fs.writeFileSync(source, JSON.stringify(data));
   fs.writeFileSync(source + '.source.json', original);
+  writeCrmPhotoFixture(root);
   const run = () => spawnSync(process.execPath, ['scripts/build-desktop.mjs'], {
     cwd: root, encoding: 'utf8', timeout: 30000,
   });

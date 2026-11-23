@@ -36,6 +36,51 @@ function memoryStorage(initial = {}) {
   };
 }
 
+test('a supplier catalog update is applied after restore and persisted without resetting user data', () => {
+  const saved = snapshot();
+  saved.nom.push({n:'Старый трек', p:5225, u:'м.п.', m:1, br:'LumFer'});
+  const seed = {version:'lumfer-storage-test', rows:[
+    {id:'n408', n:'Старый трек', p:4300, pCost:1531, u:'м.п.', m:1, br:'LumFer', category:'equipment'},
+    {id:'lf-28162', n:'LumFer 28162', p:2380, pCost:1274, u:'шт', m:1, br:'LumFer', category:'equipment'},
+  ], legacyAliases:{'Старый трек':'n408'}};
+  const storage = memoryStorage({[DESIGN_STORAGE_KEY]:JSON.stringify(saved)});
+  const store = createDesignStorage({storage, catalogSeed:seed}), loaded = store.load();
+  assert.equal(storage.writes, 0, 'restore itself does not silently write browser storage');
+  assert.equal(loaded.nom.find(row => row.id === 'n408').category, 'equipment');
+  assert.equal(loaded.nom.find(row => row.id === 'lf-28162').pCost, 1274);
+  assert.deepEqual(loaded.projects, saved.projects);
+  assert.deepEqual(loaded.presets, saved.presets);
+  assert.deepEqual(loaded.catalogueVersions, [seed.version]);
+  assert.equal(store.save(loaded), true);
+  assert.equal(storage.writes, 1, 'the migration marker must not be mistaken for already persisted data');
+  loaded.nom = loaded.nom.filter(row => row.id !== 'lf-28162');
+  loaded.nom.find(row => row.id === 'n408').p = 9999;
+  assert.equal(store.save(loaded), true);
+  const restored = createDesignStorage({storage, catalogSeed:seed}).load();
+  assert.equal(restored.nom.some(row => row.id === 'lf-28162'), false);
+  assert.equal(restored.nom.find(row => row.id === 'n408').p, 9999);
+});
+
+test('storage can add a second supplier catalogue while keeping the previously imported catalogue customized', () => {
+  const first = {version:'first-storage-fixture', rows:[{id:'fixture-first', n:'Тестовый LumFer', p:100, pCost:50, u:'шт', m:1, br:'LumFer', category:'equipment'}]};
+  const second = {version:'second-storage-fixture', brand:'Другой бренд', rows:[{id:'fixture-second', n:'Тест второго каталога', p:200, pCost:80, u:'шт', m:1, br:'Другой бренд', category:'equipment'}]};
+  const storage = memoryStorage({[DESIGN_STORAGE_KEY]:JSON.stringify(snapshot())});
+  const initialStore = createDesignStorage({storage, catalogSeed:first}), initial = initialStore.load();
+  initial.nom.find(row => row.id === 'fixture-first').p = 999;
+  assert.equal(initialStore.save(initial), true);
+  const expandedStore = createDesignStorage({storage, catalogSeed:[first, second]}), expanded = expandedStore.load();
+  assert.deepEqual(expanded.catalogueVersions, [first.version, second.version]);
+  assert.equal(expanded.nom.find(row => row.id === 'fixture-first').p, 999);
+  assert.equal(expanded.nom.find(row => row.id === 'fixture-second').pCost, 80);
+  expanded.nom = expanded.nom.filter(row => row.id !== 'fixture-second');
+  assert.equal(expandedStore.save(expanded), true);
+  const restored = createDesignStorage({storage, catalogSeed:[first, second]}).load();
+  assert.equal(restored.nom.some(row => row.id === 'fixture-second'), false);
+  assert.equal(restored.nom.find(row => row.id === 'fixture-first').p, 999);
+  assert.deepEqual(restored.projects, initial.projects);
+  assert.deepEqual(restored.presets, initial.presets);
+});
+
 test('a reload restores custom blocks, presets, projects, estimate edits, options and nomenclature together', () => {
   const storage = memoryStorage({ magicapp_v2_4_autosave_v1: 'main app data', 'zamer.contractTpl': 'contract data' });
   const store = createDesignStorage({ storage });
@@ -165,7 +210,8 @@ class Component extends DCLogic {
 }
 globalThis.TestComponent=Component;
 globalThis.TestDirectories={BLOCKS,PRESETS,NOM,ROOM_OPTS};`;
-  const seed = { presets: { canvas: [], main: [] }, nom: [], roomOpts: [], projects: [], estEd: {} };
+  const catalogSeed = {version:'lumfer-template-test', rows:[{id:'lf-template', n:'LumFer тест', p:2380, pCost:1274, u:'шт', m:1, br:'LumFer', category:'equipment'}]};
+  const seed = { presets: { canvas: [], main: [] }, nom: [], roomOpts: [], projects: [], estEd: {}, catalogSeed };
   const listeners = new Map();
   const window = { MAGIC_MAIN: copy(seed), localStorage: storage,
     MagicDesignStorage: { createDesignStorage },
@@ -185,7 +231,7 @@ globalThis.TestDirectories={BLOCKS,PRESETS,NOM,ROOM_OPTS};`;
   assert.deepEqual(copy(component.state.profile), saved.profile);
   assert.deepEqual(copy(context.TestDirectories.BLOCKS).map(b => b.id), saved.blocks.map(b => b.id));
   assert.deepEqual(copy(context.TestDirectories.ROOM_OPTS), saved.roomOpts);
-  assert.deepEqual(copy(context.TestDirectories.NOM), saved.nom);
+  assert.deepEqual(copy(context.TestDirectories.NOM), saved.nom.concat(catalogSeed.rows));
   assert.deepEqual(window.MAGIC_MAIN, seed);
   component.componentDidMount();
   context.TestDirectories.PRESETS.custom_1[0].name = 'Новое имя';
@@ -197,6 +243,7 @@ globalThis.TestDirectories={BLOCKS,PRESETS,NOM,ROOM_OPTS};`;
   assert.equal(reloaded.presets.custom_1[0].name, 'Новое имя');
   assert.equal(reloaded.estEd.project1.Лента.q, 7);
   assert.equal(reloaded.profile.company, '');
+  assert.deepEqual(reloaded.catalogueVersions, [catalogSeed.version]);
   component.componentWillUnmount();
   assert.equal(listeners.size, 0);
 });

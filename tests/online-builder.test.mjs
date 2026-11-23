@@ -5,6 +5,9 @@ import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import {writeOnlineData} from '../scripts/build-online-data.mjs';
+import {LUMFER_CATALOG_SEED} from '../src/data/lumfer-track-catalog.js';
+import {CRM_EQUIPMENT_CATALOG_SEEDS} from '../src/data/crm-equipment-catalog.js';
+import {writeCrmPhotoFixture, CRM_PHOTO_FIXTURE_BYTES} from './crm-photo-fixture.mjs';
 
 const digest = value => crypto.createHash('sha256').update(value).digest('hex');
 const imageBytes = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jQ1sAAAAASUVORK5CYII=', 'base64');
@@ -38,7 +41,8 @@ function fixture(t) {
   fs.writeFileSync(source + '.source.json', original);
   fs.writeFileSync(image, imageBytes);
   fs.writeFileSync(output, 'previous validated public seed');
-  return {root, source, output, image, original, data};
+  const crm = writeCrmPhotoFixture(root);
+  return {root, source, output, image, original, data, crm};
 }
 
 function run(value) {
@@ -78,9 +82,68 @@ test('builder publishes verified runtime data while leaving canonical and raw ba
   assert.deepEqual(payload.projects[0].unknownField, {keep:true});
   assert.equal(payload.presets.main[0].items[0].nid, 'a');
   assert.equal(payload.nom[0].imageUrl, '/online/nom/nom-YQ.png');
+  const seeds = [LUMFER_CATALOG_SEED, ...CRM_EQUIPMENT_CATALOG_SEEDS];
+  assert.equal(payload.nom.length, value.data.nom.length + seeds.reduce((sum, seed) => sum + seed.rows.length, 0));
+  assert.deepEqual(payload.catalogueVersions, seeds.map(seed => seed.version));
+  assert.deepEqual(payload.catalogSeed.map(seed => seed.version), seeds.map(seed => seed.version));
+  assert.ok(LUMFER_CATALOG_SEED.rows.every(row => payload.nom.some(item => item.id === row.id && item.pCost === row.pCost && item.category === 'equipment')));
+  for (const row of CRM_EQUIPMENT_CATALOG_SEEDS.flatMap(seed => seed.rows)) {
+    const published = payload.nom.find(item => item.id === row.id);
+    assert.equal(published.br, row.br);
+    assert.equal(published.category, 'equipment');
+    assert.equal(published.pCost, row.pCost, 'zero procurement prices retain their actual source value');
+    assert.deepEqual(fs.readFileSync(path.join(value.root, 'public/online/nom', row.img)), CRM_PHOTO_FIXTURE_BYTES);
+  }
   assert.deepEqual(payload.contractTemplate, value.data.contractTemplate);
   assert.deepEqual(fs.readFileSync(value.source), canonical);
   assert.equal(fs.readFileSync(value.source + '.source.json', 'utf8'), value.original);
+});
+
+test('CRM photo validation rejects incomplete or corrupt supplier assets before publishing any of them', t => {
+  const value = fixture(t), first = value.crm.manifest.images[0];
+  const assertNoPublishedCrm = () => assert.equal(fs.readdirSync(path.dirname(value.image)).some(file => file.startsWith('crm_')), false);
+  fs.unlinkSync(value.crm.manifestFile);
+  assertRejected(value, /CRM.*manifest/i); assertNoPublishedCrm();
+  fs.writeFileSync(value.crm.manifestFile, JSON.stringify({...value.crm.manifest, images:value.crm.manifest.images.slice(1)}));
+  assertRejected(value, /CRM.*manifest/i); assertNoPublishedCrm();
+  fs.writeFileSync(value.crm.manifestFile, JSON.stringify(value.crm.manifest));
+  fs.writeFileSync(path.join(value.crm.directory, first.file), CRM_PHOTO_FIXTURE_BYTES.subarray(1));
+  assertRejected(value, /CRM.*integrity/i); assertNoPublishedCrm();
+});
+
+test('CRM photo manifest rejects unsafe names, duplicate entries, stale references and nonregular files', t => {
+  const value = fixture(t), first = value.crm.manifest.images[0];
+  for (const patch of [{file:'../escape.webp'}, {sha256:'not-a-hash'}, {bytes:0}, {bytes:1.5}]) {
+    fs.writeFileSync(value.crm.manifestFile, JSON.stringify({...value.crm.manifest, images:[{...first, ...patch}, ...value.crm.manifest.images.slice(1)]}));
+    assertRejected(value, /CRM.*manifest/i);
+  }
+  fs.writeFileSync(value.crm.manifestFile, JSON.stringify({...value.crm.manifest, images:[...value.crm.manifest.images, first]}));
+  assertRejected(value, /CRM.*manifest/i);
+  fs.writeFileSync(value.crm.manifestFile, JSON.stringify({...value.crm.manifest, images:[...value.crm.manifest.images, {...first, file:'crm_00000000000000000000000000000000.webp'}]}));
+  assertRejected(value, /CRM.*unknown|CRM.*unreferenced/i);
+  fs.writeFileSync(value.crm.manifestFile, JSON.stringify(value.crm.manifest));
+  const photo = path.join(value.crm.directory, first.file);
+  fs.unlinkSync(photo); fs.mkdirSync(photo);
+  assertRejected(value, /CRM.*regular/i);
+  fs.rmdirSync(photo);
+  fs.symlinkSync(value.image, photo);
+  assertRejected(value, /CRM.*regular/i);
+});
+
+test('CRM photo validation rejects mislabeled image bytes and never follows an output symlink', t => {
+  const value = fixture(t), first = value.crm.manifest.images[0];
+  const source = path.join(value.crm.directory, first.file);
+  fs.writeFileSync(source, imageBytes);
+  const mislabeled = {...first, bytes:imageBytes.length, sha256:digest(imageBytes)};
+  fs.writeFileSync(value.crm.manifestFile, JSON.stringify({...value.crm.manifest, images:[mislabeled, ...value.crm.manifest.images.slice(1)]}));
+  assertRejected(value, /CRM.*WebP/i);
+  fs.writeFileSync(source, CRM_PHOTO_FIXTURE_BYTES);
+  fs.writeFileSync(value.crm.manifestFile, JSON.stringify(value.crm.manifest));
+  const destination = path.join(path.dirname(value.image), first.file);
+  fs.symlinkSync(value.image, destination);
+  assertRejected(value, /CRM.*output.*regular/i);
+  assert.deepEqual(fs.readFileSync(value.image), imageBytes);
+  assert.equal(fs.readdirSync(path.dirname(value.image)).filter(file => file.startsWith('crm_')).length, 1, 'no other CRM photo is published before all output paths pass validation');
 });
 
 test('builder rejects malformed source hashes and exact-byte source mismatches before overwriting the previous seed', t => {

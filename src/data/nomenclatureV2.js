@@ -1554,3 +1554,16 @@ export const NOM_V2=[{"id":"n1","name":"TO GO Кейс мобильный с о�
    фильтры калькулятора и снапшоты цен работали как у остальных брендов новой базы. */
 import { NOM_GRISHINY } from "./nomGrishiny.js";
 NOM_V2.push(...NOM_GRISHINY);
+
+import { LUMFER_CATALOG_SEED } from './lumfer-track-catalog.js';
+for (const row of LUMFER_CATALOG_SEED.rows) {
+  const item = {
+    id: row.id, name: row.n, price: row.p, cost: row.pCost, unit: row.u,
+    type: 'profile', category: 'equipment', brand: row.brand, brandName: row.brandName,
+    brandColor: row.brandColor, img: row.img.replace(/\.webp$/, ''), note: row.note,
+    sku: row.sku, specs: row.specs, ...(row.mult ? { mult: row.mult } : {}),
+  };
+  const existing = NOM_V2.find(entry => entry.id === row.id);
+  if (existing) Object.assign(existing, item);
+  else NOM_V2.push(item);
+}

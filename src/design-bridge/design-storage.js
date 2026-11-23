@@ -1,4 +1,6 @@
 /** Persistence for /design only. Main application and contract storage stay independent. */
+import {applyCatalogSeed} from '../utils/catalog-seed.js';
+
 export const DESIGN_STORAGE_KEY = 'zamer.design.v1';
 
 const record = value => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -65,7 +67,7 @@ export function validateDesignSnapshot(value) {
 }
 
 /** Keep a full snapshot, retry failed writes and report at most once per editor session. */
-export function createDesignStorage({ storage, getStorage = () => globalThis.localStorage, onError = () => {}, validateSnapshot = validateDesignSnapshot } = {}) {
+export function createDesignStorage({ storage, getStorage = () => globalThis.localStorage, onError = () => {}, validateSnapshot = validateDesignSnapshot, catalogSeed } = {}) {
   let lastSaved = null;
   let reported = false;
   let lastError = null;
@@ -86,7 +88,9 @@ export function createDesignStorage({ storage, getStorage = () => globalThis.loc
         const value = JSON.parse(raw);
         if (!validateSnapshot(value)) throw new Error('Invalid mobile snapshot');
         lastSaved = JSON.stringify(value);
-        return value;
+        const updated = applyCatalogSeed(value, catalogSeed);
+        if (!validateSnapshot(updated)) throw new Error('Invalid catalog update');
+        return updated;
       } catch {
         report('load');
         return null;

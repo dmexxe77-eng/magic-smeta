@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {CATALOG_FOLDERS,catalogueFolders,catalogFolderId,moveCatalogFolder} from '../src/desktop/catalog-folders.js';
+import {CRM_EQUIPMENT_CATALOG_SEEDS} from '../src/data/crm-equipment-catalog.js';
 const source=JSON.parse(fs.readFileSync(new URL('../online-src/working-data.json',import.meta.url)));
 
 test('working folder identities, order and membership match the original editor exactly',()=>{
@@ -28,4 +29,22 @@ test('moving an edited item honours its new folder and never mutates source reco
  const before=JSON.stringify(source);
  catalogueFolders(source.nom,['v2_msd']);
  assert.equal(JSON.stringify(source),before);
+});
+
+test('imported equipment folders appear with their products and retain the saved folder order',()=>{
+ const imported=CRM_EQUIPMENT_CATALOG_SEEDS.flatMap(seed=>seed.rows);
+ const custom={id:'custom-item',br:'Мои материалы',n:'Моя позиция'};
+ const items=[...source.nom,...imported,custom], before=JSON.stringify(items);
+ const folders=catalogueFolders(items,['custom:Мои материалы','v2_lumfer','stale']);
+ assert.deepEqual(folders.slice(0,2).map(folder=>folder.id),['custom:Мои материалы','v2_lumfer']);
+ for (const [id,label,count] of [['crm_technolight','Technolight',150],['crm_evoq','EVOQ',184]]) {
+  assert.equal(folders.filter(folder=>folder.id===id&&folder.label===label).length,1);
+  assert.equal(items.filter(item=>catalogFolderId(item,folders)===id).length,count);
+  assert.equal(catalogFolderId(imported.find(item=>item.brand===id)),id);
+ }
+ assert.equal(catalogFolderId(custom,folders),'custom:Мои материалы');
+ assert.equal(catalogFolderId({brand:'innoy',brandName:'INNOY',br:'INNOY'},folders),null);
+ assert.equal(JSON.stringify(items),before);
+ assert.equal(catalogueFolders(source.nom).some(folder=>folder.id.startsWith('crm_')),false);
+ assert.equal(catalogueFolders(imported.map(item=>({...item,arch:true}))).some(folder=>folder.id.startsWith('crm_')),false);
 });
